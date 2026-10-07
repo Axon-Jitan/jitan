@@ -43,13 +43,13 @@ void main() {
   OnboardingCompleteRequest complete(String qr, String password, {String device = 'device-AAAAAAAAAAAAAAAA'}) =>
       OnboardingCompleteRequest(qrCode: qr, password: password, deviceId: device);
 
-  Future<String> newEmployee(String suffix) async {
+  Future<String> newEmployee(String suffix, {bool active = true, bool mfd = false}) async {
     final qr = 'DEV-TEST-ONB-$stamp-$suffix';
     userIds.add(
       (await db.execute(
         'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
-        "VALUES ('[DEV-TEST]', 'Onboarding', :code, :qr, 1, 0)",
-        {'code': 'DT$stamp$suffix', 'qr': qr},
+        "VALUES ('[DEV-TEST]', 'Onboarding', :code, :qr, :active, :mfd)",
+        {'code': 'DT$stamp$suffix', 'qr': qr, 'active': active, 'mfd': mfd},
       )).lastInsertId,
     );
     return qr;
@@ -97,6 +97,14 @@ void main() {
 
     await expectLater(service().start(qr), alreadyCompleted());
     await expectLater(service().complete(complete(qr, 'attacker password')), alreadyCompleted());
+  });
+
+  test('inactive and MFD employees are refused; an unknown QR reveals nothing', () async {
+    Matcher refused(String code) => throwsA(isA<ApiException>().having((e) => e.code, 'code', code));
+
+    await expectLater(service().start(await newEmployee('I', active: false)), refused('account_inactive'));
+    await expectLater(service().start(await newEmployee('M', mfd: true)), refused('account_inactive'));
+    await expectLater(service().start('DEV-TEST-ONB-$stamp-unknown'), refused('invalid_qr_code'));
   });
 
   test('two devices completing at the same moment: exactly one succeeds', () async {

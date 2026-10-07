@@ -70,7 +70,7 @@ class OnboardingService {
     final languageId = await _languageIdFor(request.languageCode);
 
     final found = await _onboarding.findByQrCode(_executor, qr);
-    if (found != null && found.isActive && found.passwordSet) {
+    if (found != null && _isUsable(found) && found.passwordSet) {
       return _recoverSession(found, request.password, deviceId);
     }
 
@@ -142,14 +142,17 @@ class OnboardingService {
   }
 
   static OnboardingUser _requireOnboardable(OnboardingUser? user) {
-    // Unknown and deleted users get the same answer: nothing is revealed.
+    // Unknown QR: the same answer whatever the reason, so nothing is revealed.
     if (user == null) throw const ApiException(404, ApiErrorCode.invalidQrCode, 'This is not a Jitan QR code.');
-    if (!user.isActive) {
+    // Inactive or marked for deletion (MFD): refused, before anything else.
+    if (!_isUsable(user)) {
       throw const ApiException(403, ApiErrorCode.accountInactive, 'This account is not active.');
     }
     if (user.passwordSet) throw _alreadyCompleted();
     return user;
   }
+
+  static bool _isUsable(OnboardingUser user) => user.isActive && !user.isMarkedForDeletion;
 
   static ApiException _alreadyCompleted() => const ApiException(
         409,

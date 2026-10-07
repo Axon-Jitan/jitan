@@ -139,7 +139,7 @@ with decisions already taken, or has no screen:
 4. **"Set this later" removed** from "07 Set password": the password is mandatory (ONB-01).
    The step counter reads "8 of 9" because the flow has the extra language step.
 5. **Job title on "04 Account found" omitted.** The ERD has no job title.
-6. **"Sign in" and "Contact HR/Admin" buttons on error screens 02 and 04 not shown.**
+6. **"Sign in" and "Contact HR/Admin" buttons on error screens 02 and 04 not shown yet** (required by the 2026-10-07 onboarding brief; waiting on the questions below).
    Sign-in is AUTH-01 (not built); the ERD holds no HR contact details. "Back" is shown.
 7. **Ready summary** says "Allow location in Settings to use automatic registration"
    (warning colour) instead of "Required permissions configured" when automatic

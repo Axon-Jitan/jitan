@@ -152,6 +152,9 @@ class FakeOnboardingRepository implements OnboardingRepository {
   /// qrCode → user (without the password state).
   Map<String, ({int userId, String? firstName, String? lastName, String code, bool isActive})> users = {};
 
+  /// Users marked for deletion (`userMFD = 1`).
+  final markedForDeletion = <int>{};
+
   /// userId → stored hash (absent = NULL).
   final passwordHashes = <int, String>{};
 
@@ -171,6 +174,7 @@ class FakeOnboardingRepository implements OnboardingRepository {
       lastName: u.lastName,
       code: u.code,
       isActive: u.isActive,
+      isMarkedForDeletion: markedForDeletion.contains(u.userId),
       passwordSet: passwordHashes.containsKey(u.userId),
     );
   }

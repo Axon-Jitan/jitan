@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:employee_mobile/src/device/device_settings.dart';
 import 'package:employee_mobile/src/onboarding/onboarding_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 
 import '../support/fake_jitan_server.dart';
 
@@ -209,6 +210,33 @@ void main() {
       expect((c.step, c.passwordProblem), (OnboardingStep.password, PasswordProblem.rejected));
       expect(h.session.isSignedIn, isFalse);
     });
+  });
+
+  test('the password never appears in client logs, also when the final step fails', () async {
+    const password = 'Unmistakable-Pass-4471';
+    final records = <String>[];
+    final previous = Logger.root.level;
+    Logger.root.level = Level.ALL;
+    final subscription = Logger.root.onRecord.listen((r) => records.add('${r.message} ${r.error ?? ''}'));
+    addTearDown(() {
+      subscription.cancel();
+      Logger.root.level = previous;
+    });
+
+    await toPassword();
+    h.server.loseCompleteResponse = true;
+    await c.submitPassword(password, password);
+    h.store.failWrites = true;
+    await c.retry();
+    h.store.failWrites = false;
+    await c.retry();
+
+    expect(c.step, OnboardingStep.ready);
+    expect(records, isNotEmpty, reason: 'failures were logged');
+    for (final record in records) {
+      expect(record, isNot(contains(password)));
+      expect(record, isNot(contains(testQr)), reason: 'the QR is a credential too');
+    }
   });
 
   test('back walks the steps in reverse and forgets the scanned account at the scanner', () async {

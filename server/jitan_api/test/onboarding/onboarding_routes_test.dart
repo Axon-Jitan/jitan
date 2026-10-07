@@ -67,11 +67,28 @@ void main() {
       expect(error['message'], 'This is not a Jitan QR code.');
     });
 
-    test('inactive employee is refused (MFD employees are not found: same generic error)', () async {
+    test('inactive employee is refused', () async {
       final response = await _app(active: false).post('/onboarding/start', _start());
 
       expect(response.statusCode, 403);
       expect(await _error(response), containsPair('code', 'account_inactive'));
+    });
+
+    test('MFD (marked for deletion) employee is refused, also when already activated', () async {
+      final app = _app()..onboarding.markedForDeletion.add(1);
+      final activated = _app()
+        ..onboarding.markedForDeletion.add(1)
+        ..onboarding.passwordHashes[1] = r'$argon2id$existing';
+
+      for (final response in [
+        await app.post('/onboarding/start', _start()),
+        await app.post('/onboarding/complete', _complete()),
+        await activated.post('/onboarding/complete', _complete()),
+      ]) {
+        expect(response.statusCode, 403);
+        expect(await _error(response), containsPair('code', 'account_inactive'));
+      }
+      expect(app.onboarding.passwordHashes, isEmpty);
     });
 
     test('400 for a blank or absurdly long QR, or a malformed body', () async {

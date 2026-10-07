@@ -67,6 +67,22 @@ void main() {
 
     expect(find.text('Passwords don’t match.'), findsOneWidget);
     expect(h.server.requestsTo('/onboarding/complete'), isEmpty);
+    final first = tester.widget<TextField>(find.byType(TextField).at(0));
+    expect(first.controller!.text, 'correct horse battery', reason: 'only the confirmation needs fixing');
+
+    await tester.enterText(find.byType(TextField).at(1), 'correct horse battery');
+    await tapText(tester, 'Continue');
+    expect(find.text('You’re ready.'), findsOneWidget);
+  });
+
+  testWidgets('a password the server refuses is an inline field error, not a full-screen error', (tester) async {
+    await onboardUpToPassword(tester);
+    h.server.rejectPassword = true;
+
+    await enterPasswords(tester, 'correct horse battery', 'correct horse battery');
+
+    expect(find.text('This password can’t be used. Choose another one.'), findsOneWidget);
+    expect(find.text('Set your password'), findsOneWidget);
   });
 
   testWidgets('choosing a language translates the following screens at once', (tester) async {

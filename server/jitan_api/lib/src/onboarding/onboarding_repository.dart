@@ -13,6 +13,9 @@ typedef OnboardingUser = ({
   String code,
   bool isActive,
 
+  /// `userMFD`: marked for deletion. Refused like an inactive account.
+  bool isMarkedForDeletion,
+
   /// `userPassword IS NOT NULL`: the onboarding-complete signal (decision
   /// 2026-10-07). Setting a password is the mandatory last onboarding step.
   bool passwordSet,
@@ -23,15 +26,16 @@ typedef OnboardingUser = ({
 class OnboardingRepository {
   const OnboardingRepository();
 
-  /// The non-MFD user whose `userQRcode` is exactly [qrCode], or `null`.
+  /// The user whose `userQRcode` is exactly [qrCode], or `null`. MFD users
+  /// are returned too (flagged), so onboarding can refuse them explicitly.
   ///
   /// With [lockForUpdate] (inside a transaction) the row stays locked until
   /// commit, so two devices cannot both complete onboarding.
   Future<OnboardingUser?> findByQrCode(SqlExecutor executor, String qrCode, {bool lockForUpdate = false}) async {
     final rows = await executor.query(
-      'SELECT userID, userName, userSurname, userCode, userActive, '
+      'SELECT userID, userName, userSurname, userCode, userActive, userMFD, '
       '(userPassword IS NOT NULL) AS passwordSet '
-      'FROM tblUser WHERE userQRcode = :qrCode AND userMFD = 0'
+      'FROM tblUser WHERE userQRcode = :qrCode'
       '${lockForUpdate ? ' FOR UPDATE' : ''}',
       {'qrCode': qrCode},
     );
@@ -43,6 +47,7 @@ class OnboardingRepository {
       lastName: row.readOptionalString('userSurname'),
       code: row.readString('userCode'),
       isActive: row.readBool('userActive'),
+      isMarkedForDeletion: row.readBool('userMFD'),
       passwordSet: row.readBool('passwordSet'),
     );
   }
