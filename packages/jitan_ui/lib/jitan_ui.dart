@@ -10,6 +10,7 @@ export 'src/components/jitan_page_header.dart';
 export 'src/components/jitan_search_field.dart';
 export 'src/components/jitan_status_label.dart';
 export 'src/components/jitan_surface_card.dart';
+export 'src/i18n/translation_scope.dart';
 export 'src/layout/jitan_nav_item.dart';
 export 'src/layout/jitan_web_shell.dart';
 export 'src/layout/jitan_web_sidebar.dart';

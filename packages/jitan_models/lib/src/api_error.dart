@@ -8,6 +8,10 @@ abstract final class ApiErrorCode {
   static const unauthenticated = 'unauthenticated';
   static const forbidden = 'forbidden';
   static const notFound = 'not_found';
+
+  /// Data in the database is inconsistent with what the operation needs
+  /// (e.g. several languages assigned to one user). Not retryable by the user.
+  static const configurationError = 'configuration_error';
   static const databaseUnavailable = 'database_unavailable';
   static const internalError = 'internal_error';
 }

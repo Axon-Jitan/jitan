@@ -16,6 +16,10 @@ import 'package:jitan_api/src/config/env_file.dart';
 import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
+import 'package:jitan_api/src/languages/language_repository.dart';
+import 'package:jitan_api/src/languages/language_routes.dart';
+import 'package:jitan_api/src/languages/language_service.dart';
+import 'package:jitan_api/src/languages/translation_repository.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:logging/logging.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
@@ -65,6 +69,7 @@ Future<void> main() async {
     corsOrigins: config.corsOrigins,
     health: HealthRoutes(DatabaseHealthRepository(db)),
     companies: CompanyRoutes(authorizer, CompanyService(CompanyRepository(db))),
+    languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db))),
     identity: identity,
   );
 

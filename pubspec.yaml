@@ -7,6 +7,7 @@ environment:
 workspace:
   - packages/jitan_models
   - packages/jitan_api_client
+  - packages/jitan_core
   - packages/jitan_ui
   - apps/admin_web
   - server/jitan_api

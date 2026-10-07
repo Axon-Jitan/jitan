@@ -1,30 +1,29 @@
 import 'package:jitan_api_client/jitan_api_client.dart';
+import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 
-import '../l10n/admin_strings.dart';
-
-/// Title and message to show for a failed API call.
-typedef FailureText = ({String title, String message});
+/// Title and message keys for a failed API call.
+typedef FailureTextKeys = ({String title, String message});
 
 /// Chooses user-facing text from the failure kind and server error code,
 /// never from the server's diagnostic message.
-FailureText failureTextFor(ApiClientException failure) {
+FailureTextKeys failureTextKeysFor(ApiClientException failure) {
   if (failure.kind == ApiFailureKind.network) {
-    return (title: AdminStrings.errorNetworkTitle, message: AdminStrings.errorNetworkMessage);
+    return (title: CommonTextKeys.errorNetworkTitle, message: CommonTextKeys.errorNetworkMessage);
   }
   return switch (failure.error?.code) {
     ApiErrorCode.unauthenticated => (
-        title: AdminStrings.errorUnauthenticatedTitle,
-        message: AdminStrings.errorUnauthenticatedMessage,
+        title: CommonTextKeys.errorUnauthenticatedTitle,
+        message: CommonTextKeys.errorUnauthenticatedMessage,
       ),
     ApiErrorCode.forbidden => (
-        title: AdminStrings.errorForbiddenTitle,
-        message: AdminStrings.errorForbiddenMessage,
+        title: CommonTextKeys.errorForbiddenTitle,
+        message: CommonTextKeys.errorForbiddenMessage,
       ),
     ApiErrorCode.databaseUnavailable => (
-        title: AdminStrings.errorDatabaseTitle,
-        message: AdminStrings.errorDatabaseMessage,
+        title: CommonTextKeys.errorDatabaseTitle,
+        message: CommonTextKeys.errorDatabaseMessage,
       ),
-    _ => (title: AdminStrings.errorUnexpectedTitle, message: AdminStrings.errorUnexpectedMessage),
+    _ => (title: CommonTextKeys.errorUnexpectedTitle, message: CommonTextKeys.errorUnexpectedMessage),
   };
 }

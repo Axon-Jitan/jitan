@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import '../l10n/admin_strings.dart';
+import '../l10n/admin_text_keys.dart';
 import 'admin_routes.dart';
 
 /// Sidebar + page frame around every HR/Admin page.
@@ -28,7 +28,7 @@ class AdminShell extends StatelessWidget {
             context.go(path);
           },
           destinations: [
-            JitanNavDestination(label: AdminStrings.companiesNav, path: AdminRoutes.companies),
+            JitanNavDestination(label: context.t(AdminTextKeys.navCompanies), path: AdminRoutes.companies),
           ],
         ),
         child: child,

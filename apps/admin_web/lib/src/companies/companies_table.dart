@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../common/relative_date_text.dart';
-import '../l10n/admin_strings.dart';
+import '../l10n/admin_text_keys.dart';
 
 /// The companies table from Figma `Admin / Companies` (`153:61`).
 ///
@@ -26,18 +27,21 @@ class CompaniesTable extends StatelessWidget {
   static const _flexLastUpdated = 240;
 
   @override
-  Widget build(BuildContext context) => JitanDataTable(
-        columns: [
-          JitanTableColumn(label: AdminStrings.columnCompany, flex: _flexCompany),
-          JitanTableColumn(label: AdminStrings.columnEmployees, flex: _flexEmployees),
-          JitanTableColumn(label: AdminStrings.columnLocations, flex: _flexLocations),
-          JitanTableColumn(label: AdminStrings.columnStatus, flex: _flexStatus),
-          JitanTableColumn(label: AdminStrings.columnLastUpdated, flex: _flexLastUpdated),
-        ],
-        rows: [for (final company in companies) _cells(company)],
-      );
+  Widget build(BuildContext context) {
+    final t = TranslationScope.of(context);
+    return JitanDataTable(
+      columns: [
+        JitanTableColumn(label: t.t(AdminTextKeys.companyColumnName), flex: _flexCompany),
+        JitanTableColumn(label: t.t(AdminTextKeys.companyColumnEmployees), flex: _flexEmployees),
+        JitanTableColumn(label: t.t(AdminTextKeys.companyColumnLocations), flex: _flexLocations),
+        JitanTableColumn(label: t.t(AdminTextKeys.companyColumnStatus), flex: _flexStatus),
+        JitanTableColumn(label: t.t(AdminTextKeys.companyColumnLastUpdated), flex: _flexLastUpdated),
+      ],
+      rows: [for (final company in companies) _cells(t, company)],
+    );
+  }
 
-  List<Widget> _cells(CompanySummary company) => [
+  List<Widget> _cells(Translations t, CompanySummary company) => [
         Text(
           company.name,
           style: JitanTextStyles.tableCellStrong,
@@ -45,17 +49,17 @@ class CompaniesTable extends StatelessWidget {
         ),
         Text('${company.employeeCount}', style: JitanTextStyles.tableCell),
         Tooltip(
-          message: AdminStrings.locationsUnavailableHint,
-          child: Text(AdminStrings.valueUnavailable, style: JitanTextStyles.tableCell),
+          message: t.t(AdminTextKeys.companyLocationsUnavailable),
+          child: Text(t.t(CommonTextKeys.valueUnavailable), style: JitanTextStyles.tableCell),
         ),
         JitanStatusLabel(
-          label: company.isActive ? AdminStrings.statusActive : AdminStrings.statusInactive,
+          label: t.t(company.isActive ? CommonTextKeys.statusActive : CommonTextKeys.statusInactive),
           isPositive: company.isActive,
         ),
         Text(
           company.lastUpdatedAt == null
-              ? AdminStrings.lastUpdatedNever
-              : relativeDateText(company.lastUpdatedAt!, now: now),
+              ? t.t(CommonTextKeys.valueUnavailable)
+              : relativeDateText(t, company.lastUpdatedAt!, now: now),
           style: JitanTextStyles.tableCell,
         ),
       ];

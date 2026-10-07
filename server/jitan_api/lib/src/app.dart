@@ -7,14 +7,15 @@ import 'health/health_routes.dart';
 import 'http/api_exception.dart';
 import 'http/cors_middleware.dart';
 import 'http/error_middleware.dart';
+import 'languages/language_routes.dart';
 
 final _log = Logger('http.requests');
 
 /// Assembles the request pipeline:
 ///
 /// ```text
-/// request log → CORS → error mapping → /health*            (public)
-///                                    → identity → API routes (authenticated)
+/// request log → CORS → error mapping → /health*, /languages, /translations (public)
+///                                    → identity → API routes             (authenticated)
 /// ```
 ///
 /// [identity] is the authentication middleware. Today it is the development
@@ -24,14 +25,21 @@ Handler buildApp({
   required Set<String> corsOrigins,
   required HealthRoutes health,
   required CompanyRoutes companies,
+  required LanguageRoutes languages,
   Middleware? identity,
 }) {
-  final apiRoutes = Router(notFoundHandler: _notFound)..mount('/', companies.router.call);
+  final apiRoutes = Router(notFoundHandler: _notFound)
+    ..mount('/', companies.router.call)
+    ..mount('/', languages.authenticatedRouter.call);
 
   var api = const Pipeline();
   if (identity != null) api = api.addMiddleware(identity);
 
-  final routes = Cascade().add(health.router.call).add(api.addHandler(apiRoutes.call)).handler;
+  final routes = Cascade()
+      .add(health.router.call)
+      .add(languages.publicRouter.call)
+      .add(api.addHandler(apiRoutes.call))
+      .handler;
 
   return const Pipeline()
       .addMiddleware(logRequests(logger: _logRequest))

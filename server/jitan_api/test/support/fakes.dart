@@ -3,6 +3,8 @@ import 'package:jitan_api/src/auth/permission_evaluator.dart';
 import 'package:jitan_api/src/auth/request_identity.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
+import 'package:jitan_api/src/languages/language_repository.dart';
+import 'package:jitan_api/src/languages/translation_repository.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
 
@@ -40,6 +42,32 @@ class FakeUserRepository implements UserRepository {
 
   @override
   Future<bool> isActiveUser(int userId) async => activeUserIds.contains(userId);
+}
+
+class FakeLanguageRepository implements LanguageRepository {
+  /// Active languages only (the real query filters Active/MFD).
+  List<Language> languages = const [];
+
+  /// userID → codes of the user's active languages.
+  Map<int, List<String>> userLanguages = const {};
+
+  @override
+  Future<List<Language>> listActiveLanguages() async => languages;
+
+  @override
+  Future<Language?> findActiveByCode(String code) async =>
+      languages.where((l) => l.code == code).firstOrNull;
+
+  @override
+  Future<List<String>> activeLanguageCodesForUser(int userId) async => userLanguages[userId] ?? const [];
+}
+
+class FakeTranslationRepository implements TranslationRepository {
+  /// languageID → texts.
+  Map<int, Map<String, String>> texts = const {};
+
+  @override
+  Future<Map<String, String>> textsForLanguage(int languageId) async => texts[languageId] ?? const {};
 }
 
 class FixedPermissionEvaluator implements PermissionEvaluator {

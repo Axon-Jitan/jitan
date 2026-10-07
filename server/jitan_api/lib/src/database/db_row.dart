@@ -24,10 +24,12 @@ class DbRow {
   }
 
   String readString(String column) {
-    final raw = _raw(column);
-    if (raw == null) throw _unexpected(column, 'NULL', 'a string');
-    return raw.toString();
+    final value = readOptionalString(column);
+    if (value == null) throw _unexpected(column, 'NULL', 'a string');
+    return value;
   }
+
+  String? readOptionalString(String column) => _raw(column)?.toString();
 
   /// Reads an `...Active` / `...MFD` style flag.
   ///

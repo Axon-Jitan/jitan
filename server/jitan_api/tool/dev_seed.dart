@@ -8,6 +8,10 @@
 // (companies, user first names) or "DEV-" (user codes), and nothing in
 // production code refers to these records.
 //
+// Also ensures an English tblLanguage row ('en') and inserts the English
+// UI texts from tool/dev_translations_en.dart that are missing. These are
+// real content, not fake data, so --remove leaves them in place.
+//
 // Not seeded: tblEventLog (event types are pending CLARIFY-11), so the
 // company list's "Last updated" stays empty for seeded companies.
 
@@ -17,6 +21,8 @@ import 'package:jitan_api/src/config/app_config.dart';
 import 'package:jitan_api/src/config/config_exception.dart';
 import 'package:jitan_api/src/config/env_file.dart';
 import 'package:jitan_api/src/database/database.dart';
+
+import 'dev_translations_en.dart';
 
 const _companyPrefix = '[DEV] ';
 const _userCodePrefix = 'DEV-';
@@ -77,7 +83,38 @@ Future<void> _seed(Database db) async {
     }
     stdout.writeln('Company "$_companyPrefix$name" (id $companyId, ${active ? 'active' : 'inactive'}): $members employees');
   }
+  await _ensureEnglishTranslations(db);
   stdout.writeln('Done.');
+}
+
+Future<void> _ensureEnglishTranslations(Database db) async {
+  var rows = await db.query("SELECT languageID FROM tblLanguage WHERE languageCode = 'en'");
+  if (rows.isEmpty) {
+    await db.query(
+      "INSERT INTO tblLanguage (languageName, languageCode, languageActive, languageMFD) VALUES ('English', 'en', 1, 0)",
+    );
+    rows = await db.query("SELECT languageID FROM tblLanguage WHERE languageCode = 'en'");
+    stdout.writeln('Created tblLanguage row for English (en).');
+  }
+  final languageId = rows.single.readInt('languageID');
+
+  final existing = {
+    for (final row in await db.query(
+      'SELECT translationUIName FROM tblTranslation WHERE languageID = :id',
+      {'id': languageId},
+    ))
+      row.readString('translationUIName'),
+  };
+  var added = 0;
+  for (final MapEntry(:key, :value) in devEnglishTranslations.entries) {
+    if (existing.contains(key)) continue;
+    await db.query(
+      'INSERT INTO tblTranslation (languageID, translationUIName, translationUIText) VALUES (:id, :key, :text)',
+      {'id': languageId, 'key': key, 'text': value},
+    );
+    added++;
+  }
+  stdout.writeln('English translations: $added added, ${existing.length} already present (existing rows untouched).');
 }
 
 Future<void> _remove(Database db) async {

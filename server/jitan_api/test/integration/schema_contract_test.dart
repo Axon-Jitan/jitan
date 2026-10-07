@@ -16,6 +16,9 @@ const _usedColumns = {
   'tblUserCompany': ['userID', 'companyID'],
   'tblUser': ['userID', 'userActive', 'userMFD'],
   'tblEventLog': ['companyID', 'eventLogTimestamp'],
+  'tblLanguage': ['languageID', 'languageName', 'languageCode', 'languageActive', 'languageMFD'],
+  'tblTranslation': ['translationID', 'languageID', 'translationUIName', 'translationUIText'],
+  'tblUserLanguage': ['userID', 'languageID'],
 };
 
 void main() {

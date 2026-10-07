@@ -26,6 +26,7 @@ answered, and they block only the production cut-over of authentication and auth
 | Authorization (production cut-over only) | CLARIFY-10, CLARIFY-11 |
 | Companies: list | **not blocked**, built. "Locations" column shows "—" (GAP-03) |
 | Companies: Add company (Figma `153:87`) | GAP-02 (country, timezone), GAP-03 (primary workplace), GAP-07 (company registration methods), CLARIFY-11 (audit event type). Only the name is storable, so the slice is held back rather than shipped partially |
+| Employees: list (Figma `153:137`) | PRODUCT-CLARIFY-EMPLOYEES-LIST (company context, Type, Policy), GAP-11 (Location), GAP-04 (Onboarding column) |
 | Employee onboarding (**Milestone 1**) | GAP-04 |
 | Employee Web QR login, privacy screens | GAP-05 |
 | Core time engine | GAP-01, GAP-02, CLARIFY-02 |
@@ -212,6 +213,20 @@ Recorded so they aren't raised again.
    employee lists and give them login fields. Nothing holds a number plate, photo, host or
    visit.
 4. **Missing:** the entire visitor concept.
+
+## GAP-11: Employee location
+**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+
+1. **Requirement** (§7, Figma `Admin / Employees` `153:137`, column "Location"): each
+   employee has a location (their workplace, e.g. "Almeco").
+2. **Considered:** `tblUser`, `tblUserCompany`, `tblAddress`, `tblGeofenceAddress`,
+   `tblTimeReg.addressID`.
+3. **Why not:** no table links a user to an address. `tblUserCompany` gives the
+   *company*, not the workplace. Deriving it from the latest `tblTimeReg.addressID` would
+   show where someone last registered, not their assigned location, which is an
+   interpreted fact presented as configuration (ENGINEERING_RULES §10).
+4. **Missing:** a user → address (workplace) relationship, or confirmation that
+   "Location" means something else (e.g. the company).
 
 ---
 

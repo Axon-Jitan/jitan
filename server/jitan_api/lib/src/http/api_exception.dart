@@ -14,6 +14,10 @@ class ApiException implements Exception {
 
   const ApiException.notFound(String message) : this(404, ApiErrorCode.notFound, message);
 
+  /// The stored data is inconsistent with what the request needs.
+  const ApiException.configurationError(String message)
+      : this(409, ApiErrorCode.configurationError, message);
+
   final int statusCode;
   final String code;
   final String message;

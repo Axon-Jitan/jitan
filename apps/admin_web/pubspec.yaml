@@ -14,6 +14,8 @@ dependencies:
   go_router: ^18.0.2
   jitan_api_client:
     path: ../../packages/jitan_api_client
+  jitan_core:
+    path: ../../packages/jitan_core
   jitan_models:
     path: ../../packages/jitan_models
   jitan_ui:

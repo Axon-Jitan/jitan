@@ -133,7 +133,8 @@ server/    jitan_api
 ```
 
 Dart pub workspace, one lockfile at the root. **Exists today:** `apps/admin_web`,
-`packages/jitan_models`, `packages/jitan_api_client`, `packages/jitan_ui`, `server/jitan_api`.
+`packages/jitan_models`, `packages/jitan_api_client`, `packages/jitan_core`,
+`packages/jitan_ui`, `server/jitan_api`.
 The others are created with their first slice (no empty placeholder packages).
 
 ### Commands
@@ -141,7 +142,7 @@ The others are created with their first slice (no empty placeholder packages).
 ```sh
 flutter pub get                    # repo root, resolves everything
 dart analyze                       # repo root, must report no issues
-cd server/jitan_api && dart test   # also: packages/jitan_models, packages/jitan_api_client
+cd server/jitan_api && dart test   # also: packages/jitan_models, jitan_api_client, jitan_core
 cd apps/admin_web && flutter test  # also: packages/jitan_ui
 cd server/jitan_api && dart run bin/server.dart
 cd apps/admin_web && flutter run -d chrome --web-port 5000 --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080
@@ -168,7 +169,6 @@ named so it can be found:
 |---|---|---|
 | `DevelopmentIdentityMiddleware` | real authentication middleware attaching `RequestIdentity` | CLARIFY-01 |
 | `DevelopmentPermissionEvaluator` / `UnconfiguredPermissionEvaluator` | evaluator over `tblCredGroup`/`tblAppModulesCredGroup`/`tblFunction` | CLARIFY-10, -11 |
-| `AdminStrings._englishFallback` (admin_web) | database translation bundles; map deleted | **I18N-01** ([BACKLOG](docs/BACKLOG.md)) |
 | Sidebar role caption omitted | signed-in user's credential group from a `/me` endpoint | CLARIFY-11 |
 
 Backend modules (each with controller / service / repository / models / validation):
@@ -191,6 +191,11 @@ Modules waiting on ERD gaps, not to be built until resolved: `devices` (GAP-05),
   loaded per language and cached, never fetched key by key. **No JSON/ARB translation
   files or hardcoded maps as a source of truth.** Production widgets use `t('key')`,
   never literal copy. Spec: I18N-01 in [docs/BACKLOG.md](docs/BACKLOG.md).
+- How: keys are constants in `CommonTextKeys` (jitan_core, shared) or `<App>TextKeys`
+  (per app). Widgets call `context.t(key)` / `context.tPlural(key, n)` under a
+  `TranslationScope`; apps load bundles at startup via `TranslationService` (see
+  `AdminBootstrap`). Every new key also goes into `server/jitan_api/tool/dev_translations_en.dart`
+  (dev seed data only). Widget tests assert keys, not copy.
 - Mobile and Terminal queue events locally (SQLite) when offline and sync on reconnect. An
   event's actual timestamp is the moment it happened, not the moment it synced.
 - Authorization: role → modules via `tblUserCredGroup` + `tblAppModulesCredGroup`;

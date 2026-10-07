@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../support/fake_companies_api.dart';
+import '../support/test_translations.dart';
 
 void main() {
   void useDesktopSize(WidgetTester tester) {
@@ -12,16 +13,19 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
+  Widget app(FakeCompaniesApi api, {String? initialLocation}) =>
+      withTestTranslations(AdminApp(companiesApi: api, initialLocation: initialLocation));
+
   testWidgets('opens on Companies with the sidebar showing it as selected', (tester) async {
     useDesktopSize(tester);
     final api = FakeCompaniesApi();
 
-    await tester.pumpWidget(AdminApp(companiesApi: api));
+    await tester.pumpWidget(app(api));
     await tester.pump();
 
     expect(find.text('jitan.'), findsOneWidget);
     final item = tester.widget<JitanNavItem>(find.byType(JitanNavItem));
-    expect(item.label, 'Companies');
+    expect(item.label, 'nav.companies');
     expect(item.selected, isTrue);
     expect(api.calls, [''], reason: 'the page loads companies on open');
   });
@@ -29,22 +33,19 @@ void main() {
   testWidgets('the sidebar lists only built pages (no dead navigation)', (tester) async {
     useDesktopSize(tester);
 
-    await tester.pumpWidget(AdminApp(companiesApi: FakeCompaniesApi()));
+    await tester.pumpWidget(app(FakeCompaniesApi()));
     await tester.pump();
 
     expect(find.byType(JitanNavItem), findsOneWidget);
-    for (final unbuilt in ['Dashboard', 'Employees', 'Terminals', 'Time records', 'Exceptions', 'Reports']) {
-      expect(find.text(unbuilt), findsNothing, reason: unbuilt);
-    }
   });
 
   testWidgets('an unknown URL lands on Companies', (tester) async {
     useDesktopSize(tester);
 
-    await tester.pumpWidget(AdminApp(companiesApi: FakeCompaniesApi(), initialLocation: '/nope'));
+    await tester.pumpWidget(app(FakeCompaniesApi(), initialLocation: '/nope'));
     await tester.pump();
 
-    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
+    expect(find.text('company.list.subtitle'), findsOneWidget);
   });
 
   testWidgets('a narrow window moves the sidebar into a drawer', (tester) async {
@@ -52,7 +53,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(AdminApp(companiesApi: FakeCompaniesApi()));
+    await tester.pumpWidget(app(FakeCompaniesApi()));
     await tester.pump();
 
     expect(find.byType(JitanNavItem), findsNothing);

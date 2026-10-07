@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
+import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../common/api_failure_text.dart';
-import '../l10n/admin_strings.dart';
+import '../l10n/admin_text_keys.dart';
 import 'companies_controller.dart';
 import 'companies_table.dart';
 
@@ -43,8 +44,8 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             JitanPageHeader(
-              title: AdminStrings.companiesTitle,
-              subtitle: AdminStrings.companiesSubtitle,
+              title: context.t(AdminTextKeys.companyTitle),
+              subtitle: context.t(AdminTextKeys.companyListSubtitle),
             ),
             const SizedBox(height: JitanDimensions.headerToToolbar),
             JitanSurfaceCard(
@@ -55,7 +56,7 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: JitanDimensions.searchFieldWidth),
                   child: JitanSearchField(
-                    hintText: AdminStrings.companiesSearchHint,
+                    hintText: context.t(AdminTextKeys.companySearch),
                     onChanged: _controller.updateSearch,
                   ),
                 ),
@@ -68,7 +69,7 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
                 constraints: const BoxConstraints(minHeight: JitanDimensions.tableMinHeight),
                 child: ListenableBuilder(
                   listenable: _controller,
-                  builder: (context, _) => _content(_controller.state),
+                  builder: (context, _) => _content(context, _controller.state),
                 ),
               ),
             ),
@@ -76,30 +77,30 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
         ),
       );
 
-  Widget _content(CompaniesState state) => switch (state) {
-        CompaniesLoading() => _centered(JitanLoadingState(label: AdminStrings.companiesLoading)),
-        CompaniesFailed(:final failure) => _centered(_error(failure)),
+  Widget _content(BuildContext context, CompaniesState state) => switch (state) {
+        CompaniesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.companyListLoading))),
+        CompaniesFailed(:final failure) => _centered(_error(context, failure)),
         CompaniesLoaded(companies: [], search: '') => _centered(
             JitanEmptyState(
-              title: AdminStrings.companiesEmptyTitle,
-              message: AdminStrings.companiesEmptyMessage,
+              title: context.t(AdminTextKeys.companyEmptyTitle),
+              message: context.t(AdminTextKeys.companyEmptyMessage),
             ),
           ),
         CompaniesLoaded(companies: [], :final search) => _centered(
             JitanEmptyState(
-              title: AdminStrings.companiesNoMatchTitle,
-              message: AdminStrings.companiesNoMatchMessage(search),
+              title: context.t(AdminTextKeys.companyNoMatchTitle),
+              message: context.t(AdminTextKeys.companyNoMatchMessage, args: {'search': search}),
             ),
           ),
         CompaniesLoaded(:final companies) => CompaniesTable(companies: companies, now: widget.clock()),
       };
 
-  Widget _error(ApiClientException failure) {
-    final text = failureTextFor(failure);
+  Widget _error(BuildContext context, ApiClientException failure) {
+    final keys = failureTextKeysFor(failure);
     return JitanErrorState(
-      title: text.title,
-      message: text.message,
-      retryLabel: AdminStrings.retry,
+      title: context.t(keys.title),
+      message: context.t(keys.message),
+      retryLabel: context.t(CommonTextKeys.retry),
       onRetry: _controller.load,
     );
   }
