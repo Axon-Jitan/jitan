@@ -101,7 +101,12 @@ of guessing. The API must list the web origin in `JITAN_CORS_ORIGINS`
 
 ## Run the Employee app
 
-Needs the Android SDK (or Xcode for iOS) and a device or emulator.
+Needs the Android SDK (or Xcode for iOS) and a device or emulator. Android setup without
+Android Studio: JDK 17, the SDK command-line tools **19.0** (later versions replace
+`sdkmanager`), then `sdkmanager "platform-tools" "platforms;android-36"
+"platforms;android-37.0" "build-tools;36.0.0" "ndk;28.2.13676358"`, and
+`flutter config --android-sdk <sdk> --jdk-dir <jdk>`. The app compiles against API 37
+(required by `permission_handler_android`), hence AGP 9.1.1 and Gradle 9.3.1.
 
 ```sh
 cd apps/employee_mobile

@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.axongroup.jitan.employee_mobile"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android 14.1 compiles against API 37 (Flutter 3.44 defaults to 36).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
