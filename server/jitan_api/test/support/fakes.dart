@@ -100,6 +100,34 @@ class FakeEmployeeRepository implements EmployeeRepository {
   Future<EmployeeSummary?> findInCompany(SqlExecutor executor, int companyId, int userId) async =>
       byCompany[-userId]?.single;
 
+  /// (companyId, userId) → that member's current userQRcode (null = none).
+  /// A pair missing from the map is not a member.
+  Map<(int, int), String?> qrCodes = {};
+
+  /// When true, [setPersonalQrCodeIfMissing] behaves as if another request
+  /// stored [raceWinnerQr] first.
+  bool loseQrRace = false;
+  String raceWinnerQr = 'QR-OTHER';
+
+  @override
+  Future<({bool isMember, String? qrCode})> personalQrCode(SqlExecutor executor, int companyId, int userId) async =>
+      qrCodes.containsKey((companyId, userId))
+          ? (isMember: true, qrCode: qrCodes[(companyId, userId)])
+          : (isMember: false, qrCode: null);
+
+  @override
+  Future<bool> setPersonalQrCodeIfMissing(SqlExecutor tx, int userId, String qrCode) async {
+    final key = qrCodes.keys.firstWhere((k) => k.$2 == userId);
+    if (loseQrRace) {
+      qrCodes[key] = raceWinnerQr;
+      return false;
+    }
+    if (qrCodes[key] != null) return false;
+    writes.add('setQr $userId');
+    qrCodes[key] = qrCode;
+    return true;
+  }
+
   /// (companyId, userId) → details.
   Map<(int, int), EmployeeDetails> details = {};
 

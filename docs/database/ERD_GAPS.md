@@ -27,7 +27,7 @@ answered, and they block only the production cut-over of authentication and auth
 | Companies: list | **not blocked**, built. "Locations" column shows "—" (GAP-03) |
 | Companies: Add company (Figma `153:87`) | GAP-02 (country, timezone), GAP-03 (primary workplace), GAP-07 (company registration methods), CLARIFY-11 (audit event type). Only the name is storable, so the slice is held back rather than shipped partially |
 | Employees: list (Figma `153:137`) | **not blocked**. Location (GAP-11) and Onboarding (GAP-04) show "—"; Policy omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY) |
-| Employee onboarding (**Milestone 1**) | GAP-04 |
+| Employee onboarding (**Milestone 1**) | onboarding QR: **resolved** (userQRcode). Re-onboarding guard: activation signal (GAP-04 remaining point) |
 | Employee Web QR login, privacy screens | GAP-05 |
 | Core time engine | GAP-01, GAP-02, CLARIFY-02 |
 | Geofencing | GAP-06, CLARIFY-04, CLARIFY-05 |
@@ -120,19 +120,24 @@ Recorded so they aren't raised again.
      should their schedules differ per company? `tblUserSchedule` has no company.
 
 ## GAP-04: Employee onboarding QR
-**ERD GAP — requires clarification with IT.** · Status: `OPEN` · **Blocks Milestone 1**
+**RESOLVED for the MVP (2026-10-07, IT decision)** · remaining point: the activation signal
 
-1. **Requirement** (§9, §11): HR generates an onboarding QR. It is employee-specific,
-   **temporary**, **one-time use**, and **invalidated after activation**.
-2. **Considered:** `tblUser.userQRcode`, `userPINCode`, `userPassword`, `userActive`.
-3. **Why not:** `userQRcode` is the **permanent personal QR** (UK) used at terminals, so
-   using it for onboarding would make the onboarding code permanent and reusable. No field
-   stores an expiry, a used/invalidated flag, or an "activated" state that is separate from
-   HR's `userActive`.
-4. **Missing:** onboarding token, expiry, used flag, activation state. Question for IT: is
-   "activated" meant to be inferred from something existing (e.g. `userPassword` being
-   set)? If so, a signed, expiring token that is refused once a password exists would need
-   no schema change. **This is a design choice that needs approval, not a default.**
+**Decision.** No separate onboarding-token table. `tblUser.userQRcode` serves both as the
+QR an employee scans to onboard and, afterwards, as their permanent personal QR for Jitan
+Terminal. HR creates the employee → `userQRcode` is generated (random, unguessable, not
+derived from `userID` or `userCode`) → the employee scans it to onboard → the same QR
+stays in use for the Terminal. Acceptable while onboarding is manual and per employee; a
+temporary activation-token mechanism can be introduced for mass or self-service
+onboarding later. Implemented in EMP-08.
+
+**Remaining point: "already activated".** Because the QR never expires, the server must
+refuse to *start onboarding again* for an employee who has completed it. Otherwise anyone
+who later sees or photographs the QR could re-onboard that account (set a new password,
+register a device). This needs a reliable "activated" signal. Proposed:
+`userPassword IS NOT NULL` (the password is set as the last onboarding step). Please
+confirm, or name the field that marks activation. Until then, the Employees list
+"Onboarding" column and the details "Account" field show "—". This blocks only the
+re-onboarding guard of the Onboarding flow (ONB-01).
 
 ## GAP-05: Web-login QR, sessions, trusted devices, push tokens
 **ERD GAP — requires clarification with IT.** · Status: `OPEN`

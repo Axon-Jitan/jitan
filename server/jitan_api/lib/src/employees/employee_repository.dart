@@ -59,6 +59,30 @@ class EmployeeRepository {
     );
   }
 
+  /// The `userQRcode` of [userId] as a non-MFD member of [companyId]:
+  /// `(isMember: false, …)` when not a member; `qrCode` is null when the
+  /// user has none yet.
+  Future<({bool isMember, String? qrCode})> personalQrCode(SqlExecutor executor, int companyId, int userId) async {
+    final rows = await executor.query(
+      'SELECT u.userQRcode FROM tblUser u JOIN tblUserCompany uc ON uc.userID = u.userID '
+      'WHERE uc.companyID = :companyId AND u.userID = :userId AND u.userMFD = 0',
+      {'companyId': companyId, 'userId': userId},
+    );
+    if (rows.isEmpty) return (isMember: false, qrCode: null);
+    final value = rows.first.readOptionalString('userQRcode')?.trim();
+    return (isMember: true, qrCode: (value == null || value.isEmpty) ? null : value);
+  }
+
+  /// Stores [qrCode] only if the user still has none; returns whether it did.
+  /// Never overwrites an existing QR (it may already be in use).
+  Future<bool> setPersonalQrCodeIfMissing(SqlExecutor tx, int userId, String qrCode) async =>
+      (await tx.execute(
+        "UPDATE tblUser SET userQRcode = :qr WHERE userID = :userId AND (userQRcode IS NULL OR userQRcode = '')",
+        {'qr': qrCode, 'userId': userId},
+      ))
+          .affectedRows ==
+      1;
+
   /// Whether any user, in any company and including MFD users, has [code]
   /// (`tblUser.userCode` is unique across the table).
   Future<bool> codeExists(SqlExecutor executor, String code) async =>

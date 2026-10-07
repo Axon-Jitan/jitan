@@ -16,12 +16,17 @@ class JitanModal extends StatelessWidget {
     required this.body,
     this.subtitle,
     this.actions = const [],
+    this.width,
   });
 
   final String title;
   final String? subtitle;
   final Widget body;
   final List<Widget> actions;
+
+  /// Fixed width (still narrower on small screens); otherwise sized to the
+  /// content, up to [JitanDimensions.modalWidth].
+  final double? width;
 
   @override
   Widget build(BuildContext context) => Dialog(
@@ -30,7 +35,9 @@ class JitanModal extends StatelessWidget {
         insetPadding: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(JitanDimensions.modalRadius)),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: JitanDimensions.modalWidth),
+          constraints: width == null
+              ? const BoxConstraints(maxWidth: JitanDimensions.modalWidth)
+              : BoxConstraints.tightFor(width: width),
           child: Padding(
             padding: const EdgeInsets.all(JitanDimensions.modalPadding),
             child: Column(

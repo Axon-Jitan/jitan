@@ -55,6 +55,22 @@ class FakeEmployeesApi implements EmployeesApi {
   void detailsSucceed(EmployeeDetails details) => _pendingDetails.last.complete(details);
 
   void detailsFail(ApiClientException failure) => _pendingDetails.last.completeError(failure);
+
+  /// (companyId, userId) of every onboarding QR request.
+  final qrRequests = <(int, int)>[];
+  final _pendingQr = <Completer<String>>[];
+
+  @override
+  Future<String> onboardingQr(int companyId, int userId) {
+    qrRequests.add((companyId, userId));
+    final completer = Completer<String>();
+    _pendingQr.add(completer);
+    return completer.future;
+  }
+
+  void qrSucceeds(String value) => _pendingQr.last.complete(value);
+
+  void qrFails(ApiClientException failure) => _pendingQr.last.completeError(failure);
 }
 
 /// Stand-in for [GroupsApi] with a controllable result.

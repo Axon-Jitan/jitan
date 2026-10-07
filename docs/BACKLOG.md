@@ -138,5 +138,13 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-05 | Group assignment (`tblUserGroup`) | `TODO` |
 | EMP-06 | Language assignment (`tblUserLanguage`) | `TODO` |
 | EMP-07 | Credential-group assignment (`tblUserCredGroup`) where required | `TODO` |
-| EMP-08 | Generate/display the employee onboarding QR | `TODO`, blocked by GAP-04 for storage |
+| EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text | `DONE` |
 | EMP-09 | Bulk import (Figma "Import CSV / Excel", roadmap §8): upload → preview → validate → import | `TODO` |
+
+## Employee onboarding (next)
+
+| Task | Scope | Status |
+|---|---|---|
+| ONB-01 | Server: resolve a scanned `userQRcode` to the employee; **refuse if already activated** (GAP-04 remaining point); set password (hash per CLARIFY-01); mark activated | `TODO`, re-onboarding guard needs the activation signal |
+| ONB-02 | Employee app (Android first): welcome → scan → confirm account → language → registration method → permissions → notifications → set password → ready (roadmap §11) | `TODO` |
+| ONB-03 | HR side: "Employee activated" confirmation (Figma `153:532`) and the list's Onboarding/Account values | `TODO`, needs the activation signal |

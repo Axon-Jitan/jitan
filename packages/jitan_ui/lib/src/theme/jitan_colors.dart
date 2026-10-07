@@ -41,4 +41,7 @@ abstract final class JitanColors {
   // Status
   /// "Active" status text.
   static const success = Color(0xFF16856B);
+
+  /// Background of success pills ("READY TO SCAN").
+  static const successSurface = Color(0xFFE8F5F1);
 }

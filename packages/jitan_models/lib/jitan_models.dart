@@ -9,3 +9,4 @@ export 'src/employee_summary.dart';
 export 'src/group_summary.dart';
 export 'src/json_reading.dart';
 export 'src/language.dart';
+export 'src/personal_qr_response.dart';

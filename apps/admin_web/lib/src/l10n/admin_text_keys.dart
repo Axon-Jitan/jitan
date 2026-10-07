@@ -84,4 +84,20 @@ abstract final class AdminTextKeys {
   static const employeeFieldAccount = 'employee.field.account';
   static const employeeFieldStatus = 'employee.field.status';
   static const employeeAccountUnavailable = 'employee.account.unavailable';
+
+  static const employeeOnboardingTitle = 'employee.onboarding.title';
+  static const employeeOnboardingText = 'employee.onboarding.text';
+  static const employeeOnboardingAction = 'employee.onboarding.action';
+  static const employeeQrTitle = 'employee.qr.title';
+
+  /// Arguments: `{name}`, `{company}`.
+  static const employeeQrSubtitle = 'employee.qr.subtitle';
+  static const employeeQrLoading = 'employee.qr.loading';
+  static const employeeQrReady = 'employee.qr.ready';
+
+  /// Argument: `{name}` (first name).
+  static const employeeQrInstruction = 'employee.qr.instruction';
+
+  /// Argument: `{name}`.
+  static const employeeQrSemantics = 'employee.qr.semantics';
 }

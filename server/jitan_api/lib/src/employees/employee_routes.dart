@@ -15,6 +15,8 @@ import 'employee_service.dart';
 /// - `GET /companies/{companyId}/employees?search=<text>`
 /// - `POST /companies/{companyId}/employees` with a `CreateEmployeeRequest`
 /// - `GET /companies/{companyId}/employees/{userId}`
+/// - `POST /companies/{companyId}/employees/{userId}/onboarding-qr`: the QR
+///   value (POST because it may store one for an employee who has none)
 class EmployeeRoutes {
   const EmployeeRoutes(this._authorizer, this._employees);
 
@@ -27,7 +29,17 @@ class EmployeeRoutes {
   Router get router => Router()
     ..get(_path, _list)
     ..post(_path, _create)
-    ..get(_employeePath, _details);
+    ..get(_employeePath, _details)
+    ..post('$_employeePath/onboarding-qr', _onboardingQr);
+
+  Future<Response> _onboardingQr(Request request, String companyId, String userId) async {
+    final id = _companyId(companyId);
+    final identity = await _authorizer.require(request, Permission.viewEmployeeQr, companyId: id);
+    final qrCode = await _employees.onboardingQr(identity.userId, id, _id(userId));
+    // The value is a credential: keep it out of every cache.
+    return jsonResponse(PersonalQrResponse(qrCode: qrCode).toJson())
+        .change(headers: const {'cache-control': 'no-store'});
+  }
 
   Future<Response> _details(Request request, String companyId, String userId) async {
     final id = _companyId(companyId);

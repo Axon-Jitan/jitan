@@ -6,6 +6,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
+import 'onboarding_qr_dialog.dart';
 
 /// Opens the Employee details modal for [userId] in [companyId].
 Future<void> showEmployeeDetailsDialog(
@@ -23,8 +24,9 @@ Future<void> showEmployeeDetailsDialog(
 ///
 /// Differences from Figma, on purpose: **Location** (ERD GAP-11) and
 /// **Account** (activation rule pending) show "—" with an explanation; **Work
-/// policy** is omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY). The Onboarding card
-/// arrives with EMP-08.
+/// policy** is omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY). The Onboarding
+/// card has no "Not activated" status line until the activation rule is
+/// confirmed (docs/BACKLOG.md, ONB).
 class EmployeeDetailsDialog extends StatefulWidget {
   const EmployeeDetailsDialog({
     super.key,
@@ -113,6 +115,10 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
             ),
           ],
         ),
+        const SizedBox(height: 24),
+        _OnboardingCard(
+          onShowQr: () => showOnboardingQrDialog(context, employeesApi: widget.employeesApi, employee: details),
+        ),
       ],
     );
   }
@@ -129,4 +135,39 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
       ),
     );
   }
+}
+
+/// Figma's Onboarding card (`153:357`): explanation and the QR action.
+class _OnboardingCard extends StatelessWidget {
+  const _OnboardingCard({required this.onShowQr});
+
+  final VoidCallback onShowQr;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: JitanColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: JitanColors.inputBorder),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.t(AdminTextKeys.employeeOnboardingTitle), style: JitanTextStyles.stateTitle.copyWith(fontSize: 16)),
+              const SizedBox(height: 12),
+              Text(context.t(AdminTextKeys.employeeOnboardingText), style: JitanTextStyles.modalSubtitle),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: JitanPrimaryButton(
+                  label: context.t(AdminTextKeys.employeeOnboardingAction),
+                  onPressed: onShowQr,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 }

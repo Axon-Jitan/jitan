@@ -51,6 +51,40 @@ class EmployeeService {
         (throw ApiException.notFound('Employee $userId is not in company $companyId.'));
   }
 
+  /// The QR [userId] scans to onboard, which is also their permanent personal
+  /// QR for Jitan Terminal: `tblUser.userQRcode` (IT decision, 2026-10-07).
+  ///
+  /// Returns the stored value. If the employee has none (e.g. created outside
+  /// Jitan), a new unguessable one is stored first, once, and audited; it is
+  /// never derived from the userID or employee code, and an existing value is
+  /// never replaced.
+  ///
+  /// 404 when the company does not exist or the user is not its member.
+  Future<String> onboardingQr(int actorUserId, int companyId, int userId) async {
+    await _requireCompany(companyId);
+    return _transactions.transaction((tx) async {
+      final current = await _employees.personalQrCode(tx, companyId, userId);
+      if (!current.isMember) throw ApiException.notFound('Employee $userId is not in company $companyId.');
+      if (current.qrCode != null) return current.qrCode!;
+
+      final generated = _personalQrCode();
+      if (await _employees.setPersonalQrCodeIfMissing(tx, userId, generated)) {
+        await _audit.record(
+          tx,
+          AuditEvent(
+            type: AuditEventType.personalQrGenerated,
+            actorUserId: actorUserId,
+            references: {EventLogReference.user: userId, EventLogReference.company: companyId},
+          ),
+        );
+        return generated;
+      }
+      // Another request stored one first: use theirs.
+      return (await _employees.personalQrCode(tx, companyId, userId)).qrCode ??
+          (throw StateError('Personal QR for user $userId is still missing after an update.'));
+    });
+  }
+
   /// Creates an employee in [companyId] on behalf of [actorUserId].
   ///
   /// In one transaction: the `tblUser` row (active, with a new personal QR),

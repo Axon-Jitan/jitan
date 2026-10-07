@@ -119,4 +119,15 @@ const builtInEnglish = <String, String>{
   'employee.field.account': 'Account',
   'employee.field.status': 'Status',
   'employee.account.unavailable': 'Account activation status is not available yet.',
+
+  // Onboarding QR (EMP-08)
+  'employee.onboarding.title': 'Onboarding',
+  'employee.onboarding.text': 'Generate a personal QR for this employee to scan in Jitan.',
+  'employee.onboarding.action': 'Generate onboarding QR',
+  'employee.qr.title': 'Onboarding QR',
+  'employee.qr.subtitle': '{name} · {company}',
+  'employee.qr.loading': 'Preparing the QR…',
+  'employee.qr.ready': 'READY TO SCAN',
+  'employee.qr.instruction': 'Ask {name} to open Jitan and scan this QR.',
+  'employee.qr.semantics': 'Onboarding QR code for {name}',
 };

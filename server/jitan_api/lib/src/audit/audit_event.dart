@@ -5,7 +5,11 @@
 /// a matching row exists, the event is still logged, without a type link,
 /// and a warning names the missing type.
 enum AuditEventType {
-  employeeCreated('employee.created');
+  employeeCreated('employee.created'),
+
+  /// A personal QR was stored for an employee who had none (e.g. created
+  /// outside Jitan). Showing an existing QR is not audited as a change.
+  personalQrGenerated('employee.personal_qr.generated');
 
   const AuditEventType(this.typeName);
 

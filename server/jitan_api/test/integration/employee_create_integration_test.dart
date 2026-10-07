@@ -114,6 +114,32 @@ void main() {
     expect(await scalar('SELECT COUNT(*) AS n FROM tblUser WHERE userCode = :c', {'c': 'DT${stamp}D1'}, 'n'), 1);
   });
 
+  test('onboarding QR: the stored userQRcode is returned unchanged', () async {
+    final created = await service().create(actorId, companyId, request('Q1'));
+    final stored = (await db.query('SELECT userQRcode FROM tblUser WHERE userID = :id', {'id': created.id}))
+        .single
+        .readString('userQRcode');
+
+    expect(await service().onboardingQr(actorId, companyId, created.id), stored);
+    expect(await service().onboardingQr(actorId, companyId, created.id), stored, reason: 'stable');
+  });
+
+  test('onboarding QR: a user without one gets one stored once (needs userQRcode to allow NULL; CLARIFY-12)', () async {
+    final userId = (await db.execute(
+      'INSERT INTO tblUser (userName, userSurname, userCode, userActive, userMFD) '
+      "VALUES ('[DEV-TEST]', 'NoQr', :c, 1, 0)",
+      {'c': 'DT${stamp}NQ'},
+    ))
+        .lastInsertId;
+    await db.execute('INSERT INTO tblUserCompany (userID, companyID) VALUES (:u, :c)', {'u': userId, 'c': companyId});
+
+    final first = await service().onboardingQr(actorId, companyId, userId);
+    final second = await service().onboardingQr(actorId, companyId, userId);
+
+    expect(first, hasLength(24));
+    expect(second, first);
+  });
+
   test('a failure after the inserts rolls everything back', () async {
     await expectLater(
       service(audit: _FailingAudit()).create(actorId, companyId, request('R1', group: groupId)),
