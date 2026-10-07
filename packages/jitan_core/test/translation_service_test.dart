@@ -174,6 +174,60 @@ void main() {
       expect(await resolve(const ApiClientException.network('offline')), 'en');
     });
 
+    test('API down after the user language was loaded: the cached user language is used', () async {
+      final api = FakeLanguagesApi({'nl': dutch}, userLanguage: 'nl');
+      final service = TranslationService(api);
+      await service.loadForCurrentUser();
+
+      api
+        ..userLanguage = const ApiClientException.network('offline')
+        ..bundleFailure = const ApiClientException.network('offline');
+      final t = await service.loadForCurrentUser();
+
+      expect(t.languageCode, 'nl');
+      expect(t.t('company.title'), 'Bedrijven');
+    });
+
+    test('API down with nothing cached for the user: English', () async {
+      final api = FakeLanguagesApi({'nl': dutch}, userLanguage: const ApiClientException.network('offline'));
+
+      final t = await TranslationService(api).loadForCurrentUser();
+
+      expect(t.languageCode, 'en');
+    });
+
+    test('cachedForCurrentUser is null until the user language and its bundle are cached', () async {
+      final api = FakeLanguagesApi({'nl': dutch}, userLanguage: 'nl');
+      final service = TranslationService(api);
+      expect(service.cachedForCurrentUser(), isNull);
+
+      await service.loadForCurrentUser();
+      final requestsBefore = api.requests.length;
+      final cached = service.cachedForCurrentUser();
+
+      expect(cached?.t('company.title'), 'Bedrijven');
+      expect(api.requests, hasLength(requestsBefore), reason: 'no request');
+    });
+
+    test('signing out (401) forgets the previous user language', () async {
+      final api = FakeLanguagesApi({'nl': dutch}, userLanguage: 'nl');
+      final service = TranslationService(api);
+      await service.loadForCurrentUser();
+
+      api.userLanguage = _serverError(401, ApiErrorCode.unauthenticated);
+      expect((await service.loadForCurrentUser()).languageCode, 'en');
+      expect(service.cachedForCurrentUser(), isNull);
+    });
+
+    test('clearCache forgets the user language too', () async {
+      final service = TranslationService(FakeLanguagesApi({'nl': dutch}, userLanguage: 'nl'));
+      await service.loadForCurrentUser();
+
+      service.clearCache();
+
+      expect(service.cachedForCurrentUser(), isNull);
+    });
+
     test('loadForCurrentUser combines both steps', () async {
       final api = FakeLanguagesApi({'nl': dutch}, userLanguage: 'nl');
 

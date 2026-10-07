@@ -5,8 +5,9 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import 'admin_app.dart';
 
-/// Shows the app immediately in built-in English, then switches to the
-/// user's database language once its bundle has loaded (I18N-01).
+/// Shows the app immediately: in the user's language if it is already in
+/// the translation cache, otherwise in built-in English. Then switches to the
+/// user's database language once it is confirmed and loaded (I18N-01).
 ///
 /// Rendering never waits for, or depends on, the translation API: if the
 /// user language or bundle cannot be loaded, the app simply stays in English
@@ -22,7 +23,8 @@ class AdminBootstrap extends StatefulWidget {
 }
 
 class _AdminBootstrapState extends State<AdminBootstrap> {
-  Translations _translations = Translations.english();
+  late Translations _translations =
+      widget.translationService.cachedForCurrentUser() ?? Translations.english();
 
   @override
   void initState() {

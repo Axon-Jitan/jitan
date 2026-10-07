@@ -42,7 +42,11 @@ database is pending** (DB-VERIFY-01). Required before any UI is production-ready
 ```
 
 User language: `tblUserLanguage`. None assigned or not signed in → English. Several
-assigned → English, logged as a data error (CLARIFY-07).
+assigned → English, logged as a data error (CLARIFY-07). **If the user language cannot be
+fetched but is already in the in-memory cache, the cached language is used** instead of
+English, and apps render their first frame in it when it is cached
+(`TranslationService.cachedForCurrentUser`). Signing out (401) or `clearCache()`
+forgets it.
 
 ### Loading
 
@@ -68,6 +72,8 @@ tblLanguage → tblTranslation → Dart API → TranslationService → in-memory
       language from `tblUserLanguage`, with unit and DB integration tests
 - [x] English as default; English fallback for missing keys and for any load failure
 - [x] In-memory cache of non-English bundles; language switching
+- [x] Cached user language preferred over English when the API is unreachable, and
+      used for the first frame when available
 - [x] Missing keys shown as the key and logged once
 - [x] Tests for every fallback path (jitan_core), the app starting in English and
       switching to a database language (admin_web), and offline/API-down startup

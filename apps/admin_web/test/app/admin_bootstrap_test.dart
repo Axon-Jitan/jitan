@@ -79,6 +79,19 @@ void main() {
     expect(find.text('Can’t reach Jitan'), findsNothing);
   });
 
+  testWidgets('a user language already in the cache is shown from the first frame', (tester) async {
+    languages.userLanguage = 'nl';
+    final service = TranslationService(languages);
+    await tester.runAsync(service.loadForCurrentUser);
+    tester.view.physicalSize = const Size(1440, 1024);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(AdminBootstrap(translationService: service, companiesApi: companies));
+
+    expect(find.text('Bedrijven'), findsOneWidget, reason: 'no English flash');
+  });
+
   testWidgets('a misconfigured user language still opens in English', (tester) async {
     languages.failNext = const ApiClientException.server(
       409,
