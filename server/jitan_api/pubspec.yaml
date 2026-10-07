@@ -7,6 +7,7 @@ environment:
   sdk: ^3.12.0
 
 dependencies:
+  bcrypt: ^1.2.0
   jitan_models:
     path: ../../packages/jitan_models
   logging: ^1.3.0

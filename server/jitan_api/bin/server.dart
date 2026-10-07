@@ -26,6 +26,9 @@ import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
+import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
+import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
+import 'package:jitan_api/src/onboarding/onboarding_service.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:logging/logging.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
@@ -89,6 +92,14 @@ Future<void> main() async {
     ),
     groups: GroupRoutes(authorizer, groupRepository),
     languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db))),
+    onboarding: OnboardingRoutes(
+      OnboardingService(
+        onboarding: const OnboardingRepository(),
+        audit: const AuditLogRepository(),
+        transactions: db,
+        executor: db,
+      ),
+    ),
     identity: identity,
   );
 

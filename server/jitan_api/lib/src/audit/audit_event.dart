@@ -9,7 +9,10 @@ enum AuditEventType {
 
   /// A personal QR was stored for an employee who had none (e.g. created
   /// outside Jitan). Showing an existing QR is not audited as a change.
-  personalQrGenerated('employee.personal_qr.generated');
+  personalQrGenerated('employee.personal_qr.generated'),
+
+  /// The employee set their first password: onboarding is complete.
+  onboardingCompleted('employee.onboarding.completed');
 
   const AuditEventType(this.typeName);
 

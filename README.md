@@ -41,6 +41,8 @@ dart run bin/server.dart
 - `GET /languages`, `GET /translations?language=<code>`: UI text from `tblTranslation`
   (no sign-in needed, so the login screen can be translated)
 - `GET /me/language`: the signed-in user's language from `tblUserLanguage`
+- `POST /onboarding/start`, `POST /onboarding/complete`: employee onboarding with the
+  personal QR (no sign-in; the QR is the credential; refused once a password is set)
 - `GET /companies?search=`: company list (needs an identity, see below)
 - `GET /companies/{id}/employees?search=`: that company's employees
 - `POST /companies/{id}/employees`: create an employee in that company

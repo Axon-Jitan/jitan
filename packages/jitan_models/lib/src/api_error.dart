@@ -11,6 +11,16 @@ abstract final class ApiErrorCode {
 
   /// `tblUser.userCode` is already used by another user.
   static const duplicateEmployeeCode = 'duplicate_employee_code';
+
+  /// The scanned QR is not a known employee's personal QR.
+  static const invalidQrCode = 'invalid_qr_code';
+
+  /// The employee's account is disabled; onboarding is not possible.
+  static const accountInactive = 'account_inactive';
+
+  /// The employee already completed onboarding (a password is set). The same
+  /// QR stays valid for Jitan Terminal but cannot restart onboarding.
+  static const onboardingAlreadyCompleted = 'onboarding_already_completed';
   static const unauthenticated = 'unauthenticated';
   static const forbidden = 'forbidden';
   static const notFound = 'not_found';

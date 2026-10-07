@@ -12,6 +12,9 @@ import 'package:jitan_api/src/groups/group_routes.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
+import 'package:jitan_api/src/auth/password_hasher.dart';
+import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
+import 'package:jitan_api/src/onboarding/onboarding_service.dart';
 import 'package:shelf/shelf.dart';
 
 import 'fakes.dart';
@@ -42,6 +45,15 @@ class TestApp {
       ),
       groups: GroupRoutes(Authorizer(permissions), groups),
       languages: LanguageRoutes(LanguageService(languages, translations)),
+      onboarding: OnboardingRoutes(
+        OnboardingService(
+          onboarding: onboarding,
+          audit: audit,
+          transactions: transactions,
+          executor: unusedExecutor,
+          hasher: hasher,
+        ),
+      ),
       identity: devUserId == null
           ? null
           : DevelopmentIdentityMiddleware(
@@ -57,6 +69,11 @@ class TestApp {
   final groups = FakeGroupRepository();
   final audit = FakeAuditLog();
   final transactions = FakeTransactions();
+  final onboarding = FakeOnboardingRepository();
+  final unusedExecutor = UnusedExecutor();
+
+  /// bcrypt's minimum cost keeps tests fast; production uses cost 12.
+  final hasher = const PasswordHasher(cost: 4);
   var _qrCounter = 0;
   final databaseHealth = FakeDatabaseHealthRepository();
   final languages = FakeLanguageRepository();

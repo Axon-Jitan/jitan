@@ -11,6 +11,7 @@ import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
+import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
 
@@ -135,6 +136,45 @@ class FakeEmployeeRepository implements EmployeeRepository {
   Future<EmployeeDetails?> findDetails(int companyId, int userId) async => details[(companyId, userId)];
 }
 
+/// In-memory users by QR. [passwordHashes] stands in for `userPassword`.
+class FakeOnboardingRepository implements OnboardingRepository {
+  /// qrCode → user (without the password state).
+  Map<String, ({int userId, String? firstName, String? lastName, String code, bool isActive})> users = {};
+
+  /// userId → stored hash (absent = NULL).
+  final passwordHashes = <int, String>{};
+
+  /// userId → company names.
+  Map<int, List<String>> companies = {};
+
+  /// When true, [setPasswordIfNotSet] acts as if another device won the race.
+  bool loseRace = false;
+
+  @override
+  Future<OnboardingUser?> findByQrCode(SqlExecutor executor, String qrCode, {bool lockForUpdate = false}) async {
+    final u = users[qrCode];
+    if (u == null) return null;
+    return (
+      userId: u.userId,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      code: u.code,
+      isActive: u.isActive,
+      passwordSet: passwordHashes.containsKey(u.userId),
+    );
+  }
+
+  @override
+  Future<List<String>> companyNames(SqlExecutor executor, int userId) async => companies[userId] ?? const [];
+
+  @override
+  Future<bool> setPasswordIfNotSet(SqlExecutor tx, int userId, String passwordHash) async {
+    if (loseRace || passwordHashes.containsKey(userId)) return false;
+    passwordHashes[userId] = passwordHash;
+    return true;
+  }
+}
+
 class FakeGroupRepository implements GroupRepository {
   List<GroupSummary> groups = const [];
 
@@ -166,7 +206,7 @@ class FakeTransactions implements TransactionRunner {
   @override
   Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) async {
     try {
-      final result = await action(_UnusedExecutor());
+      final result = await action(UnusedExecutor());
       outcomes.add('commit');
       return result;
     } catch (_) {
@@ -177,7 +217,7 @@ class FakeTransactions implements TransactionRunner {
 }
 
 /// Fakes never run SQL; reaching this means a fake is missing.
-class _UnusedExecutor implements SqlExecutor {
+class UnusedExecutor implements SqlExecutor {
   @override
   Future<List<DbRow>> query(String sql, [Map<String, Object?> params = const {}]) =>
       throw UnimplementedError('Unit tests must not run SQL: $sql');

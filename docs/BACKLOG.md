@@ -145,6 +145,8 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 
 | Task | Scope | Status |
 |---|---|---|
-| ONB-01 | Server: resolve a scanned `userQRcode` to the employee; **refuse if already activated** (GAP-04 remaining point); set password (hash per CLARIFY-01); mark activated | `TODO`, re-onboarding guard needs the activation signal |
+| ONB-01 | Server: `POST /onboarding/start` resolves a scanned `userQRcode`; `POST /onboarding/complete` sets the mandatory password (bcrypt), which completes onboarding; **re-onboarding guard** (`userPassword IS NOT NULL` → 409), row-locked and race-safe; audited; `OnboardingApi` client ready for ONB-02 | `DONE` |
+| ONB-04 | Rate limiting on the public onboarding endpoints (defence in depth; the 144-bit QR is not guessable) | `TODO` |
+| ONB-05 | Session/token issued when onboarding completes, so the app is signed in straight away (part of real authentication) | `TODO` |
 | ONB-02 | Employee app (Android first): welcome → scan → confirm account → language → registration method → permissions → notifications → set password → ready (roadmap §11) | `TODO` |
 | ONB-03 | HR side: "Employee activated" confirmation (Figma `153:532`) and the list's Onboarding/Account values | `TODO`, needs the activation signal |

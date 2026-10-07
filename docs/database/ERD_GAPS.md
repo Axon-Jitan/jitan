@@ -27,7 +27,7 @@ answered, and they block only the production cut-over of authentication and auth
 | Companies: list | **not blocked**, built. "Locations" column shows "—" (GAP-03) |
 | Companies: Add company (Figma `153:87`) | GAP-02 (country, timezone), GAP-03 (primary workplace), GAP-07 (company registration methods), CLARIFY-11 (audit event type). Only the name is storable, so the slice is held back rather than shipped partially |
 | Employees: list (Figma `153:137`) | **not blocked**. Location (GAP-11) and Onboarding (GAP-04) show "—"; Policy omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY) |
-| Employee onboarding (**Milestone 1**) | onboarding QR: **resolved** (userQRcode). Re-onboarding guard: activation signal (GAP-04 remaining point) |
+| Employee onboarding (**Milestone 1**) | **not blocked**: QR = userQRcode, activated = `userPassword IS NOT NULL` (ONB-01 done server-side) |
 | Employee Web QR login, privacy screens | GAP-05 |
 | Core time engine | GAP-01, GAP-02, CLARIFY-02 |
 | Geofencing | GAP-06, CLARIFY-04, CLARIFY-05 |
@@ -120,7 +120,7 @@ Recorded so they aren't raised again.
      should their schedules differ per company? `tblUserSchedule` has no company.
 
 ## GAP-04: Employee onboarding QR
-**RESOLVED for the MVP (2026-10-07, IT decision)** · remaining point: the activation signal
+**RESOLVED for the MVP (2026-10-07)**, including the activation signal
 
 **Decision.** No separate onboarding-token table. `tblUser.userQRcode` serves both as the
 QR an employee scans to onboard and, afterwards, as their permanent personal QR for Jitan
@@ -130,14 +130,12 @@ stays in use for the Terminal. Acceptable while onboarding is manual and per emp
 temporary activation-token mechanism can be introduced for mass or self-service
 onboarding later. Implemented in EMP-08.
 
-**Remaining point: "already activated".** Because the QR never expires, the server must
-refuse to *start onboarding again* for an employee who has completed it. Otherwise anyone
-who later sees or photographs the QR could re-onboard that account (set a new password,
-register a device). This needs a reliable "activated" signal. Proposed:
-`userPassword IS NOT NULL` (the password is set as the last onboarding step). Please
-confirm, or name the field that marks activation. Until then, the Employees list
-"Onboarding" column and the details "Account" field show "—". This blocks only the
-re-onboarding guard of the Onboarding flow (ONB-01).
+**Activation signal (decided 2026-10-07): `userPassword IS NOT NULL`.** Setting a
+password is mandatory during onboarding and completes it, so no ERD change is needed.
+`userPassword IS NULL` → onboarding can start; once a password is stored, scanning the
+same QR can never restart onboarding (`409 onboarding_already_completed`). The QR stays
+valid for Terminal check-in/out. The guard is enforced twice: a check before work, and
+`UPDATE … WHERE userPassword IS NULL` under a row lock (ONB-01).
 
 ## GAP-05: Web-login QR, sessions, trusted devices, push tokens
 **ERD GAP — requires clarification with IT.** · Status: `OPEN`
@@ -238,6 +236,10 @@ re-onboarding guard of the Onboarding flow (ONB-01).
 # Clarifications
 
 ## CLARIFY-01: Password and PIN hashing · `OPEN` · IT CLARIFICATION, blocks production auth only
+
+**Interim implementation (ONB-01):** bcrypt `$2b$`, cost 12, via `PasswordHasher`. The
+format is self-identifying, so if IT requires another algorithm, existing hashes can be
+recognised and re-hashed at the user's next sign-in.
 Is anything else already writing or reading `tblUser.userPassword` / `userPINCode`? If so,
 Jitan must use **the same hashing algorithm and parameters**, or existing users can't log
 in. If not, Jitan will use a modern algorithm (argon2id or bcrypt). Plaintext is not an

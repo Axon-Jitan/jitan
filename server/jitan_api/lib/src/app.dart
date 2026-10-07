@@ -10,13 +10,14 @@ import 'http/api_exception.dart';
 import 'http/cors_middleware.dart';
 import 'http/error_middleware.dart';
 import 'languages/language_routes.dart';
+import 'onboarding/onboarding_routes.dart';
 
 final _log = Logger('http.requests');
 
 /// Assembles the request pipeline:
 ///
 /// ```text
-/// request log → CORS → error mapping → /health*, /languages, /translations (public)
+/// request log → CORS → error mapping → /health*, /languages, /translations, /onboarding/* (public)
 ///                                    → identity → API routes             (authenticated)
 /// ```
 ///
@@ -30,6 +31,7 @@ Handler buildApp({
   required EmployeeRoutes employees,
   required GroupRoutes groups,
   required LanguageRoutes languages,
+  required OnboardingRoutes onboarding,
   Middleware? identity,
 }) {
   final apiRoutes = Router(notFoundHandler: _notFound)
@@ -44,6 +46,7 @@ Handler buildApp({
   final routes = Cascade()
       .add(health.router.call)
       .add(languages.publicRouter.call)
+      .add(onboarding.router.call)
       .add(api.addHandler(apiRoutes.call))
       .handler;
 

@@ -91,6 +91,17 @@ derived policy value is shown or persisted.
 
 ---
 
+## PRODUCT-CLARIFY-PASSWORD-POLICY: Password rules
+Status: `OPEN` · development defaults in place, does not block
+
+Defined once in `server/jitan_api/lib/src/auth/password_policy.dart`: at least **8
+characters**, not only spaces, at most **72 bytes** (bcrypt ignores anything longer, so it
+is refused rather than silently cut). Passwords are used exactly as typed (never
+trimmed). Open: required length, character classes, a breached-password check, and
+whether HR/Admin accounts need stricter rules.
+
+---
+
 ## PRODUCT-CLARIFY-TRANSLATION-MAINTENANCE: Who maintains translations
 Status: `OPEN` · operational, does not block development
 
