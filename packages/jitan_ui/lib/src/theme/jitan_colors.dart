@@ -25,6 +25,12 @@ abstract final class JitanColors {
   /// Input fill (search field).
   static const inputFill = Color(0xFFF2F0EB);
 
+  /// Outline of form fields and secondary buttons.
+  static const inputBorder = Color(0xFFE7E5E0);
+
+  /// Validation and form error text.
+  static const error = vermilion;
+
   // Web sidebar
   static const sidebarBackground = ink;
   static const sidebarItemActive = Color(0xFF25302E);

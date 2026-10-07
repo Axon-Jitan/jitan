@@ -91,4 +91,23 @@ const builtInEnglish = <String, String>{
   'employee.noMatch.message': 'No employee name or code contains “{search}”.',
   'employee.noCompany.title': 'No company selected',
   'employee.noCompany.message': 'Select a company to see its employees.',
+
+  // Add employee (EMP-02)
+  'employee.add.action': 'Add employee',
+  'employee.add.title': 'Add employee',
+  'employee.add.subtitle': 'Create the employee record.',
+  'employee.add.submit': 'Create employee',
+  'employee.add.success': '{name} was added.',
+  'employee.field.firstName': 'First name',
+  'employee.field.lastName': 'Last name',
+  'employee.field.code': 'Employee code',
+  'employee.field.type': 'Employee type',
+  'employee.field.type.none': 'No type',
+  'employee.field.type.loadFailed': 'Employee types could not be loaded. You can add a type later.',
+  'employee.field.phone': 'Phone number',
+  'employee.field.phone.hint': 'Optional',
+  'employee.field.error.required': 'Required.',
+  'employee.field.error.duplicateCode': 'This employee code is already in use.',
+  'employee.field.error.invalidType': 'This employee type is no longer available.',
+  'employee.field.error.tooLong': 'One of the values is too long.',
 };

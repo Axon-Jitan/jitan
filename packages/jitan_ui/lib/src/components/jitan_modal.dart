@@ -1,0 +1,59 @@
+import 'package:flutter/material.dart';
+
+import '../theme/jitan_colors.dart';
+import '../theme/jitan_dimensions.dart';
+import '../theme/jitan_text_styles.dart';
+
+/// The white rounded modal from the Figma web flows ("Add employee", …):
+/// title, one-line subtitle, scrollable body, actions bottom-right.
+///
+/// Narrower than [JitanDimensions.modalWidth] on small screens.
+class JitanModal extends StatelessWidget {
+  const JitanModal({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.body,
+    required this.actions,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget body;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+        backgroundColor: JitanColors.surface,
+        surfaceTintColor: JitanColors.surface,
+        insetPadding: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(JitanDimensions.modalRadius)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: JitanDimensions.modalWidth),
+          child: Padding(
+            padding: const EdgeInsets.all(JitanDimensions.modalPadding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(header: true, child: Text(title, style: JitanTextStyles.modalTitle)),
+                const SizedBox(height: 8),
+                Text(subtitle, style: JitanTextStyles.modalSubtitle),
+                const SizedBox(height: 32),
+                Flexible(child: SingleChildScrollView(child: body)),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    for (var i = 0; i < actions.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 12),
+                      actions[i],
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}

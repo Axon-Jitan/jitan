@@ -6,10 +6,11 @@ import 'fake_employees_api.dart';
 /// [AdminServices] wired to fakes; the fakes stay reachable for assertions.
 class TestServices {
   TestServices({bool devTools = false}) {
-    services = AdminServices(companiesApi: companies, employeesApi: employees, devTools: devTools);
+    services = AdminServices(companiesApi: companies, employeesApi: employees, groupsApi: groups, devTools: devTools);
   }
 
   final companies = FakeCompaniesApi();
   final employees = FakeEmployeesApi();
+  final groups = FakeGroupsApi();
   late final AdminServices services;
 }

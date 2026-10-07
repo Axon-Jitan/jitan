@@ -20,6 +20,12 @@ class DatabaseQueryException implements Exception {
   /// MySQL server error number, when the server reported one.
   final int? errorCode;
 
+  /// 1062: a UNIQUE key (e.g. `tblUser.userCode`) already holds the value.
+  bool get isDuplicateKey => errorCode == 1062;
+
+  /// 1406: a value is longer than its column allows.
+  bool get isValueTooLong => errorCode == 1406;
+
   @override
   String toString() => 'DatabaseQueryException(${errorCode ?? '-'}): $cause';
 }

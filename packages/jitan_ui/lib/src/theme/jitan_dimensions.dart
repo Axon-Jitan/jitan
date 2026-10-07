@@ -29,6 +29,16 @@ abstract final class JitanDimensions {
   static const toolbarPadding = 12.0;
   static const searchFieldWidth = 380.0;
 
+  // Modals and forms
+  static const modalRadius = 24.0;
+  static const modalPadding = 28.0;
+  static const modalWidth = 720.0;
+  static const fieldHeight = 44.0;
+  static const fieldWidth = 300.0;
+  static const fieldColumnGap = 32.0;
+  static const fieldRowGap = 30.0;
+  static const fieldLabelGap = 8.0;
+
   // Tables
   static const tableHorizontalPadding = 20.0;
   static const tableHeaderHeight = 46.0;

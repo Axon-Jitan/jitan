@@ -1,0 +1,167 @@
+import 'dart:convert';
+
+import 'package:jitan_api/src/audit/audit_event.dart';
+import 'package:jitan_api/src/auth/permission.dart';
+import 'package:jitan_api/src/database/database_exception.dart';
+import 'package:jitan_models/jitan_models.dart';
+import 'package:test/test.dart';
+
+import '../support/test_app.dart';
+
+const _path = '/companies/7/employees';
+
+TestApp _app({bool allow = true}) {
+  final app = TestApp(devUserId: 9, activeUserIds: {9}, allowPermissions: allow);
+  app.companies.existingIds = {7};
+  app.groups.groups = const [GroupSummary(id: 3, name: 'White collar')];
+  return app;
+}
+
+String _body({
+  Object? firstName = 'Disan',
+  Object? lastName = 'Ssebowa',
+  Object? code = 'SBW',
+  Object? groupId,
+  Object? phone,
+}) =>
+    jsonEncode({
+      'firstName': firstName,
+      'lastName': lastName,
+      'code': code,
+      'groupId': groupId,
+      'phone': phone,
+    });
+
+Future<Map<String, Object?>> _error(TestApp app, String body) async {
+  final response = await app.post(_path, body);
+  return {'status': response.statusCode, ...(await jsonBody(response))['error']! as Map<String, Object?>};
+}
+
+void main() {
+  group('POST /companies/{id}/employees', () {
+    test('201: creates the employee, company link, group link and audit entry in one transaction', () async {
+      final app = _app();
+
+      final response = await app.post(_path, _body(firstName: ' Disan ', code: ' SBW ', groupId: 3, phone: ' +32 470 '));
+
+      expect(response.statusCode, 201);
+      expect(await jsonBody(response), containsPair('code', 'SBW'));
+      expect(app.employees.writes, ['insertUser SBW', 'addToCompany 100→7', 'addToGroup 100→3']);
+      expect(app.employees.lastPhone, '+32 470');
+      expect(app.employees.insertedQrCodes, ['QR-1'], reason: 'a new personal QR per employee');
+      expect(app.transactions.outcomes, ['commit']);
+
+      final event = app.audit.events.single;
+      expect(event.type, AuditEventType.employeeCreated);
+      expect(event.actorUserId, 9);
+      expect(event.references, {
+        EventLogReference.user: 100,
+        EventLogReference.company: 7,
+        EventLogReference.userCompany: 600,
+        EventLogReference.group: 3,
+        EventLogReference.userGroup: 1000,
+      });
+    });
+
+    test('without a group: no group link, no group in the audit entry; empty phone stored as NULL', () async {
+      final app = _app();
+
+      final response = await app.post(_path, _body(phone: '   '));
+
+      expect(response.statusCode, 201);
+      expect(app.employees.writes, ['insertUser SBW', 'addToCompany 100→7']);
+      expect(app.employees.lastPhone, isNull);
+      expect(app.audit.events.single.references.keys, isNot(contains(EventLogReference.group)));
+    });
+
+    test('checks createEmployee for that company before writing anything', () async {
+      final app = _app(allow: false);
+
+      final response = await app.post(_path, _body());
+
+      expect(response.statusCode, 403);
+      expect(app.permissions.checked, [(9, Permission.createEmployee, 7)]);
+      expect(app.employees.writes, isEmpty);
+    });
+
+    for (final (field, body) in [
+      ('firstName', _body(firstName: '  ')),
+      ('lastName', _body(lastName: '')),
+      ('code', _body(code: ' ')),
+    ]) {
+      test('400 validation_failed naming "$field" when it is blank', () async {
+        final app = _app();
+
+        final error = await _error(app, body);
+
+        expect(error, containsPair('status', 400));
+        expect(error, containsPair('code', 'validation_failed'));
+        expect(error, containsPair('field', field));
+        expect(app.transactions.outcomes, isEmpty, reason: 'validated before the transaction');
+      });
+    }
+
+    test('400 naming groupId for an unknown or inactive group', () async {
+      final app = _app();
+
+      final error = await _error(app, _body(groupId: 99));
+
+      expect(error, containsPair('field', 'groupId'));
+      expect(app.employees.writes, isEmpty);
+    });
+
+    test('409 duplicate_employee_code naming "code" when the code is taken; rolled back', () async {
+      final app = _app()..employees.existingCodes = {'SBW'};
+
+      final error = await _error(app, _body());
+
+      expect(error, containsPair('status', 409));
+      expect(error, containsPair('code', 'duplicate_employee_code'));
+      expect(error, containsPair('field', 'code'));
+      expect(app.employees.writes, isEmpty);
+      expect(app.transactions.outcomes, ['rollback']);
+    });
+
+    test('409 also when another request takes the code between check and insert', () async {
+      final app = _app()
+        ..employees.insertFailure = const DatabaseQueryException("Duplicate entry 'SBW'", errorCode: 1062);
+
+      final error = await _error(app, _body());
+
+      expect(error, containsPair('code', 'duplicate_employee_code'));
+      expect(app.transactions.outcomes, ['rollback']);
+    });
+
+    test('400 when a value is longer than its column (MySQL 1406)', () async {
+      final app = _app()..employees.insertFailure = const DatabaseQueryException('Data too long', errorCode: 1406);
+
+      final error = await _error(app, _body());
+
+      expect(error, containsPair('status', 400));
+    });
+
+    test('a failing audit write rolls the whole creation back (500)', () async {
+      final app = _app()..audit.failWith = const DatabaseQueryException("Unknown column 'x'", errorCode: 1054);
+
+      final response = await app.post(_path, _body());
+
+      expect(response.statusCode, 500);
+      expect(app.transactions.outcomes, ['rollback']);
+    });
+
+    test('404 for an unknown company', () async {
+      final response = await _app().post('/companies/99/employees', _body());
+
+      expect(response.statusCode, 404);
+    });
+
+    test('400 for malformed JSON, a non-object body, or a missing required field', () async {
+      final app = _app();
+
+      expect((await app.post(_path, '{nope')).statusCode, 400);
+      expect((await app.post(_path, '[]')).statusCode, 400);
+      expect((await app.post(_path, jsonEncode({'firstName': 'A'}))).statusCode, 400);
+      expect(app.employees.writes, isEmpty);
+    });
+  });
+}

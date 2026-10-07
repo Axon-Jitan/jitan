@@ -286,7 +286,20 @@ Does performing a function require **both** module access (via credential group)
 a `tblUserFunction` grant, or does a function grant work on its own? Is
 `credGroupLevel` used for anything beyond ordering?
 
+## CLARIFY-12: Personal QR value (`tblUser.userQRcode`) · `OPEN` · IT CLARIFICATION, does not block development
+`userQRcode` is unique and is filled when an employee is created (EMP-02). Jitan
+generates 18 cryptographically random bytes, base64url-encoded to **24 characters**, so
+one employee's QR reveals nothing about another's. Questions for IT: does an existing
+system expect a specific format or length for this column? What is its maximum length?
+If the format must change, codes can be regenerated: no QR has been issued yet.
+
 ## CLARIFY-11: Seed data · `OPEN` · IT CLARIFICATION, blocks production authorization only
 Please share current rows of `tblCredGroup`, `tblAppModules`, `tblFunction`, `tblGroup`,
 `tblScheduleType`, `tblTimeRegType`, `tblLocationType`, `tblEventType`, `tblDays`,
 `tblLanguage`. Jitan reads these from the database and must not invent values.
+
+**Audit event types.** Every audited change writes a `tblEventLog` row and links it to the
+`tblEventType` row whose `eventTypeName` equals the code-side name (`AuditEventType` in
+`server/jitan_api/lib/src/audit/audit_event.dart`), e.g. `employee.created`. Until such a
+row exists, the event is stored **without** a type link and a warning is logged. Either
+IT adds rows with these names, or the code adopts IT's names; nothing else changes.

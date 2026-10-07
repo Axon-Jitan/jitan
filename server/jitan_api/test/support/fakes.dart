@@ -1,8 +1,13 @@
+import 'package:jitan_api/src/audit/audit_event.dart';
+import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/auth/permission.dart';
 import 'package:jitan_api/src/auth/permission_evaluator.dart';
 import 'package:jitan_api/src/auth/request_identity.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
+import 'package:jitan_api/src/database/db_row.dart';
+import 'package:jitan_api/src/database/sql_executor.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
+import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
@@ -38,11 +43,114 @@ class FakeEmployeeRepository implements EmployeeRepository {
   Map<int, List<EmployeeSummary>> byCompany = {};
   final calls = <(int, String?)>[];
 
+  /// Codes [codeExists] reports as taken.
+  Set<String> existingCodes = {};
+
+  /// Thrown by [insertUser] when set (e.g. a duplicate-key race).
+  Object? insertFailure;
+
+  /// Every write, in order, e.g. `insertUser SBW`, `addToCompany 100→7`.
+  final writes = <String>[];
+  final insertedQrCodes = <String>[];
+  String? lastPhone;
+  var _nextId = 100;
+
   @override
   Future<List<EmployeeSummary>> listForCompany(int companyId, {String? nameOrCodeContains}) async {
     calls.add((companyId, nameOrCodeContains));
     return byCompany[companyId] ?? const [];
   }
+
+  @override
+  Future<bool> codeExists(SqlExecutor executor, String code) async => existingCodes.contains(code);
+
+  @override
+  Future<int> insertUser(
+    SqlExecutor tx, {
+    required String firstName,
+    required String lastName,
+    required String code,
+    required String personalQrCode,
+    required String? phone,
+  }) async {
+    if (insertFailure != null) throw insertFailure!;
+    final id = _nextId++;
+    writes.add('insertUser $code');
+    insertedQrCodes.add(personalQrCode);
+    lastPhone = phone;
+    byCompany.putIfAbsent(-id, () => [
+          EmployeeSummary(id: id, firstName: firstName, lastName: lastName, code: code, groups: const [], isActive: true),
+        ]);
+    return id;
+  }
+
+  @override
+  Future<int> addToCompany(SqlExecutor tx, int userId, int companyId) async {
+    writes.add('addToCompany $userId→$companyId');
+    return 500 + userId;
+  }
+
+  @override
+  Future<int> addToGroup(SqlExecutor tx, int userId, int groupId) async {
+    writes.add('addToGroup $userId→$groupId');
+    return 900 + userId;
+  }
+
+  @override
+  Future<EmployeeSummary?> findInCompany(SqlExecutor executor, int companyId, int userId) async =>
+      byCompany[-userId]?.single;
+}
+
+class FakeGroupRepository implements GroupRepository {
+  List<GroupSummary> groups = const [];
+
+  @override
+  Future<List<GroupSummary>> listActive() async => groups;
+
+  @override
+  Future<bool> isAssignable(int groupId) async => groups.any((g) => g.id == groupId);
+}
+
+class FakeAuditLog implements AuditLogRepository {
+  final events = <AuditEvent>[];
+
+  /// Thrown by [record] when set, to prove the transaction rolls back.
+  Object? failWith;
+
+  @override
+  Future<void> record(SqlExecutor tx, AuditEvent event) async {
+    if (failWith != null) throw failWith!;
+    events.add(event);
+  }
+}
+
+/// Runs the action and records whether it committed or rolled back. Real
+/// rollback behaviour is covered by the integration tests.
+class FakeTransactions implements TransactionRunner {
+  final outcomes = <String>[];
+
+  @override
+  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) async {
+    try {
+      final result = await action(_UnusedExecutor());
+      outcomes.add('commit');
+      return result;
+    } catch (_) {
+      outcomes.add('rollback');
+      rethrow;
+    }
+  }
+}
+
+/// Fakes never run SQL; reaching this means a fake is missing.
+class _UnusedExecutor implements SqlExecutor {
+  @override
+  Future<List<DbRow>> query(String sql, [Map<String, Object?> params = const {}]) =>
+      throw UnimplementedError('Unit tests must not run SQL: $sql');
+
+  @override
+  Future<SqlWriteResult> execute(String sql, [Map<String, Object?> params = const {}]) =>
+      throw UnimplementedError('Unit tests must not run SQL: $sql');
 }
 
 class FakeDatabaseHealthRepository implements DatabaseHealthRepository {

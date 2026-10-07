@@ -22,4 +22,14 @@ class EmployeesApi {
       throw ApiClientException.invalidResponse(200, 'Employee list: ${e.message}');
     }
   }
+
+  /// Creates an employee in [companyId]; returns it as the server stored it.
+  Future<EmployeeSummary> create(int companyId, CreateEmployeeRequest request) async {
+    final json = await _transport.postJson('companies/$companyId/employees', request.toJson());
+    try {
+      return EmployeeSummary.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(201, 'Created employee: ${e.message}');
+    }
+  }
 }

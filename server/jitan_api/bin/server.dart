@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:jitan_api/src/app.dart';
+import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/auth/authorizer.dart';
 import 'package:jitan_api/src/auth/development_identity_middleware.dart';
 import 'package:jitan_api/src/auth/development_permission_evaluator.dart';
@@ -17,6 +18,8 @@ import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/employees/employee_routes.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
+import 'package:jitan_api/src/groups/group_repository.dart';
+import 'package:jitan_api/src/groups/group_routes.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
@@ -51,6 +54,7 @@ Future<void> main() async {
   final db = Database.connect(config.database);
   final users = UserRepository(db);
   final companyRepository = CompanyRepository(db);
+  final groupRepository = GroupRepository(db);
 
   final PermissionEvaluator permissions = config.environment.allowsDevelopmentMechanisms
       ? DevelopmentPermissionEvaluator(config.environment)
@@ -73,7 +77,17 @@ Future<void> main() async {
     corsOrigins: config.corsOrigins,
     health: HealthRoutes(DatabaseHealthRepository(db)),
     companies: CompanyRoutes(authorizer, CompanyService(companyRepository)),
-    employees: EmployeeRoutes(authorizer, EmployeeService(EmployeeRepository(db), companyRepository)),
+    employees: EmployeeRoutes(
+      authorizer,
+      EmployeeService(
+        employees: EmployeeRepository(db),
+        companies: companyRepository,
+        groups: groupRepository,
+        audit: const AuditLogRepository(),
+        transactions: db,
+      ),
+    ),
+    groups: GroupRoutes(authorizer, groupRepository),
     languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db))),
     identity: identity,
   );

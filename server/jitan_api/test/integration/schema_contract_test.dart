@@ -13,11 +13,19 @@ import '../support/test_database.dart';
 /// repository starts using a new column.
 const _usedColumns = {
   'tblCompany': ['companyID', 'companyName', 'companyActive', 'companyMFD'],
-  'tblUserCompany': ['userID', 'companyID'],
-  'tblUser': ['userID', 'userName', 'userSurname', 'userCode', 'userActive', 'userMFD'],
-  'tblUserGroup': ['userID', 'groupID'],
+  'tblUserCompany': ['userCompanyID', 'userID', 'companyID'],
+  'tblUser': [
+    'userID', 'userName', 'userSurname', 'userCode', 'userQRcode', 'cellphoneNumber',
+    'userKioskMode', 'userActive', 'userMFD',
+  ],
+  'tblUserGroup': ['userGroupID', 'userID', 'groupID'],
   'tblGroup': ['groupID', 'groupName', 'groupActive', 'groupMFD'],
-  'tblEventLog': ['companyID', 'eventLogTimestamp'],
+  'tblEventLog': [
+    'eventLogID', 'eventLogTimestamp', 'userIDInit', 'userIDTarget', 'companyID', 'userCompanyID',
+    'groupID', 'userGroupID',
+  ],
+  'tblEventType': ['eventTypeID', 'eventTypeName'],
+  'tblEventLogEventType': ['eventLogEventTypeID', 'eventTypeID', 'eventLogID'],
   'tblLanguage': ['languageID', 'languageName', 'languageCode', 'languageActive', 'languageMFD'],
   'tblTranslation': ['translationID', 'languageID', 'translationUIName', 'translationUIText'],
   'tblUserLanguage': ['userID', 'languageID'],

@@ -132,10 +132,11 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | Task | Scope | Status |
 |---|---|---|
 | EMP-01 | Employee list for the current company: search, Type from `tblGroup`, all states, responsive, translation keys. Location/Onboarding show "—" (GAP-11/GAP-04), Policy omitted | `DONE` |
-| EMP-02 | Add employee: only fields the ERD supports; validation; tests | `TODO` |
+| EMP-02 | Add employee: first/last name, code, type (`tblGroup`), phone, in the current company; one transaction incl. audit; duplicate-code and validation errors on their fields. Location and Work policy omitted | `DONE` |
 | EMP-03 | Employee details | `TODO` |
 | EMP-04 | Company assignment (`tblUserCompany`) | `TODO` |
 | EMP-05 | Group assignment (`tblUserGroup`) | `TODO` |
 | EMP-06 | Language assignment (`tblUserLanguage`) | `TODO` |
 | EMP-07 | Credential-group assignment (`tblUserCredGroup`) where required | `TODO` |
 | EMP-08 | Generate/display the employee onboarding QR | `TODO`, blocked by GAP-04 for storage |
+| EMP-09 | Bulk import (Figma "Import CSV / Excel", roadmap §8): upload → preview → validate → import | `TODO` |

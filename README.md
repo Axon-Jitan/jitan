@@ -43,6 +43,8 @@ dart run bin/server.dart
 - `GET /me/language`: the signed-in user's language from `tblUserLanguage`
 - `GET /companies?search=`: company list (needs an identity, see below)
 - `GET /companies/{id}/employees?search=`: that company's employees
+- `POST /companies/{id}/employees`: create an employee in that company
+- `GET /groups`: assignable employee groups (the "Employee type")
 
 **Development identity.** Real login isn't built yet. With `JITAN_ENV=development`, set
 `JITAN_DEV_USER_ID` to an active `tblUser.userID`; every request then acts as that user. A

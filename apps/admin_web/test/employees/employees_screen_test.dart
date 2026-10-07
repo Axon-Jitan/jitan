@@ -13,12 +13,15 @@ import '../support/fake_employees_api.dart';
 final _almeco = company(7, 'Almeco');
 final _pca = company(8, 'PCA');
 
+late FakeGroupsApi _groups;
+
 Future<(FakeEmployeesApi, CurrentCompanyController)> _pump(WidgetTester tester, {CompanySummary? selected}) async {
   tester.view.physicalSize = const Size(1440, 1024);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
   final api = FakeEmployeesApi();
+  _groups = FakeGroupsApi();
   final current = CurrentCompanyController()..select(selected);
   addTearDown(current.dispose);
   await tester.pumpWidget(
@@ -28,7 +31,7 @@ Future<(FakeEmployeesApi, CurrentCompanyController)> _pump(WidgetTester tester, 
         controller: current,
         child: MaterialApp(
           theme: JitanTheme.light(),
-          home: Scaffold(body: EmployeesScreen(api: api)),
+          home: Scaffold(body: EmployeesScreen(api: api, groupsApi: _groups)),
         ),
       ),
     ),

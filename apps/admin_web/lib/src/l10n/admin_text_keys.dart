@@ -54,4 +54,24 @@ abstract final class AdminTextKeys {
   static const employeeNoMatchMessage = 'employee.noMatch.message';
   static const employeeNoCompanyTitle = 'employee.noCompany.title';
   static const employeeNoCompanyMessage = 'employee.noCompany.message';
+
+  static const employeeAddAction = 'employee.add.action';
+  static const employeeAddTitle = 'employee.add.title';
+  static const employeeAddSubtitle = 'employee.add.subtitle';
+  static const employeeAddSubmit = 'employee.add.submit';
+
+  /// Argument: `{name}`.
+  static const employeeAddSuccess = 'employee.add.success';
+  static const employeeFieldFirstName = 'employee.field.firstName';
+  static const employeeFieldLastName = 'employee.field.lastName';
+  static const employeeFieldCode = 'employee.field.code';
+  static const employeeFieldType = 'employee.field.type';
+  static const employeeFieldTypeNone = 'employee.field.type.none';
+  static const employeeFieldTypeLoadFailed = 'employee.field.type.loadFailed';
+  static const employeeFieldPhone = 'employee.field.phone';
+  static const employeeFieldPhoneHint = 'employee.field.phone.hint';
+  static const employeeFieldErrorRequired = 'employee.field.error.required';
+  static const employeeFieldErrorDuplicateCode = 'employee.field.error.duplicateCode';
+  static const employeeFieldErrorInvalidType = 'employee.field.error.invalidType';
+  static const employeeFieldErrorTooLong = 'employee.field.error.tooLong';
 }

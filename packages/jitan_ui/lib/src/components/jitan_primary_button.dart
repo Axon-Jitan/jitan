@@ -1,0 +1,58 @@
+import 'package:flutter/material.dart';
+
+import '../theme/jitan_colors.dart';
+import '../theme/jitan_dimensions.dart';
+import '../theme/jitan_text_styles.dart';
+
+/// The Vermilion action button ("Add company", "Create employee", …).
+///
+/// [onPressed] `null` disables it. [busy] shows a spinner in place of the
+/// label and ignores taps, so a request cannot be sent twice.
+class JitanPrimaryButton extends StatelessWidget {
+  const JitanPrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.busy = false,
+    this.height = JitanDimensions.fieldHeight,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool busy;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: height,
+        child: FilledButton(
+          onPressed: busy ? null : onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: JitanColors.vermilion,
+            foregroundColor: JitanColors.surface,
+            disabledBackgroundColor: JitanColors.vermilion.withValues(alpha: busy ? 1 : 0.4),
+            disabledForegroundColor: JitanColors.surface,
+            textStyle: JitanTextStyles.buttonLabel,
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(JitanDimensions.inputRadius)),
+          ),
+          child: busy
+              ? Semantics(
+                  label: label,
+                  child: const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: JitanColors.surface),
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[Icon(icon, size: 14), const SizedBox(width: 6)],
+                    Text(label),
+                  ],
+                ),
+        ),
+      );
+}

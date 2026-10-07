@@ -30,6 +30,15 @@ abstract final class JitanTextStyles {
   static final tableCell = _base.copyWith(fontSize: 11, fontWeight: _regular);
   static final tableCellStrong = _base.copyWith(fontSize: 11, fontWeight: _semiBold);
 
+  // Modals and forms
+  static final modalTitle = _base.copyWith(fontSize: 24, fontWeight: _semiBold);
+  static final modalSubtitle =
+      _base.copyWith(fontSize: 11, fontWeight: _regular, color: JitanColors.inkMuted);
+  static final fieldLabel =
+      _base.copyWith(fontSize: 10, fontWeight: _bold, color: JitanColors.inkMuted);
+  static final fieldError =
+      _base.copyWith(fontSize: 10, fontWeight: _regular, color: JitanColors.error);
+
   // Inputs and buttons
   static final inputText = _base.copyWith(fontSize: 11, fontWeight: _regular);
   static final inputHint =

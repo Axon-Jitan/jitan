@@ -3,9 +3,13 @@ import 'package:jitan_models/jitan_models.dart';
 /// An expected failure with a client-facing status, code and message.
 /// Thrown by services/routes; turned into JSON by the error middleware.
 class ApiException implements Exception {
-  const ApiException(this.statusCode, this.code, this.message);
+  const ApiException(this.statusCode, this.code, this.message, {this.field});
 
   const ApiException.badRequest(String message) : this(400, ApiErrorCode.badRequest, message);
+
+  /// A request field failed validation.
+  const ApiException.validation(String field, String message)
+      : this(400, ApiErrorCode.validationFailed, message, field: field);
 
   const ApiException.unauthenticated(String message)
       : this(401, ApiErrorCode.unauthenticated, message);
@@ -22,8 +26,11 @@ class ApiException implements Exception {
   final String code;
   final String message;
 
-  ApiError toApiError() => ApiError(code: code, message: message);
+  /// The request field this error concerns, if any.
+  final String? field;
+
+  ApiError toApiError() => ApiError(code: code, message: message, field: field);
 
   @override
-  String toString() => 'ApiException($statusCode $code: $message)';
+  String toString() => 'ApiException($statusCode $code${field == null ? '' : ' [$field]'}: $message)';
 }

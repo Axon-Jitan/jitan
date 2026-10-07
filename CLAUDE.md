@@ -162,6 +162,13 @@ endpoint calls `Authorizer.require(request, Permission.x)` first. Add the permis
 `auth/permission.dart`, and add any new column to
 `test/integration/schema_contract_test.dart`.
 
+**Writes.** A use case that changes data runs in `TransactionRunner.transaction` (the
+`Database`). Repository write methods take the transaction's `SqlExecutor`, and the
+`AuditLogRepository.record(tx, AuditEvent(...))` call goes **inside** the same
+transaction, so data and audit commit or roll back together. Validation errors throw
+`ApiException.validation(field, …)` so clients can mark the right field. Map MySQL
+duplicate-key (1062) and too-long (1406) errors to 409/400 in the service.
+
 ### DEV TEMPORARY items in the code
 
 Development-only stand-ins that must be replaced before production. Each is isolated and

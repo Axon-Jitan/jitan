@@ -22,6 +22,12 @@ extension JsonReading on Map<String, Object?> {
     throw FormatException('Expected "$key" to be a list of strings, got ${value.runtimeType}.');
   }
 
+  int? readOptionalInt(String key) {
+    final value = this[key];
+    if (value == null || value is int) return value as int?;
+    throw FormatException('Expected "$key" to be an integer or null, got ${value.runtimeType}.');
+  }
+
   int readInt(String key) {
     final value = this[key];
     if (value is int) return value;

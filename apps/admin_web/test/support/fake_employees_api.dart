@@ -23,6 +23,39 @@ class FakeEmployeesApi implements EmployeesApi {
 
   void fail(ApiClientException failure, {int? index}) =>
       _pending[index ?? _pending.length - 1].completeError(failure);
+
+  /// (companyId, request) of every create.
+  final creates = <(int, CreateEmployeeRequest)>[];
+  final _pendingCreates = <Completer<EmployeeSummary>>[];
+
+  @override
+  Future<EmployeeSummary> create(int companyId, CreateEmployeeRequest request) {
+    creates.add((companyId, request));
+    final completer = Completer<EmployeeSummary>();
+    _pendingCreates.add(completer);
+    return completer.future;
+  }
+
+  void createSucceeds(EmployeeSummary employee) => _pendingCreates.last.complete(employee);
+
+  void createFails(ApiClientException failure) => _pendingCreates.last.completeError(failure);
+}
+
+/// Stand-in for [GroupsApi] with a controllable result.
+class FakeGroupsApi implements GroupsApi {
+  final _pending = <Completer<List<GroupSummary>>>[];
+  int get calls => _pending.length;
+
+  @override
+  Future<List<GroupSummary>> listGroups() {
+    final completer = Completer<List<GroupSummary>>();
+    _pending.add(completer);
+    return completer.future;
+  }
+
+  void succeed(List<GroupSummary> groups) => _pending.last.complete(groups);
+
+  void fail(ApiClientException failure) => _pending.last.completeError(failure);
 }
 
 EmployeeSummary employee(

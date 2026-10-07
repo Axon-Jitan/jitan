@@ -7,18 +7,20 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../common/api_failure_text.dart';
 import '../company_context/current_company.dart';
 import '../l10n/admin_text_keys.dart';
+import 'add_employee_dialog.dart';
 import 'employees_controller.dart';
 import 'employees_table.dart';
 
 /// HR/Admin "Employees" page for the current company (Figma
 /// `Admin / Employees` 153:137, `HR / Employees` 153:906).
 ///
-/// "Import CSV / Excel" and "Add employee" (Figma) arrive with EMP-02 so the
-/// page never offers a button that does nothing.
+/// "Import CSV / Excel" (Figma) is not shown: bulk import is a separate task
+/// (roadmap §8), and the page never offers a button that does nothing.
 class EmployeesScreen extends StatelessWidget {
-  const EmployeesScreen({super.key, required this.api});
+  const EmployeesScreen({super.key, required this.api, required this.groupsApi});
 
   final EmployeesApi api;
+  final GroupsApi groupsApi;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +53,7 @@ class EmployeesScreen extends StatelessWidget {
             )
           else
             // Keyed by company: switching company starts a fresh list.
-            _CompanyEmployees(key: ValueKey(company.id), api: api, company: company),
+            _CompanyEmployees(key: ValueKey(company.id), api: api, groupsApi: groupsApi, company: company),
         ],
       ),
     );
@@ -59,9 +61,10 @@ class EmployeesScreen extends StatelessWidget {
 }
 
 class _CompanyEmployees extends StatefulWidget {
-  const _CompanyEmployees({super.key, required this.api, required this.company});
+  const _CompanyEmployees({super.key, required this.api, required this.groupsApi, required this.company});
 
   final EmployeesApi api;
+  final GroupsApi groupsApi;
   final CompanySummary company;
 
   @override
@@ -78,6 +81,22 @@ class _CompanyEmployeesState extends State<_CompanyEmployees> {
     super.dispose();
   }
 
+  Future<void> _addEmployee() async {
+    final created = await showAddEmployeeDialog(
+      context,
+      employeesApi: widget.api,
+      groupsApi: widget.groupsApi,
+      companyId: widget.company.id,
+    );
+    if (created == null || !mounted) return;
+    await _controller.load();
+    if (!mounted) return;
+    final name = [created.firstName, created.lastName].whereType<String>().join(' ');
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(context.t(AdminTextKeys.employeeAddSuccess, args: {'name': name}))),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -85,15 +104,26 @@ class _CompanyEmployeesState extends State<_CompanyEmployees> {
           JitanSurfaceCard(
             radius: JitanDimensions.toolbarCardRadius,
             padding: const EdgeInsets.all(JitanDimensions.toolbarPadding),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: JitanDimensions.searchFieldWidth),
-                child: JitanSearchField(
-                  hintText: context.t(AdminTextKeys.employeeSearch),
-                  onChanged: _controller.updateSearch,
+            child: Row(
+              children: [
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: JitanDimensions.searchFieldWidth),
+                    child: JitanSearchField(
+                      hintText: context.t(AdminTextKeys.employeeSearch),
+                      onChanged: _controller.updateSearch,
+                    ),
+                  ),
                 ),
-              ),
+                const Spacer(),
+                const SizedBox(width: 12),
+                JitanPrimaryButton(
+                  label: context.t(AdminTextKeys.employeeAddAction),
+                  icon: Icons.add,
+                  height: JitanDimensions.controlHeight,
+                  onPressed: _addEmployee,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: JitanDimensions.toolbarToTable),

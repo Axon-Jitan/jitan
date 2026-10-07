@@ -11,4 +11,10 @@ enum Permission {
 
   /// See one company's employees (company-scoped).
   viewEmployees,
+
+  /// Create an employee in one company (company-scoped).
+  createEmployee,
+
+  /// See the assignable employee groups (e.g. Blue/White collar).
+  viewGroups,
 }

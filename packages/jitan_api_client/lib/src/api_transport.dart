@@ -22,18 +22,40 @@ class ApiTransport {
   final Duration timeout;
   final http.Client _http;
 
-  Future<Map<String, Object?>> getJson(String path, {Map<String, String>? query}) async {
+  Future<Map<String, Object?>> getJson(String path, {Map<String, String>? query}) {
     final uri = baseUri.resolve(path).replace(
           queryParameters: (query == null || query.isEmpty) ? null : query,
         );
+    return _send('GET', uri, () => _http.get(uri, headers: const {'accept': 'application/json'}));
+  }
 
+  /// POSTs [body] as JSON.
+  ///
+  /// A timeout is reported as a network failure even though the server may
+  /// have completed the request; callers must not assume it failed. For
+  /// creates, a retry then meets the server's duplicate protection (e.g.
+  /// `duplicate_employee_code`) instead of creating twice.
+  Future<Map<String, Object?>> postJson(String path, Map<String, Object?> body) {
+    final uri = baseUri.resolve(path);
+    return _send(
+      'POST',
+      uri,
+      () => _http.post(
+        uri,
+        headers: const {'accept': 'application/json', 'content-type': 'application/json; charset=utf-8'},
+        body: jsonEncode(body),
+      ),
+    );
+  }
+
+  Future<Map<String, Object?>> _send(String method, Uri uri, Future<http.Response> Function() call) async {
     final http.Response response;
     try {
-      response = await _http.get(uri, headers: const {'accept': 'application/json'}).timeout(timeout);
+      response = await call().timeout(timeout);
     } on TimeoutException {
-      throw ApiClientException.network('GET $uri timed out after $timeout.');
+      throw ApiClientException.network('$method $uri timed out after $timeout.');
     } on http.ClientException catch (e) {
-      throw ApiClientException.network('GET $uri failed: ${e.message}');
+      throw ApiClientException.network('$method $uri failed: ${e.message}');
     }
 
     final body = _decodeObject(response);

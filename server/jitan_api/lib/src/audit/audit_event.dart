@@ -1,0 +1,38 @@
+/// What happened, in code-side names.
+///
+/// Each value is linked to the `tblEventType` row whose `eventTypeName`
+/// equals [typeName]. The real event type rows are pending CLARIFY-11; until
+/// a matching row exists, the event is still logged, without a type link,
+/// and a warning names the missing type.
+enum AuditEventType {
+  employeeCreated('employee.created');
+
+  const AuditEventType(this.typeName);
+
+  final String typeName;
+}
+
+/// The `tblEventLog` foreign-key columns an event can reference. Enum values
+/// carry the exact ERD column names, so no column name ever comes from input.
+enum EventLogReference {
+  user('userIDTarget'),
+  company('companyID'),
+  userCompany('userCompanyID'),
+  group('groupID'),
+  userGroup('userGroupID');
+
+  const EventLogReference(this.column);
+
+  final String column;
+}
+
+/// One audit event: who did it, what happened, and which records it touched.
+class AuditEvent {
+  const AuditEvent({required this.type, required this.actorUserId, required this.references});
+
+  final AuditEventType type;
+
+  /// `tblEventLog.userIDInit`.
+  final int actorUserId;
+  final Map<EventLogReference, int> references;
+}

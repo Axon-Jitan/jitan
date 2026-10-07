@@ -4,6 +4,7 @@ import 'package:shelf_router/shelf_router.dart';
 
 import 'companies/company_routes.dart';
 import 'employees/employee_routes.dart';
+import 'groups/group_routes.dart';
 import 'health/health_routes.dart';
 import 'http/api_exception.dart';
 import 'http/cors_middleware.dart';
@@ -27,12 +28,14 @@ Handler buildApp({
   required HealthRoutes health,
   required CompanyRoutes companies,
   required EmployeeRoutes employees,
+  required GroupRoutes groups,
   required LanguageRoutes languages,
   Middleware? identity,
 }) {
   final apiRoutes = Router(notFoundHandler: _notFound)
     ..mount('/', companies.router.call)
     ..mount('/', employees.router.call)
+    ..mount('/', groups.router.call)
     ..mount('/', languages.authenticatedRouter.call);
 
   var api = const Pipeline();
