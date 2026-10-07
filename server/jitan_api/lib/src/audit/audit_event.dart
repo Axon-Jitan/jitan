@@ -12,7 +12,15 @@ enum AuditEventType {
   personalQrGenerated('employee.personal_qr.generated'),
 
   /// The employee set their first password: onboarding is complete.
-  onboardingCompleted('employee.onboarding.completed');
+  onboardingCompleted('employee.onboarding.completed'),
+
+  /// A signed-in employee replaced their password (Profile → Change
+  /// password). Every other session of theirs ends.
+  passwordChanged('employee.password.changed'),
+
+  /// HR/Admin "Reset account access": the password was cleared, so the
+  /// employee sets up Jitan again with their existing QR.
+  accountAccessReset('employee.access.reset');
 
   const AuditEventType(this.typeName);
 

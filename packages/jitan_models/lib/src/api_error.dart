@@ -21,6 +21,12 @@ abstract final class ApiErrorCode {
   /// The employee already completed onboarding (a password is set). The same
   /// QR stays valid for Jitan Terminal but cannot restart onboarding.
   static const onboardingAlreadyCompleted = 'onboarding_already_completed';
+  /// Sign-in failed. Deliberately generic: never says whether the employee
+  /// code or the password was wrong.
+  static const invalidCredentials = 'invalid_credentials';
+
+  /// Reset account access on an employee who has not set up Jitan yet.
+  static const accountNotActivated = 'account_not_activated';
   static const unauthenticated = 'unauthenticated';
   static const forbidden = 'forbidden';
   static const notFound = 'not_found';

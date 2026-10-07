@@ -106,10 +106,34 @@ void main() {
 
     expect(find.text('Account already activated'), findsOneWidget);
     expect(find.text('Onboarding cannot restart'), findsOneWidget);
-    expect(find.text('Sign in'), findsNothing, reason: 'sign-in is AUTH-01');
+    expect(find.text('Contact HR/Admin'), findsOneWidget);
 
-    await tapText(tester, 'Back');
-    expect(find.text('Join your workplace'), findsOneWidget);
+    await tapText(tester, 'Sign in');
+    expect(find.text('Sign in to Jitan'), findsOneWidget);
+    expect(h.server.requestsTo('/onboarding/complete'), isEmpty, reason: 'onboarding never restarted');
+  });
+
+  testWidgets('"Contact HR/Admin" explains HR/Admin-assisted recovery', (tester) async {
+    h.server.password = 'set earlier';
+    await startApp(tester);
+    await tapText(tester, 'Get started');
+    await tapText(tester, 'Scan QR');
+
+    await tapText(tester, 'Contact HR/Admin');
+
+    expect(find.text('Can’t access your account?'), findsOneWidget);
+    expect(find.text('Contact HR/Admin to reset your Jitan access.'), findsOneWidget);
+  });
+
+  testWidgets('another device finished first: "Sign in" opens sign-in', (tester) async {
+    await onboardUpToPassword(tester);
+    h.server.anotherDeviceWins = true;
+    await enterPasswords(tester, 'correct horse battery', 'correct horse battery');
+    expect(find.text('Account was just activated'), findsOneWidget);
+
+    await tapText(tester, 'Sign in');
+
+    expect(find.text('Sign in to Jitan'), findsOneWidget);
   });
 
   testWidgets('closing the scanner without a QR stays on Join', (tester) async {
@@ -153,8 +177,14 @@ void main() {
 
       await startApp(tester);
 
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Sign in to Jitan'), findsOneWidget, reason: 'expired/revoked session → sign-in');
       expect(h.store.values.containsKey('session.token'), isFalse);
+    });
+
+    testWidgets('a device signed in before (signed out, expired) opens sign-in; a fresh one onboarding', (tester) async {
+      h.store.values['device.signedInBefore'] = 'true';
+      await startApp(tester);
+      expect(find.text('Sign in to Jitan'), findsOneWidget);
     });
 
     testWidgets('an expired session is discarded without asking the server', (tester) async {

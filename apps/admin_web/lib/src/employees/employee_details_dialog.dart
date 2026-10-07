@@ -7,6 +7,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'onboarding_qr_dialog.dart';
+import 'reset_access_dialog.dart';
 
 /// Opens the Employee details modal for [userId] in [companyId].
 Future<void> showEmployeeDetailsDialog(
@@ -24,7 +25,8 @@ Future<void> showEmployeeDetailsDialog(
 /// Differences from Figma, on purpose: **Location** (ERD GAP-11) shows "—"
 /// with an explanation; **Work policy** is omitted
 /// (PRODUCT-CLARIFY-EMPLOYEE-POLICY). **Account** and the Onboarding status
-/// follow `userPassword IS NOT NULL` (activated).
+/// follow `userPassword IS NOT NULL` (activated). An activated employee's
+/// card also offers "Reset account access" (HR/Admin-assisted recovery).
 class EmployeeDetailsDialog extends StatefulWidget {
   const EmployeeDetailsDialog({super.key, required this.employeesApi, required this.companyId, required this.userId});
 
@@ -115,9 +117,20 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
         _OnboardingCard(
           activated: details.isActivated,
           onShowQr: () => showOnboardingQrDialog(context, employeesApi: widget.employeesApi, employee: details),
+          onResetAccess: () => _resetAccess(context, details),
         ),
       ],
     );
+  }
+
+  Future<void> _resetAccess(BuildContext context, EmployeeDetails details) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final name = [details.firstName, details.lastName].whereType<String>().join(' ');
+    final success = context.t(AdminTextKeys.employeeResetAccessSuccess, args: {'name': name.isEmpty ? details.code : name});
+    if (!await showResetAccessDialog(context, employeesApi: widget.employeesApi, employee: details)) return;
+    messenger?.showSnackBar(SnackBar(content: Text(success)));
+    // The server is the source of truth: reload to show "Not activated".
+    await _load();
   }
 
   Widget _error(BuildContext context, ApiClientException failure) {
@@ -137,10 +150,13 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
 /// Figma's Onboarding card (`153:357`): status, explanation, QR action.
 /// Once activated, the same QR is the employee's personal Terminal QR.
 class _OnboardingCard extends StatelessWidget {
-  const _OnboardingCard({required this.activated, required this.onShowQr});
+  const _OnboardingCard({required this.activated, required this.onShowQr, required this.onResetAccess});
 
   final bool activated;
   final VoidCallback onShowQr;
+
+  /// Only offered once activated: there is no access to reset before.
+  final VoidCallback onResetAccess;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -173,14 +189,24 @@ class _OnboardingCard extends StatelessWidget {
             style: JitanTextStyles.modalSubtitle,
           ),
           const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: JitanPrimaryButton(
-              label: context.t(
-                activated ? AdminTextKeys.employeeOnboardingShowQr : AdminTextKeys.employeeOnboardingAction,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (activated) ...[
+                JitanSecondaryButton(
+                  label: context.t(AdminTextKeys.employeeResetAccessAction),
+                  foreground: JitanColors.errorStrong,
+                  onPressed: onResetAccess,
+                ),
+                const SizedBox(width: 12),
+              ],
+              JitanPrimaryButton(
+                label: context.t(
+                  activated ? AdminTextKeys.employeeOnboardingShowQr : AdminTextKeys.employeeOnboardingAction,
+                ),
+                onPressed: onShowQr,
               ),
-              onPressed: onShowQr,
-            ),
+            ],
           ),
         ],
       ),

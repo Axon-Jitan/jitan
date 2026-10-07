@@ -30,13 +30,13 @@ void main() {
     expect(decoded.companies, ['Almeco', 'PCA']);
   });
 
-  test('OnboardingCompleteResponse carries the session; printing it hides the token', () {
-    final response = OnboardingCompleteResponse(
+  test('SessionResponse carries the session; printing it hides the token', () {
+    final response = SessionResponse(
       account: const EmployeeAccount(firstName: 'A', lastName: 'B', code: 'C', companies: []),
       session: SessionInfo(accessToken: 'TOKEN.VALUE.SIG', expiresAt: DateTime.utc(2026, 11, 6)),
     );
 
-    final decoded = OnboardingCompleteResponse.fromJson(response.toJson());
+    final decoded = SessionResponse.fromJson(response.toJson());
 
     expect(decoded.session.accessToken, 'TOKEN.VALUE.SIG');
     expect(decoded.session.expiresAt, DateTime.utc(2026, 11, 6));

@@ -21,9 +21,9 @@ class OnboardingApi {
 
   /// Sets the mandatory first password, which completes onboarding, and
   /// returns the session for this device: no separate sign-in follows.
-  Future<OnboardingCompleteResponse> complete(OnboardingCompleteRequest request) async {
+  Future<SessionResponse> complete(OnboardingCompleteRequest request) async {
     final json = await _transport.postJson('onboarding/complete', request.toJson());
-    return _decode('Onboarding result', () => OnboardingCompleteResponse.fromJson(json));
+    return _decode('Onboarding result', () => SessionResponse.fromJson(json));
   }
 
   static T _decode<T>(String what, T Function() decode) {

@@ -2,6 +2,7 @@ import 'package:logging/logging.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
+import 'auth/sign_in_routes.dart';
 import 'companies/company_routes.dart';
 import 'employees/employee_routes.dart';
 import 'groups/group_routes.dart';
@@ -18,7 +19,7 @@ final _log = Logger('http.requests');
 /// Assembles the request pipeline:
 ///
 /// ```text
-/// request log → CORS → error mapping → /health*, /languages, /translations, /onboarding/* (public)
+/// request log → CORS → error mapping → /health*, /languages, /translations, /onboarding/*, /auth/sign-in (public)
 ///                                    → identity → API routes             (authenticated)
 /// ```
 ///
@@ -33,6 +34,7 @@ Handler buildApp({
   required GroupRoutes groups,
   required LanguageRoutes languages,
   required OnboardingRoutes onboarding,
+  required SignInRoutes signIn,
   required MeRoutes me,
   List<Middleware> authentication = const [],
 }) {
@@ -52,6 +54,7 @@ Handler buildApp({
       .add(health.router.call)
       .add(languages.publicRouter.call)
       .add(onboarding.router.call)
+      .add(signIn.router.call)
       .add(api.addHandler(apiRoutes.call))
       .handler;
 

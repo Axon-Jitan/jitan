@@ -8,10 +8,23 @@ import 'qr_scan_screen.dart';
 /// Shows the screen for the controller's current step. The system back
 /// gesture goes to the previous step; on the first screen it leaves the app.
 class OnboardingFlow extends StatelessWidget {
-  const OnboardingFlow({super.key, required this.controller, required this.scanQr, required this.onFinished});
+  const OnboardingFlow({
+    super.key,
+    required this.controller,
+    required this.scanQr,
+    required this.onFinished,
+    required this.onSignIn,
+    required this.onContactHr,
+  });
 
   final OnboardingController controller;
   final QrScanner scanQr;
+
+  /// Already activated: open sign-in (Welcome link, error screens 02 and 04).
+  final VoidCallback onSignIn;
+
+  /// "Contact HR/Admin" (error screen 02): the recovery guidance.
+  final VoidCallback onContactHr;
 
   /// "Start Jitan" on the Ready screen: the device is already signed in.
   final VoidCallback onFinished;
@@ -36,7 +49,7 @@ class OnboardingFlow extends StatelessWidget {
           child: KeyedSubtree(
             key: ValueKey(controller.step),
             child: switch (controller.step) {
-              OnboardingStep.welcome => WelcomeScreen(controller: controller),
+              OnboardingStep.welcome => WelcomeScreen(controller: controller, onSignIn: onSignIn),
               OnboardingStep.join => JoinScreen(controller: controller, onScan: () => _scan(context)),
               OnboardingStep.confirm => ConfirmScreen(controller: controller),
               OnboardingStep.language => LanguageScreen(controller: controller),
@@ -44,7 +57,11 @@ class OnboardingFlow extends StatelessWidget {
               OnboardingStep.permissions => PermissionsScreen(controller: controller),
               OnboardingStep.password => PasswordScreen(controller: controller),
               OnboardingStep.ready => ReadyScreen(controller: controller, onStart: onFinished),
-              OnboardingStep.error => OnboardingErrorScreen(controller: controller),
+              OnboardingStep.error => OnboardingErrorScreen(
+                controller: controller,
+                onSignIn: onSignIn,
+                onContactHr: onContactHr,
+              ),
             },
           ),
         ),

@@ -45,6 +45,12 @@ dart run bin/server.dart
   personal QR (no sign-in; the QR is the credential; refused once a password is set).
   Completing sets the mandatory password and returns a session token for that device
 - `GET /me`: the signed-in employee (`Authorization: Bearer <token>`)
+- `POST /auth/sign-in`: employee code + password → session for this device (generic
+  `invalid_credentials` on failure)
+- `POST /me/password`: a signed-in employee sets a new password; returns a new session
+  for this device, all other sessions end
+- `POST /companies/{id}/employees/{userId}/reset-access`: HR/Admin "Reset account access"
+  (clears the password, keeps the QR, ends every session; 204)
 - `GET /companies?search=`: company list (needs an identity, see below)
 - `GET /companies/{id}/employees?search=`: that company's employees
 - `POST /companies/{id}/employees`: create an employee in that company

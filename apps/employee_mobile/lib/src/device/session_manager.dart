@@ -20,6 +20,7 @@ class SessionManager {
   static const _tokenKey = 'session.token';
   static const _expiresKey = 'session.expiresAt';
   static const _deviceKey = 'device.id';
+  static const _signedInBeforeKey = 'device.signedInBefore';
 
   String? _token;
 
@@ -46,8 +47,13 @@ class SessionManager {
   Future<void> save(SessionInfo session) async {
     await _store.write(_tokenKey, session.accessToken);
     await _store.write(_expiresKey, session.expiresAt.toUtc().toIso8601String());
+    await _store.write(_signedInBeforeKey, 'true');
     _token = session.accessToken;
   }
+
+  /// Whether an employee has been signed in on this installation before
+  /// (kept after sign-out). Such a device opens sign-in, not onboarding.
+  Future<bool> hasSignedInBefore() async => await _store.read(_signedInBeforeKey) == 'true';
 
   /// Signs this device out (session expired or revoked, or sign-out).
   Future<void> clear() async {

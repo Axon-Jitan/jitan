@@ -2,6 +2,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
+import '../auth/device_id.dart';
 import '../auth/password_hasher.dart';
 import '../auth/password_policy.dart';
 import '../auth/session_tokens.dart';
@@ -52,8 +53,6 @@ class OnboardingService {
   /// Code of the built-in default language; it needs no database row.
   static const _englishCode = 'en';
 
-  static final _deviceIdFormat = RegExp(r'^[A-Za-z0-9_-]{16,128}$');
-
   /// Checks a scanned QR and returns the account to confirm.
   Future<EmployeeAccount> start(String qrCode) async {
     final user = _requireOnboardable(await _onboarding.findByQrCode(_executor, _checkedQr(qrCode)));
@@ -63,10 +62,10 @@ class OnboardingService {
   /// Completes onboarding in one transaction and signs the device in:
   /// row lock → guard re-check → password hash stored (only while none is
   /// set) → chosen language stored → audit → session for [request.deviceId].
-  Future<OnboardingCompleteResponse> complete(OnboardingCompleteRequest request) async {
+  Future<SessionResponse> complete(OnboardingCompleteRequest request) async {
     final qr = _checkedQr(request.qrCode);
     PasswordPolicy.check(request.password);
-    final deviceId = _checkedDeviceId(request.deviceId);
+    final deviceId = checkedDeviceId(request.deviceId, field: OnboardingCompleteRequest.fieldDeviceId);
     final languageId = await _languageIdFor(request.languageCode);
 
     final found = await _onboarding.findByQrCode(_executor, qr);
@@ -95,7 +94,7 @@ class OnboardingService {
     });
 
     final session = _sessions.issue(userId: user.userId, deviceId: deviceId, passwordHash: hash);
-    return OnboardingCompleteResponse(
+    return SessionResponse(
       account: account,
       session: SessionInfo(accessToken: session.token, expiresAt: session.expiresAt),
     );
@@ -104,11 +103,11 @@ class OnboardingService {
   /// Onboarding already completed: a new session only when [password]
   /// matches the stored hash (the same employee retrying after a lost
   /// response, Figma "Session recovery"). Nothing is written.
-  Future<OnboardingCompleteResponse> _recoverSession(OnboardingUser user, String password, String deviceId) async {
+  Future<SessionResponse> _recoverSession(OnboardingUser user, String password, String deviceId) async {
     final hash = await _onboarding.passwordHash(_executor, user.userId);
     if (hash == null || !await _hasher.verify(password, hash)) throw _alreadyCompleted();
     final session = _sessions.issue(userId: user.userId, deviceId: deviceId, passwordHash: hash);
-    return OnboardingCompleteResponse(
+    return SessionResponse(
       account: await _account(_executor, user),
       session: SessionInfo(accessToken: session.token, expiresAt: session.expiresAt),
     );
@@ -120,13 +119,6 @@ class OnboardingService {
       throw const ApiException(400, ApiErrorCode.invalidQrCode, 'This is not a Jitan QR code.');
     }
     return qr;
-  }
-
-  static String _checkedDeviceId(String deviceId) {
-    if (!_deviceIdFormat.hasMatch(deviceId)) {
-      throw const ApiException.validation(OnboardingCompleteRequest.fieldDeviceId, 'Invalid device identifier.');
-    }
-    return deviceId;
   }
 
   /// The active `tblLanguage` row for [code]; `null` for no choice or for

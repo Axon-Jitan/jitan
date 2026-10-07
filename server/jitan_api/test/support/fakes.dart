@@ -1,3 +1,4 @@
+import 'package:jitan_api/src/auth/credential_repository.dart';
 import 'package:jitan_api/src/audit/audit_event.dart';
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/auth/permission.dart';
@@ -110,7 +111,21 @@ class FakeEmployeeRepository implements EmployeeRepository {
 
   @override
   Future<EmployeeSummary?> findInCompany(SqlExecutor executor, int companyId, int userId) async =>
-      byCompany[-userId]?.single;
+      byCompany[-userId]?.single ??
+      (members.contains((companyId, userId))
+          ? EmployeeSummary(
+              id: userId,
+              firstName: null,
+              lastName: null,
+              code: 'U$userId',
+              groups: const [],
+              isActive: true,
+              isActivated: true,
+            )
+          : null);
+
+  /// (companyId, userId) pairs [findInCompany] finds.
+  Set<(int, int)> members = {};
 
   /// (companyId, userId) → that member's current userQRcode (null = none).
   /// A pair missing from the map is not a member.
@@ -197,6 +212,37 @@ class FakeOnboardingRepository implements OnboardingRepository {
 
   @override
   Future<void> setLanguage(SqlExecutor tx, int userId, int languageId) async => languages[userId] = languageId;
+}
+
+/// Credentials over the same users and hashes as [FakeOnboardingRepository].
+class FakeCredentialRepository implements CredentialRepository {
+  FakeCredentialRepository(this.onboarding);
+
+  final FakeOnboardingRepository onboarding;
+
+  @override
+  Future<List<SignInCandidate>> candidatesByCode(SqlExecutor executor, String code) async => [
+    for (final u in onboarding.users.values)
+      if (u.code == code && onboarding.passwordHashes.containsKey(u.userId))
+        (
+          userId: u.userId,
+          passwordHash: onboarding.passwordHashes[u.userId]!,
+          isActive: u.isActive,
+          isMarkedForDeletion: onboarding.markedForDeletion.contains(u.userId),
+        ),
+  ];
+
+  @override
+  Future<bool> replacePassword(SqlExecutor tx, int userId, String passwordHash) async {
+    final user = onboarding.users.values.where((u) => u.userId == userId).firstOrNull;
+    if (user == null || !user.isActive || onboarding.markedForDeletion.contains(userId)) return false;
+    if (!onboarding.passwordHashes.containsKey(userId)) return false;
+    onboarding.passwordHashes[userId] = passwordHash;
+    return true;
+  }
+
+  @override
+  Future<bool> clearPassword(SqlExecutor tx, int userId) async => onboarding.passwordHashes.remove(userId) != null;
 }
 
 class FakeGroupRepository implements GroupRepository {

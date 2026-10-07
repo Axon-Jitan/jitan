@@ -110,4 +110,66 @@ abstract final class EmployeeTextKeys {
   static const homeGreeting = 'home.greeting';
   static const homeGreetingNoName = 'home.greetingNoName';
   static const homeText = 'home.text';
+
+  // Sign-in, recovery, profile (Figma "Auth / …", "Profile / …")
+  static const welcomeSignIn = 'onboarding.welcome.signIn';
+  static const errorSignIn = 'onboarding.error.signIn';
+  static const errorContactHr = 'onboarding.error.contactHr';
+  static const signInTitle = 'auth.signIn.title';
+  static const signInText = 'auth.signIn.text';
+  static const codeLabel = 'auth.code.label';
+  static const codeHint = 'auth.code.hint';
+  static const signInPasswordLabel = 'auth.password.label';
+  static const signInPasswordHint = 'auth.password.hint';
+  static const forgotLink = 'auth.forgot.link';
+  static const signInAction = 'auth.signIn.action';
+  static const signInHelpTitle = 'auth.signIn.helpTitle';
+  static const signInHelp = 'auth.signIn.help';
+  static const signInUseQr = 'auth.signIn.useQr';
+  static const forgotTitle = 'auth.forgot.title';
+  static const forgotText = 'auth.forgot.text';
+  static const forgotBack = 'auth.forgot.back';
+  static const recoveryTitle = 'auth.recovery.title';
+  static const recoveryText = 'auth.recovery.text';
+  static const recoveryStepsTitle = 'auth.recovery.steps.title';
+  static const recoveryStepsText = 'auth.recovery.steps.text';
+  static const recoveryDeviceTitle = 'auth.recovery.device.title';
+  static const recoveryDeviceText = 'auth.recovery.device.text';
+  static const errorInvalidTitle = 'auth.error.invalid.title';
+  static const errorInvalidText = 'auth.error.invalid.text';
+  static const errorInvalidHelpTitle = 'auth.error.invalid.helpTitle';
+  static const errorInvalidHelp = 'auth.error.invalid.help';
+  static const errorInvalidForgot = 'auth.error.invalid.forgot';
+  static const errorAccountTitle = 'auth.error.unavailable.title';
+  static const errorAccountText = 'auth.error.unavailable.text';
+  static const errorAccountHelpTitle = 'auth.error.unavailable.helpTitle';
+  static const errorAccountHelp = 'auth.error.unavailable.help';
+  static const errorReachTitle = 'auth.error.network.title';
+  static const errorReachText = 'auth.error.network.text';
+  static const errorReachHelpTitle = 'auth.error.network.helpTitle';
+  static const errorReachHelp = 'auth.error.network.help';
+  static const homeOpenProfile = 'home.openProfile';
+  static const profileTitle = 'profile.title';
+  static const profileCode = 'profile.code';
+  static const profilePasswordRow = 'profile.passwordRow';
+  static const profileSignOut = 'profile.signOut';
+  static const passwordScreenTitle = 'profile.password.title';
+  static const passwordScreenText = 'profile.password.text';
+  static const passwordStatusLabel = 'profile.password.status.label';
+  static const passwordStatusValue = 'profile.password.status.value';
+  static const passwordStatusText = 'profile.password.status.text';
+  static const passwordChangeAction = 'profile.password.change';
+  static const passwordHelpTitle = 'profile.password.help.title';
+  static const passwordHelpText = 'profile.password.help.text';
+  static const changePasswordTitle = 'profile.changePassword.title';
+  static const changePasswordText = 'profile.changePassword.text';
+  static const changePasswordLabel = 'profile.changePassword.label';
+  static const changePasswordSuccess = 'profile.changePassword.success';
+  static const changePasswordNetworkError = 'profile.changePassword.networkError';
+  static const signOutTitle = 'profile.signOut.title';
+  static const signOutQuestion = 'profile.signOut.question';
+  static const signOutText = 'profile.signOut.text';
+
+  /// Argument: `{code}`.
+  static const recoveryCode = 'auth.recovery.code';
 }

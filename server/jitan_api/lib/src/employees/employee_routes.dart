@@ -17,6 +17,8 @@ import 'employee_service.dart';
 /// - `GET /companies/{companyId}/employees/{userId}`
 /// - `POST /companies/{companyId}/employees/{userId}/onboarding-qr`: the QR
 ///   value (POST because it may store one for an employee who has none)
+/// - `POST /companies/{companyId}/employees/{userId}/reset-access`: "Reset
+///   account access" (clears the password; the QR starts setup again)
 class EmployeeRoutes {
   const EmployeeRoutes(this._authorizer, this._employees);
 
@@ -30,7 +32,15 @@ class EmployeeRoutes {
     ..get(_path, _list)
     ..post(_path, _create)
     ..get(_employeePath, _details)
-    ..post('$_employeePath/onboarding-qr', _onboardingQr);
+    ..post('$_employeePath/onboarding-qr', _onboardingQr)
+    ..post('$_employeePath/reset-access', _resetAccess);
+
+  Future<Response> _resetAccess(Request request, String companyId, String userId) async {
+    final id = _companyId(companyId);
+    final identity = await _authorizer.require(request, Permission.resetEmployeeAccess, companyId: id);
+    await _employees.resetAccess(identity.userId, id, _id(userId));
+    return Response(204);
+  }
 
   Future<Response> _onboardingQr(Request request, String companyId, String userId) async {
     final id = _companyId(companyId);

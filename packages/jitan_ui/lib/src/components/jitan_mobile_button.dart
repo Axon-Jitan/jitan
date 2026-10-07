@@ -13,6 +13,9 @@ enum JitanMobileButtonStyle {
 
   /// Warm grey with ink text: secondary actions ("Back").
   secondary,
+
+  /// Dark red: confirming something that ends access ("Sign out").
+  danger,
 }
 
 /// Size of a [JitanMobileButton], as measured in Figma.
@@ -59,6 +62,7 @@ class JitanMobileButton extends StatelessWidget {
       JitanMobileButtonStyle.dark => (JitanColors.ink, JitanColors.warmWhite),
       JitanMobileButtonStyle.brand => (JitanColors.vermilion, JitanColors.surface),
       JitanMobileButtonStyle.secondary => (JitanColors.inputFill, JitanColors.ink),
+      JitanMobileButtonStyle.danger => (JitanColors.errorStrong, JitanColors.surface),
     };
     return SizedBox(
       height: size.height,

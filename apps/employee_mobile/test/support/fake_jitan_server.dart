@@ -62,6 +62,8 @@ class FakeJitanServer {
         'translations': {'onboarding.method.title': 'Hoe wil je je tijd registreren?'},
       }),
       '/me' => _me(request),
+      '/auth/sign-in' => _signIn(request),
+      '/me/password' => _changePassword(request),
       '/me/language' => _json({'languageCode': null}),
       _ => _error(404, 'not_found'),
     };
@@ -105,12 +107,48 @@ class FakeJitanServer {
     });
   }
 
-  http.Response _me(http.Request request) {
+  bool _authorized(http.Request request) {
     final auth = request.headers['authorization'];
-    if (auth == null || !issuedTokens.contains(auth.replaceFirst('Bearer ', ''))) {
-      return _error(401, 'unauthenticated');
+    return auth != null && issuedTokens.contains(auth.replaceFirst('Bearer ', ''));
+  }
+
+  http.Response _me(http.Request request) => _authorized(request) ? _json(_account) : _error(401, 'unauthenticated');
+
+  http.Response _session() {
+    final token = 'token-${++_tokenCount}';
+    issuedTokens.add(token);
+    return _json({
+      'account': _account,
+      'session': {'accessToken': token, 'expiresAt': '2099-01-01T00:00:00.000Z'},
+    });
+  }
+
+  /// Same rules as the server: generic failure unless code and password
+  /// match; an inactive account is reported only for the right password.
+  http.Response _signIn(http.Request request) {
+    final body = jsonDecode(request.body) as Map;
+    if (body['code'] != 'SBW' || password == null || body['password'] != password) {
+      return _error(401, 'invalid_credentials');
     }
-    return _json(_account);
+    if (!active) return _error(403, 'account_inactive');
+    return _session();
+  }
+
+  /// New password: every existing session ends, this device gets a new one.
+  http.Response _changePassword(http.Request request) {
+    if (!_authorized(request)) return _error(401, 'unauthenticated');
+    final newPassword = (jsonDecode(request.body) as Map)['newPassword'] as String;
+    if (rejectPassword) {
+      return http.Response(
+        jsonEncode({
+          'error': {'code': 'validation_failed', 'message': 'x', 'field': 'newPassword'},
+        }),
+        400,
+      );
+    }
+    password = newPassword;
+    issuedTokens.clear();
+    return _session();
   }
 
   static http.Response _json(Object body) =>
@@ -177,6 +215,7 @@ class TestHarness {
     final languagesApi = LanguagesApi(transport);
     services = EmployeeServices(
       onboardingApi: OnboardingApi(transport),
+      authApi: AuthApi(transport),
       languagesApi: languagesApi,
       meApi: MeApi(transport),
       translationService: TranslationService(languagesApi),

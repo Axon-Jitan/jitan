@@ -126,4 +126,89 @@ void main() {
     await tester.pump();
     expect(employees.detailRequests, hasLength(2));
   });
+
+  group('Reset account access (HR/Admin-assisted recovery)', () {
+    const activated = EmployeeDetails(
+      id: 1,
+      companyId: 7,
+      companyName: 'Almeco',
+      firstName: 'Disan',
+      lastName: 'Ssebowa',
+      code: 'SBW',
+      groups: ['White collar'],
+      phone: null,
+      isActive: true,
+      isActivated: true,
+    );
+
+    Future<void> settle(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('only offered for an activated employee', (tester) async {
+      await pumpPageAndOpen(tester);
+      employees.detailsSucceed(_disan);
+      await settle(tester);
+
+      expect(find.text('Reset account access'), findsNothing);
+    });
+
+    testWidgets('asks to confirm and to verify the employee; Cancel changes nothing', (tester) async {
+      await pumpPageAndOpen(tester);
+      employees.detailsSucceed(activated);
+      await settle(tester);
+
+      await tester.tap(find.text('Reset account access'));
+      await settle(tester);
+
+      expect(find.text('Reset account access?'), findsOneWidget);
+      expect(find.textContaining('signed out of Jitan on every device'), findsOneWidget);
+      expect(find.textContaining('confirmed that you are helping Disan Ssebowa in person'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await settle(tester);
+      expect(employees.resetRequests, isEmpty);
+      expect(find.text('Reset account access?'), findsNothing);
+    });
+
+    testWidgets('confirmed: resets in that company, confirms, and reloads the details', (tester) async {
+      await pumpPageAndOpen(tester);
+      employees.detailsSucceed(activated);
+      await settle(tester);
+      await tester.tap(find.text('Reset account access'));
+      await settle(tester);
+
+      await tester.tap(find.text('Reset access'));
+      await tester.pump();
+      expect(employees.resetRequests, [(7, 1)]);
+      employees.resetSucceeds();
+      await settle(tester);
+
+      expect(find.text('Reset account access?'), findsNothing);
+      expect(find.text('Access reset. Disan Ssebowa can now scan their Jitan QR to set a new password.'), findsOneWidget);
+      expect(employees.detailRequests, hasLength(2), reason: 'reloaded from the server');
+      employees.detailsSucceed(_disan);
+      await settle(tester);
+      expect(find.text('Reset account access'), findsNothing, reason: 'now not activated');
+    });
+
+    testWidgets('a refused reset is explained in the dialog, which stays open', (tester) async {
+      await pumpPageAndOpen(tester);
+      employees.detailsSucceed(activated);
+      await settle(tester);
+      await tester.tap(find.text('Reset account access'));
+      await settle(tester);
+
+      await tester.tap(find.text('Reset access'));
+      await tester.pump();
+      employees.resetFails(
+        const ApiClientException.server(409, ApiError(code: ApiErrorCode.accountNotActivated, message: 'x')),
+      );
+      await settle(tester);
+
+      expect(find.text('This employee hasn’t set up Jitan yet, so there is no access to reset.'), findsOneWidget);
+      expect(find.text('Reset account access?'), findsWidgets);
+    });
+  });
 }

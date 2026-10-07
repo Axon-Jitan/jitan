@@ -139,9 +139,38 @@ with decisions already taken, or has no screen:
 4. **"Set this later" removed** from "07 Set password": the password is mandatory (ONB-01).
    The step counter reads "8 of 9" because the flow has the extra language step.
 5. **Job title on "04 Account found" omitted.** The ERD has no job title.
-6. **"Sign in" and "Contact HR/Admin" buttons on error screens 02 and 04 not shown yet** (required by the 2026-10-07 onboarding brief; waiting on the questions below).
-   Sign-in is AUTH-01 (not built); the ERD holds no HR contact details. "Back" is shown.
+6. ~~"Sign in" and "Contact HR/Admin" not shown~~ **Resolved (AUTH-01):** "Sign in" opens
+   Auth / 01; "Contact HR/Admin" opens the recovery guidance (see DESIGN-CLARIFY-AUTH).
 7. **Ready summary** says "Allow location in Settings to use automatic registration"
    (warning colour) instead of "Required permissions configured" when automatic
    registration was chosen but location was refused. A refusal never blocks onboarding.
 8. **Home** is a placeholder ("Hello, {name}") until the Today screens are built.
+
+---
+
+## DESIGN-CLARIFY-AUTH: Sign-in and recovery screens without a Figma frame
+Status: `OPEN` · built from existing components, does not block
+
+Auth / 01–05 and Profile / Password & web login / Sign out follow Figma. These parts had
+no frame and were built from the same components, for design review:
+
+1. **Recovery guidance** after Forgot password → Continue (and "Contact HR/Admin"):
+   "Can't access your account? Contact HR/Admin to reset your Jitan access", the employee
+   code to give HR, and a note that a still-signed-in device can change the password.
+   Nothing is sent to the server, so nothing reveals whether the code exists.
+2. **Change password form**: new password + confirmation, same rules and inline errors as
+   onboarding "07 Set password". No current password (the session proves identity, so an
+   employee who forgot it but is still signed in can recover).
+3. **Password & web login copy**: Figma mentions an email login and a reset link to a
+   verified contact method. Jitan has no email and V1 recovery is HR/Admin-assisted, so
+   the copy says so instead.
+4. **Profile / Employee** shows only what exists: identity, employee code, Password & web
+   login, Sign out. Registration method, location, notifications, this device, privacy,
+   web login (GAP-05) and the bottom navigation come with their features. Home opens
+   Profile from a profile icon until the navigation bar exists.
+5. **Entry points**: "Already activated? Sign in" under Welcome's "Get started", and
+   "Set up with my QR" under the sign-in help note (back to onboarding).
+6. **Sign in button** is disabled until code and password are filled in.
+7. **HR/Admin "Reset account access"**: an outlined button next to "Show QR" on an
+   activated employee's Onboarding card, with a confirmation modal that asks HR/Admin to
+   have verified the employee in person. No HR/Admin frame exists for it.

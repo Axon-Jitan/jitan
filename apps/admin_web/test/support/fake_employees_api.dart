@@ -70,6 +70,22 @@ class FakeEmployeesApi implements EmployeesApi {
   void qrSucceeds(String value) => _pendingQr.last.complete(value);
 
   void qrFails(ApiClientException failure) => _pendingQr.last.completeError(failure);
+
+  /// (companyId, userId) of every reset-access request.
+  final resetRequests = <(int, int)>[];
+  final _pendingResets = <Completer<void>>[];
+
+  @override
+  Future<void> resetAccess(int companyId, int userId) {
+    resetRequests.add((companyId, userId));
+    final completer = Completer<void>();
+    _pendingResets.add(completer);
+    return completer.future;
+  }
+
+  void resetSucceeds() => _pendingResets.last.complete();
+
+  void resetFails(ApiClientException failure) => _pendingResets.last.completeError(failure);
 }
 
 /// Stand-in for [GroupsApi] with a controllable result.

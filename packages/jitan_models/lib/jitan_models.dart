@@ -2,6 +2,7 @@
 library;
 
 export 'src/api_error.dart';
+export 'src/auth.dart';
 export 'src/company_summary.dart';
 export 'src/create_employee_request.dart';
 export 'src/employee_details.dart';

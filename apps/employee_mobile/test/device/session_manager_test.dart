@@ -40,7 +40,8 @@ void main() {
     await session.clear();
 
     expect(session.isSignedIn, isFalse);
-    expect(store.values.keys, ['device.id']);
+    expect(store.values.keys, unorderedEquals(['device.id', 'device.signedInBefore']), reason: 'no session left');
+    expect(await session.hasSignedInBefore(), isTrue, reason: 'the next start opens sign-in, not onboarding');
     expect(await session.deviceId(), id);
   });
 

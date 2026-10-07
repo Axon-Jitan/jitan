@@ -128,6 +128,16 @@ hardcode or invent them.
    still active and the fingerprint matches on every request. Onboarding completion returns
    the first session, so no sign-in follows onboarding. No session/device table exists
    (GAP-05): sessions can't be listed or revoked one by one.
+10. **Sign-in and recovery** (V1): `POST /auth/sign-in` (employee code + password) only
+    for re-entry (new device, reinstall, expired session, sign-out). Failures are
+    generic (`invalid_credentials`, same Argon2id work for unknown codes); "account
+    unavailable" only after the correct password. Forgot password is HR/Admin-assisted:
+    a signed-in employee changes it (`POST /me/password`, no current password); a
+    locked-out one asks HR/Admin for **Reset account access**
+    (`POST /companies/{id}/employees/{userId}/reset-access`): `userPassword = NULL`,
+    audited, QR unchanged, every session ends, and the QR sets up a new password once.
+    Employees can never clear their own password. All password writes outside
+    onboarding are in `CredentialRepository`.
 
 ## QR types: do not conflate
 
@@ -192,7 +202,7 @@ named so it can be found:
 
 | Item | Replace with | Blocked on |
 |---|---|---|
-| `DevelopmentIdentityMiddleware` | `TokenAuthenticationMiddleware` (exists; runs first) once sign-in exists for HR/Admin web | AUTH-01 |
+| `DevelopmentIdentityMiddleware` | `TokenAuthenticationMiddleware` (exists; runs first) once the HR/Admin web has a sign-in screen | AUTH-02 |
 | `DevelopmentPermissionEvaluator` / `UnconfiguredPermissionEvaluator` | evaluator over `tblCredGroup`/`tblAppModulesCredGroup`/`tblFunction` | CLARIFY-10, -11 |
 | Sidebar role caption omitted | signed-in user's credential group from a `/me` endpoint | CLARIFY-11 |
 | Cleartext `http://` in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`) | HTTPS API; release builds already refuse cleartext | production hosting |

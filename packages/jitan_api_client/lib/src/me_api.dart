@@ -10,6 +10,17 @@ class MeApi {
 
   final ApiTransport _transport;
 
+  /// Profile → Change password. Returns a new session for this device: store
+  /// it, because the old token (and every other device's) stops working.
+  Future<SessionResponse> changePassword(String newPassword) async {
+    final json = await _transport.postJson('me/password', ChangePasswordRequest(newPassword: newPassword).toJson());
+    try {
+      return SessionResponse.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Change password: ${e.message}');
+    }
+  }
+
   Future<EmployeeAccount> me() async {
     final json = await _transport.getJson('me');
     try {

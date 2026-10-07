@@ -17,21 +17,14 @@ abstract final class PasswordPolicy {
   static const recommendedLength = 12;
   static const maxLength = 256;
 
-  /// Throws 400 `validation_failed` (field `password`) when [password] breaks
-  /// a rule.
-  static void check(String password) {
+  /// Throws 400 `validation_failed` on [field] when [password] breaks a rule.
+  static void check(String password, {String field = OnboardingCompleteRequest.fieldPassword}) {
     final length = password.runes.length;
     if (password.trim().isEmpty || length < minLength) {
-      throw const ApiException.validation(
-        OnboardingCompleteRequest.fieldPassword,
-        'The password must be at least $minLength characters.',
-      );
+      throw ApiException.validation(field, 'The password must be at least $minLength characters.');
     }
     if (length > maxLength) {
-      throw const ApiException.validation(
-        OnboardingCompleteRequest.fieldPassword,
-        'The password must be at most $maxLength characters.',
-      );
+      throw ApiException.validation(field, 'The password must be at most $maxLength characters.');
     }
   }
 }

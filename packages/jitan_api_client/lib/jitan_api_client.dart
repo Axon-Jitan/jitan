@@ -3,6 +3,7 @@ library;
 
 export 'src/api_client_exception.dart';
 export 'src/api_transport.dart';
+export 'src/auth_api.dart';
 export 'src/companies_api.dart';
 export 'src/employees_api.dart';
 export 'src/groups_api.dart';

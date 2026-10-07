@@ -4,9 +4,12 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:logging/logging.dart';
 
+import '../auth/password_rules.dart';
 import '../device/device_settings.dart';
 import '../device/permissions_gateway.dart';
 import '../device/session_manager.dart';
+
+export '../auth/password_rules.dart' show PasswordProblem;
 
 final _log = Logger('onboarding');
 
@@ -37,9 +40,6 @@ enum OnboardingProblem {
   sessionRecovery,
 }
 
-/// Why the password was not accepted.
-enum PasswordProblem { tooShort, tooLong, mismatch, rejected }
-
 /// Drives onboarding: scan → confirm → language → registration method →
 /// permissions → password → ready (the session is created with the
 /// password, so no sign-in follows).
@@ -63,10 +63,6 @@ class OnboardingController extends ChangeNotifier {
   final DeviceSettings _settings;
   final PermissionsGateway _permissions;
   final Future<void> Function(String languageCode) _onLanguageChosen;
-
-  /// Password rules shown before sending (the server enforces the same).
-  static const minPasswordLength = 8;
-  static const maxPasswordLength = 256;
 
   OnboardingStep _step = OnboardingStep.welcome;
   OnboardingStep get step => _step;
@@ -216,7 +212,7 @@ class OnboardingController extends ChangeNotifier {
   /// Checks the password locally, then completes onboarding on the server,
   /// which also signs this device in.
   Future<void> submitPassword(String password, String confirmation) async {
-    final problem = _checkPassword(password, confirmation);
+    final problem = PasswordRules.check(password, confirmation);
     if (problem != null) {
       _passwordProblem = problem;
       notifyListeners();
@@ -296,13 +292,6 @@ class OnboardingController extends ChangeNotifier {
     ApiErrorCode.accountInactive => OnboardingProblem.accountUnavailable,
     _ => OnboardingProblem.serverUnavailable,
   };
-
-  static PasswordProblem? _checkPassword(String password, String confirmation) {
-    if (password.trim().isEmpty || password.length < minPasswordLength) return PasswordProblem.tooShort;
-    if (password.length > maxPasswordLength) return PasswordProblem.tooLong;
-    if (password != confirmation) return PasswordProblem.mismatch;
-    return null;
-  }
 
   // ── Helpers ────────────────────────────────────────────────────────────
 

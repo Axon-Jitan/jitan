@@ -122,7 +122,7 @@ void main() {
       final app = _app();
 
       final response = await app.post('/onboarding/complete', _complete());
-      final body = OnboardingCompleteResponse.fromJson(await jsonBody(response));
+      final body = SessionResponse.fromJson(await jsonBody(response));
 
       expect(body.account.code, 'SBW');
       expect(body.session.expiresAt, DateTime.utc(2026, 11, 6, 12));
@@ -134,7 +134,7 @@ void main() {
 
     test('the employee lands directly in the authenticated app: the session works for GET /me', () async {
       final app = _app();
-      final body = OnboardingCompleteResponse.fromJson(
+      final body = SessionResponse.fromJson(
         await jsonBody(await app.post('/onboarding/complete', _complete())),
       );
 
@@ -189,7 +189,7 @@ void main() {
       final retry = await app.post('/onboarding/complete', _complete(deviceId: 'device-retry-0000000000'));
 
       expect(retry.statusCode, 200);
-      final body = OnboardingCompleteResponse.fromJson(await jsonBody(retry));
+      final body = SessionResponse.fromJson(await jsonBody(retry));
       expect(app.sessions.verify(body.session.accessToken)!.deviceId, 'device-retry-0000000000');
       expect((await app.getAuthorized('/me', body.session.accessToken)).statusCode, 200);
       expect(app.onboarding.passwordHashes[1], hash, reason: 'password unchanged');
@@ -254,7 +254,7 @@ void main() {
   group('session authentication', () {
     Future<(TestApp, String)> onboarded() async {
       final app = _app();
-      final body = OnboardingCompleteResponse.fromJson(
+      final body = SessionResponse.fromJson(
         await jsonBody(await app.post('/onboarding/complete', _complete())),
       );
       return (app, body.session.accessToken);

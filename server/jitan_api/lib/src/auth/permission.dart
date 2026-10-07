@@ -21,4 +21,8 @@ enum Permission {
 
   /// See the assignable employee groups (e.g. Blue/White collar).
   viewGroups,
+
+  /// "Reset account access" for an employee of one company (company-scoped):
+  /// clears their password so they set up Jitan again with their QR.
+  resetEmployeeAccess,
 }

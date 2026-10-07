@@ -106,4 +106,18 @@ abstract final class AdminTextKeys {
 
   /// Argument: `{name}` (first name).
   static const employeeQrTerminalInstruction = 'employee.qr.terminalInstruction';
+
+  static const employeeResetAccessAction = 'employee.resetAccess.action';
+  static const employeeResetAccessTitle = 'employee.resetAccess.title';
+
+  /// Argument: `{name}`.
+  static const employeeResetAccessMessage = 'employee.resetAccess.message';
+
+  /// Argument: `{name}`.
+  static const employeeResetAccessVerify = 'employee.resetAccess.verify';
+  static const employeeResetAccessConfirm = 'employee.resetAccess.confirm';
+
+  /// Argument: `{name}`.
+  static const employeeResetAccessSuccess = 'employee.resetAccess.success';
+  static const employeeResetAccessNotActivated = 'employee.resetAccess.notActivated';
 }

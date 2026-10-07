@@ -51,7 +51,27 @@ class ApiTransport {
     );
   }
 
-  Future<Map<String, Object?>> _send(String method, Uri uri, Future<http.Response> Function() call) async {
+  /// POSTs an action that answers `204 No Content` (e.g. reset-access).
+  Future<void> postNoContent(String path, {Map<String, Object?>? body}) async {
+    final uri = baseUri.resolve(path);
+    await _send(
+      'POST',
+      uri,
+      () => _http.post(
+        uri,
+        headers: _headers(const {'accept': 'application/json', 'content-type': 'application/json; charset=utf-8'}),
+        body: body == null ? null : jsonEncode(body),
+      ),
+      expectBody: false,
+    );
+  }
+
+  Future<Map<String, Object?>> _send(
+    String method,
+    Uri uri,
+    Future<http.Response> Function() call, {
+    bool expectBody = true,
+  }) async {
     final http.Response response;
     try {
       response = await call().timeout(timeout);
@@ -61,6 +81,7 @@ class ApiTransport {
       throw ApiClientException.network('$method $uri failed: ${e.message}');
     }
 
+    if (!expectBody && response.statusCode == 204) return const {};
     final body = _decodeObject(response);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (body == null) {

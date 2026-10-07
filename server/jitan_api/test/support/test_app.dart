@@ -4,6 +4,9 @@ import 'package:jitan_api/src/app.dart';
 import 'package:jitan_api/src/auth/authorizer.dart';
 import 'package:jitan_api/src/auth/development_identity_middleware.dart';
 import 'package:jitan_api/src/auth/session_tokens.dart';
+import 'package:jitan_api/src/auth/sign_in_routes.dart';
+import 'package:jitan_api/src/auth/sign_in_service.dart';
+import 'package:jitan_api/src/users/account_service.dart';
 import 'package:jitan_api/src/auth/token_authentication_middleware.dart';
 import 'package:jitan_api/src/users/me_routes.dart';
 import 'package:jitan_api/src/companies/company_routes.dart';
@@ -44,6 +47,7 @@ class TestApp {
           groups: groups,
           audit: audit,
           transactions: transactions,
+          credentials: credentials,
           personalQrCode: () => 'QR-${++_qrCounter}',
         ),
       ),
@@ -60,7 +64,26 @@ class TestApp {
           hasher: hasher,
         ),
       ),
-      me: MeRoutes(users),
+      signIn: SignInRoutes(
+        SignInService(
+          credentials: credentials,
+          users: users,
+          executor: unusedExecutor,
+          sessions: sessions,
+          hasher: hasher,
+        ),
+      ),
+      me: MeRoutes(
+        users,
+        AccountService(
+          credentials: credentials,
+          users: users,
+          audit: audit,
+          transactions: transactions,
+          sessions: sessions,
+          hasher: hasher,
+        ),
+      ),
       authentication: [
         TokenAuthenticationMiddleware(tokens: sessions, users: users).middleware,
         if (devUserId != null)
@@ -79,6 +102,7 @@ class TestApp {
   final audit = FakeAuditLog();
   final transactions = FakeTransactions();
   final onboarding = FakeOnboardingRepository();
+  late final credentials = FakeCredentialRepository(onboarding);
   final unusedExecutor = UnusedExecutor();
   late final FakeUserRepository users;
 
@@ -99,6 +123,18 @@ class TestApp {
   final translations = FakeTranslationRepository();
   late final FixedPermissionEvaluator permissions;
   late final Handler handler;
+
+  /// POST with `Authorization: Bearer <token>`.
+  Future<Response> postAuthorized(String path, String body, String token) => Future.sync(
+    () => handler(
+      Request(
+        'POST',
+        Uri.parse('http://localhost$path'),
+        body: body,
+        headers: {'content-type': 'application/json', 'authorization': 'Bearer $token'},
+      ),
+    ),
+  );
 
   /// GET with `Authorization: Bearer <token>`.
   Future<Response> getAuthorized(String path, String token) => get(path, headers: {'authorization': 'Bearer $token'});

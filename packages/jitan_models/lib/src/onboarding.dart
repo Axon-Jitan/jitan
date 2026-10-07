@@ -114,12 +114,13 @@ class SessionInfo {
   String toString() => 'SessionInfo(<redacted>, expires $expiresAt)';
 }
 
-/// Response of `POST /onboarding/complete`: the employee is onboarded and
-/// this device is signed in. No second sign-in step.
-class OnboardingCompleteResponse {
-  const OnboardingCompleteResponse({required this.account, required this.session});
+/// A signed-in device: the account and its session. Returned by
+/// `POST /onboarding/complete` (onboarding signs the device in, no second
+/// sign-in step), `POST /auth/sign-in` and `POST /me/password`.
+class SessionResponse {
+  const SessionResponse({required this.account, required this.session});
 
-  factory OnboardingCompleteResponse.fromJson(Map<String, Object?> json) => OnboardingCompleteResponse(
+  factory SessionResponse.fromJson(Map<String, Object?> json) => SessionResponse(
         account: EmployeeAccount.fromJson(json.readObject('account')),
         session: SessionInfo.fromJson(json.readObject('session')),
       );
@@ -130,5 +131,5 @@ class OnboardingCompleteResponse {
   Map<String, Object?> toJson() => {'account': account.toJson(), 'session': session.toJson()};
 
   @override
-  String toString() => 'OnboardingCompleteResponse(${account.code}, <session redacted>)';
+  String toString() => 'SessionResponse(${account.code}, <session redacted>)';
 }

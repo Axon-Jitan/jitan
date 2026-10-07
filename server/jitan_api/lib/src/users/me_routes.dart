@@ -1,20 +1,41 @@
+import 'package:jitan_models/jitan_models.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 import '../auth/request_identity.dart';
 import '../http/api_exception.dart';
+import '../http/json_request.dart';
 import '../http/json_response.dart';
+import 'account_service.dart';
 import 'user_repository.dart';
 
-/// `GET /me`: the signed-in employee. Any signed-in user may read their own
-/// account, so this needs an identity but no permission. Consumer: the
-/// Employee app's Ready/Home screen right after onboarding (ONB-02).
+/// The signed-in employee's own account. Needs an identity but no
+/// permission: everyone may act on their own account. Consumer: the
+/// Employee app (Home, Profile).
+///
+/// - `GET /me`: the account
+/// - `POST /me/password` with a `ChangePasswordRequest`: new password; the
+///   response is a new session for this device (all others end)
 class MeRoutes {
-  const MeRoutes(this._users);
+  const MeRoutes(this._users, this._accounts);
 
   final UserRepository _users;
+  final AccountService _accounts;
 
-  Router get router => Router()..get('/me', _me);
+  Router get router => Router()
+    ..get('/me', _me)
+    ..post('/me/password', _changePassword);
+
+  Future<Response> _changePassword(Request request) async {
+    final ChangePasswordRequest body;
+    try {
+      body = ChangePasswordRequest.fromJson(await readJsonObject(request));
+    } on FormatException catch (e) {
+      throw ApiException.badRequest(e.message);
+    }
+    final result = await _accounts.changePassword(request.identity, body);
+    return jsonResponse(result.toJson()).change(headers: const {'cache-control': 'no-store'});
+  }
 
   Future<Response> _me(Request request) async {
     final account = await _users.account(request.identity.userId) ??

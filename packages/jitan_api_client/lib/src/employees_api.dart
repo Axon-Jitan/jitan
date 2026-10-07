@@ -45,6 +45,12 @@ class EmployeesApi {
   }
 
   /// Creates an employee in [companyId]; returns it as the server stored it.
+  /// HR/Admin "Reset account access": clears the employee's password so
+  /// they set up Jitan again with their existing QR. Every session of theirs
+  /// ends. Fails with `account_not_activated` when there is nothing to reset.
+  Future<void> resetAccess(int companyId, int userId) =>
+      _transport.postNoContent('companies/$companyId/employees/$userId/reset-access');
+
   Future<EmployeeSummary> create(int companyId, CreateEmployeeRequest request) async {
     final json = await _transport.postJson('companies/$companyId/employees', request.toJson());
     try {

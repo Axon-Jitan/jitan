@@ -4,7 +4,8 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
-import '../onboarding/widgets/onboarding_widgets.dart';
+import '../profile/profile_screens.dart';
+import '../widgets/mobile_widgets.dart';
 
 /// Where a signed-in employee lands. A placeholder until the Today screens
 /// ("Today / 01 …") are built: it proves the session works by loading the
@@ -13,10 +14,19 @@ import '../onboarding/widgets/onboarding_widgets.dart';
 /// A 401 means the session is no longer valid (expired, password changed,
 /// account disabled): [onSessionEnded] signs the device out.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.meApi, required this.onSessionEnded, this.initialAccount});
+  const HomeScreen({
+    super.key,
+    required this.meApi,
+    required this.onSessionEnded,
+    required this.profileFor,
+    this.initialAccount,
+  });
 
   final MeApi meApi;
   final VoidCallback onSessionEnded;
+
+  /// What the Profile screens need, for the account as known so far.
+  final ProfileContext Function(EmployeeAccount? account) profileFor;
 
   /// Known right after onboarding; saves a request.
   final EmployeeAccount? initialAccount;
@@ -48,9 +58,22 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final firstName = _account?.firstName;
     return OnboardingPage(
+      showLogo: false,
       actions: const [],
       children: [
-        const SizedBox(height: 45),
+        Row(
+          children: [
+            const Expanded(child: JitanWordmark()),
+            IconButton(
+              tooltip: context.t(EmployeeTextKeys.homeOpenProfile),
+              icon: const Icon(Icons.account_circle_outlined, color: JitanColors.ink),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => ProfileScreen(profile: widget.profileFor(_account))),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 37),
         Semantics(
           header: true,
           child: Text(

@@ -6,7 +6,10 @@ import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/auth/authorizer.dart';
 import 'package:jitan_api/src/auth/development_identity_middleware.dart';
 import 'package:jitan_api/src/auth/development_permission_evaluator.dart';
+import 'package:jitan_api/src/auth/credential_repository.dart';
 import 'package:jitan_api/src/auth/password_hasher.dart';
+import 'package:jitan_api/src/auth/sign_in_routes.dart';
+import 'package:jitan_api/src/auth/sign_in_service.dart';
 import 'package:jitan_api/src/auth/permission_evaluator.dart';
 import 'package:jitan_api/src/auth/session_tokens.dart';
 import 'package:jitan_api/src/auth/token_authentication_middleware.dart';
@@ -32,6 +35,7 @@ import 'package:jitan_api/src/languages/translation_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
+import 'package:jitan_api/src/users/account_service.dart';
 import 'package:jitan_api/src/users/me_routes.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:logging/logging.dart';
@@ -76,6 +80,7 @@ Future<void> main() async {
     _log.warning('JITAN_SESSION_SECRET not set: using a random one (development only); sessions end on restart.');
   }
   _log.info('Password hashing: ${config.passwordHashing}');
+  final hasher = PasswordHasher(parameters: config.passwordHashing);
 
   final devUserId = config.devUserId;
   final authentication = [
@@ -112,10 +117,29 @@ Future<void> main() async {
         transactions: db,
         executor: db,
         sessions: sessions,
-        hasher: PasswordHasher(parameters: config.passwordHashing),
+        hasher: hasher,
       ),
     ),
-    me: MeRoutes(users),
+    signIn: SignInRoutes(
+      SignInService(
+        credentials: const CredentialRepository(),
+        users: users,
+        executor: db,
+        sessions: sessions,
+        hasher: hasher,
+      ),
+    ),
+    me: MeRoutes(
+      users,
+      AccountService(
+        credentials: const CredentialRepository(),
+        users: users,
+        audit: const AuditLogRepository(),
+        transactions: db,
+        sessions: sessions,
+        hasher: hasher,
+      ),
+    ),
     authentication: authentication,
   );
 

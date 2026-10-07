@@ -5,21 +5,33 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../device/device_settings.dart';
 import '../l10n/employee_text_keys.dart';
 import 'onboarding_controller.dart';
-import 'widgets/onboarding_widgets.dart';
+import '../widgets/mobile_widgets.dart';
 
 // Vertical spacing below is measured from the 390 × 844 Figma frames
 // ("Onboarding / 01 … 08").
 
-/// 01 Welcome.
+/// 01 Welcome. The "Sign in" link (not in Figma, DESIGN-CLARIFY-AUTH) is for
+/// an already activated employee on a new device or after a reinstall.
 class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({super.key, required this.controller});
+  const WelcomeScreen({super.key, required this.controller, required this.onSignIn});
 
   final OnboardingController controller;
+  final VoidCallback onSignIn;
 
   @override
   Widget build(BuildContext context) => OnboardingPage(
     logoStyle: JitanMobileTextStyles.logo.copyWith(fontSize: 24),
-    actions: [JitanMobileButton(label: context.t(EmployeeTextKeys.welcomeAction), onPressed: controller.getStarted)],
+    actions: [
+      JitanMobileButton(label: context.t(EmployeeTextKeys.welcomeAction), onPressed: controller.getStarted),
+      const SizedBox(height: 4),
+      Center(
+        child: TextButton(
+          onPressed: onSignIn,
+          style: TextButton.styleFrom(foregroundColor: JitanColors.inkMuted),
+          child: Text(context.t(EmployeeTextKeys.welcomeSignIn), style: JitanMobileTextStyles.link),
+        ),
+      ),
+    ],
     children: [
       const SizedBox(height: 105),
       Text(context.t(EmployeeTextKeys.welcomeEyebrow), style: JitanMobileTextStyles.eyebrow),

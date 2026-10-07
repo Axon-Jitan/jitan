@@ -2,6 +2,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
+import '../auth/credential_repository.dart';
 import '../companies/company_repository.dart';
 import '../database/database_exception.dart';
 import '../database/sql_executor.dart';
@@ -18,6 +19,7 @@ class EmployeeService {
     required this._groups,
     required this._audit,
     required this._transactions,
+    this._credentials = const CredentialRepository(),
     this._personalQrCode = newPersonalQrCode,
   });
 
@@ -26,6 +28,7 @@ class EmployeeService {
   final GroupRepository _groups;
   final AuditLogRepository _audit;
   final TransactionRunner _transactions;
+  final CredentialRepository _credentials;
   final String Function() _personalQrCode;
 
   /// Longest accepted search text. Longer input is rejected, not truncated.
@@ -49,6 +52,43 @@ class EmployeeService {
     await _requireCompany(companyId);
     return await _employees.findDetails(companyId, userId) ??
         (throw ApiException.notFound('Employee $userId is not in company $companyId.'));
+  }
+
+  /// HR/Admin "Reset account access" for an employee who is locked out.
+  ///
+  /// Clears `tblUser.userPassword` in one audited transaction. Effects:
+  /// every session of the employee ends at once (sessions are bound to the
+  /// password hash, GAP-05); the existing `userQRcode` is unchanged and, with
+  /// no password set, starts account setup again; the employee sets a new
+  /// password, which blocks the QR again. Employees cannot reset themselves.
+  ///
+  /// 404 outside [companyId]; 409 `account_not_activated` when the employee
+  /// never set a password (nothing to reset).
+  Future<void> resetAccess(int actorUserId, int companyId, int userId) async {
+    if (actorUserId == userId) {
+      throw const ApiException.forbidden('You can’t reset your own account access.');
+    }
+    await _requireCompany(companyId);
+    await _transactions.transaction((tx) async {
+      if (await _employees.findInCompany(tx, companyId, userId) == null) {
+        throw ApiException.notFound('Employee $userId is not in company $companyId.');
+      }
+      if (!await _credentials.clearPassword(tx, userId)) {
+        throw const ApiException(
+          409,
+          ApiErrorCode.accountNotActivated,
+          'This employee hasn’t set up Jitan yet, so there is no access to reset.',
+        );
+      }
+      await _audit.record(
+        tx,
+        AuditEvent(
+          type: AuditEventType.accountAccessReset,
+          actorUserId: actorUserId,
+          references: {EventLogReference.user: userId, EventLogReference.company: companyId},
+        ),
+      );
+    });
   }
 
   /// The QR [userId] scans to onboard, which is also their permanent personal

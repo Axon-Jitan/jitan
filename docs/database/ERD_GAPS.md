@@ -323,3 +323,5 @@ Please share current rows of `tblCredGroup`, `tblAppModules`, `tblFunction`, `tb
 `server/jitan_api/lib/src/audit/audit_event.dart`), e.g. `employee.created`. Until such a
 row exists, the event is stored **without** a type link and a warning is logged. Either
 IT adds rows with these names, or the code adopts IT's names; nothing else changes.
+Names in use: `employee.created`, `employee.personal_qr.generated`,
+`employee.onboarding.completed`, `employee.password.changed`, `employee.access.reset`.
