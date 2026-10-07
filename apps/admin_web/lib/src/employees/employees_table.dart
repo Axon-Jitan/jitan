@@ -9,8 +9,9 @@ import '../l10n/admin_text_keys.dart';
 ///
 /// Differences from Figma, on purpose:
 /// - **Policy** is omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY).
-/// - **Location** (ERD GAP-11) and **Onboarding** (ERD GAP-04) have no data
-///   source yet and show an explicit placeholder.
+/// - **Location** (ERD GAP-11) has no data source yet and shows a placeholder.
+/// - **Onboarding** has two states, Activated / Not activated
+///   (`userPassword IS NOT NULL`). Figma's "QR generated" is not tracked.
 /// - **Type** lists every group of the employee; none is singled out.
 class EmployeesTable extends StatelessWidget {
   const EmployeesTable({super.key, required this.employees, this.onOpen});
@@ -63,9 +64,13 @@ class EmployeesTable extends StatelessWidget {
         message: t.t(AdminTextKeys.employeeLocationUnavailable),
         child: Text(unavailable, style: JitanTextStyles.tableCell),
       ),
-      Tooltip(
-        message: t.t(AdminTextKeys.employeeOnboardingUnavailable),
-        child: Text(unavailable, style: JitanTextStyles.tableCell),
+      JitanStatusLabel(
+        label: t.t(
+          employee.isActivated
+              ? AdminTextKeys.employeeOnboardingActivated
+              : AdminTextKeys.employeeOnboardingNotActivated,
+        ),
+        isPositive: employee.isActivated,
       ),
       JitanStatusLabel(
         label: t.t(employee.isActive ? CommonTextKeys.statusActive : CommonTextKeys.statusInactive),
@@ -76,10 +81,10 @@ class EmployeesTable extends StatelessWidget {
 
   /// "First Last" from whichever parts exist; `null` when neither does.
   static String? _displayName(EmployeeSummary employee) {
-    final parts = [employee.firstName, employee.lastName]
-        .whereType<String>()
-        .map((part) => part.trim())
-        .where((part) => part.isNotEmpty);
+    final parts = [
+      employee.firstName,
+      employee.lastName,
+    ].whereType<String>().map((part) => part.trim()).where((part) => part.isNotEmpty);
     return parts.isEmpty ? null : parts.join(' ');
   }
 }

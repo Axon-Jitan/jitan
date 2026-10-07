@@ -23,14 +23,7 @@ String _body({
   Object? code = 'SBW',
   Object? groupId,
   Object? phone,
-}) =>
-    jsonEncode({
-      'firstName': firstName,
-      'lastName': lastName,
-      'code': code,
-      'groupId': groupId,
-      'phone': phone,
-    });
+}) => jsonEncode({'firstName': firstName, 'lastName': lastName, 'code': code, 'groupId': groupId, 'phone': phone});
 
 Future<Map<String, Object?>> _error(TestApp app, String body) async {
   final response = await app.post(_path, body);
@@ -42,7 +35,10 @@ void main() {
     test('201: creates the employee, company link, group link and audit entry in one transaction', () async {
       final app = _app();
 
-      final response = await app.post(_path, _body(firstName: ' Disan ', code: ' SBW ', groupId: 3, phone: ' +32 470 '));
+      final response = await app.post(
+        _path,
+        _body(firstName: ' Disan ', code: ' SBW ', groupId: 3, phone: ' +32 470 '),
+      );
 
       expect(response.statusCode, 201);
       expect(await jsonBody(response), containsPair('code', 'SBW'));

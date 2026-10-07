@@ -3,10 +3,12 @@ import 'package:test/test.dart';
 
 void main() {
   test('LanguageListResponse round-trips', () {
-    const original = LanguageListResponse(languages: [
-      Language(id: 1, code: 'en', name: 'English'),
-      Language(id: 2, code: 'nl', name: 'Dutch'),
-    ]);
+    const original = LanguageListResponse(
+      languages: [
+        Language(id: 1, code: 'en', name: 'English'),
+        Language(id: 2, code: 'nl', name: 'Dutch'),
+      ],
+    );
 
     final decoded = LanguageListResponse.fromJson(original.toJson());
 

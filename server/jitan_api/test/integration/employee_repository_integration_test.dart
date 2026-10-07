@@ -122,6 +122,7 @@ void main() {
     expect(thomas.isActive, isFalse);
     expect(thomas.groups, [groupName('Blue collar'), groupName('White collar')]);
     expect(list.first.groups, isEmpty, reason: 'inactive group hidden');
+    expect(list.every((e) => !e.isActivated), isTrue, reason: 'no password set (userPassword IS NULL)');
   });
 
   test('another company sees only its own members', () async {

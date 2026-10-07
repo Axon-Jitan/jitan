@@ -33,25 +33,25 @@ class AdminShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => JitanWebShell(
-        sidebar: JitanWebSidebar(
-          selectedPath: location,
-          onNavigate: (path) {
-            Scaffold.maybeOf(context)?.closeDrawer();
-            context.go(path);
-          },
-          destinations: [
-            JitanNavDestination(label: context.t(AdminTextKeys.navCompanies), path: AdminRoutes.companies),
-            JitanNavDestination(label: context.t(AdminTextKeys.navEmployees), path: AdminRoutes.employees),
-          ],
-        ),
-        child: devTools
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  DevCompanySelector(companiesApi: companiesApi),
-                  Expanded(child: child),
-                ],
-              )
-            : child,
-      );
+    sidebar: JitanWebSidebar(
+      selectedPath: location,
+      onNavigate: (path) {
+        Scaffold.maybeOf(context)?.closeDrawer();
+        context.go(path);
+      },
+      destinations: [
+        JitanNavDestination(label: context.t(AdminTextKeys.navCompanies), path: AdminRoutes.companies),
+        JitanNavDestination(label: context.t(AdminTextKeys.navEmployees), path: AdminRoutes.employees),
+      ],
+    ),
+    child: devTools
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DevCompanySelector(companiesApi: companiesApi),
+              Expanded(child: child),
+            ],
+          )
+        : child,
+  );
 }

@@ -5,13 +5,7 @@ import 'package:jitan_models/jitan_models.dart';
 import '../l10n/admin_text_keys.dart';
 
 /// The Add employee form's values.
-typedef NewEmployeeInput = ({
-  String firstName,
-  String lastName,
-  String code,
-  int? groupId,
-  String phone,
-});
+typedef NewEmployeeInput = ({String firstName, String lastName, String code, int? groupId, String phone});
 
 /// Loading state of the "Employee type" options.
 sealed class GroupOptions {
@@ -40,11 +34,7 @@ class GroupOptionsFailed extends GroupOptions {
 /// and is the authority (ENGINEERING_RULES §19). Server errors are mapped
 /// back onto the field they concern.
 class AddEmployeeController extends ChangeNotifier {
-  AddEmployeeController({
-    required this._employeesApi,
-    required this._groupsApi,
-    required this.companyId,
-  });
+  AddEmployeeController({required this._employeesApi, required this._groupsApi, required this.companyId});
 
   final EmployeesApi _employeesApi;
   final GroupsApi _groupsApi;
@@ -83,7 +73,8 @@ class AddEmployeeController extends ChangeNotifier {
     if (_submitting) return null;
 
     final missing = {
-      if (input.firstName.trim().isEmpty) CreateEmployeeRequest.fieldFirstName: AdminTextKeys.employeeFieldErrorRequired,
+      if (input.firstName.trim().isEmpty)
+        CreateEmployeeRequest.fieldFirstName: AdminTextKeys.employeeFieldErrorRequired,
       if (input.lastName.trim().isEmpty) CreateEmployeeRequest.fieldLastName: AdminTextKeys.employeeFieldErrorRequired,
       if (input.code.trim().isEmpty) CreateEmployeeRequest.fieldCode: AdminTextKeys.employeeFieldErrorRequired,
     };

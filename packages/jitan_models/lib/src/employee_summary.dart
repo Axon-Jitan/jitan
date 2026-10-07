@@ -8,8 +8,11 @@ import 'json_reading.dart';
 /// - [groups]: names of the user's active `tblGroup` rows via `tblUserGroup`,
 ///   the "Type" column. Every group is listed; no priority is applied.
 ///
-/// Not included: location (ERD GAP-11), onboarding status (ERD GAP-04),
-/// policy (PRODUCT-CLARIFY-EMPLOYEE-POLICY).
+/// - [isActivated]: onboarding completed, i.e. `userPassword IS NOT NULL`
+///   (decision 2026-10-07). Only this flag leaves the server, never the hash.
+///
+/// Not included: location (ERD GAP-11), policy
+/// (PRODUCT-CLARIFY-EMPLOYEE-POLICY).
 class EmployeeSummary {
   const EmployeeSummary({
     required this.id,
@@ -18,6 +21,7 @@ class EmployeeSummary {
     required this.code,
     required this.groups,
     required this.isActive,
+    required this.isActivated,
   });
 
   factory EmployeeSummary.fromJson(Map<String, Object?> json) => EmployeeSummary(
@@ -27,6 +31,7 @@ class EmployeeSummary {
         code: json.readString('code'),
         groups: json.readStringList('groups'),
         isActive: json.readBool('isActive'),
+        isActivated: json.readBool('isActivated'),
       );
 
   final int id;
@@ -38,6 +43,9 @@ class EmployeeSummary {
   final List<String> groups;
   final bool isActive;
 
+  /// Onboarding completed (`userPassword IS NOT NULL`).
+  final bool isActivated;
+
   Map<String, Object?> toJson() => {
         'id': id,
         'firstName': firstName,
@@ -45,6 +53,7 @@ class EmployeeSummary {
         'code': code,
         'groups': groups,
         'isActive': isActive,
+        'isActivated': isActivated,
       };
 }
 

@@ -21,7 +21,7 @@ class CurrentCompanyController extends ChangeNotifier {
 /// Makes the [CurrentCompanyController] available below it.
 class CurrentCompanyScope extends InheritedNotifier<CurrentCompanyController> {
   const CurrentCompanyScope({super.key, required CurrentCompanyController controller, required super.child})
-      : super(notifier: controller);
+    : super(notifier: controller);
 
   /// The controller, rebuilding [context] when the company changes.
   static CurrentCompanyController of(BuildContext context) {

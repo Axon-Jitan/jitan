@@ -31,7 +31,7 @@ class EmployeeRepository {
   Future<EmployeeDetails?> findDetails(int companyId, int userId) async {
     final rows = await _db.query(
       'SELECT u.userID, u.userName, u.userSurname, u.userCode, u.cellphoneNumber, u.userActive, '
-      'c.companyID, c.companyName '
+      '(u.userPassword IS NOT NULL) AS isActivated, c.companyID, c.companyName '
       'FROM tblUser u '
       'JOIN tblUserCompany uc ON uc.userID = u.userID '
       'JOIN tblCompany c ON c.companyID = uc.companyID '
@@ -56,6 +56,7 @@ class EmployeeRepository {
       groups: [for (final g in groups) g.readString('groupName')],
       phone: row.readOptionalString('cellphoneNumber'),
       isActive: row.readBool('userActive'),
+      isActivated: row.readBool('isActivated'),
     );
   }
 
@@ -132,7 +133,8 @@ class EmployeeRepository {
             "OR CONCAT_WS(' ', u.userName, u.userSurname) LIKE :pattern) ";
     final userFilter = userId == null ? '' : 'AND u.userID = :userId ';
     final users = await executor.query(
-      'SELECT u.userID, u.userName, u.userSurname, u.userCode, u.userActive '
+      'SELECT u.userID, u.userName, u.userSurname, u.userCode, u.userActive, '
+      '(u.userPassword IS NOT NULL) AS isActivated '
       'FROM tblUser u JOIN tblUserCompany uc ON uc.userID = u.userID '
       'WHERE uc.companyID = :companyId AND u.userMFD = 0 '
       '$searchFilter'
@@ -168,6 +170,7 @@ class EmployeeRepository {
           code: row.readString('userCode'),
           groups: groupsByUser[row.readInt('userID')] ?? const [],
           isActive: row.readBool('userActive'),
+          isActivated: row.readBool('isActivated'),
         ),
     ];
   }

@@ -21,8 +21,9 @@ Future<void> showOnboardingQrDialog(
 ///
 /// Shows `tblUser.userQRcode`: the QR the employee scans to onboard, which
 /// stays their personal QR for Jitan Terminal afterwards (IT decision,
-/// 2026-10-07). The value is only ever drawn as a QR, never shown as text or
-/// logged.
+/// 2026-10-07). For an activated employee it is presented as the personal
+/// Terminal QR: scanning it can no longer start onboarding. The value is
+/// only ever drawn as a QR, never shown as text or logged.
 class OnboardingQrDialog extends StatefulWidget {
   const OnboardingQrDialog({super.key, required this.employeesApi, required this.employee});
 
@@ -66,7 +67,7 @@ class _OnboardingQrDialogState extends State<OnboardingQrDialog> {
     final callName = employee.firstName ?? fullName;
     return JitanModal(
       width: _modalWidth,
-      title: context.t(AdminTextKeys.employeeQrTitle),
+      title: context.t(employee.isActivated ? AdminTextKeys.employeeQrPersonalTitle : AdminTextKeys.employeeQrTitle),
       subtitle: context.t(AdminTextKeys.employeeQrSubtitle, args: {'name': fullName, 'company': employee.companyName}),
       body: switch ((_qrCode, _failure)) {
         // Full width so the QR block is centred, as in Figma.
@@ -79,10 +80,15 @@ class _OnboardingQrDialogState extends State<OnboardingQrDialog> {
                 semanticLabel: context.t(AdminTextKeys.employeeQrSemantics, args: {'name': fullName}),
               ),
               const SizedBox(height: 18),
-              JitanStatusPill(label: context.t(AdminTextKeys.employeeQrReady)),
+              if (!employee.isActivated) JitanStatusPill(label: context.t(AdminTextKeys.employeeQrReady)),
               const SizedBox(height: 14),
               Text(
-                context.t(AdminTextKeys.employeeQrInstruction, args: {'name': callName}),
+                context.t(
+                  employee.isActivated
+                      ? AdminTextKeys.employeeQrTerminalInstruction
+                      : AdminTextKeys.employeeQrInstruction,
+                  args: {'name': callName},
+                ),
                 style: JitanTextStyles.inputText.copyWith(fontSize: 12),
                 textAlign: TextAlign.center,
               ),

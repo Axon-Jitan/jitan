@@ -46,8 +46,7 @@ const builtInEnglish = <String, String>{
   // ── HR/Admin app ──────────────────────────────────────────────────────
   'app.admin.title': 'Jitan Admin',
   'app.config.error.title': 'Jitan Admin is not configured',
-  'app.config.error.message':
-      'The API address is missing. Build or run with --dart-define=JITAN_API_BASE_URL=<url>.',
+  'app.config.error.message': 'The API address is missing. Build or run with --dart-define=JITAN_API_BASE_URL=<url>.',
   'nav.companies': 'Companies',
   'nav.employees': 'Employees',
 
@@ -84,7 +83,8 @@ const builtInEnglish = <String, String>{
   'employee.column.onboarding': 'Onboarding',
   'employee.column.status': 'Status',
   'employee.location.unavailable': 'Employee locations are not available yet.',
-  'employee.onboarding.unavailable': 'Onboarding status is not available yet.',
+  'employee.onboarding.activated': 'Activated',
+  'employee.onboarding.notActivated': 'Not activated',
   'employee.empty.title': 'No employees yet',
   'employee.empty.message': 'Employees of {company} will appear here.',
   'employee.noMatch.title': 'No matching employees',
@@ -118,16 +118,20 @@ const builtInEnglish = <String, String>{
   'employee.field.location': 'Location',
   'employee.field.account': 'Account',
   'employee.field.status': 'Status',
-  'employee.account.unavailable': 'Account activation status is not available yet.',
 
   // Onboarding QR (EMP-08)
   'employee.onboarding.title': 'Onboarding',
   'employee.onboarding.text': 'Generate a personal QR for this employee to scan in Jitan.',
   'employee.onboarding.action': 'Generate onboarding QR',
+  'employee.onboarding.completedText':
+      'Onboarding is complete. This is now the employee’s personal QR for Jitan Terminal.',
+  'employee.onboarding.showQr': 'Show personal QR',
   'employee.qr.title': 'Onboarding QR',
   'employee.qr.subtitle': '{name} · {company}',
   'employee.qr.loading': 'Preparing the QR…',
   'employee.qr.ready': 'READY TO SCAN',
   'employee.qr.instruction': 'Ask {name} to open Jitan and scan this QR.',
   'employee.qr.semantics': 'Onboarding QR code for {name}',
+  'employee.qr.personalTitle': 'Personal QR',
+  'employee.qr.terminalInstruction': '{name} scans this QR at a Jitan Terminal to check in and out.',
 };

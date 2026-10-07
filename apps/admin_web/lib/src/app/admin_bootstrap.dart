@@ -23,8 +23,7 @@ class AdminBootstrap extends StatefulWidget {
 }
 
 class _AdminBootstrapState extends State<AdminBootstrap> {
-  late Translations _translations =
-      widget.translationService.cachedForCurrentUser() ?? Translations.english();
+  late Translations _translations = widget.translationService.cachedForCurrentUser() ?? Translations.english();
 
   @override
   void initState() {
@@ -41,7 +40,7 @@ class _AdminBootstrapState extends State<AdminBootstrap> {
 
   @override
   Widget build(BuildContext context) => TranslationScope(
-        translations: _translations,
-        child: AdminApp(services: widget.services),
-      );
+    translations: _translations,
+    child: AdminApp(services: widget.services),
+  );
 }

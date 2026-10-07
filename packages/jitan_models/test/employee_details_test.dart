@@ -13,6 +13,7 @@ void main() {
       groups: ['White collar'],
       phone: null,
       isActive: true,
+      isActivated: false,
     );
 
     final decoded = EmployeeDetails.fromJson(original.toJson());
@@ -34,6 +35,7 @@ void main() {
       groups: [],
       phone: null,
       isActive: true,
+      isActivated: false,
     );
 
     expect(details.toJson().keys, isNot(anyOf(contains('password'), contains('pin'), contains('qr'))));

@@ -149,4 +149,5 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | ONB-04 | Rate limiting on the public onboarding endpoints (defence in depth; the 144-bit QR is not guessable) | `TODO` |
 | ONB-05 | Session/token issued when onboarding completes, so the app is signed in straight away (part of real authentication) | `TODO` |
 | ONB-02 | Employee app (Android first): welcome → scan → confirm account → language → registration method → permissions → notifications → set password → ready (roadmap §11) | `TODO` |
-| ONB-03 | HR side: "Employee activated" confirmation (Figma `153:532`) and the list's Onboarding/Account values | `TODO`, needs the activation signal |
+| ONB-03a | HR side: Activated / Not activated in the list's Onboarding column, the details Account field and the Onboarding card; activated employees' QR shown as the personal Terminal QR | `DONE` |
+| ONB-03b | HR side: live "Employee activated" confirmation while the QR modal is open (Figma `153:532`); needs polling or push | `TODO` |

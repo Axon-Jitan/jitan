@@ -11,8 +11,7 @@ NewEmployeeInput _input({
   String code = 'SBW',
   int? groupId,
   String phone = '',
-}) =>
-    (firstName: firstName, lastName: lastName, code: code, groupId: groupId, phone: phone);
+}) => (firstName: firstName, lastName: lastName, code: code, groupId: groupId, phone: phone);
 
 ApiClientException _server(int status, String code, {String? field}) =>
     ApiClientException.server(status, ApiError(code: code, message: 'x', field: field));

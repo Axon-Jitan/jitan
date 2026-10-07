@@ -79,9 +79,20 @@ class FakeEmployeeRepository implements EmployeeRepository {
     writes.add('insertUser $code');
     insertedQrCodes.add(personalQrCode);
     lastPhone = phone;
-    byCompany.putIfAbsent(-id, () => [
-          EmployeeSummary(id: id, firstName: firstName, lastName: lastName, code: code, groups: const [], isActive: true),
-        ]);
+    byCompany.putIfAbsent(
+      -id,
+      () => [
+        EmployeeSummary(
+          id: id,
+          firstName: firstName,
+          lastName: lastName,
+          code: code,
+          groups: const [],
+          isActive: true,
+          isActivated: false,
+        ),
+      ],
+    );
     return id;
   }
 
@@ -113,8 +124,8 @@ class FakeEmployeeRepository implements EmployeeRepository {
   @override
   Future<({bool isMember, String? qrCode})> personalQrCode(SqlExecutor executor, int companyId, int userId) async =>
       qrCodes.containsKey((companyId, userId))
-          ? (isMember: true, qrCode: qrCodes[(companyId, userId)])
-          : (isMember: false, qrCode: null);
+      ? (isMember: true, qrCode: qrCodes[(companyId, userId)])
+      : (isMember: false, qrCode: null);
 
   @override
   Future<bool> setPersonalQrCodeIfMissing(SqlExecutor tx, int userId, String qrCode) async {
@@ -256,8 +267,7 @@ class FakeLanguageRepository implements LanguageRepository {
   Future<List<Language>> listActiveLanguages() async => languages;
 
   @override
-  Future<Language?> findActiveByCode(String code) async =>
-      languages.where((l) => l.code == code).firstOrNull;
+  Future<Language?> findActiveByCode(String code) async => languages.where((l) => l.code == code).firstOrNull;
 
   @override
   Future<List<String>> activeLanguageCodesForUser(int userId) async => userLanguages[userId] ?? const [];
@@ -287,10 +297,4 @@ class FixedPermissionEvaluator implements PermissionEvaluator {
 }
 
 CompanySummary company(int id, String name, {bool active = true, int employees = 0}) =>
-    CompanySummary(
-      id: id,
-      name: name,
-      isActive: active,
-      employeeCount: employees,
-      lastUpdatedAt: null,
-    );
+    CompanySummary(id: id, name: name, isActive: active, employeeCount: employees, lastUpdatedAt: null);

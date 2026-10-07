@@ -3,17 +3,29 @@ import 'package:test/test.dart';
 
 void main() {
   test('EmployeeListResponse round-trips, including null names and several groups', () {
-    const original = EmployeeListResponse(companyId: 7, employees: [
-      EmployeeSummary(
-        id: 1,
-        firstName: 'Disan',
-        lastName: 'Ssebowa',
-        code: 'SBW',
-        groups: ['White collar'],
-        isActive: true,
-      ),
-      EmployeeSummary(id: 2, firstName: null, lastName: null, code: 'X1', groups: ['A', 'B'], isActive: false),
-    ]);
+    const original = EmployeeListResponse(
+      companyId: 7,
+      employees: [
+        EmployeeSummary(
+          id: 1,
+          firstName: 'Disan',
+          lastName: 'Ssebowa',
+          code: 'SBW',
+          groups: ['White collar'],
+          isActive: true,
+          isActivated: false,
+        ),
+        EmployeeSummary(
+          id: 2,
+          firstName: null,
+          lastName: null,
+          code: 'X1',
+          groups: ['A', 'B'],
+          isActive: false,
+          isActivated: false,
+        ),
+      ],
+    );
 
     final decoded = EmployeeListResponse.fromJson(original.toJson());
 

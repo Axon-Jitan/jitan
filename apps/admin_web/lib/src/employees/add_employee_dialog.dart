@@ -15,11 +15,10 @@ Future<EmployeeSummary?> showAddEmployeeDialog(
   required EmployeesApi employeesApi,
   required GroupsApi groupsApi,
   required int companyId,
-}) =>
-    showDialog<EmployeeSummary>(
-      context: context,
-      builder: (_) => AddEmployeeDialog(employeesApi: employeesApi, groupsApi: groupsApi, companyId: companyId),
-    );
+}) => showDialog<EmployeeSummary>(
+  context: context,
+  builder: (_) => AddEmployeeDialog(employeesApi: employeesApi, groupsApi: groupsApi, companyId: companyId),
+);
 
 /// Figma `Admin / Employees — Add employee modal` (`153:266`).
 ///
@@ -27,12 +26,7 @@ Future<EmployeeSummary?> showAddEmployeeDialog(
 /// policy** (PRODUCT-CLARIFY-EMPLOYEE-POLICY) are left out, and the subtitle
 /// does not mention the onboarding QR, which arrives with EMP-08.
 class AddEmployeeDialog extends StatefulWidget {
-  const AddEmployeeDialog({
-    super.key,
-    required this.employeesApi,
-    required this.groupsApi,
-    required this.companyId,
-  });
+  const AddEmployeeDialog({super.key, required this.employeesApi, required this.groupsApi, required this.companyId});
 
   final EmployeesApi employeesApi;
   final GroupsApi groupsApi;
@@ -77,86 +71,82 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) {
-          final errors = _controller.fieldErrors;
-          String? errorFor(String field) => errors[field] == null ? null : context.t(errors[field]!);
-          final busy = _controller.submitting;
+    listenable: _controller,
+    builder: (context, _) {
+      final errors = _controller.fieldErrors;
+      String? errorFor(String field) => errors[field] == null ? null : context.t(errors[field]!);
+      final busy = _controller.submitting;
 
-          return JitanModal(
-            title: context.t(AdminTextKeys.employeeAddTitle),
-            subtitle: context.t(AdminTextKeys.employeeAddSubtitle),
-            body: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      return JitanModal(
+        title: context.t(AdminTextKeys.employeeAddTitle),
+        subtitle: context.t(AdminTextKeys.employeeAddSubtitle),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _FieldRows(
               children: [
-                _FieldRows(
-                  children: [
-                    JitanTextField(
-                      label: context.t(AdminTextKeys.employeeFieldFirstName),
-                      controller: _firstName,
-                      enabled: !busy,
-                      autofocus: true,
-                      errorText: errorFor(CreateEmployeeRequest.fieldFirstName),
-                    ),
-                    JitanTextField(
-                      label: context.t(AdminTextKeys.employeeFieldLastName),
-                      controller: _lastName,
-                      enabled: !busy,
-                      errorText: errorFor(CreateEmployeeRequest.fieldLastName),
-                    ),
-                    JitanTextField(
-                      label: context.t(AdminTextKeys.employeeFieldCode),
-                      controller: _code,
-                      enabled: !busy,
-                      errorText: errorFor(CreateEmployeeRequest.fieldCode),
-                    ),
-                    _typeField(context, busy: busy, errorText: errorFor(CreateEmployeeRequest.fieldGroupId)),
-                    JitanTextField(
-                      label: context.t(AdminTextKeys.employeeFieldPhone),
-                      controller: _phone,
-                      enabled: !busy,
-                      hintText: context.t(AdminTextKeys.employeeFieldPhoneHint),
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _submit(),
-                    ),
-                  ],
+                JitanTextField(
+                  label: context.t(AdminTextKeys.employeeFieldFirstName),
+                  controller: _firstName,
+                  enabled: !busy,
+                  autofocus: true,
+                  errorText: errorFor(CreateEmployeeRequest.fieldFirstName),
                 ),
-                if (_controller.formFailure case final failure?) ...[
-                  const SizedBox(height: 20),
-                  _formError(context, failure),
-                ],
+                JitanTextField(
+                  label: context.t(AdminTextKeys.employeeFieldLastName),
+                  controller: _lastName,
+                  enabled: !busy,
+                  errorText: errorFor(CreateEmployeeRequest.fieldLastName),
+                ),
+                JitanTextField(
+                  label: context.t(AdminTextKeys.employeeFieldCode),
+                  controller: _code,
+                  enabled: !busy,
+                  errorText: errorFor(CreateEmployeeRequest.fieldCode),
+                ),
+                _typeField(context, busy: busy, errorText: errorFor(CreateEmployeeRequest.fieldGroupId)),
+                JitanTextField(
+                  label: context.t(AdminTextKeys.employeeFieldPhone),
+                  controller: _phone,
+                  enabled: !busy,
+                  hintText: context.t(AdminTextKeys.employeeFieldPhoneHint),
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                ),
               ],
             ),
-            actions: [
-              JitanPrimaryButton(
-                label: context.t(AdminTextKeys.employeeAddSubmit),
-                busy: busy,
-                onPressed: _submit,
-              ),
+            if (_controller.formFailure case final failure?) ...[
+              const SizedBox(height: 20),
+              _formError(context, failure),
             ],
-          );
-        },
+          ],
+        ),
+        actions: [
+          JitanPrimaryButton(label: context.t(AdminTextKeys.employeeAddSubmit), busy: busy, onPressed: _submit),
+        ],
       );
+    },
+  );
 
   Widget _typeField(BuildContext context, {required bool busy, required String? errorText}) {
     final label = context.t(AdminTextKeys.employeeFieldType);
     return switch (_controller.groups) {
       GroupOptionsLoading() => JitanSelectField<int?>(label: label, options: const [], value: null, onChanged: null),
       GroupOptionsFailed() => JitanFieldLabel(
-          label: label,
-          child: Text(context.t(AdminTextKeys.employeeFieldTypeLoadFailed), style: JitanTextStyles.stateMessage),
-        ),
+        label: label,
+        child: Text(context.t(AdminTextKeys.employeeFieldTypeLoadFailed), style: JitanTextStyles.stateMessage),
+      ),
       GroupOptionsLoaded(:final groups) => JitanSelectField<int?>(
-          label: label,
-          value: _groupId,
-          errorText: errorText,
-          options: [
-            JitanSelectOption(value: null, label: context.t(AdminTextKeys.employeeFieldTypeNone)),
-            for (final group in groups) JitanSelectOption(value: group.id, label: group.name),
-          ],
-          onChanged: busy ? null : (id) => setState(() => _groupId = id),
-        ),
+        label: label,
+        value: _groupId,
+        errorText: errorText,
+        options: [
+          JitanSelectOption(value: null, label: context.t(AdminTextKeys.employeeFieldTypeNone)),
+          for (final group in groups) JitanSelectOption(value: group.id, label: group.name),
+        ],
+        onChanged: busy ? null : (id) => setState(() => _groupId = id),
+      ),
     };
   }
 
@@ -182,14 +172,14 @@ class _FieldRows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth >= _twoColumnWidth ? 2 : 1;
-          final width = columns == 2 ? JitanDimensions.fieldWidth : constraints.maxWidth;
-          return Wrap(
-            spacing: JitanDimensions.fieldColumnGap,
-            runSpacing: JitanDimensions.fieldRowGap,
-            children: [for (final child in children) SizedBox(width: width, child: child)],
-          );
-        },
+    builder: (context, constraints) {
+      final columns = constraints.maxWidth >= _twoColumnWidth ? 2 : 1;
+      final width = columns == 2 ? JitanDimensions.fieldWidth : constraints.maxWidth;
+      return Wrap(
+        spacing: JitanDimensions.fieldColumnGap,
+        runSpacing: JitanDimensions.fieldRowGap,
+        children: [for (final child in children) SizedBox(width: width, child: child)],
       );
+    },
+  );
 }

@@ -13,21 +13,18 @@ FailureTextKeys failureTextKeysFor(ApiClientException failure) {
   }
   return switch (failure.error?.code) {
     ApiErrorCode.unauthenticated => (
-        title: CommonTextKeys.errorUnauthenticatedTitle,
-        message: CommonTextKeys.errorUnauthenticatedMessage,
-      ),
+      title: CommonTextKeys.errorUnauthenticatedTitle,
+      message: CommonTextKeys.errorUnauthenticatedMessage,
+    ),
     ApiErrorCode.forbidden => (
-        title: CommonTextKeys.errorForbiddenTitle,
-        message: CommonTextKeys.errorForbiddenMessage,
-      ),
-    ApiErrorCode.notFound => (
-        title: CommonTextKeys.errorNotFoundTitle,
-        message: CommonTextKeys.errorNotFoundMessage,
-      ),
+      title: CommonTextKeys.errorForbiddenTitle,
+      message: CommonTextKeys.errorForbiddenMessage,
+    ),
+    ApiErrorCode.notFound => (title: CommonTextKeys.errorNotFoundTitle, message: CommonTextKeys.errorNotFoundMessage),
     ApiErrorCode.databaseUnavailable => (
-        title: CommonTextKeys.errorDatabaseTitle,
-        message: CommonTextKeys.errorDatabaseMessage,
-      ),
+      title: CommonTextKeys.errorDatabaseTitle,
+      message: CommonTextKeys.errorDatabaseMessage,
+    ),
     _ => (title: CommonTextKeys.errorUnexpectedTitle, message: CommonTextKeys.errorUnexpectedMessage),
   };
 }

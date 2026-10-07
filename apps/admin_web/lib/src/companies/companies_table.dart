@@ -42,25 +42,21 @@ class CompaniesTable extends StatelessWidget {
   }
 
   List<Widget> _cells(Translations t, CompanySummary company) => [
-        Text(
-          company.name,
-          style: JitanTextStyles.tableCellStrong,
-          overflow: TextOverflow.ellipsis,
-        ),
-        Text('${company.employeeCount}', style: JitanTextStyles.tableCell),
-        Tooltip(
-          message: t.t(AdminTextKeys.companyLocationsUnavailable),
-          child: Text(t.t(CommonTextKeys.valueUnavailable), style: JitanTextStyles.tableCell),
-        ),
-        JitanStatusLabel(
-          label: t.t(company.isActive ? CommonTextKeys.statusActive : CommonTextKeys.statusInactive),
-          isPositive: company.isActive,
-        ),
-        Text(
-          company.lastUpdatedAt == null
-              ? t.t(CommonTextKeys.valueUnavailable)
-              : relativeDateText(t, company.lastUpdatedAt!, now: now),
-          style: JitanTextStyles.tableCell,
-        ),
-      ];
+    Text(company.name, style: JitanTextStyles.tableCellStrong, overflow: TextOverflow.ellipsis),
+    Text('${company.employeeCount}', style: JitanTextStyles.tableCell),
+    Tooltip(
+      message: t.t(AdminTextKeys.companyLocationsUnavailable),
+      child: Text(t.t(CommonTextKeys.valueUnavailable), style: JitanTextStyles.tableCell),
+    ),
+    JitanStatusLabel(
+      label: t.t(company.isActive ? CommonTextKeys.statusActive : CommonTextKeys.statusInactive),
+      isPositive: company.isActive,
+    ),
+    Text(
+      company.lastUpdatedAt == null
+          ? t.t(CommonTextKeys.valueUnavailable)
+          : relativeDateText(t, company.lastUpdatedAt!, now: now),
+      style: JitanTextStyles.tableCell,
+    ),
+  ];
 }

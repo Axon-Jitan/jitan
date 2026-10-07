@@ -21,8 +21,7 @@ class FakeEmployeesApi implements EmployeesApi {
   void succeed(List<EmployeeSummary> employees, {int? index}) =>
       _pending[index ?? _pending.length - 1].complete(employees);
 
-  void fail(ApiClientException failure, {int? index}) =>
-      _pending[index ?? _pending.length - 1].completeError(failure);
+  void fail(ApiClientException failure, {int? index}) => _pending[index ?? _pending.length - 1].completeError(failure);
 
   /// (companyId, request) of every create.
   final creates = <(int, CreateEmployeeRequest)>[];
@@ -97,5 +96,13 @@ EmployeeSummary employee(
   String code, {
   List<String> groups = const [],
   bool active = true,
-}) =>
-    EmployeeSummary(id: id, firstName: first, lastName: last, code: code, groups: groups, isActive: active);
+  bool activated = false,
+}) => EmployeeSummary(
+  id: id,
+  firstName: first,
+  lastName: last,
+  code: code,
+  groups: groups,
+  isActive: active,
+  isActivated: activated,
+);

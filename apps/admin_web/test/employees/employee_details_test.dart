@@ -20,6 +20,7 @@ const _disan = EmployeeDetails(
   groups: ['White collar'],
   phone: null,
   isActive: true,
+  isActivated: false,
 );
 
 /// Employee details from the Employees page: row click → modal (EMP-03).
@@ -40,12 +41,16 @@ void main() {
           controller: current,
           child: MaterialApp(
             theme: JitanTheme.light(),
-            home: Scaffold(body: EmployeesScreen(api: employees, groupsApi: FakeGroupsApi())),
+            home: Scaffold(
+              body: EmployeesScreen(api: employees, groupsApi: FakeGroupsApi()),
+            ),
           ),
         ),
       ),
     );
-    employees.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW', groups: ['White collar'])]);
+    employees.succeed([
+      employee(1, 'Disan', 'Ssebowa', 'SBW', groups: ['White collar']),
+    ]);
     await tester.pump();
 
     await tester.tap(find.text('Disan Ssebowa'));
@@ -76,8 +81,39 @@ void main() {
       expect(inModal(label), findsOneWidget, reason: label);
     }
     expect(inModal('Work policy'), findsNothing);
-    // Location (GAP-11), Phone (none), Account (activation rule pending).
-    expect(inModal('—'), findsNWidgets(3));
+    // Location (GAP-11) and Phone (none).
+    expect(inModal('—'), findsNWidgets(2));
+    // Account field and Onboarding card status: not activated yet.
+    expect(inModal('Not activated'), findsNWidgets(2));
+    expect(inModal('Generate onboarding QR'), findsOneWidget);
+  });
+
+  testWidgets('an activated employee: Account Activated, card offers the personal QR', (tester) async {
+    await pumpPageAndOpen(tester);
+    employees.detailsSucceed(
+      const EmployeeDetails(
+        id: 1,
+        companyId: 7,
+        companyName: 'Almeco',
+        firstName: 'Disan',
+        lastName: 'Ssebowa',
+        code: 'SBW',
+        groups: [],
+        phone: null,
+        isActive: true,
+        isActivated: true,
+      ),
+    );
+    await tester.pump();
+
+    expect(inModal('Activated'), findsNWidgets(2));
+    expect(inModal('Not activated'), findsNothing);
+    expect(inModal('Show personal QR'), findsOneWidget);
+    expect(inModal('Generate onboarding QR'), findsNothing);
+    expect(
+      inModal('Onboarding is complete. This is now the employee’s personal QR for Jitan Terminal.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a failure shows an error with retry', (tester) async {

@@ -42,6 +42,9 @@ abstract final class JitanColors {
   /// "Active" status text.
   static const success = Color(0xFF16856B);
 
+  /// Pending status that needs attention ("Not activated" in Figma).
+  static const warning = Color(0xFFB56B16);
+
   /// Background of success pills ("READY TO SCAN").
   static const successSurface = Color(0xFFE8F5F1);
 }

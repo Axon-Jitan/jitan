@@ -31,7 +31,9 @@ void main() {
           controller: current,
           child: MaterialApp(
             theme: JitanTheme.light(),
-            home: Scaffold(body: EmployeesScreen(api: employees, groupsApi: groups)),
+            home: Scaffold(
+              body: EmployeesScreen(api: employees, groupsApi: groups),
+            ),
           ),
         ),
       ),
@@ -49,9 +51,9 @@ void main() {
   }
 
   Finder field(String label) => find.descendant(
-        of: find.ancestor(of: find.text(label), matching: find.byType(JitanTextField)),
-        matching: find.byType(TextField),
-      );
+    of: find.ancestor(of: find.text(label), matching: find.byType(JitanTextField)),
+    matching: find.byType(TextField),
+  );
 
   testWidgets('shows the modal with only the ERD-backed fields', (tester) async {
     await pumpPage(tester);
@@ -109,10 +111,12 @@ void main() {
     await tester.enterText(field('Employee code'), 'SBW');
     await tester.tap(find.text('Create employee'));
     await tester.pump();
-    employees.createFails(const ApiClientException.server(
-      409,
-      ApiError(code: ApiErrorCode.duplicateEmployeeCode, message: 'x', field: 'code'),
-    ));
+    employees.createFails(
+      const ApiClientException.server(
+        409,
+        ApiError(code: ApiErrorCode.duplicateEmployeeCode, message: 'x', field: 'code'),
+      ),
+    );
     await tester.pump();
 
     expect(find.text('This employee code is already in use.'), findsOneWidget);

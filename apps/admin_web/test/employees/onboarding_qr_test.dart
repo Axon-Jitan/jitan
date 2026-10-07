@@ -1,5 +1,6 @@
 import 'package:admin_web/src/company_context/current_company.dart';
 import 'package:admin_web/src/employees/employees_screen.dart';
+import 'package:admin_web/src/employees/onboarding_qr_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
@@ -20,6 +21,7 @@ const _disan = EmployeeDetails(
   groups: ['White collar'],
   phone: null,
   isActive: true,
+  isActivated: false,
 );
 
 /// Employees → row → details → "Generate onboarding QR" → QR modal (EMP-08).
@@ -40,7 +42,9 @@ void main() {
           controller: current,
           child: MaterialApp(
             theme: JitanTheme.light(),
-            home: Scaffold(body: EmployeesScreen(api: employees, groupsApi: FakeGroupsApi())),
+            home: Scaffold(
+              body: EmployeesScreen(api: employees, groupsApi: FakeGroupsApi()),
+            ),
           ),
         ),
       ),
@@ -78,6 +82,44 @@ void main() {
     expect(find.text('READY TO SCAN'), findsOneWidget);
     expect(find.text('Ask Disan to open Jitan and scan this QR.'), findsOneWidget);
     expect(find.textContaining('n9Xq'), findsNothing, reason: 'the credential is only drawn as a QR');
+  });
+
+  testWidgets('for an activated employee it is the personal Terminal QR, not an onboarding prompt', (tester) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final api = FakeEmployeesApi();
+    await tester.pumpWidget(
+      TranslationScope(
+        translations: Translations.english(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: OnboardingQrDialog(
+              employeesApi: api,
+              employee: const EmployeeDetails(
+                id: 1,
+                companyId: 7,
+                companyName: 'Almeco',
+                firstName: 'Disan',
+                lastName: 'Ssebowa',
+                code: 'SBW',
+                groups: [],
+                phone: null,
+                isActive: true,
+                isActivated: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    api.qrSucceeds('n9Xq-2kLmPz8RtYw4VbC5dEf');
+    await tester.pump();
+
+    expect(find.text('Personal QR'), findsOneWidget);
+    expect(find.text('READY TO SCAN'), findsNothing);
+    expect(find.text('Disan scans this QR at a Jitan Terminal to check in and out.'), findsOneWidget);
+    expect(find.byType(JitanQrCode), findsOneWidget);
   });
 
   testWidgets('a failure shows an error with retry', (tester) async {

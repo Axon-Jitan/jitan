@@ -11,6 +11,7 @@ const _sbw = EmployeeSummary(
   code: 'SBW',
   groups: ['White collar'],
   isActive: true,
+  isActivated: false,
 );
 const _tvm = EmployeeSummary(
   id: 2,
@@ -19,6 +20,7 @@ const _tvm = EmployeeSummary(
   code: 'TVM',
   groups: ['Blue collar', 'Night shift'],
   isActive: false,
+  isActivated: false,
 );
 
 TestApp _app({bool allow = true}) {
@@ -49,6 +51,7 @@ void main() {
           'code': 'SBW',
           'groups': ['White collar'],
           'isActive': true,
+          'isActivated': false,
         },
         {
           'id': 2,
@@ -57,6 +60,7 @@ void main() {
           'code': 'TVM',
           'groups': ['Blue collar', 'Night shift'],
           'isActive': false,
+          'isActivated': false,
         },
       ]);
     });

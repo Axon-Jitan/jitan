@@ -14,18 +14,18 @@ class ConfigurationErrorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TranslationScope(
-        translations: Translations.english(),
-        child: MaterialApp(
-          theme: JitanTheme.light(),
-          debugShowCheckedModeBanner: false,
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: JitanErrorState(
-                title: context.t(AdminTextKeys.configErrorTitle),
-                message: context.t(AdminTextKeys.configErrorMessage),
-              ),
-            ),
+    translations: Translations.english(),
+    child: MaterialApp(
+      theme: JitanTheme.light(),
+      debugShowCheckedModeBanner: false,
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: JitanErrorState(
+            title: context.t(AdminTextKeys.configErrorTitle),
+            message: context.t(AdminTextKeys.configErrorMessage),
           ),
         ),
-      );
+      ),
+    ),
+  );
 }

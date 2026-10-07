@@ -22,10 +22,7 @@ class TestDatabase {
 
   static TestDatabase? _load() {
     final file = File('.env.test');
-    final env = {
-      if (file.existsSync()) ...parseEnvFile(file.readAsLinesSync()),
-      ...Platform.environment,
-    };
+    final env = {if (file.existsSync()) ...parseEnvFile(file.readAsLinesSync()), ...Platform.environment};
     String? read(String key) {
       final value = env['JITAN_TEST_DB_$key']?.trim();
       return (value == null || value.isEmpty) ? null : value;

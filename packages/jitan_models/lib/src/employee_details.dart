@@ -7,8 +7,8 @@ import 'json_reading.dart';
 /// `tblGroup` (groups, all of them, no priority), `tblCompany` (name).
 ///
 /// Not included: location (ERD GAP-11), work policy
-/// (PRODUCT-CLARIFY-EMPLOYEE-POLICY), account activation (pending the
-/// activation rule, see docs/BACKLOG.md ONB). Never the password, PIN or QR.
+/// (PRODUCT-CLARIFY-EMPLOYEE-POLICY). Never the password, PIN or QR: only
+/// [isActivated] (`userPassword IS NOT NULL`).
 class EmployeeDetails {
   const EmployeeDetails({
     required this.id,
@@ -20,6 +20,7 @@ class EmployeeDetails {
     required this.groups,
     required this.phone,
     required this.isActive,
+    required this.isActivated,
   });
 
   factory EmployeeDetails.fromJson(Map<String, Object?> json) => EmployeeDetails(
@@ -32,6 +33,7 @@ class EmployeeDetails {
         groups: json.readStringList('groups'),
         phone: json.readOptionalString('phone'),
         isActive: json.readBool('isActive'),
+        isActivated: json.readBool('isActivated'),
       );
 
   final int id;
@@ -44,6 +46,9 @@ class EmployeeDetails {
   final String? phone;
   final bool isActive;
 
+  /// Onboarding completed (`userPassword IS NOT NULL`).
+  final bool isActivated;
+
   Map<String, Object?> toJson() => {
         'id': id,
         'companyId': companyId,
@@ -54,5 +59,6 @@ class EmployeeDetails {
         'groups': groups,
         'phone': phone,
         'isActive': isActive,
+        'isActivated': isActivated,
       };
 }

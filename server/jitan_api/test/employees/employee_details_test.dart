@@ -14,6 +14,7 @@ const _details = EmployeeDetails(
   groups: ['White collar'],
   phone: '+32 470',
   isActive: true,
+  isActivated: false,
 );
 
 TestApp _app({bool allow = true}) {

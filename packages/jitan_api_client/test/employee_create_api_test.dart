@@ -15,7 +15,7 @@ void main() {
     final api = EmployeesApi(_transport((request) async {
       sent = request;
       return http.Response(
-        jsonEncode({'id': 5, 'firstName': 'Disan', 'lastName': 'Ssebowa', 'code': 'SBW', 'groups': [], 'isActive': true}),
+        jsonEncode({'id': 5, 'firstName': 'Disan', 'lastName': 'Ssebowa', 'code': 'SBW', 'groups': [], 'isActive': true, 'isActivated': false}),
         201,
       );
     }));

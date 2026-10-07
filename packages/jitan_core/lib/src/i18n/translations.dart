@@ -20,11 +20,8 @@ const englishLanguageCode = 'en';
 class Translations {
   /// [selected] is the database bundle of [languageCode]; empty for English.
   /// [fallback] is the built-in English bundle; replaceable only in tests.
-  Translations({
-    required this.languageCode,
-    Map<String, String> selected = const {},
-    this._fallback = builtInEnglish,
-  }) : _selected = languageCode == englishLanguageCode ? const {} : selected;
+  Translations({required this.languageCode, Map<String, String> selected = const {}, this._fallback = builtInEnglish})
+    : _selected = languageCode == englishLanguageCode ? const {} : selected;
 
   /// English only. Always available, with no network.
   Translations.english() : this(languageCode: englishLanguageCode);
@@ -47,8 +44,7 @@ class Translations {
   ///
   /// The one/other split fits English and Dutch. Languages with other plural
   /// rules (e.g. French treats 0 as singular) need richer keys when added.
-  String plural(String key, int count) =>
-      t(count == 1 ? '$key.one' : '$key.other', args: {'n': count});
+  String plural(String key, int count) => t(count == 1 ? '$key.one' : '$key.other', args: {'n': count});
 
   String _missing(String key) {
     if (_reportedMissing.add(key)) {

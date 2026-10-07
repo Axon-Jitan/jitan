@@ -43,7 +43,8 @@ abstract final class AdminTextKeys {
   static const employeeColumnOnboarding = 'employee.column.onboarding';
   static const employeeColumnStatus = 'employee.column.status';
   static const employeeLocationUnavailable = 'employee.location.unavailable';
-  static const employeeOnboardingUnavailable = 'employee.onboarding.unavailable';
+  static const employeeOnboardingActivated = 'employee.onboarding.activated';
+  static const employeeOnboardingNotActivated = 'employee.onboarding.notActivated';
   static const employeeEmptyTitle = 'employee.empty.title';
 
   /// Argument: `{company}`.
@@ -83,11 +84,12 @@ abstract final class AdminTextKeys {
   static const employeeFieldLocation = 'employee.field.location';
   static const employeeFieldAccount = 'employee.field.account';
   static const employeeFieldStatus = 'employee.field.status';
-  static const employeeAccountUnavailable = 'employee.account.unavailable';
 
   static const employeeOnboardingTitle = 'employee.onboarding.title';
   static const employeeOnboardingText = 'employee.onboarding.text';
   static const employeeOnboardingAction = 'employee.onboarding.action';
+  static const employeeOnboardingCompletedText = 'employee.onboarding.completedText';
+  static const employeeOnboardingShowQr = 'employee.onboarding.showQr';
   static const employeeQrTitle = 'employee.qr.title';
 
   /// Arguments: `{name}`, `{company}`.
@@ -100,4 +102,8 @@ abstract final class AdminTextKeys {
 
   /// Argument: `{name}`.
   static const employeeQrSemantics = 'employee.qr.semantics';
+  static const employeeQrPersonalTitle = 'employee.qr.personalTitle';
+
+  /// Argument: `{name}` (first name).
+  static const employeeQrTerminalInstruction = 'employee.qr.terminalInstruction';
 }

@@ -85,8 +85,10 @@ class TranslationService {
           return englishLanguageCode;
         default:
           final cached = cachedForCurrentUser();
-          _log.warning('Could not read the user language ($e); '
-              'using ${cached == null ? 'English' : 'cached "${cached.languageCode}"'}.');
+          _log.warning(
+            'Could not read the user language ($e); '
+            'using ${cached == null ? 'English' : 'cached "${cached.languageCode}"'}.',
+          );
           return cached?.languageCode ?? englishLanguageCode;
       }
     }

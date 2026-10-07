@@ -72,8 +72,7 @@ class _DevCompanySelectorState extends State<DevCompanySelector> {
                 style: JitanTextStyles.inputText,
                 underline: const SizedBox.shrink(),
                 items: [
-                  for (final company in companies)
-                    DropdownMenuItem(value: company.id, child: Text(company.name)),
+                  for (final company in companies) DropdownMenuItem(value: company.id, child: Text(company.name)),
                 ],
                 onChanged: (id) => current.select(companies.where((c) => c.id == id).firstOrNull),
               ),

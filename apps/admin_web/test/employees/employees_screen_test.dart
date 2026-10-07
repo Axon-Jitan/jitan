@@ -31,7 +31,9 @@ Future<(FakeEmployeesApi, CurrentCompanyController)> _pump(WidgetTester tester, 
         controller: current,
         child: MaterialApp(
           theme: JitanTheme.light(),
-          home: Scaffold(body: EmployeesScreen(api: api, groupsApi: _groups)),
+          home: Scaffold(
+            body: EmployeesScreen(api: api, groupsApi: _groups),
+          ),
         ),
       ),
     ),
@@ -71,9 +73,24 @@ void main() {
     expect(find.text('Blue collar, Night shift'), findsOneWidget, reason: 'all groups, no priority');
     expect(find.text('Active'), findsNWidgets(2));
     expect(find.text('Inactive'), findsOneWidget);
-    // Per row: Location + Onboarding placeholders (GAP-11, GAP-04); the
-    // nameless employee adds a name placeholder and has no groups.
-    expect(find.text('—'), findsNWidgets(3 * 2 + 2));
+    // Location per row (GAP-11); the nameless employee adds a name
+    // placeholder and has no groups.
+    expect(find.text('—'), findsNWidgets(3 + 2));
+    // Onboarding: userPassword IS NOT NULL → Activated (none of these yet).
+    expect(find.text('Not activated'), findsNWidgets(3));
+  });
+
+  testWidgets('an employee who completed onboarding shows Activated', (tester) async {
+    final (api, _) = await _pump(tester, selected: _almeco);
+
+    api.succeed([
+      employee(1, 'Disan', 'Ssebowa', 'SBW', activated: true),
+      employee(2, 'Kevin', 'De Vos', 'KDV'),
+    ]);
+    await tester.pump();
+
+    expect(find.text('Activated'), findsOneWidget);
+    expect(find.text('Not activated'), findsOneWidget);
   });
 
   testWidgets('empty company: names the company', (tester) async {

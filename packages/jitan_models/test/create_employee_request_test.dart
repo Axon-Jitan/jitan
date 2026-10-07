@@ -3,7 +3,13 @@ import 'package:test/test.dart';
 
 void main() {
   test('CreateEmployeeRequest round-trips, optional fields included', () {
-    const original = CreateEmployeeRequest(firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', groupId: 3, phone: '+32 470');
+    const original = CreateEmployeeRequest(
+      firstName: 'Disan',
+      lastName: 'Ssebowa',
+      code: 'SBW',
+      groupId: 3,
+      phone: '+32 470',
+    );
 
     final decoded = CreateEmployeeRequest.fromJson(original.toJson());
 

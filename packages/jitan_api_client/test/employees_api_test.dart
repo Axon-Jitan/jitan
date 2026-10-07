@@ -16,7 +16,7 @@ void main() {
           jsonEncode({
             'companyId': 7,
             'employees': [
-              {'id': 1, 'firstName': 'Disan', 'lastName': 'Ssebowa', 'code': 'SBW', 'groups': ['White collar'], 'isActive': true},
+              {'id': 1, 'firstName': 'Disan', 'lastName': 'Ssebowa', 'code': 'SBW', 'groups': ['White collar'], 'isActive': true, 'isActivated': false},
             ],
           }),
           200,

@@ -34,66 +34,66 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-        padding: const EdgeInsetsDirectional.fromSTEB(
-          JitanDimensions.pagePaddingStart,
-          JitanDimensions.pagePaddingVertical,
-          JitanDimensions.pagePaddingEnd,
-          JitanDimensions.pagePaddingVertical,
+    padding: const EdgeInsetsDirectional.fromSTEB(
+      JitanDimensions.pagePaddingStart,
+      JitanDimensions.pagePaddingVertical,
+      JitanDimensions.pagePaddingEnd,
+      JitanDimensions.pagePaddingVertical,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        JitanPageHeader(
+          title: context.t(AdminTextKeys.companyTitle),
+          subtitle: context.t(AdminTextKeys.companyListSubtitle),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            JitanPageHeader(
-              title: context.t(AdminTextKeys.companyTitle),
-              subtitle: context.t(AdminTextKeys.companyListSubtitle),
-            ),
-            const SizedBox(height: JitanDimensions.headerToToolbar),
-            JitanSurfaceCard(
-              radius: JitanDimensions.toolbarCardRadius,
-              padding: const EdgeInsets.all(JitanDimensions.toolbarPadding),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: JitanDimensions.searchFieldWidth),
-                  child: JitanSearchField(
-                    hintText: context.t(AdminTextKeys.companySearch),
-                    onChanged: _controller.updateSearch,
-                  ),
-                ),
+        const SizedBox(height: JitanDimensions.headerToToolbar),
+        JitanSurfaceCard(
+          radius: JitanDimensions.toolbarCardRadius,
+          padding: const EdgeInsets.all(JitanDimensions.toolbarPadding),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: JitanDimensions.searchFieldWidth),
+              child: JitanSearchField(
+                hintText: context.t(AdminTextKeys.companySearch),
+                onChanged: _controller.updateSearch,
               ),
             ),
-            const SizedBox(height: JitanDimensions.toolbarToTable),
-            JitanSurfaceCard(
-              radius: JitanDimensions.tableCardRadius,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: JitanDimensions.tableMinHeight),
-                child: ListenableBuilder(
-                  listenable: _controller,
-                  builder: (context, _) => _content(context, _controller.state),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-      );
+        const SizedBox(height: JitanDimensions.toolbarToTable),
+        JitanSurfaceCard(
+          radius: JitanDimensions.tableCardRadius,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: JitanDimensions.tableMinHeight),
+            child: ListenableBuilder(
+              listenable: _controller,
+              builder: (context, _) => _content(context, _controller.state),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _content(BuildContext context, CompaniesState state) => switch (state) {
-        CompaniesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.companyListLoading))),
-        CompaniesFailed(:final failure) => _centered(_error(context, failure)),
-        CompaniesLoaded(companies: [], search: '') => _centered(
-            JitanEmptyState(
-              title: context.t(AdminTextKeys.companyEmptyTitle),
-              message: context.t(AdminTextKeys.companyEmptyMessage),
-            ),
-          ),
-        CompaniesLoaded(companies: [], :final search) => _centered(
-            JitanEmptyState(
-              title: context.t(AdminTextKeys.companyNoMatchTitle),
-              message: context.t(AdminTextKeys.companyNoMatchMessage, args: {'search': search}),
-            ),
-          ),
-        CompaniesLoaded(:final companies) => CompaniesTable(companies: companies, now: widget.clock()),
-      };
+    CompaniesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.companyListLoading))),
+    CompaniesFailed(:final failure) => _centered(_error(context, failure)),
+    CompaniesLoaded(companies: [], search: '') => _centered(
+      JitanEmptyState(
+        title: context.t(AdminTextKeys.companyEmptyTitle),
+        message: context.t(AdminTextKeys.companyEmptyMessage),
+      ),
+    ),
+    CompaniesLoaded(companies: [], :final search) => _centered(
+      JitanEmptyState(
+        title: context.t(AdminTextKeys.companyNoMatchTitle),
+        message: context.t(AdminTextKeys.companyNoMatchMessage, args: {'search': search}),
+      ),
+    ),
+    CompaniesLoaded(:final companies) => CompaniesTable(companies: companies, now: widget.clock()),
+  };
 
   Widget _error(BuildContext context, ApiClientException failure) {
     final keys = failureTextKeysFor(failure);
@@ -105,6 +105,5 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
     );
   }
 
-  static Widget _centered(Widget child) =>
-      SizedBox(height: JitanDimensions.tableMinHeight, child: child);
+  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableMinHeight, child: child);
 }

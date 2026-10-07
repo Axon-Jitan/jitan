@@ -86,9 +86,10 @@ class TestApp {
 
   /// POST with a raw body (already JSON-encoded, or deliberately malformed).
   Future<Response> post(String path, String body) => Future.sync(
-        () => handler(Request('POST', Uri.parse('http://localhost$path'), body: body,
-            headers: {'content-type': 'application/json'})),
-      );
+    () => handler(
+      Request('POST', Uri.parse('http://localhost$path'), body: body, headers: {'content-type': 'application/json'}),
+    ),
+  );
 }
 
 Future<Map<String, Object?>> jsonBody(Response response) async =>

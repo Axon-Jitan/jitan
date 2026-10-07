@@ -14,26 +14,19 @@ Future<void> showEmployeeDetailsDialog(
   required EmployeesApi employeesApi,
   required int companyId,
   required int userId,
-}) =>
-    showDialog<void>(
-      context: context,
-      builder: (_) => EmployeeDetailsDialog(employeesApi: employeesApi, companyId: companyId, userId: userId),
-    );
+}) => showDialog<void>(
+  context: context,
+  builder: (_) => EmployeeDetailsDialog(employeesApi: employeesApi, companyId: companyId, userId: userId),
+);
 
 /// Figma `Admin / Employees — Employee details modal` (`153:357`).
 ///
-/// Differences from Figma, on purpose: **Location** (ERD GAP-11) and
-/// **Account** (activation rule pending) show "—" with an explanation; **Work
-/// policy** is omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY). The Onboarding
-/// card has no "Not activated" status line until the activation rule is
-/// confirmed (docs/BACKLOG.md, ONB).
+/// Differences from Figma, on purpose: **Location** (ERD GAP-11) shows "—"
+/// with an explanation; **Work policy** is omitted
+/// (PRODUCT-CLARIFY-EMPLOYEE-POLICY). **Account** and the Onboarding status
+/// follow `userPassword IS NOT NULL` (activated).
 class EmployeeDetailsDialog extends StatefulWidget {
-  const EmployeeDetailsDialog({
-    super.key,
-    required this.employeesApi,
-    required this.companyId,
-    required this.userId,
-  });
+  const EmployeeDetailsDialog({super.key, required this.employeesApi, required this.companyId, required this.userId});
 
   final EmployeesApi employeesApi;
   final int companyId;
@@ -68,16 +61,13 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
 
   @override
   Widget build(BuildContext context) => JitanModal(
-        title: context.t(AdminTextKeys.employeeDetailsTitle),
-        body: switch ((_details, _failure)) {
-          (final details?, _) => _content(context, details),
-          (_, final failure?) => _error(context, failure),
-          _ => SizedBox(
-              height: 200,
-              child: JitanLoadingState(label: context.t(AdminTextKeys.employeeDetailsLoading)),
-            ),
-        },
-      );
+    title: context.t(AdminTextKeys.employeeDetailsTitle),
+    body: switch ((_details, _failure)) {
+      (final details?, _) => _content(context, details),
+      (_, final failure?) => _error(context, failure),
+      _ => SizedBox(height: 200, child: JitanLoadingState(label: context.t(AdminTextKeys.employeeDetailsLoading))),
+    },
+  );
 
   Widget _content(BuildContext context, EmployeeDetails details) {
     final unavailable = context.t(CommonTextKeys.valueUnavailable);
@@ -88,7 +78,10 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
         Text(name.isEmpty ? unavailable : name, style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
         const SizedBox(height: 6),
         Text(
-          context.t(AdminTextKeys.employeeDetailsSubtitle, args: {'company': details.companyName, 'code': details.code}),
+          context.t(
+            AdminTextKeys.employeeDetailsSubtitle,
+            args: {'company': details.companyName, 'code': details.code},
+          ),
           style: JitanTextStyles.modalSubtitle,
         ),
         const SizedBox(height: 26),
@@ -106,8 +99,11 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
             JitanDetailItem(label: context.t(AdminTextKeys.employeeFieldPhone), value: details.phone ?? unavailable),
             JitanDetailItem(
               label: context.t(AdminTextKeys.employeeFieldAccount),
-              value: unavailable,
-              tooltip: context.t(AdminTextKeys.employeeAccountUnavailable),
+              value: context.t(
+                details.isActivated
+                    ? AdminTextKeys.employeeOnboardingActivated
+                    : AdminTextKeys.employeeOnboardingNotActivated,
+              ),
             ),
             JitanDetailItem(
               label: context.t(AdminTextKeys.employeeFieldStatus),
@@ -117,6 +113,7 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
         ),
         const SizedBox(height: 24),
         _OnboardingCard(
+          activated: details.isActivated,
           onShowQr: () => showOnboardingQrDialog(context, employeesApi: widget.employeesApi, employee: details),
         ),
       ],
@@ -137,37 +134,56 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
   }
 }
 
-/// Figma's Onboarding card (`153:357`): explanation and the QR action.
+/// Figma's Onboarding card (`153:357`): status, explanation, QR action.
+/// Once activated, the same QR is the employee's personal Terminal QR.
 class _OnboardingCard extends StatelessWidget {
-  const _OnboardingCard({required this.onShowQr});
+  const _OnboardingCard({required this.activated, required this.onShowQr});
 
+  final bool activated;
   final VoidCallback onShowQr;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-        decoration: BoxDecoration(
-          color: JitanColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: JitanColors.inputBorder),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.t(AdminTextKeys.employeeOnboardingTitle), style: JitanTextStyles.stateTitle.copyWith(fontSize: 16)),
-              const SizedBox(height: 12),
-              Text(context.t(AdminTextKeys.employeeOnboardingText), style: JitanTextStyles.modalSubtitle),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: JitanPrimaryButton(
-                  label: context.t(AdminTextKeys.employeeOnboardingAction),
-                  onPressed: onShowQr,
-                ),
-              ),
-            ],
+    decoration: BoxDecoration(
+      color: JitanColors.surface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: JitanColors.inputBorder),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.t(AdminTextKeys.employeeOnboardingTitle),
+            style: JitanTextStyles.stateTitle.copyWith(fontSize: 16),
           ),
-        ),
-      );
+          const SizedBox(height: 12),
+          Text(
+            context.t(
+              activated ? AdminTextKeys.employeeOnboardingActivated : AdminTextKeys.employeeOnboardingNotActivated,
+            ),
+            style: JitanTextStyles.tableCellStrong.copyWith(
+              color: activated ? JitanColors.success : JitanColors.warning,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            context.t(activated ? AdminTextKeys.employeeOnboardingCompletedText : AdminTextKeys.employeeOnboardingText),
+            style: JitanTextStyles.modalSubtitle,
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: JitanPrimaryButton(
+              label: context.t(
+                activated ? AdminTextKeys.employeeOnboardingShowQr : AdminTextKeys.employeeOnboardingAction,
+              ),
+              onPressed: onShowQr,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

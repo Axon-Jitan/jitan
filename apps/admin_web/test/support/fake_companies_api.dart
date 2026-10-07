@@ -24,24 +24,11 @@ class FakeCompaniesApi implements CompaniesApi {
   void succeed(List<CompanySummary> companies, {int? index}) =>
       _pending[index ?? _pending.length - 1].complete(companies);
 
-  void fail(ApiClientException failure, {int? index}) =>
-      _pending[index ?? _pending.length - 1].completeError(failure);
+  void fail(ApiClientException failure, {int? index}) => _pending[index ?? _pending.length - 1].completeError(failure);
 }
 
-CompanySummary company(
-  int id,
-  String name, {
-  bool active = true,
-  int employees = 0,
-  DateTime? lastUpdatedAt,
-}) =>
-    CompanySummary(
-      id: id,
-      name: name,
-      isActive: active,
-      employeeCount: employees,
-      lastUpdatedAt: lastUpdatedAt,
-    );
+CompanySummary company(int id, String name, {bool active = true, int employees = 0, DateTime? lastUpdatedAt}) =>
+    CompanySummary(id: id, name: name, isActive: active, employeeCount: employees, lastUpdatedAt: lastUpdatedAt);
 
 ApiClientException serverError(int status, String code) =>
     ApiClientException.server(status, ApiError(code: code, message: 'server detail'));

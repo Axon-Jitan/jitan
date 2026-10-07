@@ -73,8 +73,7 @@ class _CompanyEmployees extends StatefulWidget {
 }
 
 class _CompanyEmployeesState extends State<_CompanyEmployees> {
-  late final EmployeesController _controller =
-      EmployeesController(widget.api, companyId: widget.company.id)..load();
+  late final EmployeesController _controller = EmployeesController(widget.api, companyId: widget.company.id)..load();
 
   @override
   void dispose() {
@@ -93,79 +92,79 @@ class _CompanyEmployeesState extends State<_CompanyEmployees> {
     await _controller.load();
     if (!mounted) return;
     final name = [created.firstName, created.lastName].whereType<String>().join(' ');
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(context.t(AdminTextKeys.employeeAddSuccess, args: {'name': name}))),
-    );
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(context.t(AdminTextKeys.employeeAddSuccess, args: {'name': name}))));
   }
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          JitanSurfaceCard(
-            radius: JitanDimensions.toolbarCardRadius,
-            padding: const EdgeInsets.all(JitanDimensions.toolbarPadding),
-            child: Row(
-              children: [
-                Flexible(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: JitanDimensions.searchFieldWidth),
-                    child: JitanSearchField(
-                      hintText: context.t(AdminTextKeys.employeeSearch),
-                      onChanged: _controller.updateSearch,
-                    ),
-                  ),
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      JitanSurfaceCard(
+        radius: JitanDimensions.toolbarCardRadius,
+        padding: const EdgeInsets.all(JitanDimensions.toolbarPadding),
+        child: Row(
+          children: [
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: JitanDimensions.searchFieldWidth),
+                child: JitanSearchField(
+                  hintText: context.t(AdminTextKeys.employeeSearch),
+                  onChanged: _controller.updateSearch,
                 ),
-                const Spacer(),
-                const SizedBox(width: 12),
-                JitanPrimaryButton(
-                  label: context.t(AdminTextKeys.employeeAddAction),
-                  icon: Icons.add,
-                  height: JitanDimensions.controlHeight,
-                  onPressed: _addEmployee,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: JitanDimensions.toolbarToTable),
-          JitanSurfaceCard(
-            radius: JitanDimensions.tableCardRadius,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: JitanDimensions.tableMinHeight),
-              child: ListenableBuilder(
-                listenable: _controller,
-                builder: (context, _) => _content(context, _controller.state),
               ),
             ),
+            const Spacer(),
+            const SizedBox(width: 12),
+            JitanPrimaryButton(
+              label: context.t(AdminTextKeys.employeeAddAction),
+              icon: Icons.add,
+              height: JitanDimensions.controlHeight,
+              onPressed: _addEmployee,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: JitanDimensions.toolbarToTable),
+      JitanSurfaceCard(
+        radius: JitanDimensions.tableCardRadius,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: JitanDimensions.tableMinHeight),
+          child: ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) => _content(context, _controller.state),
           ),
-        ],
-      );
+        ),
+      ),
+    ],
+  );
 
   Widget _content(BuildContext context, EmployeesState state) => switch (state) {
-        EmployeesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.employeeListLoading))),
-        EmployeesFailed(:final failure) => _centered(_error(context, failure)),
-        EmployeesLoaded(employees: [], search: '') => _centered(
-            JitanEmptyState(
-              title: context.t(AdminTextKeys.employeeEmptyTitle),
-              message: context.t(AdminTextKeys.employeeEmptyMessage, args: {'company': widget.company.name}),
-            ),
-          ),
-        EmployeesLoaded(employees: [], :final search) => _centered(
-            JitanEmptyState(
-              title: context.t(AdminTextKeys.employeeNoMatchTitle),
-              message: context.t(AdminTextKeys.employeeNoMatchMessage, args: {'search': search}),
-            ),
-          ),
-        EmployeesLoaded(:final employees) => EmployeesTable(
-            employees: employees,
-            onOpen: (employee) => showEmployeeDetailsDialog(
-              context,
-              employeesApi: widget.api,
-              companyId: widget.company.id,
-              userId: employee.id,
-            ),
-          ),
-      };
+    EmployeesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.employeeListLoading))),
+    EmployeesFailed(:final failure) => _centered(_error(context, failure)),
+    EmployeesLoaded(employees: [], search: '') => _centered(
+      JitanEmptyState(
+        title: context.t(AdminTextKeys.employeeEmptyTitle),
+        message: context.t(AdminTextKeys.employeeEmptyMessage, args: {'company': widget.company.name}),
+      ),
+    ),
+    EmployeesLoaded(employees: [], :final search) => _centered(
+      JitanEmptyState(
+        title: context.t(AdminTextKeys.employeeNoMatchTitle),
+        message: context.t(AdminTextKeys.employeeNoMatchMessage, args: {'search': search}),
+      ),
+    ),
+    EmployeesLoaded(:final employees) => EmployeesTable(
+      employees: employees,
+      onOpen: (employee) => showEmployeeDetailsDialog(
+        context,
+        employeesApi: widget.api,
+        companyId: widget.company.id,
+        userId: employee.id,
+      ),
+    ),
+  };
 
   Widget _error(BuildContext context, ApiClientException failure) {
     final keys = failureTextKeysFor(failure);

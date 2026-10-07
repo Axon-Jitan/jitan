@@ -23,8 +23,7 @@ class AdminApp extends StatefulWidget {
 }
 
 class _AdminAppState extends State<AdminApp> {
-  late final GoRouter _router =
-      buildAdminRouter(services: widget.services, initialLocation: widget.initialLocation);
+  late final GoRouter _router = buildAdminRouter(services: widget.services, initialLocation: widget.initialLocation);
   late final CurrentCompanyController _currentCompany = widget.currentCompany ?? CurrentCompanyController();
 
   @override
@@ -36,12 +35,12 @@ class _AdminAppState extends State<AdminApp> {
 
   @override
   Widget build(BuildContext context) => CurrentCompanyScope(
-        controller: _currentCompany,
-        child: MaterialApp.router(
-          title: context.t(AdminTextKeys.appTitle),
-          theme: JitanTheme.light(),
-          routerConfig: _router,
-          debugShowCheckedModeBanner: false,
-        ),
-      );
+    controller: _currentCompany,
+    child: MaterialApp.router(
+      title: context.t(AdminTextKeys.appTitle),
+      theme: JitanTheme.light(),
+      routerConfig: _router,
+      debugShowCheckedModeBanner: false,
+    ),
+  );
 }
