@@ -55,7 +55,9 @@ Unresolved production details never stall development. Classify every issue (ENG
 - **Clients:** Flutter (Android first → iOS → Employee Web → Admin Web → Terminal)
 - **Backend:** standalone Dart API (HTTP/JSON)
 - **Database:** MySQL, provided externally. Schema is **fixed** (see below).
-- **Dev:** no Docker. **Prod:** Hyper-V → Linux VM → Nginx → Dart `systemd` service → MySQL
+- **Dev:** no Docker needed for the apps. A disposable local MySQL with the ERD runs in
+  Docker until IT's development database exists: [dev/local-db](dev/local-db/README.md).
+  **Prod:** Hyper-V → Linux VM → Nginx → Dart `systemd` service → MySQL
 
 ## The database schema is fixed
 

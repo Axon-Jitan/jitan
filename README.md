@@ -21,7 +21,8 @@ server/jitan_api          Dart API, the only component that talks to MySQL
 
 Not created yet, added with their first slice: `apps/employee_web`, `apps/terminal`.
 
-Requirements: Flutter 3.44+ (Dart 3.12+). No Docker needed.
+Requirements: Flutter 3.44+ (Dart 3.12+). Docker only for the optional local database
+([dev/local-db](dev/local-db/README.md)), used until IT's development database exists.
 
 ```sh
 flutter pub get        # at the repo root; resolves every package
@@ -142,7 +143,8 @@ cd apps/admin_web            && flutter test
 ```
 
 Server **integration tests** (`test/integration/`) run against a real dev/test MySQL and are
-skipped until one is configured. Set `JITAN_TEST_DB_HOST`, `JITAN_TEST_DB_NAME`,
+skipped until one is configured. The local database runs them all:
+`python ../../dev/local-db/with_local_db.py dart test` in `server/jitan_api`. Set `JITAN_TEST_DB_HOST`, `JITAN_TEST_DB_NAME`,
 `JITAN_TEST_DB_USER`, `JITAN_TEST_DB_PASSWORD` (or put them in a git-ignored
 `server/jitan_api/.env.test`). They verify every column the repositories use exists with
 the exact ERD spelling, then run the real SQL on `[DEV-TEST]` fixtures that they remove

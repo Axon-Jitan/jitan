@@ -64,9 +64,9 @@ void main() {
     expect(listed, isNot(contains(inactiveCode)));
   });
 
-  test('loads a translation bundle; the lowest translationID wins on duplicates', () async {
+  test('loads a translation bundle, quotes and backslashes intact (one row per key: ERD unique pair)', () async {
     final id = languageIds.isNotEmpty ? languageIds.first : await insertLanguage(activeCode);
-    for (final (key, text) in [('test.a', 'First'), ('test.b', "O'Brien \\ text"), ('test.a', 'Second')]) {
+    for (final (key, text) in [('test.a', 'First'), ('test.b', "O'Brien \\ text")]) {
       await db.query(
         'INSERT INTO tblTranslation (languageID, translationUIName, translationUIText) VALUES (:id, :key, :text)',
         {'id': id, 'key': key, 'text': text},

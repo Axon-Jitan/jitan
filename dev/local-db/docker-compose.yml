@@ -1,0 +1,39 @@
+# Jitan LOCAL, DISPOSABLE development database (MySQL). Not the IT database.
+#
+#   cd dev/local-db
+#   cp .env.example .env          # local-only values; .env is git-ignored
+#   docker compose up -d          # first start loads schema.sql, then seed.sql
+#   docker compose down -v        # throw it away (the next "up" starts fresh)
+#
+# Listens on 127.0.0.1 only. Connection settings come from .env.
+name: jitan-local-db
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${JITAN_LOCAL_DB_ROOT_PASSWORD:?set JITAN_LOCAL_DB_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${JITAN_LOCAL_DB_NAME:?set JITAN_LOCAL_DB_NAME in .env}
+      MYSQL_USER: ${JITAN_LOCAL_DB_USER:?set JITAN_LOCAL_DB_USER in .env}
+      MYSQL_PASSWORD: ${JITAN_LOCAL_DB_PASSWORD:?set JITAN_LOCAL_DB_PASSWORD in .env}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+    ports:
+      - "127.0.0.1:${JITAN_LOCAL_DB_PORT:-3307}:3306"
+    volumes:
+      # Run in name order on first start only.
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - jitan-local-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+volumes:
+  jitan-local-db-data:
