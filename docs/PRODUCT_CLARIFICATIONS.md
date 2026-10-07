@@ -57,24 +57,43 @@ Current interpretation (in `CompanyRepository.listCompanies`):
 ---
 
 ## PRODUCT-CLARIFY-EMPLOYEES-LIST: Company context and the Type/Policy columns
-Status: `OPEN` · **blocks the Employees list slice** (Figma `Admin / Employees` `153:137`)
+Status: `RESOLVED (2026-10-07)` except the final switcher design and Policy (below)
 
-1. **How is "the selected company" chosen?** The page reads "Manage employees for the
-   selected company", but the frame has no company selector, and the Companies list rows
-   are not clickable in Figma. The app must not silently pick a company
-   (ENGINEERING_RULES §20). Options: a company selector on the page, clickable company
-   rows leading to that company's employees, or a global company switcher. Whichever is
-   chosen should be added to Figma.
-2. **Type when a user has several groups.** `tblUserGroup` allows more than one group per
-   user. Show all of them, or is exactly one Blue/White collar group expected (and
-   several a data error)?
-3. **What is "Policy" (Office / Field)?** There is no policy table. Candidates and why
-   none fits cleanly:
-   - `tblGroup`: already used for Type (Blue/White collar), and nothing distinguishes a
-     "type" group from a "policy" group.
-   - `tblScheduleType`: describes periods (Work/Break/Lunch/Travel), not employees.
-   - `tblFunction`: per-user capabilities, not a working pattern.
+Decisions:
 
-   Which ERD concept is "Office"/"Field"? If none, this is an ERD gap.
+1. **Company context.** HR/Admin always works inside a **currently selected company**.
+   The Employees screen shows that company's employees only
+   (`tblUser → tblUserCompany → tblCompany`), never all companies mixed. Until the final
+   company switcher is designed, a **development-only** selector sets the current company.
+   No company is hardcoded. *Still open:* the design of the production company switcher
+   (Figma has none yet).
+2. **Type** = the user's groups (`tblUser → tblUserGroup → tblGroup`), e.g. Blue collar /
+   White collar. One group: show it. Several: show all their names, comma-separated, with
+   no invented priority. Confirm real usage against production `tblGroup` rows at
+   DB-VERIFY-01.
+3. **Policy** → split out as PRODUCT-CLARIFY-EMPLOYEE-POLICY.
 
-Also blocked for this page: **Location** (ERD GAP-11) and **Onboarding** (ERD GAP-04).
+Still blocked on this page: **Location** (ERD GAP-11) and **Onboarding** (ERD GAP-04),
+both shown as "—".
+
+---
+
+## PRODUCT-CLARIFY-EMPLOYEE-POLICY: Meaning of the Employees "Policy" column
+Status: `OPEN` · does **not** block the Employees flow
+
+There is no `tblPolicy`, and none will be created. What the product called "policy" is
+spread across `tblGroup`, `tblScheduleType`, `tblSchedule`, `tblUserSchedule`,
+`tblRoundingRule`, `tblScheduleRoundingRule`, `tblGeofence` and `tblTimeRegType`. Which
+of these the Figma column (values "Office" / "Field") should summarise is undefined.
+
+Until it is defined, the column is **omitted** from the Employees list. No fake or
+derived policy value is shown or persisted.
+
+---
+
+## PRODUCT-CLARIFY-TRANSLATION-MAINTENANCE: Who maintains translations
+Status: `OPEN` · operational, does not block development
+
+Who enters and maintains non-English rows in `tblTranslation` in production, and how (an
+admin screen, IT scripts, an export/import for translators)? English is built into the
+apps and maintained in code (`builtInEnglish`).

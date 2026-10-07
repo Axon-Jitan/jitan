@@ -26,7 +26,7 @@ answered, and they block only the production cut-over of authentication and auth
 | Authorization (production cut-over only) | CLARIFY-10, CLARIFY-11 |
 | Companies: list | **not blocked**, built. "Locations" column shows "—" (GAP-03) |
 | Companies: Add company (Figma `153:87`) | GAP-02 (country, timezone), GAP-03 (primary workplace), GAP-07 (company registration methods), CLARIFY-11 (audit event type). Only the name is storable, so the slice is held back rather than shipped partially |
-| Employees: list (Figma `153:137`) | PRODUCT-CLARIFY-EMPLOYEES-LIST (company context, Type, Policy), GAP-11 (Location), GAP-04 (Onboarding column) |
+| Employees: list (Figma `153:137`) | **not blocked**. Location (GAP-11) and Onboarding (GAP-04) show "—"; Policy omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY) |
 | Employee onboarding (**Milestone 1**) | GAP-04 |
 | Employee Web QR login, privacy screens | GAP-05 |
 | Core time engine | GAP-01, GAP-02, CLARIFY-02 |

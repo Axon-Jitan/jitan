@@ -6,6 +6,9 @@ product questions in [PRODUCT_CLARIFICATIONS.md](PRODUCT_CLARIFICATIONS.md).
 
 Status values: `TODO` · `IN PROGRESS` · `DONE (commit)`
 
+**Commits:** each completed task is its own reviewable commit. History is pushed as-is,
+never squashed.
+
 ---
 
 ## I18N-01: Translation infrastructure
@@ -91,25 +94,48 @@ tblLanguage → tblTranslation → Dart API → TranslationService → in-memory
 
 ### Open points
 
-- **Key convention vs. existing rows.** Code uses `company.title` / `common.retry` style
-  keys. If `tblTranslation` already holds rows under another convention (CLARIFY-11),
-  align before translations are entered.
-- **Production content.** Who enters and maintains non-English rows, and how (an admin
-  screen, IT scripts)? A screen listing keys without a translation per language would
-  help translators.
+- **Key convention vs. existing rows.** Development continues with the current key
+  convention (`company.title`). At DB-VERIFY-01: inspect the real `tblTranslation` rows,
+  compare their key style, report differences. Never modify the ERD or silently rewrite
+  production translation data.
+- **Production content:** PRODUCT-CLARIFY-TRANSLATION-MAINTENANCE.
+- **Persistent offline cache** for non-English languages: later, for Employee Mobile and
+  Terminal. Does not block development.
 - **Plural rules.** Plural keys use `.one` / `.other`, which fits English and Dutch;
   French (0 is singular) and others need richer keys when added.
 - CLARIFY-07 (one language per user?) and CLARIFY-08 (duplicate keys per language).
 
 ---
 
-## DB-VERIFY-01: Verify the Company list against the real dev database
-Status: `TODO` · waiting for dev database credentials
+## DB-VERIFY-01: Verify everything built so far against the real dev database
+Status: `TODO` · waiting for dev database credentials · **does not block development**
 
 - [ ] Fill `server/jitan_api/.env` and `.env.test` (never committed)
-- [ ] `dart test` in `server/jitan_api` with `JITAN_TEST_DB_*` set: schema contract and
-      company repository integration tests must pass
+- [ ] `dart test` in `server/jitan_api` with `JITAN_TEST_DB_*` set: every skipped
+      integration test (schema contract, repositories) must pass
+- [ ] Verify every mapped column against the real schema
+- [ ] Inspect the actual reference rows of `tblGroup`, `tblCredGroup`, `tblAppModules`,
+      `tblFunction`, `tblScheduleType`, `tblTimeRegType`, `tblLanguage`, `tblTranslation`
+      and report how they compare with the code's assumptions
 - [ ] `dart run tool/dev_seed.dart` if the database lacks useful data (add `--pseudo-language` to
       see a database language), then run the API and the Admin web app against it and check the list
       in a browser, in English and in the pseudo language
-- [ ] Fix any column-spelling or type differences the schema contract test finds
+- [ ] Report any mismatch. **Never change the fixed ERD to make code or tests pass**;
+      fix the code, or raise an ERD gap.
+
+---
+
+## Employee management
+
+Order agreed 2026-10-07. Employee Onboarding follows immediately after.
+
+| Task | Scope | Status |
+|---|---|---|
+| EMP-01 | Employee list for the current company: search, Type from `tblGroup`, all states, responsive, translation keys | `IN PROGRESS` |
+| EMP-02 | Add employee: only fields the ERD supports; validation; tests | `TODO` |
+| EMP-03 | Employee details | `TODO` |
+| EMP-04 | Company assignment (`tblUserCompany`) | `TODO` |
+| EMP-05 | Group assignment (`tblUserGroup`) | `TODO` |
+| EMP-06 | Language assignment (`tblUserLanguage`) | `TODO` |
+| EMP-07 | Credential-group assignment (`tblUserCredGroup`) where required | `TODO` |
+| EMP-08 | Generate/display the employee onboarding QR | `TODO`, blocked by GAP-04 for storage |
