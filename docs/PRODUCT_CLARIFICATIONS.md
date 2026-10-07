@@ -120,3 +120,28 @@ Status: `OPEN` · operational, does not block development
 Who enters and maintains non-English rows in `tblTranslation` in production, and how (an
 admin screen, IT scripts, an export/import for translators)? English is built into the
 apps and maintained in code (`builtInEnglish`).
+
+---
+
+## DESIGN-CLARIFY-ONBOARDING: Gaps between Figma and the agreed onboarding flow
+Status: `OPEN` · development choices in place, does not block
+
+The Employee app (ONB-02) follows Figma `01 — Employee App` except where Figma conflicts
+with decisions already taken, or has no screen:
+
+1. **Language step: no Figma frame.** Built like "05 Registration method" (choice cards,
+   English first, other active languages from the database). Please design it.
+2. **"03 Employee identifier" is skipped.** The personal QR already identifies the
+   employee (EMP-08), so the code screen isn't needed.
+3. **Join copy changed.** Figma says "company QR" / "shown on your company terminal". The
+   onboarding QR is personal and shown by HR/Admin, so the app says "Scan the personal Jitan
+   QR that HR/Admin shows you" and "Scan QR".
+4. **"Set this later" removed** from "07 Set password": the password is mandatory (ONB-01).
+   The step counter reads "8 of 9" because the flow has the extra language step.
+5. **Job title on "04 Account found" omitted.** The ERD has no job title.
+6. **"Sign in" and "Contact HR/Admin" buttons on error screens 02 and 04 not shown.**
+   Sign-in is AUTH-01 (not built); the ERD holds no HR contact details. "Back" is shown.
+7. **Ready summary** says "Allow location in Settings to use automatic registration"
+   (warning colour) instead of "Required permissions configured" when automatic
+   registration was chosen but location was refused. A refusal never blocks onboarding.
+8. **Home** is a placeholder ("Hello, {name}") until the Today screens are built.

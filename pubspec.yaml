@@ -10,6 +10,7 @@ workspace:
   - packages/jitan_core
   - packages/jitan_ui
   - apps/admin_web
+  - apps/employee_mobile
   - server/jitan_api
 
 dev_dependencies:

@@ -183,6 +183,9 @@ valid for Terminal check-in/out. The guard is enforced twice: a check before wor
    active, MFD; `tblFunction` is per user, not per company). Confirmation for per-user
    allowed methods. A place for the chosen method, or a confirmation that it lives only on
    the device.
+5. **Interim (ONB-02, in place):** the employee's choice is stored on the device only
+   (`DeviceSettings`, secure storage). Every method is offered, since allowed methods
+   can't be read from the ERD. Reinstalling the app loses the choice.
 
 ## GAP-08: Exception state and correction requests
 **ERD GAP — requires clarification with IT.** · Status: `OPEN`

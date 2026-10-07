@@ -1,0 +1,113 @@
+/// `tblTranslation.translationUIName` keys used only by the Employee app.
+/// Shared keys are in `CommonTextKeys` (jitan_core).
+///
+/// Keys only. English texts live in `builtInEnglish` (jitan_core); other
+/// languages in `tblTranslation` (I18N-01).
+abstract final class EmployeeTextKeys {
+  static const appTitle = 'app.employee.title';
+  static const configErrorTitle = 'app.employee.config.error.title';
+  static const configErrorMessage = 'app.employee.config.error.message';
+
+  static const welcomeEyebrow = 'onboarding.welcome.eyebrow';
+  static const welcomeTitle = 'onboarding.welcome.title';
+  static const welcomeText = 'onboarding.welcome.text';
+  static const welcomeAction = 'onboarding.welcome.action';
+
+  static const joinTitle = 'onboarding.join.title';
+  static const joinText = 'onboarding.join.text';
+  static const joinHint = 'onboarding.join.hint';
+  static const joinAction = 'onboarding.join.action';
+
+  static const scanTitle = 'onboarding.scan.title';
+  static const scanCameraUnavailable = 'onboarding.scan.cameraUnavailable';
+
+  static const confirmTitle = 'onboarding.confirm.title';
+  static const confirmAction = 'onboarding.confirm.action';
+  static const confirmNotYou = 'onboarding.confirm.notYou';
+  static const confirmGoBack = 'onboarding.confirm.goBack';
+
+  static const languageTitle = 'onboarding.language.title';
+  static const languageText = 'onboarding.language.text';
+  static const languageLoadFailed = 'onboarding.language.loadFailed';
+  static const languageInvalid = 'onboarding.language.invalid';
+  static const languageEnglish = 'onboarding.language.english';
+
+  static const methodTitle = 'onboarding.method.title';
+  static const methodText = 'onboarding.method.text';
+  static const methodAutomaticTitle = 'onboarding.method.automatic.title';
+  static const methodAutomaticText = 'onboarding.method.automatic.text';
+  static const methodManualTitle = 'onboarding.method.manual.title';
+  static const methodManualText = 'onboarding.method.manual.text';
+  static const methodNote = 'onboarding.method.note';
+
+  static const permissionsTitle = 'onboarding.permissions.title';
+  static const permissionsText = 'onboarding.permissions.text';
+  static const permissionsLocationTitle = 'onboarding.permissions.location.title';
+  static const permissionsLocationText = 'onboarding.permissions.location.text';
+  static const permissionsNotificationsTitle = 'onboarding.permissions.notifications.title';
+  static const permissionsNotificationsText = 'onboarding.permissions.notifications.text';
+  static const permissionsPrivacyTitle = 'onboarding.permissions.privacy.title';
+  static const permissionsPrivacyText = 'onboarding.permissions.privacy.text';
+
+  static const passwordTitle = 'onboarding.password.title';
+  static const passwordText = 'onboarding.password.text';
+  static const passwordLabel = 'onboarding.password.label';
+  static const passwordHint = 'onboarding.password.hint';
+  static const passwordConfirmLabel = 'onboarding.password.confirm.label';
+  static const passwordConfirmHint = 'onboarding.password.confirm.hint';
+  static const passwordShow = 'onboarding.password.show';
+  static const passwordHide = 'onboarding.password.hide';
+  static const passwordErrorTooShort = 'onboarding.password.error.tooShort';
+  static const passwordErrorTooLong = 'onboarding.password.error.tooLong';
+  static const passwordErrorMismatch = 'onboarding.password.error.mismatch';
+  static const passwordErrorRejected = 'onboarding.password.error.rejected';
+  static const passwordNoteTitle = 'onboarding.password.note.title';
+  static const passwordNoteText = 'onboarding.password.note.text';
+
+  /// Arguments: `{n}`, `{total}`.
+  static const step = 'onboarding.step';
+
+  static const readyBadge = 'onboarding.ready.badge';
+  static const readyTitle = 'onboarding.ready.title';
+  static const readyText = 'onboarding.ready.text';
+  static const readyWorkplace = 'onboarding.ready.workplace';
+  static const readyMethod = 'onboarding.ready.method';
+  static const readyPermissions = 'onboarding.ready.permissions';
+  static const readyLocationMissing = 'onboarding.ready.locationMissing';
+  static const readyAction = 'onboarding.ready.action';
+
+  static const errorInvalidQrTitle = 'onboarding.error.invalidQr.title';
+  static const errorInvalidQrText = 'onboarding.error.invalidQr.text';
+  static const errorInvalidQrHelpTitle = 'onboarding.error.invalidQr.helpTitle';
+  static const errorInvalidQrHelp = 'onboarding.error.invalidQr.help';
+  static const errorAlreadyActivatedTitle = 'onboarding.error.alreadyActivated.title';
+  static const errorAlreadyActivatedText = 'onboarding.error.alreadyActivated.text';
+  static const errorAlreadyActivatedHelpTitle = 'onboarding.error.alreadyActivated.helpTitle';
+  static const errorAlreadyActivatedHelp = 'onboarding.error.alreadyActivated.help';
+  static const errorUnavailableTitle = 'onboarding.error.unavailable.title';
+  static const errorUnavailableText = 'onboarding.error.unavailable.text';
+  static const errorUnavailableHelpTitle = 'onboarding.error.unavailable.helpTitle';
+  static const errorUnavailableHelp = 'onboarding.error.unavailable.help';
+  static const errorActivatedElsewhereTitle = 'onboarding.error.activatedElsewhere.title';
+  static const errorActivatedElsewhereText = 'onboarding.error.activatedElsewhere.text';
+  static const errorActivatedElsewhereHelpTitle = 'onboarding.error.activatedElsewhere.helpTitle';
+  static const errorActivatedElsewhereHelp = 'onboarding.error.activatedElsewhere.help';
+  static const errorNetworkTitle = 'onboarding.error.network.title';
+  static const errorNetworkText = 'onboarding.error.network.text';
+  static const errorNetworkHelpTitle = 'onboarding.error.network.helpTitle';
+  static const errorNetworkHelp = 'onboarding.error.network.help';
+  static const errorServerTitle = 'onboarding.error.server.title';
+  static const errorServerText = 'onboarding.error.server.text';
+  static const errorServerHelpTitle = 'onboarding.error.server.helpTitle';
+  static const errorServerHelp = 'onboarding.error.server.help';
+  static const errorSessionRecoveryTitle = 'onboarding.error.sessionRecovery.title';
+  static const errorSessionRecoveryText = 'onboarding.error.sessionRecovery.text';
+  static const errorSessionRecoveryHelpTitle = 'onboarding.error.sessionRecovery.helpTitle';
+  static const errorSessionRecoveryHelp = 'onboarding.error.sessionRecovery.help';
+  static const errorSessionRecoveryAction = 'onboarding.error.sessionRecovery.action';
+
+  /// Argument: `{name}`.
+  static const homeGreeting = 'home.greeting';
+  static const homeGreetingNoName = 'home.greetingNoName';
+  static const homeText = 'home.text';
+}

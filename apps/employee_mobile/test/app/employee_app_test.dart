@@ -1,0 +1,163 @@
+import 'package:employee_mobile/src/app/employee_app.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../support/fake_jitan_server.dart';
+
+void main() {
+  late TestHarness h;
+
+  setUp(() => h = TestHarness());
+
+  Future<void> startApp(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1170, 2532); // 390 × 844 logical, like the Figma frames
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(EmployeeApp(services: h.services));
+    await settle(tester);
+  }
+
+  Future<void> tapText(WidgetTester tester, String text) async {
+    await tester.ensureVisible(find.text(text));
+    await tester.tap(find.text(text));
+    await settle(tester);
+  }
+
+  Future<void> onboardUpToPassword(WidgetTester tester) async {
+    await startApp(tester);
+    await tapText(tester, 'Get started');
+    await tapText(tester, 'Scan QR');
+    expect(find.text('Is this you?'), findsOneWidget);
+    expect(find.text('Disan Ssebowa'), findsOneWidget);
+    await tapText(tester, 'Yes, this is me');
+    expect(find.text('Choose your language'), findsOneWidget);
+    await tapText(tester, 'Continue');
+    expect(find.text('Automatic registration'), findsOneWidget);
+    await tapText(tester, 'Continue');
+    expect(find.text('Finish your setup.'), findsOneWidget);
+    await tapText(tester, 'Continue');
+    expect(find.text('Set your password'), findsOneWidget);
+  }
+
+  Future<void> enterPasswords(WidgetTester tester, String password, String confirmation) async {
+    await tester.enterText(find.byType(TextField).at(0), password);
+    await tester.enterText(find.byType(TextField).at(1), confirmation);
+    await tapText(tester, 'Continue');
+  }
+
+  testWidgets('scan → confirm → language → method → permissions → password → Ready → Home, no sign-in', (
+    tester,
+  ) async {
+    await onboardUpToPassword(tester);
+    expect(find.text('Set this later'), findsNothing, reason: 'the password is mandatory');
+
+    await enterPasswords(tester, 'correct horse battery', 'correct horse battery');
+    expect(find.text('You’re ready.'), findsOneWidget);
+    expect(h.store.values['session.token'], h.server.issuedTokens.single);
+
+    await tapText(tester, 'Start Jitan');
+    expect(find.text('Hello, Disan'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing, reason: 'no second sign-in screen');
+  });
+
+  testWidgets('a mismatched confirmation shows the Figma message and sends nothing', (tester) async {
+    await onboardUpToPassword(tester);
+
+    await enterPasswords(tester, 'correct horse battery', 'correct horse batterz');
+
+    expect(find.text('Passwords don’t match.'), findsOneWidget);
+    expect(h.server.requestsTo('/onboarding/complete'), isEmpty);
+  });
+
+  testWidgets('choosing a language translates the following screens at once', (tester) async {
+    await startApp(tester);
+    await tapText(tester, 'Get started');
+    await tapText(tester, 'Scan QR');
+    await tapText(tester, 'Yes, this is me');
+
+    await tapText(tester, 'Nederlands');
+    await tapText(tester, 'Continue');
+
+    expect(find.text('Hoe wil je je tijd registreren?'), findsOneWidget);
+    expect(find.text('Automatic registration'), findsOneWidget, reason: 'untranslated keys fall back to English');
+  });
+
+  testWidgets('an already activated QR shows the error and never restarts onboarding', (tester) async {
+    h.server.password = 'set earlier';
+    await startApp(tester);
+    await tapText(tester, 'Get started');
+    await tapText(tester, 'Scan QR');
+
+    expect(find.text('Account already activated'), findsOneWidget);
+    expect(find.text('Onboarding cannot restart'), findsOneWidget);
+    expect(find.text('Sign in'), findsNothing, reason: 'sign-in is AUTH-01');
+
+    await tapText(tester, 'Back');
+    expect(find.text('Join your workplace'), findsOneWidget);
+  });
+
+  testWidgets('closing the scanner without a QR stays on Join', (tester) async {
+    h.scannedValue = null;
+    await startApp(tester);
+    await tapText(tester, 'Get started');
+    await tapText(tester, 'Scan QR');
+
+    expect(find.text('Join your workplace'), findsOneWidget);
+    expect(h.server.requestsTo('/onboarding/start'), isEmpty);
+  });
+
+  testWidgets('lost final response: Try again signs in without repeating onboarding', (tester) async {
+    await onboardUpToPassword(tester);
+    h.server.loseCompleteResponse = true;
+
+    await enterPasswords(tester, 'correct horse battery', 'correct horse battery');
+    expect(find.text('Couldn’t finish setup'), findsOneWidget);
+
+    await tapText(tester, 'Try again');
+    expect(find.text('You’re ready.'), findsOneWidget);
+  });
+
+  group('app start', () {
+    testWidgets('a stored session opens Home directly, authenticated with the bearer token', (tester) async {
+      h.server.issuedTokens.add('stored-token');
+      h.store.values
+        ..['session.token'] = 'stored-token'
+        ..['session.expiresAt'] = '2099-01-01T00:00:00.000Z';
+
+      await startApp(tester);
+
+      expect(find.text('Hello, Disan'), findsOneWidget);
+      expect(h.server.requestsTo('/me').single.headers['authorization'], 'Bearer stored-token');
+    });
+
+    testWidgets('a session the server no longer accepts signs the device out', (tester) async {
+      h.store.values
+        ..['session.token'] = 'revoked-token'
+        ..['session.expiresAt'] = '2099-01-01T00:00:00.000Z';
+
+      await startApp(tester);
+
+      expect(find.text('Get started'), findsOneWidget);
+      expect(h.store.values.containsKey('session.token'), isFalse);
+    });
+
+    testWidgets('an expired session is discarded without asking the server', (tester) async {
+      h.store.values
+        ..['session.token'] = 'old-token'
+        ..['session.expiresAt'] = '2020-01-01T00:00:00.000Z';
+
+      await startApp(tester);
+
+      expect(find.text('Get started'), findsOneWidget);
+      expect(h.server.requestsTo('/me'), isEmpty);
+    });
+  });
+}
+
+/// Lets requests, state changes and the 200 ms screen transition finish.
+/// (No pumpAndSettle: spinners never settle.)
+Future<void> settle(WidgetTester tester) async {
+  for (var i = 0; i < 6; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}

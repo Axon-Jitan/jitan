@@ -5,6 +5,9 @@
 /// the texts are `<base>.one` and `<base>.other` (see `Translations.plural`).
 abstract final class CommonTextKeys {
   static const retry = 'common.retry';
+  static const back = 'common.back';
+  static const continueAction = 'common.continue';
+  static const cancel = 'common.cancel';
   static const valueUnavailable = 'common.value.unavailable';
 
   static const statusActive = 'common.status.active';

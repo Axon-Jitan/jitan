@@ -1,0 +1,38 @@
+name: employee_mobile
+description: Jitan Employee app (Android first, then iOS).
+publish_to: none
+version: 0.1.0+1
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_secure_storage: ^11.2.0
+  jitan_api_client:
+    path: ../../packages/jitan_api_client
+  jitan_core:
+    path: ../../packages/jitan_core
+  jitan_models:
+    path: ../../packages/jitan_models
+  jitan_ui:
+    path: ../../packages/jitan_ui
+  logging: ^1.3.0
+  mobile_scanner: ^7.4.2
+  permission_handler: ^13.0.2
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  http: ^1.6.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    # Onboarding illustrations, exported from Figma (01 Employee App).
+    - assets/illustrations/

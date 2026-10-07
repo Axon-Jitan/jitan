@@ -11,6 +11,7 @@ Dart pub workspace (one lockfile at the root).
 
 ```text
 apps/admin_web            HR/Admin web app (Flutter web)
+apps/employee_mobile      Employee app (Flutter, Android first, then iOS)
 packages/jitan_models     shared API/domain models (pure Dart)
 packages/jitan_api_client typed API client for all Flutter apps (pure Dart)
 packages/jitan_core       shared client logic, e.g. the translation service (pure Dart)
@@ -18,8 +19,7 @@ packages/jitan_ui         design system from Figma: tokens, theme, components (F
 server/jitan_api          Dart API, the only component that talks to MySQL
 ```
 
-Not created yet, added with their first slice: `apps/employee_mobile`, `apps/employee_web`,
-`apps/terminal`.
+Not created yet, added with their first slice: `apps/employee_web`, `apps/terminal`.
 
 Requirements: Flutter 3.44+ (Dart 3.12+). No Docker needed.
 
@@ -98,6 +98,25 @@ company switcher is not designed yet. Leave it out of production builds.
 `JITAN_API_BASE_URL` is required. Without it the app shows a configuration error instead
 of guessing. The API must list the web origin in `JITAN_CORS_ORIGINS`
 (`.env.example` has `http://localhost:5000`).
+
+## Run the Employee app
+
+Needs the Android SDK (or Xcode for iOS) and a device or emulator.
+
+```sh
+cd apps/employee_mobile
+flutter run --dart-define=JITAN_API_BASE_URL=http://10.0.2.2:8080   # Android emulator → host
+```
+
+`JITAN_API_BASE_URL` is required (absolute URL). Debug builds may use plain `http://`
+(development only, `android/app/src/debug/AndroidManifest.xml`); release builds need
+HTTPS. To onboard, open an employee in the HR/Admin app, show the onboarding QR and scan
+it with the app. Completing onboarding signs the device in; the session token is kept in
+the platform's secure storage.
+
+iOS: `permission_handler` needs its permission macros (`PERMISSION_CAMERA`,
+`PERMISSION_LOCATION_WHENINUSE`, `PERMISSION_NOTIFICATIONS`) in the Podfile, added with
+the first iOS build.
 
 ## Tests
 
