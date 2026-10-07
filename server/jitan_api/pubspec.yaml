@@ -1,0 +1,19 @@
+name: jitan_api
+description: Jitan backend API. The only component allowed to talk to MySQL.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  jitan_models:
+    path: ../../packages/jitan_models
+  logging: ^1.3.0
+  mysql_client_plus: ^0.1.3
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.25.0

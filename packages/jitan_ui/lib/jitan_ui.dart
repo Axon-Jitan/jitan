@@ -1,0 +1,20 @@
+/// Jitan design system: tokens and components from the approved Figma
+/// (`00 — Foundations`, `05 — Components`, shared screen patterns).
+library;
+
+export 'src/components/jitan_data_table.dart';
+export 'src/components/jitan_empty_state.dart';
+export 'src/components/jitan_error_state.dart';
+export 'src/components/jitan_loading_state.dart';
+export 'src/components/jitan_page_header.dart';
+export 'src/components/jitan_search_field.dart';
+export 'src/components/jitan_status_label.dart';
+export 'src/components/jitan_surface_card.dart';
+export 'src/layout/jitan_nav_item.dart';
+export 'src/layout/jitan_web_shell.dart';
+export 'src/layout/jitan_web_sidebar.dart';
+export 'src/theme/font_licenses.dart';
+export 'src/theme/jitan_colors.dart';
+export 'src/theme/jitan_dimensions.dart';
+export 'src/theme/jitan_text_styles.dart';
+export 'src/theme/jitan_theme.dart';

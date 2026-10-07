@@ -1,0 +1,15 @@
+name: jitan_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+workspace:
+  - packages/jitan_models
+  - packages/jitan_api_client
+  - packages/jitan_ui
+  - apps/admin_web
+  - server/jitan_api
+
+dev_dependencies:
+  lints: ^6.1.0

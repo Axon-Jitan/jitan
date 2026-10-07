@@ -1,0 +1,32 @@
+name: jitan_ui
+description: Shared Jitan design system (tokens, theme, components) from the approved Figma Foundations.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  fonts:
+    # Inter v4.1, SIL Open Font License 1.1 (fonts/inter/OFL.txt).
+    - family: Inter
+      fonts:
+        - asset: fonts/inter/Inter-Regular.ttf
+          weight: 400
+        - asset: fonts/inter/Inter-SemiBold.ttf
+          weight: 600
+        - asset: fonts/inter/Inter-Bold.ttf
+          weight: 700
+
+  assets:
+    - fonts/inter/OFL.txt

@@ -1,0 +1,28 @@
+name: admin_web
+description: Jitan HR/Admin web application.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  go_router: ^18.0.2
+  jitan_api_client:
+    path: ../../packages/jitan_api_client
+  jitan_models:
+    path: ../../packages/jitan_models
+  jitan_ui:
+    path: ../../packages/jitan_ui
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

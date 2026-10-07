@@ -1,0 +1,9 @@
+# Normalise text to LF in the repository (server deploys to Linux).
+* text=auto eol=lf
+
+# Binary assets
+*.ttf binary
+*.otf binary
+*.png binary
+*.jpg binary
+*.ico binary

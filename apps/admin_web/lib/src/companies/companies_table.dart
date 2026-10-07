@@ -1,0 +1,62 @@
+import 'package:flutter/material.dart';
+import 'package:jitan_models/jitan_models.dart';
+import 'package:jitan_ui/jitan_ui.dart';
+
+import '../common/relative_date_text.dart';
+import '../l10n/admin_strings.dart';
+
+/// The companies table from Figma `Admin / Companies` (`153:61`).
+///
+/// "Locations" has no data source yet (ERD GAP-03: no company → address
+/// relationship) and shows an explicit placeholder rather than a number.
+class CompaniesTable extends StatelessWidget {
+  const CompaniesTable({super.key, required this.companies, required this.now});
+
+  final List<CompanySummary> companies;
+
+  /// Reference time for "Last updated"; injected for deterministic tests.
+  final DateTime now;
+
+  /// Column widths proportional to the Figma table (x = 20/360/520/700/860
+  /// in a 1120 px card).
+  static const _flexCompany = 340;
+  static const _flexEmployees = 160;
+  static const _flexLocations = 180;
+  static const _flexStatus = 160;
+  static const _flexLastUpdated = 240;
+
+  @override
+  Widget build(BuildContext context) => JitanDataTable(
+        columns: [
+          JitanTableColumn(label: AdminStrings.columnCompany, flex: _flexCompany),
+          JitanTableColumn(label: AdminStrings.columnEmployees, flex: _flexEmployees),
+          JitanTableColumn(label: AdminStrings.columnLocations, flex: _flexLocations),
+          JitanTableColumn(label: AdminStrings.columnStatus, flex: _flexStatus),
+          JitanTableColumn(label: AdminStrings.columnLastUpdated, flex: _flexLastUpdated),
+        ],
+        rows: [for (final company in companies) _cells(company)],
+      );
+
+  List<Widget> _cells(CompanySummary company) => [
+        Text(
+          company.name,
+          style: JitanTextStyles.tableCellStrong,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text('${company.employeeCount}', style: JitanTextStyles.tableCell),
+        Tooltip(
+          message: AdminStrings.locationsUnavailableHint,
+          child: Text(AdminStrings.valueUnavailable, style: JitanTextStyles.tableCell),
+        ),
+        JitanStatusLabel(
+          label: company.isActive ? AdminStrings.statusActive : AdminStrings.statusInactive,
+          isPositive: company.isActive,
+        ),
+        Text(
+          company.lastUpdatedAt == null
+              ? AdminStrings.lastUpdatedNever
+              : relativeDateText(company.lastUpdatedAt!, now: now),
+          style: JitanTextStyles.tableCell,
+        ),
+      ];
+}

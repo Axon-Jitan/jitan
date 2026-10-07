@@ -1,0 +1,4 @@
+tags:
+  integration:
+    # Needs a dev/test MySQL (JITAN_TEST_DB_* or .env.test). Skipped otherwise.
+    timeout: 30s

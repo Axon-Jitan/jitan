@@ -1,0 +1,51 @@
+/// Strict accessors for decoding API JSON.
+///
+/// Every accessor throws [FormatException] naming the offending key, so a
+/// contract mismatch between server and client fails loudly instead of being
+/// silently coerced.
+extension JsonReading on Map<String, Object?> {
+  String readString(String key) {
+    final value = this[key];
+    if (value is String) return value;
+    throw FormatException('Expected "$key" to be a string, got ${value.runtimeType}.');
+  }
+
+  int readInt(String key) {
+    final value = this[key];
+    if (value is int) return value;
+    throw FormatException('Expected "$key" to be an integer, got ${value.runtimeType}.');
+  }
+
+  bool readBool(String key) {
+    final value = this[key];
+    if (value is bool) return value;
+    throw FormatException('Expected "$key" to be a boolean, got ${value.runtimeType}.');
+  }
+
+  DateTime? readOptionalDateTime(String key) {
+    final value = this[key];
+    if (value == null) return null;
+    if (value is String) return DateTime.parse(value);
+    throw FormatException('Expected "$key" to be a date-time string or null, got ${value.runtimeType}.');
+  }
+
+  Map<String, Object?> readObject(String key) {
+    final value = this[key];
+    if (value is Map<String, Object?>) return value;
+    throw FormatException('Expected "$key" to be an object, got ${value.runtimeType}.');
+  }
+
+  List<Map<String, Object?>> readObjectList(String key) {
+    final value = this[key];
+    if (value is List<Object?>) {
+      return [
+        for (final item in value)
+          if (item is Map<String, Object?>)
+            item
+          else
+            throw FormatException('Expected every item of "$key" to be an object.'),
+      ];
+    }
+    throw FormatException('Expected "$key" to be a list, got ${value.runtimeType}.');
+  }
+}

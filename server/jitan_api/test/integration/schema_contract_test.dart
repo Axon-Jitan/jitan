@@ -1,0 +1,48 @@
+@Tags(['integration'])
+library;
+
+import 'package:jitan_api/src/database/database.dart';
+import 'package:test/test.dart';
+
+import '../support/test_database.dart';
+
+/// Every table/column the repositories reference, spelled exactly as used.
+///
+/// Fails when the live schema differs from the ERD documentation, which
+/// would otherwise surface only as a runtime 500. Extend this list whenever a
+/// repository starts using a new column.
+const _usedColumns = {
+  'tblCompany': ['companyID', 'companyName', 'companyActive', 'companyMFD'],
+  'tblUserCompany': ['userID', 'companyID'],
+  'tblUser': ['userID', 'userActive', 'userMFD'],
+  'tblEventLog': ['companyID', 'eventLogTimestamp'],
+};
+
+void main() {
+  final skip = TestDatabase.skipReason;
+  if (skip != null) {
+    test('integration tests', () {}, skip: skip);
+    return;
+  }
+
+  late Database db;
+
+  setUpAll(() => db = TestDatabase.connect());
+  tearDownAll(() => db.close());
+
+  for (final MapEntry(key: table, value: columns) in _usedColumns.entries) {
+    test('$table has ${columns.join(', ')}', () async {
+      final rows = await db.query(
+        'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS '
+        'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table',
+        {'table': table},
+      );
+      final actual = rows.map((r) => r.readString('COLUMN_NAME')).toSet();
+
+      expect(actual, isNotEmpty, reason: 'Table $table does not exist.');
+      for (final column in columns) {
+        expect(actual, contains(column), reason: '$table.$column missing or spelled differently.');
+      }
+    });
+  }
+}
