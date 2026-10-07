@@ -14,7 +14,6 @@ class OnboardingFlow extends StatelessWidget {
     required this.scanQr,
     required this.onFinished,
     required this.onSignIn,
-    required this.onContactHr,
   });
 
   final OnboardingController controller;
@@ -22,9 +21,6 @@ class OnboardingFlow extends StatelessWidget {
 
   /// Already activated: open sign-in (Welcome link, error screens 02 and 04).
   final VoidCallback onSignIn;
-
-  /// "Contact HR/Admin" (error screen 02): the recovery guidance.
-  final VoidCallback onContactHr;
 
   /// "Start Jitan" on the Ready screen: the device is already signed in.
   final VoidCallback onFinished;
@@ -60,7 +56,6 @@ class OnboardingFlow extends StatelessWidget {
               OnboardingStep.error => OnboardingErrorScreen(
                 controller: controller,
                 onSignIn: onSignIn,
-                onContactHr: onContactHr,
               ),
             },
           ),

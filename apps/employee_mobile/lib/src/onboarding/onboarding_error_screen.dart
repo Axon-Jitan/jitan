@@ -8,19 +8,17 @@ import 'onboarding_controller.dart';
 
 /// The Figma "Onboarding Error / 01 … 07" screens.
 ///
-/// "Sign in" (02, 04) opens the sign-in flow; "Contact HR/Admin" (02) shows
-/// the HR/Admin-assisted recovery guidance.
+/// "Sign in" (02, 04) opens the sign-in flow. "Contact HR/Admin" (02) is an
+/// instruction, not an action.
 class OnboardingErrorScreen extends StatelessWidget {
   const OnboardingErrorScreen({
     super.key,
     required this.controller,
     required this.onSignIn,
-    required this.onContactHr,
   });
 
   final OnboardingController controller;
   final VoidCallback onSignIn;
-  final VoidCallback onContactHr;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +43,7 @@ class OnboardingErrorScreen extends StatelessWidget {
         EmployeeTextKeys.errorAlreadyActivatedText,
         EmployeeTextKeys.errorAlreadyActivatedHelpTitle,
         EmployeeTextKeys.errorAlreadyActivatedHelp,
-        [signIn, StatusAction(label: context.t(EmployeeTextKeys.errorContactHr), onPressed: onContactHr)],
+        [signIn],
       ),
       OnboardingProblem.accountUnavailable => (
         StatusTone.error,
@@ -89,6 +87,17 @@ class OnboardingErrorScreen extends StatelessWidget {
       ),
     };
     return StatusPage(
+      footer: [
+        if (problem == OnboardingProblem.alreadyActivated)
+          NoteBox(
+            title: context.t(EmployeeTextKeys.errorContactHr),
+            text: context.t(EmployeeTextKeys.errorContactHrText),
+            textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 9),
+            radius: 14,
+            minHeight: 72,
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          ),
+      ],
       tone: tone,
       title: context.t(title),
       text: context.t(text),

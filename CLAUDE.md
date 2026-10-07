@@ -135,8 +135,11 @@ hardcode or invent them.
     a signed-in employee changes it (`POST /me/password`, no current password); a
     locked-out one asks HR/Admin for **Reset account access**
     (`POST /companies/{id}/employees/{userId}/reset-access`): `userPassword = NULL`,
-    audited, QR unchanged, every session ends, and the QR sets up a new password once.
-    Employees can never clear their own password. All password writes outside
+    audited, QR unchanged, every session ends. The employee then uses **Scan QR to
+    recover account** on Sign in: the existing QR is accepted only while
+    `userPassword IS NULL` (the onboarding endpoints and rule), a new password is set and
+    the device is signed in. Before the reset, or once the new password is set, the QR is
+    refused. Employees can never clear their own password. All password writes outside
     onboarding are in `CredentialRepository`.
 
 ## QR types: do not conflate

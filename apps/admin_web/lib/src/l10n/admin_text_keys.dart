@@ -110,11 +110,13 @@ abstract final class AdminTextKeys {
   static const employeeResetAccessAction = 'employee.resetAccess.action';
   static const employeeResetAccessTitle = 'employee.resetAccess.title';
 
-  /// Argument: `{name}`.
-  static const employeeResetAccessMessage = 'employee.resetAccess.message';
-
-  /// Argument: `{name}`.
-  static const employeeResetAccessVerify = 'employee.resetAccess.verify';
+  static const employeeResetAccessSubtitle = 'employee.resetAccess.subtitle';
+  static const employeeResetAccessEffectsTitle = 'employee.resetAccess.effects.title';
+  static const employeeResetAccessEffectSessions = 'employee.resetAccess.effects.sessions';
+  static const employeeResetAccessEffectPassword = 'employee.resetAccess.effects.password';
+  static const employeeResetAccessEffectRecovery = 'employee.resetAccess.effects.recovery';
+  static const employeeResetAccessEffectQr = 'employee.resetAccess.effects.qr';
+  static const employeeResetAccessUnavailable = 'employee.resetAccess.unavailable';
   static const employeeResetAccessConfirm = 'employee.resetAccess.confirm';
 
   /// Argument: `{name}`.

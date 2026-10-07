@@ -18,6 +18,7 @@ class EmployeeServices {
     required this.settings,
     required this.permissions,
     this.scanQr = scanQrWithCamera,
+    this.qrScannerView = cameraQrScannerView,
   });
 
   final OnboardingApi onboardingApi;
@@ -29,4 +30,7 @@ class EmployeeServices {
   final DeviceSettings settings;
   final PermissionsGateway permissions;
   final QrScanner scanQr;
+
+  /// Embedded camera for "Recover with QR".
+  final QrScannerView qrScannerView;
 }

@@ -5,12 +5,16 @@ import 'package:employee_mobile/src/device/device_settings.dart';
 import 'package:employee_mobile/src/device/permissions_gateway.dart';
 import 'package:employee_mobile/src/device/secure_store.dart';
 import 'package:employee_mobile/src/device/session_manager.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 
 const testQr = 'qr-AAAAAAAAAAAAAAAAAAAAAAAA';
+
+/// Tap target of the fake embedded camera ([TestHarness]).
+const fakeCameraKey = ValueKey('fake-camera');
 
 /// The Jitan API as onboarding sees it, in memory, over the real API client:
 /// the same rules as the server (re-onboarding guard, session recovery with
@@ -223,6 +227,18 @@ class TestHarness {
       settings: DeviceSettings(store),
       permissions: permissions,
       scanQr: (_) async => scannedValue,
+      // The embedded camera of "Recover with QR": a button that "reads"
+      // [scannedValue].
+      qrScannerView: (onDetected) => Center(
+        child: TextButton(
+          key: fakeCameraKey,
+          onPressed: () {
+            final value = scannedValue;
+            if (value != null) onDetected(value);
+          },
+          child: const Text('fake camera'),
+        ),
+      ),
     );
   }
 

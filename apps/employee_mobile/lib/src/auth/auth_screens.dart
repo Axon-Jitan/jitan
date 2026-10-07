@@ -3,8 +3,10 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
+import '../onboarding/qr_scan_screen.dart';
 import '../widgets/mobile_widgets.dart';
 import 'auth_controller.dart';
+import 'password_rules.dart';
 
 // Spacing measured from the Figma "Auth / …" frames (390 × 844).
 
@@ -121,7 +123,24 @@ class _SignInScreenState extends State<SignInScreen> {
         busy: widget.controller.busy,
         onPressed: AuthController.canSubmit(_code.text, _password.text) ? _submit : null,
       ),
-      const SizedBox(height: 34),
+      const SizedBox(height: 18),
+      Row(
+        children: [
+          const Expanded(child: Divider(color: JitanColors.inputBorder, height: 1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(context.t(EmployeeTextKeys.signInOr), style: JitanMobileTextStyles.caption.copyWith(fontSize: 10)),
+          ),
+          const Expanded(child: Divider(color: JitanColors.inputBorder, height: 1)),
+        ],
+      ),
+      const SizedBox(height: 24),
+      JitanMobileButton(
+        label: context.t(EmployeeTextKeys.signInRecoverQr),
+        size: JitanMobileButtonSize.compact,
+        onPressed: widget.controller.openRecovery,
+      ),
+      const SizedBox(height: 20),
       NoteBox(
         title: context.t(EmployeeTextKeys.signInHelpTitle),
         text: context.t(EmployeeTextKeys.signInHelp),
@@ -140,7 +159,8 @@ class _SignInScreenState extends State<SignInScreen> {
 }
 
 /// Auth / 02 Forgot password: asks for the employee code. Continue sends
-/// nothing; it shows how to recover ([RecoveryScreen]).
+/// nothing and resets nothing; it opens "Recover with QR", which tells the
+/// employee to ask HR/Admin for a reset first.
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key, required this.controller});
 
@@ -193,49 +213,202 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   );
 }
 
-/// After "Forgot password" (and "Contact HR/Admin"): recovery is
-/// HR/Admin-assisted in V1. No Figma frame yet; built from the Auth screens'
-/// parts (DESIGN-CLARIFY-AUTH).
-class RecoveryScreen extends StatelessWidget {
-  const RecoveryScreen({super.key, required this.controller});
+/// Auth / 06 Recover with QR: embedded camera. The QR is accepted only
+/// after HR/Admin "Reset account access"; otherwise the "HR/Admin reset
+/// required" note turns into an error and scanning continues.
+class RecoverWithQrScreen extends StatelessWidget {
+  const RecoverWithQrScreen({super.key, required this.controller, required this.scannerView});
+
+  final AuthController controller;
+  final QrScannerView scannerView;
+
+  @override
+  Widget build(BuildContext context) {
+    final refused = controller.recoveryRefused;
+    return _AuthScaffold(
+      children: [
+        _AuthHeader(title: context.t(EmployeeTextKeys.recoverTitle), text: context.t(EmployeeTextKeys.recoverText)),
+        const SizedBox(height: 56),
+        AspectRatio(
+          aspectRatio: 1,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: JitanColors.ink, borderRadius: BorderRadius.circular(22)),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  const ColoredBox(color: JitanColors.sidebarItemActive),
+                  if (!controller.busy) scannerView(controller.submitRecoveryQr),
+                  const IgnorePointer(child: _ViewfinderCorners()),
+                  IgnorePointer(
+                    child: Center(
+                      child: controller.busy
+                          ? const CircularProgressIndicator(color: JitanColors.surface)
+                          : Text(
+                              context.t(EmployeeTextKeys.recoverScanHint),
+                              textAlign: TextAlign.center,
+                              style: JitanMobileTextStyles.noteTitle.copyWith(fontSize: 12, color: JitanColors.surface),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 26),
+        Semantics(
+          liveRegion: true,
+          child: NoteBox(
+            title: context.t(EmployeeTextKeys.recoverNoteTitle),
+            text: context.t(EmployeeTextKeys.recoverNoteText),
+            background: refused ? JitanColors.errorSurface : JitanColors.warningSurface,
+            foreground: refused ? JitanColors.errorStrong : JitanColors.warning,
+            textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 9),
+            minHeight: 94,
+          ),
+        ),
+        const SizedBox(height: 32),
+        JitanMobileButton(
+          label: context.t(CommonTextKeys.back),
+          style: JitanMobileButtonStyle.secondary,
+          size: JitanMobileButtonSize.compact,
+          onPressed: controller.busy ? null : controller.back,
+        ),
+      ],
+    );
+  }
+}
+
+/// The four white corner brackets of the recovery scanner (4 × 34 px, 12 px
+/// inside the camera preview).
+class _ViewfinderCorners extends StatelessWidget {
+  const _ViewfinderCorners();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(12),
+    child: Stack(
+      children: [
+        for (final alignment in [Alignment.topLeft, Alignment.topRight, Alignment.bottomLeft, Alignment.bottomRight])
+          Align(
+            alignment: alignment,
+            child: SizedBox.square(
+              dimension: 34,
+              child: CustomPaint(painter: _CornerPainter(alignment)),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+class _CornerPainter extends CustomPainter {
+  const _CornerPainter(this.alignment);
+
+  final Alignment alignment;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = JitanColors.surface;
+    const t = 4.0;
+    final left = alignment.x < 0;
+    final top = alignment.y < 0;
+    canvas
+      ..drawRect(Rect.fromLTWH(0, top ? 0 : size.height - t, size.width, t), paint)
+      ..drawRect(Rect.fromLTWH(left ? 0 : size.width - t, 0, t, size.height), paint);
+  }
+
+  @override
+  bool shouldRepaint(_CornerPainter oldDelegate) => oldDelegate.alignment != alignment;
+}
+
+/// Auth / 07 Set new password after reset. "Set password & sign in" stores
+/// the new password (Argon2id on the server) and signs this device in.
+class SetNewPasswordScreen extends StatefulWidget {
+  const SetNewPasswordScreen({super.key, required this.controller});
 
   final AuthController controller;
 
   @override
-  Widget build(BuildContext context) => _AuthScaffold(
-    children: [
-      _AuthHeader(title: context.t(EmployeeTextKeys.recoveryTitle), text: context.t(EmployeeTextKeys.recoveryText)),
-      if (controller.code.isNotEmpty) ...[
-        const SizedBox(height: 16),
-        Text(
-          context.t(EmployeeTextKeys.recoveryCode, args: {'code': controller.code}),
-          style: JitanMobileTextStyles.cardTitleSmall,
+  State<SetNewPasswordScreen> createState() => _SetNewPasswordScreenState();
+}
+
+class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
+  final _password = TextEditingController();
+  final _confirmation = TextEditingController();
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirmation.dispose();
+    super.dispose();
+  }
+
+  void _submit() => widget.controller.submitNewPassword(_password.text, _confirmation.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final problem = widget.controller.passwordProblem;
+    final showLabel = context.t(EmployeeTextKeys.passwordShow);
+    final hideLabel = context.t(EmployeeTextKeys.passwordHide);
+    return _AuthScaffold(
+      children: [
+        _AuthHeader(title: context.t(EmployeeTextKeys.newPasswordTitle), text: context.t(EmployeeTextKeys.newPasswordText)),
+        const SizedBox(height: 70),
+        AutofillGroup(
+          child: Column(
+            children: [
+              PasswordField(
+                controller: _password,
+                label: context.t(EmployeeTextKeys.passwordLabel),
+                hint: context.t(EmployeeTextKeys.passwordHint),
+                showLabel: showLabel,
+                hideLabel: hideLabel,
+                error: switch (problem) {
+                  PasswordProblem.tooShort => context.t(EmployeeTextKeys.passwordErrorTooShort),
+                  PasswordProblem.tooLong => context.t(EmployeeTextKeys.passwordErrorTooLong),
+                  PasswordProblem.rejected => context.t(EmployeeTextKeys.passwordErrorRejected),
+                  _ => null,
+                },
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.newPassword],
+              ),
+              const SizedBox(height: 26),
+              PasswordField(
+                controller: _confirmation,
+                label: context.t(EmployeeTextKeys.passwordConfirmLabel),
+                hint: context.t(EmployeeTextKeys.passwordConfirmHint),
+                showLabel: showLabel,
+                hideLabel: hideLabel,
+                error: problem == PasswordProblem.mismatch ? context.t(EmployeeTextKeys.passwordErrorMismatch) : null,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(),
+                autofillHints: const [AutofillHints.newPassword],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 38),
+        NoteBox(
+          title: context.t(EmployeeTextKeys.newPasswordNoteTitle),
+          text: context.t(EmployeeTextKeys.newPasswordNoteText),
+          textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 9),
+          minHeight: 86,
+        ),
+        const SizedBox(height: 50),
+        JitanMobileButton(
+          label: context.t(EmployeeTextKeys.newPasswordAction),
+          style: JitanMobileButtonStyle.brand,
+          size: JitanMobileButtonSize.compact,
+          busy: widget.controller.busy,
+          onPressed: _submit,
         ),
       ],
-      const SizedBox(height: 40),
-      NoteBox(
-        title: context.t(EmployeeTextKeys.recoveryStepsTitle),
-        text: context.t(EmployeeTextKeys.recoveryStepsText),
-        background: JitanColors.warningSurface,
-        foreground: JitanColors.warning,
-        radius: 18,
-        minHeight: 100,
-      ),
-      const SizedBox(height: 16),
-      NoteBox(
-        title: context.t(EmployeeTextKeys.recoveryDeviceTitle),
-        text: context.t(EmployeeTextKeys.recoveryDeviceText),
-        minHeight: 86,
-      ),
-      const SizedBox(height: 34),
-      JitanMobileButton(
-        label: context.t(EmployeeTextKeys.forgotBack),
-        style: JitanMobileButtonStyle.secondary,
-        size: JitanMobileButtonSize.medium,
-        onPressed: controller.back,
-      ),
-    ],
-  );
+    );
+  }
 }
 
 /// Auth / 03 Invalid credentials, 04 Account unavailable, 05 Network error.

@@ -166,6 +166,22 @@ void main() {
       expect((await app.getAuthorized('/me', employeeSession)).statusCode, 401);
     });
 
+    test('QR recovery before HR/Admin reset is refused and changes nothing', () async {
+      final app = await _app();
+      final hash = app.onboarding.passwordHashes[1];
+
+      final start = await app.post('/onboarding/start', jsonEncode({'qrCode': _qr}));
+      final complete = await app.post(
+        '/onboarding/complete',
+        jsonEncode({'qrCode': _qr, 'password': 'attacker password', 'deviceId': _device}),
+      );
+
+      expect((start.statusCode, (await _error(start))['code']), (409, 'onboarding_already_completed'));
+      expect((complete.statusCode, (await _error(complete))['code']), (409, 'onboarding_already_completed'));
+      expect(app.onboarding.passwordHashes[1], hash);
+      expect(app.audit.events, isEmpty);
+    });
+
     test('full recovery: the existing QR sets up the account again, then is blocked again', () async {
       final app = await _app();
       await app.post(path, '');

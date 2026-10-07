@@ -325,3 +325,6 @@ row exists, the event is stored **without** a type link and a warning is logged.
 IT adds rows with these names, or the code adopts IT's names; nothing else changes.
 Names in use: `employee.created`, `employee.personal_qr.generated`,
 `employee.onboarding.completed`, `employee.password.changed`, `employee.access.reset`.
+Recovery after a reset uses the onboarding endpoints, so the new password is logged as
+`employee.onboarding.completed` too (the database cannot tell a first setup from a
+recovery; the preceding `employee.access.reset` row shows which it was).

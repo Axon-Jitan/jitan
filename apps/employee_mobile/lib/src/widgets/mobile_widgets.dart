@@ -389,6 +389,7 @@ class StatusPage extends StatelessWidget {
     required this.actions,
     this.showLogo = false,
     this.buttonSize = JitanMobileButtonSize.compact,
+    this.footer = const [],
   });
 
   final String title;
@@ -399,6 +400,9 @@ class StatusPage extends StatelessWidget {
   final List<StatusAction> actions;
   final bool showLogo;
   final JitanMobileButtonSize buttonSize;
+
+  /// Shown after the actions, e.g. an instruction that is not an action.
+  final List<Widget> footer;
 
   @override
   Widget build(BuildContext context) {
@@ -450,6 +454,7 @@ class StatusPage extends StatelessWidget {
                   onPressed: action.onPressed,
                 ),
               ],
+              if (footer.isNotEmpty) ...[const SizedBox(height: 12), ...footer],
             ],
           ),
         ),

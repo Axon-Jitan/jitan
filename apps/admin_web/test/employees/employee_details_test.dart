@@ -146,12 +146,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
 
-    testWidgets('only offered for an activated employee', (tester) async {
+    testWidgets('shown bottom-left, disabled until the employee has activated', (tester) async {
       await pumpPageAndOpen(tester);
       employees.detailsSucceed(_disan);
       await settle(tester);
 
-      expect(find.text('Reset account access'), findsNothing);
+      final button = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Reset account access'));
+      expect(button.onPressed, isNull);
+      await tester.tap(find.text('Reset account access'), warnIfMissed: false);
+      await settle(tester);
+      expect(find.text('Reset account access?'), findsNothing);
     });
 
     testWidgets('asks to confirm and to verify the employee; Cancel changes nothing', (tester) async {
@@ -163,8 +167,15 @@ void main() {
       await settle(tester);
 
       expect(find.text('Reset account access?'), findsOneWidget);
-      expect(find.textContaining('signed out of Jitan on every device'), findsOneWidget);
-      expect(find.textContaining('confirmed that you are helping Disan Ssebowa in person'), findsOneWidget);
+      expect(find.textContaining('Use this only after verifying the employee.'), findsOneWidget);
+      for (final effect in [
+        '• sign out active sessions',
+        '• clear the current password hash',
+        '• allow account recovery with the existing QR',
+        '• keep the employee’s Terminal QR unchanged',
+      ]) {
+        expect(find.text(effect), findsOneWidget);
+      }
 
       await tester.tap(find.text('Cancel'));
       await settle(tester);
@@ -190,7 +201,8 @@ void main() {
       expect(employees.detailRequests, hasLength(2), reason: 'reloaded from the server');
       employees.detailsSucceed(_disan);
       await settle(tester);
-      expect(find.text('Reset account access'), findsNothing, reason: 'now not activated');
+      final button = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Reset account access'));
+      expect(button.onPressed, isNull, reason: 'now not activated');
     });
 
     testWidgets('a refused reset is explained in the dialog, which stays open', (tester) async {

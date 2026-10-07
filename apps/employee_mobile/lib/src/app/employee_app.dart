@@ -99,12 +99,14 @@ class _EmployeeAppState extends State<EmployeeApp> {
     });
   }
 
-  /// Sign-in; with [recovery], straight to the recovery guidance
-  /// ("Contact HR/Admin").
-  void _startSignIn({bool recovery = false}) {
+  void _startSignIn() {
     _disposeFlows();
-    final auth = AuthController(authApi: _services.authApi, session: _services.session, onSignedIn: _enterSignedIn);
-    if (recovery) auth.showRecovery();
+    final auth = AuthController(
+      authApi: _services.authApi,
+      onboardingApi: _services.onboardingApi,
+      session: _services.session,
+      onSignedIn: _enterSignedIn,
+    );
     setState(() {
       _account = null;
       _auth = auth;
@@ -165,9 +167,12 @@ class _EmployeeAppState extends State<EmployeeApp> {
             scanQr: _services.scanQr,
             onFinished: _finishOnboarding,
             onSignIn: _startSignIn,
-            onContactHr: () => _startSignIn(recovery: true),
           ),
-          _Phase.signIn => AuthFlow(controller: _auth!, onLeave: _startOnboarding),
+          _Phase.signIn => AuthFlow(
+            controller: _auth!,
+            onLeave: _startOnboarding,
+            scannerView: _services.qrScannerView,
+          ),
           _Phase.signedIn => HomeScreen(
             key: ValueKey(_account),
             meApi: _services.meApi,

@@ -106,23 +106,22 @@ void main() {
 
     expect(find.text('Account already activated'), findsOneWidget);
     expect(find.text('Onboarding cannot restart'), findsOneWidget);
-    expect(find.text('Contact HR/Admin'), findsOneWidget);
 
     await tapText(tester, 'Sign in');
     expect(find.text('Sign in to Jitan'), findsOneWidget);
     expect(h.server.requestsTo('/onboarding/complete'), isEmpty, reason: 'onboarding never restarted');
   });
 
-  testWidgets('"Contact HR/Admin" explains HR/Admin-assisted recovery', (tester) async {
+  testWidgets('"Contact HR/Admin" is an instruction, not a button', (tester) async {
     h.server.password = 'set earlier';
     await startApp(tester);
     await tapText(tester, 'Get started');
     await tapText(tester, 'Scan QR');
 
-    await tapText(tester, 'Contact HR/Admin');
-
-    expect(find.text('Can’t access your account?'), findsOneWidget);
-    expect(find.text('Contact HR/Admin to reset your Jitan access.'), findsOneWidget);
+    expect(find.text('Contact HR/Admin'), findsOneWidget);
+    expect(find.text('Ask HR/Admin to reset your Jitan account access.'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Contact HR/Admin'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
   });
 
   testWidgets('another device finished first: "Sign in" opens sign-in', (tester) async {

@@ -25,8 +25,9 @@ Future<void> showEmployeeDetailsDialog(
 /// Differences from Figma, on purpose: **Location** (ERD GAP-11) shows "—"
 /// with an explanation; **Work policy** is omitted
 /// (PRODUCT-CLARIFY-EMPLOYEE-POLICY). **Account** and the Onboarding status
-/// follow `userPassword IS NOT NULL` (activated). An activated employee's
-/// card also offers "Reset account access" (HR/Admin-assisted recovery).
+/// follow `userPassword IS NOT NULL` (activated). "Reset account access"
+/// (bottom left, Figma `196:149`) starts HR/Admin-assisted recovery; it is
+/// disabled until the employee has activated (nothing to reset before).
 class EmployeeDetailsDialog extends StatefulWidget {
   const EmployeeDetailsDialog({super.key, required this.employeesApi, required this.companyId, required this.userId});
 
@@ -117,7 +118,16 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
         _OnboardingCard(
           activated: details.isActivated,
           onShowQr: () => showOnboardingQrDialog(context, employeesApi: widget.employeesApi, employee: details),
-          onResetAccess: () => _resetAccess(context, details),
+        ),
+        const SizedBox(height: 32),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: JitanSecondaryButton(
+            label: context.t(AdminTextKeys.employeeResetAccessAction),
+            foreground: JitanColors.errorStrong,
+            tooltip: details.isActivated ? null : context.t(AdminTextKeys.employeeResetAccessUnavailable),
+            onPressed: details.isActivated ? () => _resetAccess(context, details) : null,
+          ),
         ),
       ],
     );
@@ -150,13 +160,10 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
 /// Figma's Onboarding card (`153:357`): status, explanation, QR action.
 /// Once activated, the same QR is the employee's personal Terminal QR.
 class _OnboardingCard extends StatelessWidget {
-  const _OnboardingCard({required this.activated, required this.onShowQr, required this.onResetAccess});
+  const _OnboardingCard({required this.activated, required this.onShowQr});
 
   final bool activated;
   final VoidCallback onShowQr;
-
-  /// Only offered once activated: there is no access to reset before.
-  final VoidCallback onResetAccess;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -189,24 +196,14 @@ class _OnboardingCard extends StatelessWidget {
             style: JitanTextStyles.modalSubtitle,
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (activated) ...[
-                JitanSecondaryButton(
-                  label: context.t(AdminTextKeys.employeeResetAccessAction),
-                  foreground: JitanColors.errorStrong,
-                  onPressed: onResetAccess,
-                ),
-                const SizedBox(width: 12),
-              ],
-              JitanPrimaryButton(
-                label: context.t(
-                  activated ? AdminTextKeys.employeeOnboardingShowQr : AdminTextKeys.employeeOnboardingAction,
-                ),
-                onPressed: onShowQr,
+          Align(
+            alignment: Alignment.centerRight,
+            child: JitanPrimaryButton(
+              label: context.t(
+                activated ? AdminTextKeys.employeeOnboardingShowQr : AdminTextKeys.employeeOnboardingAction,
               ),
-            ],
+              onPressed: onShowQr,
+            ),
           ),
         ],
       ),

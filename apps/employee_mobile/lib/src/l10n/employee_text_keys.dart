@@ -129,12 +129,6 @@ abstract final class EmployeeTextKeys {
   static const forgotTitle = 'auth.forgot.title';
   static const forgotText = 'auth.forgot.text';
   static const forgotBack = 'auth.forgot.back';
-  static const recoveryTitle = 'auth.recovery.title';
-  static const recoveryText = 'auth.recovery.text';
-  static const recoveryStepsTitle = 'auth.recovery.steps.title';
-  static const recoveryStepsText = 'auth.recovery.steps.text';
-  static const recoveryDeviceTitle = 'auth.recovery.device.title';
-  static const recoveryDeviceText = 'auth.recovery.device.text';
   static const errorInvalidTitle = 'auth.error.invalid.title';
   static const errorInvalidText = 'auth.error.invalid.text';
   static const errorInvalidHelpTitle = 'auth.error.invalid.helpTitle';
@@ -169,7 +163,17 @@ abstract final class EmployeeTextKeys {
   static const signOutTitle = 'profile.signOut.title';
   static const signOutQuestion = 'profile.signOut.question';
   static const signOutText = 'profile.signOut.text';
-
-  /// Argument: `{code}`.
-  static const recoveryCode = 'auth.recovery.code';
+  static const errorContactHrText = 'onboarding.error.contactHr.text';
+  static const signInOr = 'auth.signIn.or';
+  static const signInRecoverQr = 'auth.signIn.recoverQr';
+  static const recoverTitle = 'auth.recover.title';
+  static const recoverText = 'auth.recover.text';
+  static const recoverScanHint = 'auth.recover.scanHint';
+  static const recoverNoteTitle = 'auth.recover.note.title';
+  static const recoverNoteText = 'auth.recover.note.text';
+  static const newPasswordTitle = 'auth.newPassword.title';
+  static const newPasswordText = 'auth.newPassword.text';
+  static const newPasswordNoteTitle = 'auth.newPassword.note.title';
+  static const newPasswordNoteText = 'auth.newPassword.note.text';
+  static const newPasswordAction = 'auth.newPassword.action';
 }

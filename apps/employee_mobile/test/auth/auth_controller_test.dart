@@ -13,7 +13,12 @@ void main() {
   setUp(() {
     h = TestHarness()..server.password = 'correct horse battery';
     signedIn.clear();
-    c = AuthController(authApi: h.services.authApi, session: h.session, onSignedIn: signedIn.add);
+    c = AuthController(
+      authApi: h.services.authApi,
+      onboardingApi: h.services.onboardingApi,
+      session: h.session,
+      onSignedIn: signedIn.add,
+    );
   });
 
   test('success stores the session and reports the account; nothing else is kept', () async {
@@ -47,12 +52,58 @@ void main() {
     expect(h.server.requests, isEmpty);
   });
 
-  test('forgot password sends nothing and resets nothing', () {
+  test('forgot password sends nothing, resets nothing, and leads to Recover with QR', () {
     c.openForgotPassword();
     c.submitForgotPassword(' SBW ');
 
-    expect((c.step, c.code), (AuthStep.recovery, 'SBW'));
+    expect((c.step, c.code), (AuthStep.recoverWithQr, 'SBW'));
     expect(h.server.requests, isEmpty);
+  });
+
+  group('recovery with the existing QR', () {
+    test('refused while a password is set (no HR/Admin reset); an unknown QR the same', () async {
+      c.openRecovery();
+      await c.submitRecoveryQr(testQr);
+      expect((c.step, c.recoveryRefused), (AuthStep.recoverWithQr, true));
+
+      c.openRecovery();
+      await c.submitRecoveryQr('not-a-jitan-qr');
+      expect(c.recoveryRefused, isTrue, reason: 'nothing reveals whether the QR exists');
+    });
+
+    test('allowed after the reset: new password, fresh session, signed in', () async {
+      h.server.password = null;
+      c.openRecovery();
+      await c.submitRecoveryQr(testQr);
+      expect(c.step, AuthStep.setNewPassword);
+
+      await c.submitNewPassword('my new password', 'my new password');
+
+      expect(signedIn.single.code, 'SBW');
+      expect(h.server.password, 'my new password');
+      expect(h.session.accessToken, h.server.issuedTokens.single);
+    });
+
+    test('another device set the password first: refused, back to scanning', () async {
+      h.server.password = null;
+      c.openRecovery();
+      await c.submitRecoveryQr(testQr);
+      h.server.anotherDeviceWins = true;
+
+      await c.submitNewPassword('my new password', 'my new password');
+
+      expect((c.step, c.recoveryRefused), (AuthStep.recoverWithQr, true));
+      expect(signedIn, isEmpty);
+    });
+
+    test('an inactive employee gets "Account unavailable"', () async {
+      h.server
+        ..password = null
+        ..active = false;
+      c.openRecovery();
+      await c.submitRecoveryQr(testQr);
+      expect(c.problem, AuthProblem.accountUnavailable);
+    });
   });
 
   test('passwords never reach the logs, also on failures and retries', () async {

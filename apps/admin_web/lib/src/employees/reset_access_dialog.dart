@@ -20,12 +20,11 @@ Future<bool> showResetAccessDialog(
     ) ??
     false;
 
-/// Confirmation for "Reset account access" (V1 HR/Admin-assisted recovery).
-/// No Figma frame yet; built from the modal pattern (DESIGN-CLARIFY-AUTH).
+/// Figma "Admin / Employees — Reset account access modal" (`196:242`).
 ///
-/// The reset clears the employee's password: every device is signed out and
-/// their existing Jitan QR sets up a new password. HR/Admin must have
-/// verified the employee first; the text says so.
+/// The reset signs the employee out everywhere, clears the password hash,
+/// lets them recover with their existing QR, and keeps that QR (their
+/// Terminal QR) unchanged.
 class ResetAccessDialog extends StatefulWidget {
   const ResetAccessDialog({super.key, required this.employeesApi, required this.employee});
 
@@ -39,11 +38,6 @@ class ResetAccessDialog extends StatefulWidget {
 class _ResetAccessDialogState extends State<ResetAccessDialog> {
   bool _busy = false;
   ApiClientException? _failure;
-
-  String get _name {
-    final name = [widget.employee.firstName, widget.employee.lastName].whereType<String>().join(' ');
-    return name.isEmpty ? widget.employee.code : name;
-  }
 
   Future<void> _reset() async {
     setState(() {
@@ -65,25 +59,61 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final employee = widget.employee;
+    final name = [employee.firstName, employee.lastName].whereType<String>().join(' ');
     final failure = _failure;
+    final effectStyle = JitanTextStyles.stateMessage.copyWith(fontSize: 10, color: JitanColors.errorStrong);
     return JitanModal(
       title: context.t(AdminTextKeys.employeeResetAccessTitle),
-      subtitle: context.t(
-        AdminTextKeys.employeeDetailsSubtitle,
-        args: {'company': widget.employee.companyName, 'code': widget.employee.code},
-      ),
-      width: 520,
+      subtitle: context.t(AdminTextKeys.employeeResetAccessSubtitle),
+      width: 640,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            context.t(AdminTextKeys.employeeResetAccessMessage, args: {'name': _name}),
-            style: JitanTextStyles.stateMessage.copyWith(fontSize: 12, color: JitanColors.ink),
+          const SizedBox(height: 28),
+          // Employee summary
+          Container(
+            constraints: const BoxConstraints(minHeight: 84),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(14)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name.isEmpty ? employee.code : name, style: JitanTextStyles.stateTitle),
+                const SizedBox(height: 8),
+                Text(
+                  context.t(
+                    AdminTextKeys.employeeDetailsSubtitle,
+                    args: {'company': employee.companyName, 'code': employee.code},
+                  ),
+                  style: JitanTextStyles.stateMessage.copyWith(fontSize: 10),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            context.t(AdminTextKeys.employeeResetAccessVerify, args: {'name': _name}),
-            style: JitanTextStyles.tableCellStrong.copyWith(color: JitanColors.warning),
+          const SizedBox(height: 22),
+          // Reset effects
+          Container(
+            constraints: const BoxConstraints(minHeight: 150),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: JitanColors.errorSurface, borderRadius: BorderRadius.circular(14)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.t(AdminTextKeys.employeeResetAccessEffectsTitle),
+                  style: JitanTextStyles.stateTitle.copyWith(fontSize: 11, color: JitanColors.errorStrong),
+                ),
+                const SizedBox(height: 10),
+                for (final key in const [
+                  AdminTextKeys.employeeResetAccessEffectSessions,
+                  AdminTextKeys.employeeResetAccessEffectPassword,
+                  AdminTextKeys.employeeResetAccessEffectRecovery,
+                  AdminTextKeys.employeeResetAccessEffectQr,
+                ])
+                  Text(context.t(key), style: effectStyle),
+              ],
+            ),
           ),
           if (failure != null) ...[
             const SizedBox(height: 16),
@@ -98,6 +128,7 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
         ),
         JitanPrimaryButton(
           label: context.t(AdminTextKeys.employeeResetAccessConfirm),
+          color: JitanColors.errorStrong,
           busy: _busy,
           onPressed: _reset,
         ),

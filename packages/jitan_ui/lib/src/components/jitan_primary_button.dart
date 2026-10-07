@@ -16,6 +16,7 @@ class JitanPrimaryButton extends StatelessWidget {
     this.icon,
     this.busy = false,
     this.height = JitanDimensions.fieldHeight,
+    this.color = JitanColors.vermilion,
   });
 
   final String label;
@@ -24,15 +25,19 @@ class JitanPrimaryButton extends StatelessWidget {
   final bool busy;
   final double height;
 
+  /// Fill colour: Vermilion, or [JitanColors.errorStrong] to confirm an
+  /// action that removes access (Figma "Button / Confirm reset").
+  final Color color;
+
   @override
   Widget build(BuildContext context) => SizedBox(
         height: height,
         child: FilledButton(
           onPressed: busy ? null : onPressed,
           style: FilledButton.styleFrom(
-            backgroundColor: JitanColors.vermilion,
+            backgroundColor: color,
             foregroundColor: JitanColors.surface,
-            disabledBackgroundColor: JitanColors.vermilion.withValues(alpha: busy ? 1 : 0.4),
+            disabledBackgroundColor: color.withValues(alpha: busy ? 1 : 0.4),
             disabledForegroundColor: JitanColors.surface,
             textStyle: JitanTextStyles.buttonLabel,
             padding: const EdgeInsets.symmetric(horizontal: 28),
