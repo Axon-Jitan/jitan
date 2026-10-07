@@ -57,6 +57,13 @@ class OnboardingRepository {
     return [for (final row in rows) row.readString('companyName')];
   }
 
+  /// The stored `userPassword` hash, or `null` when none is set. Only for
+  /// verifying a password server-side; never returned or logged.
+  Future<String?> passwordHash(SqlExecutor executor, int userId) async {
+    final rows = await executor.query('SELECT userPassword FROM tblUser WHERE userID = :userId', {'userId': userId});
+    return rows.isEmpty ? null : rows.first.readOptionalString('userPassword');
+  }
+
   /// Stores [passwordHash] only while no password is set; returns whether it
   /// did. The `IS NULL` condition is the database-level re-onboarding guard.
   Future<bool> setPasswordIfNotSet(SqlExecutor tx, int userId, String passwordHash) async =>

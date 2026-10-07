@@ -18,6 +18,10 @@ import 'onboarding_repository.dart';
 /// - Once a password is set, the same QR never restarts onboarding; it stays
 ///   valid for Jitan Terminal.
 /// - Completing onboarding signs the device in: no second sign-in.
+/// - Session recovery: if the response to a completed onboarding was lost
+///   (network), repeating the request with the **same password** returns a
+///   new session and changes nothing. Any other password gets 409, so this is
+///   never a way to replace a password.
 ///
 /// The QR is the credential here (the employee has no password yet): 144
 /// random bits, so it cannot be guessed.
@@ -65,8 +69,13 @@ class OnboardingService {
     final deviceId = _checkedDeviceId(request.deviceId);
     final languageId = await _languageIdFor(request.languageCode);
 
-    // Refuse before the (slow) hash when onboarding is already done…
-    _requireOnboardable(await _onboarding.findByQrCode(_executor, qr));
+    final found = await _onboarding.findByQrCode(_executor, qr);
+    if (found != null && found.isActive && found.passwordSet) {
+      return _recoverSession(found, request.password, deviceId);
+    }
+
+    // Refuse before the (slow) hash when onboarding cannot run…
+    _requireOnboardable(found);
     final hash = await _hasher.hash(request.password);
 
     // …and check again under a row lock: only one device can complete.
@@ -88,6 +97,19 @@ class OnboardingService {
     final session = _sessions.issue(userId: user.userId, deviceId: deviceId, passwordHash: hash);
     return OnboardingCompleteResponse(
       account: account,
+      session: SessionInfo(accessToken: session.token, expiresAt: session.expiresAt),
+    );
+  }
+
+  /// Onboarding already completed: a new session only when [password]
+  /// matches the stored hash (the same employee retrying after a lost
+  /// response, Figma "Session recovery"). Nothing is written.
+  Future<OnboardingCompleteResponse> _recoverSession(OnboardingUser user, String password, String deviceId) async {
+    final hash = await _onboarding.passwordHash(_executor, user.userId);
+    if (hash == null || !await _hasher.verify(password, hash)) throw _alreadyCompleted();
+    final session = _sessions.issue(userId: user.userId, deviceId: deviceId, passwordHash: hash);
+    return OnboardingCompleteResponse(
+      account: await _account(_executor, user),
       session: SessionInfo(accessToken: session.token, expiresAt: session.expiresAt),
     );
   }

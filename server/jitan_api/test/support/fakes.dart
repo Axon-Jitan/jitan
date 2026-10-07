@@ -179,6 +179,9 @@ class FakeOnboardingRepository implements OnboardingRepository {
   Future<List<String>> companyNames(SqlExecutor executor, int userId) async => companies[userId] ?? const [];
 
   @override
+  Future<String?> passwordHash(SqlExecutor executor, int userId) async => passwordHashes[userId];
+
+  @override
   Future<bool> setPasswordIfNotSet(SqlExecutor tx, int userId, String passwordHash) async {
     if (loseRace || passwordHashes.containsKey(userId)) return false;
     passwordHashes[userId] = passwordHash;

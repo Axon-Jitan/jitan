@@ -164,6 +164,30 @@ void main() {
       expect(app.audit.events, hasLength(1));
     });
 
+    test('session recovery: repeating completion with the same password signs in again, changes nothing', () async {
+      final app = _app();
+      await app.post('/onboarding/complete', _complete());
+      final hash = app.onboarding.passwordHashes[1];
+
+      final retry = await app.post('/onboarding/complete', _complete(deviceId: 'device-retry-0000000000'));
+
+      expect(retry.statusCode, 200);
+      final body = OnboardingCompleteResponse.fromJson(await jsonBody(retry));
+      expect(app.sessions.verify(body.session.accessToken)!.deviceId, 'device-retry-0000000000');
+      expect((await app.getAuthorized('/me', body.session.accessToken)).statusCode, 200);
+      expect(app.onboarding.passwordHashes[1], hash, reason: 'password unchanged');
+      expect(app.audit.events, hasLength(1), reason: 'onboarding not repeated');
+      expect(app.transactions.outcomes, ['commit'], reason: 'no write for the recovery');
+    });
+
+    test('session recovery is refused for an inactive employee', () async {
+      final app = _app();
+      await app.post('/onboarding/complete', _complete());
+      app.onboarding.users = {_qr: (userId: 1, firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', isActive: false)};
+
+      expect((await app.post('/onboarding/complete', _complete())).statusCode, 403);
+    });
+
     test('concurrent completion: the device losing the race gets 409 and nothing is committed', () async {
       final app = _app()..onboarding.loseRace = true;
 

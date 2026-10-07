@@ -114,4 +114,21 @@ void main() {
     expect(outcomes.where((o) => o == 'ok'), hasLength(1));
     expect(outcomes.where((o) => o == 'onboarding_already_completed'), hasLength(1));
   });
+
+  test('a lost response is recovered with the same password; another password stays refused', () async {
+    final qr = await newEmployee('C');
+    await service().complete(complete(qr, 'my real password'));
+    final before = (await db.query('SELECT userPassword FROM tblUser WHERE userID = :id', {
+      'id': userIds.last,
+    })).single.readString('userPassword');
+
+    final recovered = await service().complete(complete(qr, 'my real password', device: 'device-RRRRRRRRRRRRRRRR'));
+    await expectLater(service().complete(complete(qr, 'someone else pass')), alreadyCompleted());
+
+    expect(sessions.verify(recovered.session.accessToken)!.userId, userIds.last);
+    final after = (await db.query('SELECT userPassword FROM tblUser WHERE userID = :id', {
+      'id': userIds.last,
+    })).single.readString('userPassword');
+    expect(after, before);
+  });
 }
