@@ -99,6 +99,12 @@ class FakeEmployeeRepository implements EmployeeRepository {
   @override
   Future<EmployeeSummary?> findInCompany(SqlExecutor executor, int companyId, int userId) async =>
       byCompany[-userId]?.single;
+
+  /// (companyId, userId) → details.
+  Map<(int, int), EmployeeDetails> details = {};
+
+  @override
+  Future<EmployeeDetails?> findDetails(int companyId, int userId) async => details[(companyId, userId)];
 }
 
 class FakeGroupRepository implements GroupRepository {

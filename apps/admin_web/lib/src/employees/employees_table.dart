@@ -13,9 +13,12 @@ import '../l10n/admin_text_keys.dart';
 ///   source yet and show an explicit placeholder.
 /// - **Type** lists every group of the employee; none is singled out.
 class EmployeesTable extends StatelessWidget {
-  const EmployeesTable({super.key, required this.employees});
+  const EmployeesTable({super.key, required this.employees, this.onOpen});
 
   final List<EmployeeSummary> employees;
+
+  /// Opens an employee's details (row click).
+  final ValueChanged<EmployeeSummary>? onOpen;
 
   /// Column widths proportional to the Figma table without its Policy column.
   static const _flexName = 260;
@@ -38,6 +41,7 @@ class EmployeesTable extends StatelessWidget {
         JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnStatus), flex: _flexStatus),
       ],
       rows: [for (final employee in employees) _cells(t, employee)],
+      onRowTap: onOpen == null ? null : (index) => onOpen!(employees[index]),
     );
   }
 

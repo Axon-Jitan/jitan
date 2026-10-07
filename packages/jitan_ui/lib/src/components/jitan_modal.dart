@@ -5,20 +5,21 @@ import '../theme/jitan_dimensions.dart';
 import '../theme/jitan_text_styles.dart';
 
 /// The white rounded modal from the Figma web flows ("Add employee", …):
-/// title, one-line subtitle, scrollable body, actions bottom-right.
+/// title, optional one-line subtitle, scrollable body, optional actions
+/// bottom-right. Without actions it is closed by Escape or a tap outside.
 ///
 /// Narrower than [JitanDimensions.modalWidth] on small screens.
 class JitanModal extends StatelessWidget {
   const JitanModal({
     super.key,
     required this.title,
-    required this.subtitle,
     required this.body,
-    required this.actions,
+    this.subtitle,
+    this.actions = const [],
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final Widget body;
   final List<Widget> actions;
 
@@ -37,20 +38,24 @@ class JitanModal extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Semantics(header: true, child: Text(title, style: JitanTextStyles.modalTitle)),
-                const SizedBox(height: 8),
-                Text(subtitle, style: JitanTextStyles.modalSubtitle),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 8),
+                  Text(subtitle!, style: JitanTextStyles.modalSubtitle),
+                ],
                 const SizedBox(height: 32),
                 Flexible(child: SingleChildScrollView(child: body)),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    for (var i = 0; i < actions.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 12),
-                      actions[i],
+                if (actions.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      for (var i = 0; i < actions.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 12),
+                        actions[i],
+                      ],
                     ],
-                  ],
-                ),
+                  ),
+                ],
               ],
             ),
           ),

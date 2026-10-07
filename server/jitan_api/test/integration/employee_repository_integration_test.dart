@@ -144,6 +144,17 @@ void main() {
     expect(await search('%'), isEmpty, reason: 'wildcards are literal');
   });
 
+  test('findDetails: scoped to the company, with phone and all active groups', () async {
+    final repo = EmployeeRepository(db);
+    final list = await repo.listForCompany(almeco);
+    final thomas = list.firstWhere((e) => e.lastName == 'Vermeulen');
+
+    final details = await repo.findDetails(almeco, thomas.id);
+    expect(details?.companyName, '[DEV-TEST] $stamp Almeco');
+    expect(details?.groups, [groupName('Blue collar'), groupName('White collar')]);
+    expect(await repo.findDetails(pca, thomas.id), isNull, reason: 'not a PCA member');
+  });
+
   test('CompanyRepository.exists: true for listed, false for unknown', () async {
     final companies = CompanyRepository(db);
 

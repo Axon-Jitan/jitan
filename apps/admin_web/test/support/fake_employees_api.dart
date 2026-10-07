@@ -39,6 +39,22 @@ class FakeEmployeesApi implements EmployeesApi {
   void createSucceeds(EmployeeSummary employee) => _pendingCreates.last.complete(employee);
 
   void createFails(ApiClientException failure) => _pendingCreates.last.completeError(failure);
+
+  /// (companyId, userId) of every details request.
+  final detailRequests = <(int, int)>[];
+  final _pendingDetails = <Completer<EmployeeDetails>>[];
+
+  @override
+  Future<EmployeeDetails> details(int companyId, int userId) {
+    detailRequests.add((companyId, userId));
+    final completer = Completer<EmployeeDetails>();
+    _pendingDetails.add(completer);
+    return completer.future;
+  }
+
+  void detailsSucceed(EmployeeDetails details) => _pendingDetails.last.complete(details);
+
+  void detailsFail(ApiClientException failure) => _pendingDetails.last.completeError(failure);
 }
 
 /// Stand-in for [GroupsApi] with a controllable result.

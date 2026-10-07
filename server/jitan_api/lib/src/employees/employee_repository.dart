@@ -27,6 +27,38 @@ class EmployeeRepository {
   Future<EmployeeSummary?> findInCompany(SqlExecutor executor, int companyId, int userId) async =>
       (await _list(executor, companyId, userId: userId)).firstOrNull;
 
+  /// Details of [userId] as a non-MFD member of [companyId], or `null`.
+  Future<EmployeeDetails?> findDetails(int companyId, int userId) async {
+    final rows = await _db.query(
+      'SELECT u.userID, u.userName, u.userSurname, u.userCode, u.cellphoneNumber, u.userActive, '
+      'c.companyID, c.companyName '
+      'FROM tblUser u '
+      'JOIN tblUserCompany uc ON uc.userID = u.userID '
+      'JOIN tblCompany c ON c.companyID = uc.companyID '
+      'WHERE uc.companyID = :companyId AND u.userID = :userId AND u.userMFD = 0 AND c.companyMFD = 0',
+      {'companyId': companyId, 'userId': userId},
+    );
+    if (rows.isEmpty) return null;
+    final row = rows.single;
+    final groups = await _db.query(
+      'SELECT g.groupName FROM tblUserGroup ug JOIN tblGroup g ON g.groupID = ug.groupID '
+      'WHERE ug.userID = :userId AND g.groupActive = 1 AND g.groupMFD = 0 '
+      'ORDER BY g.groupName, g.groupID',
+      {'userId': userId},
+    );
+    return EmployeeDetails(
+      id: row.readInt('userID'),
+      companyId: row.readInt('companyID'),
+      companyName: row.readString('companyName'),
+      firstName: row.readOptionalString('userName'),
+      lastName: row.readOptionalString('userSurname'),
+      code: row.readString('userCode'),
+      groups: [for (final g in groups) g.readString('groupName')],
+      phone: row.readOptionalString('cellphoneNumber'),
+      isActive: row.readBool('userActive'),
+    );
+  }
+
   /// Whether any user, in any company and including MFD users, has [code]
   /// (`tblUser.userCode` is unique across the table).
   Future<bool> codeExists(SqlExecutor executor, String code) async =>

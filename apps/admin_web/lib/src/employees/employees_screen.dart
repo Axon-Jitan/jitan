@@ -8,6 +8,7 @@ import '../common/api_failure_text.dart';
 import '../company_context/current_company.dart';
 import '../l10n/admin_text_keys.dart';
 import 'add_employee_dialog.dart';
+import 'employee_details_dialog.dart';
 import 'employees_controller.dart';
 import 'employees_table.dart';
 
@@ -155,7 +156,15 @@ class _CompanyEmployeesState extends State<_CompanyEmployees> {
               message: context.t(AdminTextKeys.employeeNoMatchMessage, args: {'search': search}),
             ),
           ),
-        EmployeesLoaded(:final employees) => EmployeesTable(employees: employees),
+        EmployeesLoaded(:final employees) => EmployeesTable(
+            employees: employees,
+            onOpen: (employee) => showEmployeeDetailsDialog(
+              context,
+              employeesApi: widget.api,
+              companyId: widget.company.id,
+              userId: employee.id,
+            ),
+          ),
       };
 
   Widget _error(BuildContext context, ApiClientException failure) {

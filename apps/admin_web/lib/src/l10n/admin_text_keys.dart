@@ -74,4 +74,14 @@ abstract final class AdminTextKeys {
   static const employeeFieldErrorDuplicateCode = 'employee.field.error.duplicateCode';
   static const employeeFieldErrorInvalidType = 'employee.field.error.invalidType';
   static const employeeFieldErrorTooLong = 'employee.field.error.tooLong';
+
+  static const employeeDetailsTitle = 'employee.details.title';
+
+  /// Arguments: `{company}`, `{code}`.
+  static const employeeDetailsSubtitle = 'employee.details.subtitle';
+  static const employeeDetailsLoading = 'employee.details.loading';
+  static const employeeFieldLocation = 'employee.field.location';
+  static const employeeFieldAccount = 'employee.field.account';
+  static const employeeFieldStatus = 'employee.field.status';
+  static const employeeAccountUnavailable = 'employee.account.unavailable';
 }

@@ -14,6 +14,7 @@ import 'employee_service.dart';
 ///
 /// - `GET /companies/{companyId}/employees?search=<text>`
 /// - `POST /companies/{companyId}/employees` with a `CreateEmployeeRequest`
+/// - `GET /companies/{companyId}/employees/{userId}`
 class EmployeeRoutes {
   const EmployeeRoutes(this._authorizer, this._employees);
 
@@ -21,10 +22,19 @@ class EmployeeRoutes {
   final EmployeeService _employees;
 
   static const _path = '/companies/<companyId|[0-9]+>/employees';
+  static const _employeePath = '$_path/<userId|[0-9]+>';
 
   Router get router => Router()
     ..get(_path, _list)
-    ..post(_path, _create);
+    ..post(_path, _create)
+    ..get(_employeePath, _details);
+
+  Future<Response> _details(Request request, String companyId, String userId) async {
+    final id = _companyId(companyId);
+    await _authorizer.require(request, Permission.viewEmployees, companyId: id);
+    final employee = _id(userId);
+    return jsonResponse((await _employees.details(id, employee)).toJson());
+  }
 
   Future<Response> _list(Request request, String companyId) async {
     final id = _companyId(companyId);
@@ -47,4 +57,6 @@ class EmployeeRoutes {
   }
 
   static int _companyId(String raw) => int.tryParse(raw) ?? (throw const ApiException.notFound('No such company.'));
+
+  static int _id(String raw) => int.tryParse(raw) ?? (throw const ApiException.notFound('No such employee.'));
 }

@@ -1,5 +1,6 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
+import '../theme/jitan_colors.dart';
 import '../theme/jitan_dimensions.dart';
 import '../theme/jitan_text_styles.dart';
 
@@ -14,12 +15,16 @@ class JitanTableColumn {
 /// The borderless web table: bold muted header row, then evenly spaced rows.
 ///
 /// Below [minWidth] the table scrolls horizontally instead of squashing.
+///
+/// With [onRowTap], rows are clickable (hover highlight, keyboard focusable,
+/// announced as buttons).
 class JitanDataTable extends StatelessWidget {
   const JitanDataTable({
     super.key,
     required this.columns,
     required this.rows,
     this.minWidth = 760,
+    this.onRowTap,
   });
 
   final List<JitanTableColumn> columns;
@@ -27,6 +32,9 @@ class JitanDataTable extends StatelessWidget {
   /// One list of cell widgets per row, in column order.
   final List<List<Widget>> rows;
   final double minWidth;
+
+  /// Called with the row index.
+  final ValueChanged<int>? onRowTap;
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +55,13 @@ class JitanDataTable extends StatelessWidget {
                   for (final column in columns) Text(column.label, style: JitanTextStyles.tableHeader),
                 ],
               ),
-              for (final cells in rows)
-                _Row(height: JitanDimensions.tableRowHeight, columns: columns, cells: cells),
+              for (var i = 0; i < rows.length; i++)
+                onRowTap == null
+                    ? _Row(height: JitanDimensions.tableRowHeight, columns: columns, cells: rows[i])
+                    : _TappableRow(
+                        onTap: () => onRowTap!(i),
+                        child: _Row(height: JitanDimensions.tableRowHeight, columns: columns, cells: rows[i]),
+                      ),
             ],
           ),
         );
@@ -58,6 +71,22 @@ class JitanDataTable extends StatelessWidget {
       },
     );
   }
+}
+
+class _TappableRow extends StatelessWidget {
+  const _TappableRow({required this.onTap, required this.child});
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(onTap: onTap, hoverColor: JitanColors.warmWhite, child: child),
+        ),
+      );
 }
 
 class _Row extends StatelessWidget {

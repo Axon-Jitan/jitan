@@ -3,6 +3,7 @@
 library;
 
 export 'src/components/jitan_data_table.dart';
+export 'src/components/jitan_detail_grid.dart';
 export 'src/components/jitan_empty_state.dart';
 export 'src/components/jitan_error_state.dart';
 export 'src/components/jitan_field_decoration.dart';

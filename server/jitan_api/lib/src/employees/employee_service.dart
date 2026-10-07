@@ -42,6 +42,15 @@ class EmployeeService {
     return _employees.listForCompany(companyId, nameOrCodeContains: term.isEmpty ? null : term);
   }
 
+  /// One employee of [companyId]. 404 when the company does not exist or
+  /// the user is not a (non-deleted) member of it, so an ID from another
+  /// company reveals nothing.
+  Future<EmployeeDetails> details(int companyId, int userId) async {
+    await _requireCompany(companyId);
+    return await _employees.findDetails(companyId, userId) ??
+        (throw ApiException.notFound('Employee $userId is not in company $companyId.'));
+  }
+
   /// Creates an employee in [companyId] on behalf of [actorUserId].
   ///
   /// In one transaction: the `tblUser` row (active, with a new personal QR),

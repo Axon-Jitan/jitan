@@ -110,4 +110,13 @@ const builtInEnglish = <String, String>{
   'employee.field.error.duplicateCode': 'This employee code is already in use.',
   'employee.field.error.invalidType': 'This employee type is no longer available.',
   'employee.field.error.tooLong': 'One of the values is too long.',
+
+  // Employee details (EMP-03)
+  'employee.details.title': 'Employee details',
+  'employee.details.subtitle': '{company} · Employee code {code}',
+  'employee.details.loading': 'Loading employee…',
+  'employee.field.location': 'Location',
+  'employee.field.account': 'Account',
+  'employee.field.status': 'Status',
+  'employee.account.unavailable': 'Account activation status is not available yet.',
 };

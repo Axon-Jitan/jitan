@@ -44,6 +44,7 @@ dart run bin/server.dart
 - `GET /companies?search=`: company list (needs an identity, see below)
 - `GET /companies/{id}/employees?search=`: that company's employees
 - `POST /companies/{id}/employees`: create an employee in that company
+- `GET /companies/{id}/employees/{userId}`: one employee's details (404 outside that company)
 - `GET /groups`: assignable employee groups (the "Employee type")
 
 **Development identity.** Real login isn't built yet. With `JITAN_ENV=development`, set
