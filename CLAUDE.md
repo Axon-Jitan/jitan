@@ -185,17 +185,18 @@ Modules waiting on ERD gaps, not to be built until resolved: `devices` (GAP-05),
 - Employee identity for login is **employee code** (`userCode`), not email. No email is
   required anywhere.
 - Shared models live in `jitan_models` and are the single definition used by every client.
-- All user-facing text comes from `tblTranslation` (key = `translationUIName`, describing
-  meaning: `company.add`, not `Add company`). Resolution: selected language → English
-  (an ordinary `tblLanguage` row, the default) → the key itself, logged. Bundles are
-  loaded per language and cached, never fetched key by key. **No JSON/ARB translation
-  files or hardcoded maps as a source of truth.** Production widgets use `t('key')`,
-  never literal copy. Spec: I18N-01 in [docs/BACKLOG.md](docs/BACKLOG.md).
-- How: keys are constants in `CommonTextKeys` (jitan_core, shared) or `<App>TextKeys`
-  (per app). Widgets call `context.t(key)` / `context.tPlural(key, n)` under a
-  `TranslationScope`; apps load bundles at startup via `TranslationService` (see
-  `AdminBootstrap`). Every new key also goes into `server/jitan_api/tool/dev_translations_en.dart`
-  (dev seed data only). Widget tests assert keys, not copy.
+- **Translations.** English is **built in**, in one central map: `builtInEnglish`
+  (jitan_core). It is the default and the final fallback, and renders with no API,
+  database or network. Other languages come from `tblTranslation` (via
+  `tblLanguage`/`tblUserLanguage`); the apps never read English from the database.
+  Resolution per key: selected database language → built-in English → the key itself
+  (logged). Rendering never waits for translations: apps start in English and switch
+  when the user's bundle arrives. Spec: I18N-01 in [docs/BACKLOG.md](docs/BACKLOG.md).
+- **Never put copy in a widget.** Use `context.t(SomeTextKeys.x)` /
+  `context.tPlural(key, n)` under a `TranslationScope`. Keys (meaning, not copy:
+  `company.add`) are constants in `CommonTextKeys` (shared) or `<App>TextKeys`. **Every
+  new key needs its English text in `builtInEnglish`**; a test fails otherwise, and also
+  fails if a screen passes a string literal to `t()`.
 - Mobile and Terminal queue events locally (SQLite) when offline and sync on reconnect. An
   event's actual timestamp is the moment it happened, not the moment it synced.
 - Authorization: role → modules via `tblUserCredGroup` + `tblAppModulesCredGroup`;

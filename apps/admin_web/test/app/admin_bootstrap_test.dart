@@ -8,16 +8,8 @@ import 'package:jitan_models/jitan_models.dart';
 import '../support/fake_companies_api.dart';
 import '../support/fake_languages_api.dart';
 
-/// The full client translation path for the Company list (I18N-01):
-/// user language → bundles → fallback → rendered screen.
+/// The full client translation path for the Company list (I18N-01).
 void main() {
-  const english = {
-    'company.title': 'Companies',
-    'company.list.subtitle': 'View and manage companies in Jitan.',
-    'company.column.name': 'Company',
-    'common.status.active': 'Active',
-    'nav.companies': 'Companies',
-  };
   const dutch = {
     'company.title': 'Bedrijven',
     'company.column.name': 'Bedrijf',
@@ -28,7 +20,7 @@ void main() {
   late FakeCompaniesApi companies;
 
   setUp(() {
-    languages = FakeLanguagesApi({'en': english, 'nl': dutch});
+    languages = FakeLanguagesApi({'nl': dutch});
     companies = FakeCompaniesApi();
   });
 
@@ -41,52 +33,53 @@ void main() {
     );
   }
 
-  testWidgets('loads the user language and renders the Company list from the database bundles', (tester) async {
+  testWidgets('renders in built-in English immediately, before any translation request completes', (tester) async {
     languages.userLanguage = 'nl';
 
     await pumpBootstrap(tester);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget, reason: 'loading, no text yet');
 
+    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
+    expect(find.text('Companies'), findsWidgets);
+  });
+
+  testWidgets('switches to the user database language when its bundle arrives', (tester) async {
+    languages.userLanguage = 'nl';
+
+    await pumpBootstrap(tester);
     await tester.pump();
     await tester.pump();
     companies.succeed([company(1, 'Almeco')]);
     await tester.pump();
 
-    expect(find.text('Bedrijven'), findsOneWidget, reason: 'Dutch title');
-    expect(find.text('Bedrijf'), findsOneWidget, reason: 'Dutch column header');
+    expect(find.text('Bedrijven'), findsOneWidget, reason: 'Dutch from the database');
+    expect(find.text('Bedrijf'), findsOneWidget);
     expect(find.text('Actief'), findsOneWidget);
     expect(find.text('View and manage companies in Jitan.'), findsOneWidget, reason: 'missing in Dutch → English');
-    expect(find.text('company.search'), findsOneWidget, reason: 'missing everywhere → key');
-    expect(languages.requests, ['me/language', 'translations:en', 'translations:nl']);
+    expect(languages.requests, ['me/language', 'translations:nl']);
   });
 
-  testWidgets('a user without a language gets English', (tester) async {
+  testWidgets('a user without a language stays in English with no bundle request', (tester) async {
     await pumpBootstrap(tester);
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Companies'), findsWidgets);
-    expect(languages.requests, ['me/language', 'translations:en']);
+    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
+    expect(languages.requests, ['me/language']);
   });
 
-  testWidgets('a failed load shows an error with retry, and retry succeeds', (tester) async {
+  testWidgets('API unreachable: the app stays fully usable in English, no error screen', (tester) async {
+    languages.userLanguage = 'nl';
     languages.failNext = const ApiClientException.network('offline');
 
     await pumpBootstrap(tester);
     await tester.pump();
-
-    // No bundle could be loaded, so the error shows keys.
-    expect(find.text('common.error.network.title'), findsOneWidget);
-
-    await tester.tap(find.text('common.retry'));
-    await tester.pump();
-    await tester.pump();
     await tester.pump();
 
-    expect(find.text('Companies'), findsWidgets);
+    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
+    expect(find.text('Can’t reach Jitan'), findsNothing);
   });
 
-  testWidgets('a misconfigured user language still opens the app in English', (tester) async {
+  testWidgets('a misconfigured user language still opens in English', (tester) async {
     languages.failNext = const ApiClientException.server(
       409,
       ApiError(code: ApiErrorCode.configurationError, message: 'several'),
@@ -96,6 +89,6 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Companies'), findsWidgets);
+    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
   });
 }

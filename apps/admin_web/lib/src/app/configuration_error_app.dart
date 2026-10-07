@@ -7,15 +7,14 @@ import '../l10n/admin_text_keys.dart';
 /// Shown instead of the app when the build is missing required
 /// configuration, so a bad deployment fails visibly (ENGINEERING_RULES §20).
 ///
-/// Without an API address no translation bundle can be loaded, so this
-/// screen shows translation keys (the end of the fallback chain). It is only
-/// ever seen by whoever deployed a misconfigured build.
+/// Without an API address no database language can load, so this screen is
+/// in built-in English.
 class ConfigurationErrorApp extends StatelessWidget {
   const ConfigurationErrorApp({super.key});
 
   @override
   Widget build(BuildContext context) => TranslationScope(
-        translations: Translations.keysOnly(),
+        translations: Translations.english(),
         child: MaterialApp(
           theme: JitanTheme.light(),
           debugShowCheckedModeBanner: false,

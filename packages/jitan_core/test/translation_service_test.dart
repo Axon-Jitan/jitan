@@ -4,23 +4,23 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 
-/// Serves bundles from memory and counts requests.
+/// Serves database bundles from memory and counts requests.
 class FakeLanguagesApi implements LanguagesApi {
   FakeLanguagesApi(this.bundles, {this.userLanguage});
 
   final Map<String, Map<String, String>> bundles;
-  Object? userLanguage; // String, null, or an ApiClientException to throw
+
+  /// A code, `null`, or an [ApiClientException] to throw.
+  Object? userLanguage;
+
+  /// When set, every bundle request throws it (API/database unreachable).
+  ApiClientException? bundleFailure;
   final requests = <String>[];
-  Object? failNextBundleWith;
 
   @override
   Future<TranslationBundle> translationBundle(String languageCode) async {
     requests.add(languageCode);
-    final failure = failNextBundleWith;
-    if (failure != null) {
-      failNextBundleWith = null;
-      throw failure;
-    }
+    if (bundleFailure != null) throw bundleFailure!;
     final texts = bundles[languageCode];
     if (texts == null) {
       throw const ApiClientException.server(404, ApiError(code: ApiErrorCode.notFound, message: 'x'));
@@ -39,141 +39,174 @@ class FakeLanguagesApi implements LanguagesApi {
   Future<List<Language>> listLanguages() async => const [];
 }
 
+ApiClientException _serverError(int status, String code) =>
+    ApiClientException.server(status, ApiError(code: code, message: 'x'));
+
 void main() {
   final logs = <LogRecord>[];
   setUpAll(() => Logger.root.onRecord.listen(logs.add));
   setUp(logs.clear);
 
-  final english = {'company.add': 'Add company', 'common.save': 'Save', 'common.days.one': '{n} day', 'common.days.other': '{n} days'};
-  final dutch = {'company.add': 'Bedrijf toevoegen'};
+  const dutch = {'company.title': 'Bedrijven'};
 
-  group('fallback chain', () {
-    test('selected language first', () async {
-      final t = await TranslationService(FakeLanguagesApi({'en': english, 'nl': dutch})).load('nl');
+  group('resolution order', () {
+    test('English uses the built-in bundle directly, with no request', () async {
+      final api = FakeLanguagesApi({'nl': dutch});
 
-      expect(t.t('company.add'), 'Bedrijf toevoegen');
+      final t = await TranslationService(api).load('en');
+
+      expect(t.t('company.title'), 'Companies');
+      expect(api.requests, isEmpty);
+    });
+
+    test('another language uses its database translation first', () async {
+      final t = await TranslationService(FakeLanguagesApi({'nl': dutch})).load('nl');
+
       expect(t.languageCode, 'nl');
+      expect(t.t('company.title'), 'Bedrijven');
     });
 
-    test('falls back to English when the selected language lacks the key', () async {
-      final t = await TranslationService(FakeLanguagesApi({'en': english, 'nl': dutch})).load('nl');
+    test('a translation missing in that language falls back to built-in English', () async {
+      final t = await TranslationService(FakeLanguagesApi({'nl': dutch})).load('nl');
 
-      expect(t.t('common.save'), 'Save');
+      expect(t.t('company.search'), 'Search companies');
     });
 
-    test('shows the key itself when English lacks it too, and logs it once', () async {
-      final t = await TranslationService(FakeLanguagesApi({'en': english, 'nl': dutch})).load('nl');
+    test('a key missing even in built-in English shows the key, logged once', () async {
+      final t = await TranslationService(FakeLanguagesApi({'nl': dutch})).load('nl');
 
-      expect(t.t('company.delete'), 'company.delete');
-      expect(t.t('company.delete'), 'company.delete');
-      expect(logs.where((r) => r.message.contains('"company.delete"')), hasLength(1));
-    });
-  });
-
-  group('loading and caching', () {
-    test('loads English once and the selected bundle once', () async {
-      final api = FakeLanguagesApi({'en': english, 'nl': dutch});
-      final service = TranslationService(api);
-
-      await service.load('nl');
-      await service.load('nl');
-
-      expect(api.requests, ['en', 'nl']);
+      expect(t.t('company.delete.never'), 'company.delete.never');
+      expect(t.t('company.delete.never'), 'company.delete.never');
+      expect(logs.where((r) => r.message.contains('"company.delete.never"')), hasLength(1));
     });
 
-    test('English selected needs a single request', () async {
-      final api = FakeLanguagesApi({'en': english});
+    test('a database English copy is never needed', () async {
+      final api = FakeLanguagesApi({}); // no 'en' bundle in the database at all
 
-      await TranslationService(api).load('en');
+      final t = await TranslationService(api).load('en');
 
-      expect(api.requests, ['en']);
-    });
-
-    test('switching language reuses the cached English bundle', () async {
-      final api = FakeLanguagesApi({'en': english, 'nl': dutch, 'fr': {'company.add': 'Ajouter une entreprise'}});
-      final service = TranslationService(api);
-
-      final nl = await service.load('nl');
-      final fr = await service.load('fr');
-
-      expect(nl.t('company.add'), 'Bedrijf toevoegen');
-      expect(fr.t('company.add'), 'Ajouter une entreprise');
-      expect(fr.t('common.save'), 'Save');
-      expect(api.requests, ['en', 'nl', 'fr']);
-    });
-
-    test('an unavailable selected language shows English and is logged', () async {
-      final t = await TranslationService(FakeLanguagesApi({'en': english})).load('de');
-
-      expect(t.languageCode, 'en');
-      expect(t.t('company.add'), 'Add company');
-      expect(logs.any((r) => r.message.contains('"de" is not available')), isTrue);
-    });
-
-    test('failing to load English is an error, not an empty UI', () async {
-      final api = FakeLanguagesApi({})..failNextBundleWith = const ApiClientException.network('offline');
-
-      expect(TranslationService(api).load('en'), throwsA(isA<ApiClientException>()));
-    });
-
-    test('a failed load is not cached, so retry works', () async {
-      final api = FakeLanguagesApi({'en': english})..failNextBundleWith = const ApiClientException.network('offline');
-      final service = TranslationService(api);
-
-      await expectLater(service.load('en'), throwsA(isA<ApiClientException>()));
-      final t = await service.load('en');
-
-      expect(t.t('common.save'), 'Save');
+      expect(t.t('common.retry'), 'Try again');
     });
   });
 
-  group('user language', () {
-    test('uses the user language from the server', () async {
-      final api = FakeLanguagesApi({}, userLanguage: 'nl');
-      expect(await TranslationService(api).resolveUserLanguageCode(), 'nl');
+  group('API or database unavailable', () {
+    for (final (label, failure) in [
+      ('offline', const ApiClientException.network('offline')),
+      ('database down', _serverError(503, ApiErrorCode.databaseUnavailable)),
+      ('unknown language', _serverError(404, ApiErrorCode.notFound)),
+      ('broken response', const ApiClientException.invalidResponse(200, 'x')),
+    ]) {
+      test('$label: built-in English, logged, never an error', () async {
+        final api = FakeLanguagesApi({'nl': dutch})..bundleFailure = failure;
+
+        final t = await TranslationService(api).load('nl');
+
+        expect(t.languageCode, 'en');
+        expect(t.t('company.title'), 'Companies');
+        expect(logs.any((r) => r.message.contains('using built-in English')), isTrue);
+      });
+    }
+
+    test('a bundle loaded earlier keeps working when the API later goes down', () async {
+      final api = FakeLanguagesApi({'nl': dutch});
+      final service = TranslationService(api);
+      await service.load('nl');
+
+      api.bundleFailure = const ApiClientException.network('offline');
+      final t = await service.load('nl');
+
+      expect(t.t('company.title'), 'Bedrijven');
+      expect(api.requests, ['nl'], reason: 'served from cache');
     });
 
-    test('defaults to English when the user has none', () async {
-      final api = FakeLanguagesApi({});
-      expect(await TranslationService(api).resolveUserLanguageCode(), 'en');
+    test('a failed load is not cached, so a later load retries', () async {
+      final api = FakeLanguagesApi({'nl': dutch})..bundleFailure = const ApiClientException.network('offline');
+      final service = TranslationService(api);
+      expect((await service.load('nl')).languageCode, 'en');
+
+      api.bundleFailure = null;
+      expect((await service.load('nl')).t('company.title'), 'Bedrijven');
+    });
+  });
+
+  group('language switching', () {
+    test('switches between database languages and back to English', () async {
+      final api = FakeLanguagesApi({'nl': dutch, 'fr': {'company.title': 'Entreprises'}});
+      final service = TranslationService(api);
+
+      expect((await service.load('nl')).t('company.title'), 'Bedrijven');
+      expect((await service.load('fr')).t('company.title'), 'Entreprises');
+      expect((await service.load('en')).t('company.title'), 'Companies');
+      expect((await service.load('nl')).t('company.title'), 'Bedrijven');
+      expect(api.requests, ['nl', 'fr'], reason: 'each bundle fetched once');
     });
 
-    test('uses English and logs when several languages are assigned', () async {
-      final api = FakeLanguagesApi({}, userLanguage: const ApiClientException.server(
-        409,
-        ApiError(code: ApiErrorCode.configurationError, message: 'several'),
-      ));
+    test('clearCache forces a fresh fetch', () async {
+      final api = FakeLanguagesApi({'nl': dutch});
+      final service = TranslationService(api);
+      await service.load('nl');
 
-      expect(await TranslationService(api).resolveUserLanguageCode(), 'en');
+      service.clearCache();
+      await service.load('nl');
+
+      expect(api.requests, ['nl', 'nl']);
+    });
+  });
+
+  group('user language (tblUserLanguage)', () {
+    Future<String> resolve(Object? userLanguage) =>
+        TranslationService(FakeLanguagesApi({}, userLanguage: userLanguage)).resolveUserLanguageCode();
+
+    test('uses the assigned language', () async => expect(await resolve('nl'), 'nl'));
+
+    test('defaults to English when none is assigned', () async => expect(await resolve(null), 'en'));
+
+    test('English when not signed in', () async {
+      expect(await resolve(_serverError(401, ApiErrorCode.unauthenticated)), 'en');
+    });
+
+    test('English, logged as an error, when several are assigned', () async {
+      expect(await resolve(_serverError(409, ApiErrorCode.configurationError)), 'en');
       expect(logs.any((r) => r.level == Level.SEVERE), isTrue);
     });
 
-    test('uses English before sign-in (401)', () async {
-      final api = FakeLanguagesApi({}, userLanguage: const ApiClientException.server(
-        401,
-        ApiError(code: ApiErrorCode.unauthenticated, message: 'x'),
-      ));
-
-      expect(await TranslationService(api).resolveUserLanguageCode(), 'en');
+    test('English when the API is unreachable', () async {
+      expect(await resolve(const ApiClientException.network('offline')), 'en');
     });
 
-    test('other failures propagate', () async {
-      final api = FakeLanguagesApi({}, userLanguage: const ApiClientException.network('offline'));
-      expect(TranslationService(api).resolveUserLanguageCode(), throwsA(isA<ApiClientException>()));
+    test('loadForCurrentUser combines both steps', () async {
+      final api = FakeLanguagesApi({'nl': dutch}, userLanguage: 'nl');
+
+      final t = await TranslationService(api).loadForCurrentUser();
+
+      expect(t.t('company.title'), 'Bedrijven');
     });
   });
 
   group('Translations', () {
-    test('substitutes arguments and plurals', () {
-      final t = Translations(languageCode: 'en', selected: english, fallback: english);
+    test('substitutes arguments and picks plural forms', () {
+      final t = Translations.english();
 
-      expect(t.plural('common.days', 1), '1 day');
-      expect(t.plural('common.days', 3), '3 days');
-      expect(t.t('x.{name}', args: {'name': 'y'}), 'x.y', reason: 'missing key still substitutes');
+      expect(t.plural(CommonTextKeys.dateDaysAgo, 1), '1 day ago');
+      expect(t.plural(CommonTextKeys.dateDaysAgo, 3), '3 days ago');
+      expect(t.t('company.noMatch.message', args: {'search': 'Zeta'}), 'No company name contains “Zeta”.');
     });
 
-    test('keysOnly shows every key', () {
-      expect(Translations.keysOnly().t('company.add'), 'company.add');
+    test('English never applies a database bundle, even if one is passed', () {
+      final t = Translations(languageCode: 'en', selected: const {'company.title': 'Other'});
+
+      expect(t.t('company.title'), 'Companies');
+    });
+
+    test('built-in English plural keys come in complete pairs', () {
+      final bases = builtInEnglish.keys
+          .where((k) => k.endsWith('.one') || k.endsWith('.other'))
+          .map((k) => k.substring(0, k.lastIndexOf('.')))
+          .toSet();
+      for (final base in bases) {
+        expect(builtInEnglish, contains('$base.one'), reason: base);
+        expect(builtInEnglish, contains('$base.other'), reason: base);
+      }
     });
   });
 }

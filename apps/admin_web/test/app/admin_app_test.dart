@@ -1,10 +1,10 @@
 import 'package:admin_web/src/app/admin_app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../support/fake_companies_api.dart';
-import '../support/test_translations.dart';
 
 void main() {
   void useDesktopSize(WidgetTester tester) {
@@ -13,8 +13,10 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  Widget app(FakeCompaniesApi api, {String? initialLocation}) =>
-      withTestTranslations(AdminApp(companiesApi: api, initialLocation: initialLocation));
+  Widget app(FakeCompaniesApi api, {String? initialLocation}) => TranslationScope(
+        translations: Translations.english(),
+        child: AdminApp(companiesApi: api, initialLocation: initialLocation),
+      );
 
   testWidgets('opens on Companies with the sidebar showing it as selected', (tester) async {
     useDesktopSize(tester);
@@ -25,7 +27,7 @@ void main() {
 
     expect(find.text('jitan.'), findsOneWidget);
     final item = tester.widget<JitanNavItem>(find.byType(JitanNavItem));
-    expect(item.label, 'nav.companies');
+    expect(item.label, 'Companies');
     expect(item.selected, isTrue);
     expect(api.calls, [''], reason: 'the page loads companies on open');
   });
@@ -37,6 +39,9 @@ void main() {
     await tester.pump();
 
     expect(find.byType(JitanNavItem), findsOneWidget);
+    for (final unbuilt in ['Dashboard', 'Employees', 'Terminals', 'Time records', 'Exceptions', 'Reports']) {
+      expect(find.text(unbuilt), findsNothing, reason: unbuilt);
+    }
   });
 
   testWidgets('an unknown URL lands on Companies', (tester) async {
@@ -45,7 +50,7 @@ void main() {
     await tester.pumpWidget(app(FakeCompaniesApi(), initialLocation: '/nope'));
     await tester.pump();
 
-    expect(find.text('company.list.subtitle'), findsOneWidget);
+    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
   });
 
   testWidgets('a narrow window moves the sidebar into a drawer', (tester) async {

@@ -1,8 +1,8 @@
 /// `tblTranslation.translationUIName` keys shared by every Jitan app.
 ///
-/// Keys only. The texts live in the database. Keys describe meaning, not
-/// copy. Plural keys are bases: the rows are `<base>.one` and `<base>.other`
-/// (see `Translations.plural`).
+/// Keys only. English texts live in `builtInEnglish`; other languages in
+/// `tblTranslation`. Keys describe meaning, not copy. Plural keys are bases:
+/// the texts are `<base>.one` and `<base>.other` (see `Translations.plural`).
 abstract final class CommonTextKeys {
   static const retry = 'common.retry';
   static const valueUnavailable = 'common.value.unavailable';

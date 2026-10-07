@@ -1,16 +1,20 @@
 // DEVELOPMENT ONLY: fills a dev/test database with clearly marked fake data.
 //
-//   dart run tool/dev_seed.dart           insert (idempotent)
-//   dart run tool/dev_seed.dart --remove  delete everything this tool created
+//   dart run tool/dev_seed.dart                    insert (idempotent)
+//   dart run tool/dev_seed.dart --pseudo-language  also add a fake database language
+//   dart run tool/dev_seed.dart --remove           delete everything this tool created
 //
 // Reads the same JITAN_* variables / .env as the server and refuses to run
 // unless JITAN_ENV is development or test. Every record is prefixed "[DEV]"
-// (companies, user first names) or "DEV-" (user codes), and nothing in
-// production code refers to these records.
+// (companies, user first names, language name) or "DEV-" (user codes), and
+// nothing in production code refers to these records.
 //
-// Also ensures an English tblLanguage row ('en') and inserts the English
-// UI texts from tool/dev_translations_en.dart that are missing. These are
-// real content, not fake data, so --remove leaves them in place.
+// English is NOT seeded: it is built into the apps (builtInEnglish in
+// jitan_core) and never read from the database. --pseudo-language creates
+// "[DEV] Pseudo" (code `xx`) whose texts are the built-in English wrapped in
+// ⟦…⟧, and assigns it to the DEV-ADMIN user, so the database translation path
+// (tblLanguage → tblTranslation → tblUserLanguage → API → app) can be seen
+// working: wrapped text came from the database, plain text is the fallback.
 //
 // Not seeded: tblEventLog (event types are pending CLARIFY-11), so the
 // company list's "Last updated" stays empty for seeded companies.
@@ -21,11 +25,12 @@ import 'package:jitan_api/src/config/app_config.dart';
 import 'package:jitan_api/src/config/config_exception.dart';
 import 'package:jitan_api/src/config/env_file.dart';
 import 'package:jitan_api/src/database/database.dart';
-
-import 'dev_translations_en.dart';
+import 'package:jitan_core/jitan_core.dart';
 
 const _companyPrefix = '[DEV] ';
 const _userCodePrefix = 'DEV-';
+const _pseudoLanguageCode = 'xx';
+const _pseudoLanguageName = '[DEV] Pseudo';
 
 /// Companies (name, active) and members per company.
 const _companies = [
@@ -37,6 +42,7 @@ const _companies = [
 
 Future<void> main(List<String> args) async {
   final remove = args.contains('--remove');
+  final pseudoLanguage = args.contains('--pseudo-language');
 
   final AppConfig config;
   try {
@@ -62,14 +68,14 @@ Future<void> main(List<String> args) async {
     if (remove) {
       await _remove(db);
     } else {
-      await _seed(db);
+      await _seed(db, pseudoLanguage: pseudoLanguage);
     }
   } finally {
     await db.close();
   }
 }
 
-Future<void> _seed(Database db) async {
+Future<void> _seed(Database db, {required bool pseudoLanguage}) async {
   final devAdminId = await _ensureUser(db, code: '${_userCodePrefix}ADMIN', first: '[DEV]', last: 'Developer');
   stdout.writeln('Development user: tblUser.userID=$devAdminId  ->  set JITAN_DEV_USER_ID=$devAdminId');
 
@@ -83,20 +89,30 @@ Future<void> _seed(Database db) async {
     }
     stdout.writeln('Company "$_companyPrefix$name" (id $companyId, ${active ? 'active' : 'inactive'}): $members employees');
   }
-  await _ensureEnglishTranslations(db);
+  if (pseudoLanguage) await _ensurePseudoLanguage(db, devAdminId);
   stdout.writeln('Done.');
 }
 
-Future<void> _ensureEnglishTranslations(Database db) async {
-  var rows = await db.query("SELECT languageID FROM tblLanguage WHERE languageCode = 'en'");
-  if (rows.isEmpty) {
-    await db.query(
-      "INSERT INTO tblLanguage (languageName, languageCode, languageActive, languageMFD) VALUES ('English', 'en', 1, 0)",
+/// "[DEV] Pseudo" (`xx`): built-in English wrapped in ⟦…⟧, assigned to the
+/// dev admin. One key ('common.retry') is deliberately left out so the
+/// English fallback is visible too.
+Future<void> _ensurePseudoLanguage(Database db, int devAdminId) async {
+  Future<int?> find() async {
+    final rows = await db.query(
+      'SELECT languageID FROM tblLanguage WHERE languageCode = :code',
+      {'code': _pseudoLanguageCode},
     );
-    rows = await db.query("SELECT languageID FROM tblLanguage WHERE languageCode = 'en'");
-    stdout.writeln('Created tblLanguage row for English (en).');
+    return rows.isEmpty ? null : rows.single.readInt('languageID');
   }
-  final languageId = rows.single.readInt('languageID');
+
+  var languageId = await find();
+  if (languageId == null) {
+    await db.query(
+      'INSERT INTO tblLanguage (languageName, languageCode, languageActive, languageMFD) VALUES (:name, :code, 1, 0)',
+      {'name': _pseudoLanguageName, 'code': _pseudoLanguageCode},
+    );
+    languageId = await find() ?? (throw StateError('Inserted the pseudo language but cannot read it back.'));
+  }
 
   final existing = {
     for (final row in await db.query(
@@ -106,15 +122,25 @@ Future<void> _ensureEnglishTranslations(Database db) async {
       row.readString('translationUIName'),
   };
   var added = 0;
-  for (final MapEntry(:key, :value) in devEnglishTranslations.entries) {
-    if (existing.contains(key)) continue;
+  for (final MapEntry(:key, :value) in builtInEnglish.entries) {
+    if (key == 'common.retry' || existing.contains(key)) continue;
     await db.query(
       'INSERT INTO tblTranslation (languageID, translationUIName, translationUIText) VALUES (:id, :key, :text)',
-      {'id': languageId, 'key': key, 'text': value},
+      {'id': languageId, 'key': key, 'text': '⟦$value⟧'},
     );
     added++;
   }
-  stdout.writeln('English translations: $added added, ${existing.length} already present (existing rows untouched).');
+
+  final assigned = await db.query('SELECT languageID FROM tblUserLanguage WHERE userID = :user', {'user': devAdminId});
+  if (assigned.isEmpty) {
+    await db.query(
+      'INSERT INTO tblUserLanguage (userID, languageID) VALUES (:user, :language)',
+      {'user': devAdminId, 'language': languageId},
+    );
+  } else if (assigned.every((r) => r.readInt('languageID') != languageId)) {
+    stdout.writeln('DEV-ADMIN already has another language; pseudo language NOT assigned.');
+  }
+  stdout.writeln('Pseudo language "$_pseudoLanguageName" ($_pseudoLanguageCode, id $languageId): $added texts added.');
 }
 
 Future<void> _remove(Database db) async {
@@ -126,8 +152,13 @@ Future<void> _remove(Database db) async {
     "SELECT companyID FROM tblCompany WHERE companyName LIKE CONCAT(:prefix, '%')",
     {'prefix': _companyPrefix},
   );
+  final languages = await db.query(
+    'SELECT languageID FROM tblLanguage WHERE languageCode = :code AND languageName = :name',
+    {'code': _pseudoLanguageCode, 'name': _pseudoLanguageName},
+  );
   for (final row in users) {
     final id = row.readInt('userID');
+    await db.query('DELETE FROM tblUserLanguage WHERE userID = :id', {'id': id});
     await db.query('DELETE FROM tblUserCompany WHERE userID = :id', {'id': id});
     await db.query('DELETE FROM tblUser WHERE userID = :id', {'id': id});
   }
@@ -136,7 +167,14 @@ Future<void> _remove(Database db) async {
     await db.query('DELETE FROM tblUserCompany WHERE companyID = :id', {'id': id});
     await db.query('DELETE FROM tblCompany WHERE companyID = :id', {'id': id});
   }
-  stdout.writeln('Removed ${users.length} dev users and ${companies.length} dev companies.');
+  for (final row in languages) {
+    final id = row.readInt('languageID');
+    await db.query('DELETE FROM tblUserLanguage WHERE languageID = :id', {'id': id});
+    await db.query('DELETE FROM tblTranslation WHERE languageID = :id', {'id': id});
+    await db.query('DELETE FROM tblLanguage WHERE languageID = :id', {'id': id});
+  }
+  stdout.writeln('Removed ${users.length} dev users, ${companies.length} dev companies '
+      'and ${languages.length} dev language(s).');
 }
 
 Future<int> _ensureCompany(Database db, String name, {required bool active}) async {

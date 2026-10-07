@@ -1,7 +1,8 @@
 /// `tblTranslation.translationUIName` keys used only by the HR/Admin app.
 /// Shared keys are in `CommonTextKeys` (jitan_core).
 ///
-/// Keys only. The texts live in the database (I18N-01).
+/// Keys only. English texts live in `builtInEnglish` (jitan_core); other
+/// languages in `tblTranslation` (I18N-01).
 abstract final class AdminTextKeys {
   static const appTitle = 'app.admin.title';
   static const configErrorTitle = 'app.config.error.title';

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:logging/logging.dart';
@@ -8,72 +6,66 @@ import 'translations.dart';
 
 final _log = Logger('i18n');
 
-/// Loads database translation bundles through the API and caches them.
+/// Resolves the user's language and loads its database bundle.
 ///
-/// Bundles are fetched whole, once per language per session. Call [load] on
-/// app start, session start and language change; repeat calls for a cached
-/// language make no request. [clearCache] forces a reload (e.g. after
-/// sign-in as another user).
+/// **Never a precondition for rendering.** Apps start with
+/// [Translations.english], which needs nothing, and swap in the result of
+/// [loadForCurrentUser] or [load] when it arrives. Every failure here ends in
+/// English, logged, and never in an error screen or a blank label.
+///
+/// Bundles are fetched whole and cached in memory per language for the
+/// session. A cached bundle keeps working when the API later becomes
+/// unreachable.
 class TranslationService {
   TranslationService(this._api);
 
   final LanguagesApi _api;
-  final _bundles = <String, Future<Map<String, String>>>{};
+  final _cache = <String, Map<String, String>>{};
 
-  /// Texts for [languageCode] with English as fallback.
+  /// Translations for the signed-in user's language (`tblUserLanguage`), or
+  /// English when there is none, the user is not signed in, or anything fails.
+  Future<Translations> loadForCurrentUser() async => load(await resolveUserLanguageCode());
+
+  /// Translations for [languageCode].
   ///
-  /// - The English bundle is required: if it cannot be loaded, this throws.
-  /// - A selected language the server does not know (inactive or removed,
-  ///   404) is shown entirely through the English fallback, and logged.
+  /// - English: built-in, no request.
+  /// - Cached: no request.
+  /// - Otherwise fetched; on any failure (offline, API/database down,
+  ///   unknown language) English is returned and the reason logged.
   Future<Translations> load(String languageCode) async {
-    final fallback = await _bundle(fallbackLanguageCode);
-    if (languageCode == fallbackLanguageCode) {
-      return Translations(languageCode: languageCode, selected: fallback, fallback: fallback);
-    }
+    if (languageCode == englishLanguageCode) return Translations.english();
+
+    final cached = _cache[languageCode];
+    if (cached != null) return Translations(languageCode: languageCode, selected: cached);
+
     try {
-      final selected = await _bundle(languageCode);
-      return Translations(languageCode: languageCode, selected: selected, fallback: fallback);
+      final bundle = await _api.translationBundle(languageCode);
+      _cache[languageCode] = bundle.texts;
+      return Translations(languageCode: languageCode, selected: bundle.texts);
     } on ApiClientException catch (e) {
-      if (e.error?.code != ApiErrorCode.notFound) rethrow;
-      _log.warning('Language "$languageCode" is not available; showing "$fallbackLanguageCode".');
-      return Translations(languageCode: fallbackLanguageCode, selected: fallback, fallback: fallback);
+      _log.warning('Could not load "$languageCode" translations ($e); using built-in English.');
+      return Translations.english();
     }
   }
 
-  /// The signed-in user's language code from `tblUserLanguage`, or English
-  /// when none is set.
-  ///
-  /// - Not signed in (401): English. Screens before sign-in must still render.
-  /// - Several languages assigned (409 `configuration_error`, CLARIFY-07): the
-  ///   app still has to render, so English is used and the data problem is
-  ///   logged.
-  /// - Anything else is rethrown.
+  /// The user's language code, or English:
+  /// - none assigned, or not signed in (401) → English
+  /// - several assigned (409 `configuration_error`, CLARIFY-07) → English, logged as an error
+  /// - API/database unreachable → English, logged
   Future<String> resolveUserLanguageCode() async {
     try {
-      return await _api.currentUserLanguage() ?? fallbackLanguageCode;
+      return await _api.currentUserLanguage() ?? englishLanguageCode;
     } on ApiClientException catch (e) {
-      switch (e.error?.code) {
-        case ApiErrorCode.unauthenticated:
-          return fallbackLanguageCode;
-        case ApiErrorCode.configurationError:
-          _log.severe('User language is misconfigured (${e.error?.message}); showing "$fallbackLanguageCode".');
-          return fallbackLanguageCode;
-        default:
-          rethrow;
+      final code = e.error?.code;
+      if (code == ApiErrorCode.configurationError) {
+        _log.severe('User language is misconfigured (${e.error?.message}); using English.');
+      } else if (code != ApiErrorCode.unauthenticated) {
+        _log.warning('Could not read the user language ($e); using English.');
       }
+      return englishLanguageCode;
     }
   }
 
-  void clearCache() => _bundles.clear();
-
-  Future<Map<String, String>> _bundle(String code) {
-    return _bundles.putIfAbsent(code, () async {
-      try {
-        return (await _api.translationBundle(code)).texts;
-      } catch (_) {
-        unawaited(_bundles.remove(code)); // do not cache failures; allow retry
-        rethrow;
-      }
-    });
-  }
+  /// Drops cached bundles, e.g. after signing in as another user.
+  void clearCache() => _cache.clear();
 }

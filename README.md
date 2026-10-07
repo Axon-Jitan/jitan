@@ -49,16 +49,18 @@ dev-only permission evaluator allows everything. With `JITAN_ENV=production` (al
 default when unset) the server **refuses to start** if any `JITAN_DEV_*` variable is set,
 and every protected route answers 401/403 until real auth and permissions exist.
 
-**Translations.** All UI text comes from `tblTranslation`; English (`en`) is the default
-and fallback language. An empty dev database shows translation keys until seeded.
+**Translations.** English is built into the apps (`builtInEnglish` in `jitan_core`) and
+always works, even with no API or database. Other languages come from `tblTranslation`;
+missing texts fall back to English.
 
-**Development data.** To fill an empty dev database with `[DEV]` companies and users, and
-the English UI texts:
+**Development data.** To fill an empty dev database with `[DEV]` companies and users:
 
 ```sh
 cd server/jitan_api
-dart run tool/dev_seed.dart          # prints the userID to use as JITAN_DEV_USER_ID
-dart run tool/dev_seed.dart --remove # deletes the [DEV] companies and users (English texts stay)
+dart run tool/dev_seed.dart                   # prints the userID to use as JITAN_DEV_USER_ID
+dart run tool/dev_seed.dart --pseudo-language # also: a fake "[DEV] Pseudo" database language
+                                              # (texts in ⟦…⟧) assigned to the dev user
+dart run tool/dev_seed.dart --remove          # deletes everything the seed created
 ```
 
 Refuses to run outside `development`/`test`.

@@ -1,32 +1,35 @@
 import 'package:logging/logging.dart';
 
+import 'built_in_english.dart';
+
 final _log = Logger('i18n');
 
-/// Code of the default and fallback language. It is an ordinary
-/// `tblLanguage` row; this is only the code the fallback chain looks for.
-const fallbackLanguageCode = 'en';
+/// Code of English, the built-in default language. English is never loaded
+/// from the database; see [builtInEnglish].
+const englishLanguageCode = 'en';
 
-/// Loaded UI texts for one language, with the fallback chain:
+/// UI texts for one language, resolved per key:
 ///
 /// ```text
-/// selected language → English → the key itself (logged once)
+/// selected language (database bundle, non-English only)
+///   ↓ missing
+/// built-in English
+///   ↓ missing
+/// the key itself (logged once)
 /// ```
-///
-/// Every text comes from `tblTranslation` bundles; nothing here is a
-/// source of copy.
 class Translations {
+  /// [selected] is the database bundle of [languageCode]; empty for English.
+  /// [fallback] is the built-in English bundle; replaceable only in tests.
   Translations({
     required this.languageCode,
-    required this._selected,
-    required this._fallback,
-  });
+    Map<String, String> selected = const {},
+    this._fallback = builtInEnglish,
+  }) : _selected = languageCode == englishLanguageCode ? const {} : selected;
 
-  /// No texts at all: every lookup shows its key. Used before any bundle
-  /// could be loaded (e.g. the API address is missing) and in tests that
-  /// assert which key a widget uses.
-  Translations.keysOnly() : this(languageCode: fallbackLanguageCode, selected: const {}, fallback: const {});
+  /// English only. Always available, with no network.
+  Translations.english() : this(languageCode: englishLanguageCode);
 
-  /// The language actually being shown.
+  /// The language whose database bundle is applied (`en` = built-in only).
   final String languageCode;
 
   final Map<String, String> _selected;
@@ -39,20 +42,17 @@ class Translations {
     return args.isEmpty ? text : _substitute(text, args);
   }
 
-  /// Picks `<key>.one` for a count of 1 and `<key>.other` otherwise, with
-  /// `{n}` replaced by [count].
+  /// `<key>.one` for a count of 1, `<key>.other` otherwise, with `{n}`
+  /// replaced by [count].
   ///
   /// The one/other split fits English and Dutch. Languages with other plural
-  /// rules (e.g. French treats 0 as singular) need richer keys when they are
-  /// added.
+  /// rules (e.g. French treats 0 as singular) need richer keys when added.
   String plural(String key, int count) =>
       t(count == 1 ? '$key.one' : '$key.other', args: {'n': count});
 
-  bool has(String key) => _selected.containsKey(key) || _fallback.containsKey(key);
-
   String _missing(String key) {
     if (_reportedMissing.add(key)) {
-      _log.warning('Missing translation "$key" in "$languageCode" and in fallback "$fallbackLanguageCode".');
+      _log.warning('Missing translation "$key": not in "$languageCode" nor in built-in English.');
     }
     return key;
   }

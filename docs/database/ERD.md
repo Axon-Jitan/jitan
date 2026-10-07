@@ -314,8 +314,11 @@ grant, or a function grant alone.)*
 | `languageActive` | bool | |
 | `languageMFD` | bool | |
 
-Examples: English / `en`, Dutch / `nl`, French / `fr`. Jitan may grow to 50+ languages,
+Examples: Dutch / `nl`, French / `fr`, German / `de`. Jitan may grow to 50+ languages,
 so **the UI never assumes a fixed list**. The language picker reads this table.
+
+English is **built into the apps** (the guaranteed default and fallback, I18N-01). It may
+also have a row here if the database needs one, but the apps never depend on it.
 
 ## `tblUserLanguage`
 
@@ -340,8 +343,9 @@ UI strings per language.
 | `translationUIName` | string | | Stable translation **key**, e.g. `employee.home.welcome` |
 | `translationUIText` | string | | Translated text, e.g. `Welcome` / `Welkom` / `Bienvenue` |
 
-All client UI copy comes from here. There is no separate translation store
-(no ARB-only strings, no JSON files as the source of truth).
+The source of truth for every **non-English** language. English is the one built-in
+bundle (`builtInEnglish` in `packages/jitan_core`); a missing translation here falls back
+to it key by key. There are no ARB or JSON translation files.
 
 ---
 

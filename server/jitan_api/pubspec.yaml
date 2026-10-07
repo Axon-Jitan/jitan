@@ -15,5 +15,8 @@ dependencies:
   shelf_router: ^1.1.4
 
 dev_dependencies:
+  # tool/dev_seed.dart only (built-in English for the pseudo language).
+  jitan_core:
+    path: ../../packages/jitan_core
   lints: ^6.1.0
   test: ^1.25.0
