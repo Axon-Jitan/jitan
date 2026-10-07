@@ -8,6 +8,7 @@ const _db = {
   'JITAN_DB_NAME': 'jitan',
   'JITAN_DB_USER': 'jitan_app',
   'JITAN_DB_PASSWORD': 's3cret',
+  'JITAN_SESSION_SECRET': 'a-production-session-secret-of-32-chars-plus',
 };
 
 void main() {
@@ -18,10 +19,7 @@ void main() {
     });
 
     test('rejects an unknown JITAN_ENV', () {
-      expect(
-        () => AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'staging'}),
-        throwsA(isA<ConfigException>()),
-      );
+      expect(() => AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'staging'}), throwsA(isA<ConfigException>()));
     });
   });
 
@@ -29,23 +27,16 @@ void main() {
     test('production refuses to start when JITAN_DEV_USER_ID is set', () {
       expect(
         () => AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'production', 'JITAN_DEV_USER_ID': '1'}),
-        throwsA(isA<ConfigException>()
-            .having((e) => e.message, 'message', contains('JITAN_DEV_USER_ID'))),
+        throwsA(isA<ConfigException>().having((e) => e.message, 'message', contains('JITAN_DEV_USER_ID'))),
       );
     });
 
     test('unset JITAN_ENV with a dev variable also refuses (defaults to production)', () {
-      expect(
-        () => AppConfig.fromEnvironment({..._db, 'JITAN_DEV_USER_ID': '1'}),
-        throwsA(isA<ConfigException>()),
-      );
+      expect(() => AppConfig.fromEnvironment({..._db, 'JITAN_DEV_USER_ID': '1'}), throwsA(isA<ConfigException>()));
     });
 
     test('production refuses any other JITAN_DEV_* variable too', () {
-      expect(
-        () => AppConfig.fromEnvironment({..._db, 'JITAN_DEV_ANYTHING': 'x'}),
-        throwsA(isA<ConfigException>()),
-      );
+      expect(() => AppConfig.fromEnvironment({..._db, 'JITAN_DEV_ANYTHING': 'x'}), throwsA(isA<ConfigException>()));
     });
 
     test('production ignores an empty JITAN_DEV_* variable', () {
@@ -54,8 +45,7 @@ void main() {
     });
 
     test('development reads JITAN_DEV_USER_ID', () {
-      final config =
-          AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'development', 'JITAN_DEV_USER_ID': '42'});
+      final config = AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'development', 'JITAN_DEV_USER_ID': '42'});
       expect(config.devUserId, 42);
     });
 
@@ -85,22 +75,57 @@ void main() {
     });
 
     test('parses CORS origins', () {
-      final config = AppConfig.fromEnvironment(
-        {..._db, 'JITAN_CORS_ORIGINS': 'http://localhost:5000, http://127.0.0.1:5000,'},
-      );
+      final config = AppConfig.fromEnvironment({
+        ..._db,
+        'JITAN_CORS_ORIGINS': 'http://localhost:5000, http://127.0.0.1:5000,',
+      });
       expect(config.corsOrigins, {'http://localhost:5000', 'http://127.0.0.1:5000'});
     });
 
     test('rejects an invalid port', () {
-      expect(
-        () => AppConfig.fromEnvironment({..._db, 'JITAN_HTTP_PORT': '99999'}),
-        throwsA(isA<ConfigException>()),
-      );
+      expect(() => AppConfig.fromEnvironment({..._db, 'JITAN_HTTP_PORT': '99999'}), throwsA(isA<ConfigException>()));
     });
 
     test('database description never contains the password', () {
       final config = AppConfig.fromEnvironment(_db);
       expect(config.database.toString(), isNot(contains('s3cret')));
+    });
+  });
+
+  group('sessions and password hashing', () {
+    test('production requires a session secret of at least 32 characters', () {
+      final withoutSecret = Map.of(_db)..remove('JITAN_SESSION_SECRET');
+      expect(() => AppConfig.fromEnvironment(withoutSecret), throwsA(isA<ConfigException>()));
+      expect(
+        () => AppConfig.fromEnvironment({..._db, 'JITAN_SESSION_SECRET': 'too-short'}),
+        throwsA(isA<ConfigException>()),
+      );
+    });
+
+    test('development may omit the secret (a random one is used)', () {
+      final withoutSecret = Map.of(_db)..remove('JITAN_SESSION_SECRET');
+      final config = AppConfig.fromEnvironment({...withoutSecret, 'JITAN_ENV': 'development'});
+      expect(config.sessionSecret, isNull);
+    });
+
+    test('defaults: 30-day sessions, OWASP Argon2id parameters', () {
+      final config = AppConfig.fromEnvironment(_db);
+      expect(config.sessionLifetime, const Duration(days: 30));
+      expect(config.passwordHashing.memoryKiB, 19456);
+      expect(config.passwordHashing.iterations, 2);
+    });
+
+    test('Argon2id parameters are configurable but bounded', () {
+      final tuned = AppConfig.fromEnvironment({
+        ..._db,
+        'JITAN_ARGON2_MEMORY_KIB': '47104',
+        'JITAN_ARGON2_ITERATIONS': '1',
+      });
+      expect(tuned.passwordHashing.memoryKiB, 47104);
+      expect(
+        () => AppConfig.fromEnvironment({..._db, 'JITAN_ARGON2_MEMORY_KIB': '1024'}),
+        throwsA(isA<ConfigException>()),
+      );
     });
   });
 }

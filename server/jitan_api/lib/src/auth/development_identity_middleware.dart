@@ -8,7 +8,9 @@ import 'request_identity.dart';
 
 final _log = Logger('auth.dev_identity');
 
-/// DEVELOPMENT ONLY: treats every request as coming from `JITAN_DEV_USER_ID`.
+/// DEVELOPMENT ONLY: treats every request without a session token as coming
+/// from `JITAN_DEV_USER_ID`. A request already authenticated with a session
+/// token keeps that identity.
 ///
 /// Replaces authentication only. The user must still exist and be active,
 /// exactly as real authentication will require, and authorization still runs.
@@ -30,6 +32,7 @@ class DevelopmentIdentityMiddleware {
   final UserRepository users;
 
   Middleware get middleware => (inner) => (request) async {
+        if (request.hasIdentity) return inner(request);
         if (!await users.isActiveUser(devUserId)) {
           throw ApiException.unauthenticated(
             'JITAN_DEV_USER_ID=$devUserId is not an active, non-deleted user in tblUser.',

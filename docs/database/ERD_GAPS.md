@@ -149,6 +149,12 @@ valid for Terminal check-in/out. The guard is enforced twice: a check before wor
    they can't be listed or revoked per device without storage.
 4. **Missing:** session/device storage. Question for IT: is V1 acceptable with stateless
    expiring tokens, no session list/revoke, and device-local notifications only?
+5. **Interim (ONB-05, in place):** onboarding "registers" the device only inside its
+   session token: a signed, expiring token carrying the userID, the device id and a
+   fingerprint of the password hash. Nothing about the device is persisted. Until IT adds
+   storage: no list of trusted devices; one device can't be revoked on its own (changing
+   the password or deactivating the employee ends **all** sessions); a stolen token stays
+   valid until it expires (default 30 days).
 
 ## GAP-06: Short-exit threshold
 **ERD GAP — requires clarification with IT.** · Status: `OPEN`
@@ -237,13 +243,17 @@ valid for Terminal check-in/out. The guard is enforced twice: a check before wor
 
 ## CLARIFY-01: Password and PIN hashing · `OPEN` · IT CLARIFICATION, blocks production auth only
 
-**Interim implementation (ONB-01):** bcrypt `$2b$`, cost 12, via `PasswordHasher`. The
-format is self-identifying, so if IT requires another algorithm, existing hashes can be
-recognised and re-hashed at the user's next sign-in.
+**Implementation:** Argon2id (RFC 9106) via `PasswordHasher`, stored as the standard PHC
+string `$argon2id$v=19$m=19456,t=2,p=1$<salt>$<hash>` (verified against libsodium).
+Default parameters are OWASP's (19 MiB, 2 iterations, 1 lane), about 140 ms per hash on
+the development machine (compiled); they are configurable (`JITAN_ARGON2_*`) and must be
+measured on the production server with `tool/bench_argon2.dart`. The format is
+self-identifying, so if IT requires another algorithm, existing hashes can be recognised
+and re-hashed at the next sign-in. The default format is 97 characters long.
+**Question for IT:** is `userPassword` at least that wide (e.g. `VARCHAR(255)`)?
 Is anything else already writing or reading `tblUser.userPassword` / `userPINCode`? If so,
 Jitan must use **the same hashing algorithm and parameters**, or existing users can't log
-in. If not, Jitan will use a modern algorithm (argon2id or bcrypt). Plaintext is not an
-option either way.
+in. If not, Jitan uses Argon2id as above. Plaintext is not an option either way.
 
 ## CLARIFY-02: What `tblTimeRegType` encodes · `OPEN`
 Roadmap §15 wants both an **event kind** (arrival / departure / break) and a **source**

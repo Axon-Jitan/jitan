@@ -95,10 +95,22 @@ derived policy value is shown or persisted.
 Status: `OPEN` · development defaults in place, does not block
 
 Defined once in `server/jitan_api/lib/src/auth/password_policy.dart`: at least **8
-characters**, not only spaces, at most **72 bytes** (bcrypt ignores anything longer, so it
-is refused rather than silently cut). Passwords are used exactly as typed (never
-trimmed). Open: required length, character classes, a breached-password check, and
-whether HR/Admin accounts need stricter rules.
+characters** (12+ recommended to the employee), not only spaces, at most **256
+characters** (only a guard against abuse; Argon2id has no 72-byte limit). Letters,
+numbers, symbols and any Unicode are allowed; no composition rules. Passwords are used
+exactly as typed (never trimmed). Open: a breached-password check, and whether HR/Admin
+accounts need stricter rules.
+
+---
+
+## PRODUCT-CLARIFY-SESSION-LIFETIME: How long a device stays signed in
+Status: `OPEN` · development default in place, does not block
+
+A session from onboarding (or later sign-in) lasts **30 days** by default
+(`JITAN_SESSION_LIFETIME_DAYS`). There is no refresh yet: when it expires the employee
+signs in again with code + password. Open: the lifetime for mobile, Terminal and
+Employee Web; whether activity extends it; whether HR/Admin need shorter sessions.
+Revoking a single device needs storage (GAP-05).
 
 ---
 

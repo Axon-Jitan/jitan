@@ -9,11 +9,16 @@ import 'api_client_exception.dart';
 /// Sends requests to the Jitan API and turns every outcome into either a
 /// decoded JSON object or an [ApiClientException].
 ///
-/// Authentication headers will be added here once real login exists; the
-/// per-resource API classes stay unchanged.
+/// With [accessToken], every request carries `Authorization: Bearer <token>`
+/// (the session from onboarding or sign-in). The per-resource API classes
+/// stay unaware of authentication.
 class ApiTransport {
-  ApiTransport({required this.baseUri, http.Client? httpClient, this.timeout = defaultTimeout})
-      : _http = httpClient ?? http.Client();
+  ApiTransport({required this.baseUri, http.Client? httpClient, this.timeout = defaultTimeout, this.accessToken})
+    : _http = httpClient ?? http.Client();
+
+  /// Returns the current session token, or `null` when signed out. Read on
+  /// every request, so signing in or out takes effect immediately.
+  final String? Function()? accessToken;
 
   static const defaultTimeout = Duration(seconds: 15);
 
@@ -23,10 +28,8 @@ class ApiTransport {
   final http.Client _http;
 
   Future<Map<String, Object?>> getJson(String path, {Map<String, String>? query}) {
-    final uri = baseUri.resolve(path).replace(
-          queryParameters: (query == null || query.isEmpty) ? null : query,
-        );
-    return _send('GET', uri, () => _http.get(uri, headers: const {'accept': 'application/json'}));
+    final uri = baseUri.resolve(path).replace(queryParameters: (query == null || query.isEmpty) ? null : query);
+    return _send('GET', uri, () => _http.get(uri, headers: _headers(const {'accept': 'application/json'})));
   }
 
   /// POSTs [body] as JSON.
@@ -42,7 +45,7 @@ class ApiTransport {
       uri,
       () => _http.post(
         uri,
-        headers: const {'accept': 'application/json', 'content-type': 'application/json; charset=utf-8'},
+        headers: _headers(const {'accept': 'application/json', 'content-type': 'application/json; charset=utf-8'}),
         body: jsonEncode(body),
       ),
     );
@@ -71,6 +74,11 @@ class ApiTransport {
       response.statusCode,
       'Unexpected ${response.statusCode} response without a structured error.',
     );
+  }
+
+  Map<String, String> _headers(Map<String, String> base) {
+    final token = accessToken?.call();
+    return token == null ? base : {...base, 'authorization': 'Bearer $token'};
   }
 
   void close() => _http.close();

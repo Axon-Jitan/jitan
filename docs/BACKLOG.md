@@ -145,9 +145,11 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 
 | Task | Scope | Status |
 |---|---|---|
-| ONB-01 | Server: `POST /onboarding/start` resolves a scanned `userQRcode`; `POST /onboarding/complete` sets the mandatory password (bcrypt), which completes onboarding; **re-onboarding guard** (`userPassword IS NOT NULL` → 409), row-locked and race-safe; audited; `OnboardingApi` client ready for ONB-02 | `DONE` |
+| ONB-01 | Server: `POST /onboarding/start` resolves a scanned `userQRcode`; `POST /onboarding/complete` sets the mandatory password (Argon2id since ONB-05), which completes onboarding; **re-onboarding guard** (`userPassword IS NOT NULL` → 409), row-locked and race-safe; audited; `OnboardingApi` client ready for ONB-02 | `DONE` |
 | ONB-04 | Rate limiting on the public onboarding endpoints (defence in depth; the 144-bit QR is not guessable) | `TODO` |
-| ONB-05 | Session/token issued when onboarding completes, so the app is signed in straight away (part of real authentication) | `TODO` |
+| ONB-05 | Argon2id password hashing (off the event loop, PHC format, benchmark tool `tool/bench_argon2.dart`); onboarding completion stores the password and language in one transaction and returns a session token for the device (no second sign-in); bearer-token middleware (active + password-fingerprint check on every request); `GET /me`; `ApiTransport.accessToken`, `MeApi` | `DONE` |
+| ONB-06 | Persisted trusted devices and per-device revocation: blocked on **GAP-05** (no device/session table). Until then the device id lives only in the stateless token | `BLOCKED` |
+| AUTH-01 | Sign-in with employee code + password (new device, reinstall, expired session, sign-out, Employee Web); issues the same session token | `TODO` |
 | ONB-02 | Employee app (Android first): welcome → scan → confirm account → language → registration method → permissions → notifications → set password → ready (roadmap §11) | `TODO` |
 | ONB-03a | HR side: Activated / Not activated in the list's Onboarding column, the details Account field and the Onboarding card; activated employees' QR shown as the personal Terminal QR | `DONE` |
 | ONB-03b | HR side: live "Employee activated" confirmation while the QR modal is open (Figma `153:532`); needs polling or push | `TODO` |

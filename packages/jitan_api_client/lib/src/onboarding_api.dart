@@ -14,21 +14,23 @@ class OnboardingApi {
   ///
   /// Fails with `onboarding_already_completed` once a password is set: the
   /// same QR then only works at Jitan Terminal.
-  Future<OnboardingAccount> start(String qrCode) =>
-      _account(_transport.postJson('onboarding/start', OnboardingStartRequest(qrCode: qrCode).toJson()));
+  Future<EmployeeAccount> start(String qrCode) async {
+    final json = await _transport.postJson('onboarding/start', OnboardingStartRequest(qrCode: qrCode).toJson());
+    return _decode('Onboarding account', () => EmployeeAccount.fromJson(json));
+  }
 
-  /// Sets the first password, which completes onboarding.
-  Future<OnboardingAccount> complete(String qrCode, String password) => _account(_transport.postJson(
-        'onboarding/complete',
-        OnboardingCompleteRequest(qrCode: qrCode, password: password).toJson(),
-      ));
+  /// Sets the mandatory first password, which completes onboarding, and
+  /// returns the session for this device: no separate sign-in follows.
+  Future<OnboardingCompleteResponse> complete(OnboardingCompleteRequest request) async {
+    final json = await _transport.postJson('onboarding/complete', request.toJson());
+    return _decode('Onboarding result', () => OnboardingCompleteResponse.fromJson(json));
+  }
 
-  static Future<OnboardingAccount> _account(Future<Map<String, Object?>> request) async {
-    final json = await request;
+  static T _decode<T>(String what, T Function() decode) {
     try {
-      return OnboardingAccount.fromJson(json);
+      return decode();
     } on FormatException catch (e) {
-      throw ApiClientException.invalidResponse(200, 'Onboarding account: ${e.message}');
+      throw ApiClientException.invalidResponse(200, '$what: ${e.message}');
     }
   }
 }

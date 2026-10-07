@@ -1,32 +1,36 @@
-import 'dart:convert';
-
 import 'package:jitan_models/jitan_models.dart';
 
 import '../http/api_exception.dart';
 
-/// Rules a new password must meet. The one place they are defined.
+/// Rules a new password must meet. The one place they are defined (V1,
+/// agreed 2026-10-07).
 ///
-/// Development defaults, pending PRODUCT-CLARIFY-PASSWORD-POLICY:
-/// - at least [minLength] characters, not only whitespace
-/// - at most [maxBytes] UTF-8 bytes: bcrypt ignores everything after 72
-///   bytes, so a longer password is refused instead of silently shortened
+/// - at least [minLength] characters; [recommendedLength]+ is recommended
+///   (shown by the apps, not enforced)
+/// - letters, numbers and symbols all allowed; no composition rules
+/// - not only whitespace
+/// - at most [maxLength] characters: no algorithm limit applies (Argon2id
+///   takes any length), this only bounds the work one request can cause
+/// - used exactly as typed, never trimmed
 abstract final class PasswordPolicy {
   static const minLength = 8;
-  static const maxBytes = 72;
+  static const recommendedLength = 12;
+  static const maxLength = 256;
 
   /// Throws 400 `validation_failed` (field `password`) when [password] breaks
-  /// a rule. The password is used exactly as given: never trimmed.
+  /// a rule.
   static void check(String password) {
-    if (password.trim().isEmpty || password.runes.length < minLength) {
+    final length = password.runes.length;
+    if (password.trim().isEmpty || length < minLength) {
       throw const ApiException.validation(
         OnboardingCompleteRequest.fieldPassword,
         'The password must be at least $minLength characters.',
       );
     }
-    if (utf8.encode(password).length > maxBytes) {
+    if (length > maxLength) {
       throw const ApiException.validation(
         OnboardingCompleteRequest.fieldPassword,
-        'The password is too long.',
+        'The password must be at most $maxLength characters.',
       );
     }
   }

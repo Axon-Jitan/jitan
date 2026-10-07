@@ -12,7 +12,8 @@ import 'onboarding_service.dart';
 /// personal QR is the credential.
 ///
 /// - `POST /onboarding/start` `{qrCode}` → the account to confirm
-/// - `POST /onboarding/complete` `{qrCode, password}` → onboarding completed
+/// - `POST /onboarding/complete` `{qrCode, password, deviceId, languageCode?}`
+///   → onboarding completed **and** this device signed in (session token)
 class OnboardingRoutes {
   const OnboardingRoutes(this._onboarding);
 
@@ -24,12 +25,12 @@ class OnboardingRoutes {
 
   Future<Response> _start(Request request) async {
     final body = await _read(request, OnboardingStartRequest.fromJson);
-    return _noStore(await _onboarding.start(body.qrCode));
+    return _noStore((await _onboarding.start(body.qrCode)).toJson());
   }
 
   Future<Response> _complete(Request request) async {
     final body = await _read(request, OnboardingCompleteRequest.fromJson);
-    return _noStore(await _onboarding.complete(body.qrCode, body.password));
+    return _noStore((await _onboarding.complete(body)).toJson());
   }
 
   static Future<T> _read<T>(Request request, T Function(Map<String, Object?>) fromJson) async {
@@ -40,6 +41,7 @@ class OnboardingRoutes {
     }
   }
 
-  static Response _noStore(OnboardingAccount account) =>
-      jsonResponse(account.toJson()).change(headers: const {'cache-control': 'no-store'});
+  /// Responses can carry a session token: never cached.
+  static Response _noStore(Map<String, Object?> body) =>
+      jsonResponse(body).change(headers: const {'cache-control': 'no-store'});
 }

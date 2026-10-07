@@ -11,6 +11,7 @@ import 'http/cors_middleware.dart';
 import 'http/error_middleware.dart';
 import 'languages/language_routes.dart';
 import 'onboarding/onboarding_routes.dart';
+import 'users/me_routes.dart';
 
 final _log = Logger('http.requests');
 
@@ -21,9 +22,9 @@ final _log = Logger('http.requests');
 ///                                    → identity → API routes             (authenticated)
 /// ```
 ///
-/// [identity] is the authentication middleware. Today it is the development
-/// identity (or `null`, leaving every API route unauthenticated → 401).
-/// Real authentication replaces it here and nowhere else.
+/// [authentication] runs in order before the API routes: session tokens,
+/// then (development only) the development identity for requests without a
+/// token. With none attaching an identity, API routes answer 401.
 Handler buildApp({
   required Set<String> corsOrigins,
   required HealthRoutes health,
@@ -32,16 +33,20 @@ Handler buildApp({
   required GroupRoutes groups,
   required LanguageRoutes languages,
   required OnboardingRoutes onboarding,
-  Middleware? identity,
+  required MeRoutes me,
+  List<Middleware> authentication = const [],
 }) {
   final apiRoutes = Router(notFoundHandler: _notFound)
     ..mount('/', companies.router.call)
     ..mount('/', employees.router.call)
     ..mount('/', groups.router.call)
-    ..mount('/', languages.authenticatedRouter.call);
+    ..mount('/', languages.authenticatedRouter.call)
+    ..mount('/', me.router.call);
 
   var api = const Pipeline();
-  if (identity != null) api = api.addMiddleware(identity);
+  for (final middleware in authentication) {
+    api = api.addMiddleware(middleware);
+  }
 
   final routes = Cascade()
       .add(health.router.call)

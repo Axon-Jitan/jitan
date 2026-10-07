@@ -114,9 +114,20 @@ hardcode or invent them.
    endpoints take the company in the path (`/companies/{id}/…`), query only that company,
    and pass it to `Authorizer.require(…, companyId: id)` so the permission evaluator can
    enforce access. Never only in the UI.
-8. **Passwords and PINs are hashed server-side** (`userPassword`, `userPINCode`). They are
-   never visible to HR/Admin, never logged, never returned by an API. Algorithm pending
-   **CLARIFY-01** (blocks production auth only; development uses the dev identity).
+8. **Passwords and PINs are hashed server-side** (`userPassword`, `userPINCode`) with
+   **Argon2id** (`PasswordHasher`: random 16-byte salt, PHC string
+   `$argon2id$v=19$m=…,t=…,p=…$salt$hash` stored whole, computed in a separate isolate,
+   parameters from `JITAN_ARGON2_*`, default m=19456 KiB/t=2/p=1). Plaintext and hashes are
+   never visible to HR/Admin, never logged, never returned by an API. Rules in
+   `PasswordPolicy` (8..256 characters, never trimmed). CLARIFY-01 asks IT whether another
+   system already writes these columns.
+9. **Sessions are stateless signed tokens** (`SessionTokens`, HS256, secret
+   `JITAN_SESSION_SECRET`, required in production): claims `sub` (userID), `did` (device),
+   `exp`, and `pwf`, a fingerprint of the current password hash, so a password change ends
+   every session. `TokenAuthenticationMiddleware` checks the token *and* that the user is
+   still active and the fingerprint matches on every request. Onboarding completion returns
+   the first session, so no sign-in follows onboarding. No session/device table exists
+   (GAP-05): sessions can't be listed or revoked one by one.
 
 ## QR types: do not conflate
 
@@ -181,7 +192,7 @@ named so it can be found:
 
 | Item | Replace with | Blocked on |
 |---|---|---|
-| `DevelopmentIdentityMiddleware` | real authentication middleware attaching `RequestIdentity` | CLARIFY-01 |
+| `DevelopmentIdentityMiddleware` | `TokenAuthenticationMiddleware` (exists; runs first) once sign-in exists for HR/Admin web | AUTH-01 |
 | `DevelopmentPermissionEvaluator` / `UnconfiguredPermissionEvaluator` | evaluator over `tblCredGroup`/`tblAppModulesCredGroup`/`tblFunction` | CLARIFY-10, -11 |
 | Sidebar role caption omitted | signed-in user's credential group from a `/me` endpoint | CLARIFY-11 |
 | `DevCompanySelector` (admin_web, only with `JITAN_DEV_TOOLS=true`) | the production company switcher | switcher design (PRODUCT-CLARIFY-EMPLOYEES-LIST) |

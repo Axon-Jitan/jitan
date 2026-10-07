@@ -42,7 +42,9 @@ dart run bin/server.dart
   (no sign-in needed, so the login screen can be translated)
 - `GET /me/language`: the signed-in user's language from `tblUserLanguage`
 - `POST /onboarding/start`, `POST /onboarding/complete`: employee onboarding with the
-  personal QR (no sign-in; the QR is the credential; refused once a password is set)
+  personal QR (no sign-in; the QR is the credential; refused once a password is set).
+  Completing sets the mandatory password and returns a session token for that device
+- `GET /me`: the signed-in employee (`Authorization: Bearer <token>`)
 - `GET /companies?search=`: company list (needs an identity, see below)
 - `GET /companies/{id}/employees?search=`: that company's employees
 - `POST /companies/{id}/employees`: create an employee in that company
@@ -50,7 +52,14 @@ dart run bin/server.dart
 - `POST /companies/{id}/employees/{userId}/onboarding-qr`: the employee's onboarding / personal QR value
 - `GET /groups`: assignable employee groups (the "Employee type")
 
-**Development identity.** Real login isn't built yet. With `JITAN_ENV=development`, set
+**Sessions.** `Authorization: Bearer <token>` with a token from onboarding. Set
+`JITAN_SESSION_SECRET` (32+ characters, required in production; in development a random
+one is generated per start, so tokens don't survive a restart) and optionally
+`JITAN_SESSION_LIFETIME_DAYS` (default 30). Password hashing is Argon2id; tune it with
+`JITAN_ARGON2_MEMORY_KIB`, `JITAN_ARGON2_ITERATIONS`, `JITAN_ARGON2_PARALLELISM` after
+measuring on the server with `tool/bench_argon2.dart` (compile it for realistic numbers).
+
+**Development identity.** Sign-in for HR/Admin isn't built yet. With `JITAN_ENV=development`, set
 `JITAN_DEV_USER_ID` to an active `tblUser.userID`; every request then acts as that user. A
 dev-only permission evaluator allows everything. With `JITAN_ENV=production` (also the
 default when unset) the server **refuses to start** if any `JITAN_DEV_*` variable is set,

@@ -6,7 +6,10 @@ import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/auth/authorizer.dart';
 import 'package:jitan_api/src/auth/development_identity_middleware.dart';
 import 'package:jitan_api/src/auth/development_permission_evaluator.dart';
+import 'package:jitan_api/src/auth/password_hasher.dart';
 import 'package:jitan_api/src/auth/permission_evaluator.dart';
+import 'package:jitan_api/src/auth/session_tokens.dart';
+import 'package:jitan_api/src/auth/token_authentication_middleware.dart';
 import 'package:jitan_api/src/auth/unconfigured_permission_evaluator.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
 import 'package:jitan_api/src/companies/company_routes.dart';
@@ -29,6 +32,7 @@ import 'package:jitan_api/src/languages/translation_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
+import 'package:jitan_api/src/users/me_routes.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:logging/logging.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
@@ -64,17 +68,25 @@ Future<void> main() async {
       : const UnconfiguredPermissionEvaluator();
   final authorizer = Authorizer(permissions);
 
-  final devUserId = config.devUserId;
-  final identity = devUserId == null
-      ? null
-      : DevelopmentIdentityMiddleware(
-          environment: config.environment,
-          devUserId: devUserId,
-          users: users,
-        ).middleware;
-  if (identity == null) {
-    _log.warning('No authentication mechanism configured: API routes will answer 401.');
+  final sessionSecret = config.sessionSecret;
+  final sessions = sessionSecret == null
+      ? SessionTokens.withRandomSecret(lifetime: config.sessionLifetime)
+      : SessionTokens(secret: sessionSecret, lifetime: config.sessionLifetime);
+  if (sessionSecret == null) {
+    _log.warning('JITAN_SESSION_SECRET not set: using a random one (development only); sessions end on restart.');
   }
+  _log.info('Password hashing: ${config.passwordHashing}');
+
+  final devUserId = config.devUserId;
+  final authentication = [
+    TokenAuthenticationMiddleware(tokens: sessions, users: users).middleware,
+    if (devUserId != null)
+      DevelopmentIdentityMiddleware(
+        environment: config.environment,
+        devUserId: devUserId,
+        users: users,
+      ).middleware,
+  ];
 
   final handler = buildApp(
     corsOrigins: config.corsOrigins,
@@ -95,12 +107,16 @@ Future<void> main() async {
     onboarding: OnboardingRoutes(
       OnboardingService(
         onboarding: const OnboardingRepository(),
+        languages: LanguageRepository(db),
         audit: const AuditLogRepository(),
         transactions: db,
         executor: db,
+        sessions: sessions,
+        hasher: PasswordHasher(parameters: config.passwordHashing),
       ),
     ),
-    identity: identity,
+    me: MeRoutes(users),
+    authentication: authentication,
   );
 
   final server = await shelf_io.serve(handler, config.httpHost, config.httpPort);

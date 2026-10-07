@@ -1,4 +1,8 @@
+import 'package:logging/logging.dart';
+
 import '../database/sql_executor.dart';
+
+final _log = Logger('onboarding');
 
 /// The `tblUser` row a personal QR belongs to, as onboarding needs it.
 /// Never carries the password hash itself, only whether one is set.
@@ -14,7 +18,8 @@ typedef OnboardingUser = ({
   bool passwordSet,
 });
 
-/// Data access for onboarding: `tblUser` by `userQRcode`.
+/// Data access for onboarding: `tblUser` by `userQRcode`, and the user's
+/// language in `tblUserLanguage`.
 class OnboardingRepository {
   const OnboardingRepository();
 
@@ -61,4 +66,27 @@ class OnboardingRepository {
       ))
           .affectedRows ==
       1;
+
+  /// Makes [languageId] the user's language (one per user, CLARIFY-07): adds
+  /// it when the user has none, changes it when the user has exactly one.
+  /// With several assigned (inconsistent data), nothing is changed and the
+  /// problem is logged rather than guessed at.
+  Future<void> setLanguage(SqlExecutor tx, int userId, int languageId) async {
+    final current = await tx.query('SELECT userLanguageID FROM tblUserLanguage WHERE userID = :userId', {
+      'userId': userId,
+    });
+    if (current.isEmpty) {
+      await tx.execute(
+        'INSERT INTO tblUserLanguage (userID, languageID) VALUES (:userId, :languageId)',
+        {'userId': userId, 'languageId': languageId},
+      );
+    } else if (current.length == 1) {
+      await tx.execute(
+        'UPDATE tblUserLanguage SET languageID = :languageId WHERE userLanguageID = :id',
+        {'languageId': languageId, 'id': current.single.readInt('userLanguageID')},
+      );
+    } else {
+      _log.warning('User $userId has ${current.length} languages (CLARIFY-07); onboarding choice not stored.');
+    }
+  }
 }

@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:jitan_api/src/app.dart';
 import 'package:jitan_api/src/auth/authorizer.dart';
 import 'package:jitan_api/src/auth/development_identity_middleware.dart';
+import 'package:jitan_api/src/auth/session_tokens.dart';
+import 'package:jitan_api/src/auth/token_authentication_middleware.dart';
+import 'package:jitan_api/src/users/me_routes.dart';
 import 'package:jitan_api/src/companies/company_routes.dart';
 import 'package:jitan_api/src/companies/company_service.dart';
 import 'package:jitan_api/src/config/app_environment.dart';
@@ -28,6 +31,7 @@ class TestApp {
     Set<String> corsOrigins = const {},
   }) {
     permissions = FixedPermissionEvaluator(allow: allowPermissions);
+    users = FakeUserRepository(activeUserIds, passwordHashes: onboarding.passwordHashes, onboarding: onboarding);
     handler = buildApp(
       corsOrigins: corsOrigins,
       health: HealthRoutes(databaseHealth),
@@ -48,19 +52,24 @@ class TestApp {
       onboarding: OnboardingRoutes(
         OnboardingService(
           onboarding: onboarding,
+          languages: languages,
           audit: audit,
           transactions: transactions,
           executor: unusedExecutor,
+          sessions: sessions,
           hasher: hasher,
         ),
       ),
-      identity: devUserId == null
-          ? null
-          : DevelopmentIdentityMiddleware(
-              environment: AppEnvironment.test,
-              devUserId: devUserId,
-              users: FakeUserRepository(activeUserIds),
-            ).middleware,
+      me: MeRoutes(users),
+      authentication: [
+        TokenAuthenticationMiddleware(tokens: sessions, users: users).middleware,
+        if (devUserId != null)
+          DevelopmentIdentityMiddleware(
+            environment: AppEnvironment.test,
+            devUserId: devUserId,
+            users: users,
+          ).middleware,
+      ],
     );
   }
 
@@ -71,15 +80,28 @@ class TestApp {
   final transactions = FakeTransactions();
   final onboarding = FakeOnboardingRepository();
   final unusedExecutor = UnusedExecutor();
+  late final FakeUserRepository users;
 
-  /// bcrypt's minimum cost keeps tests fast; production uses cost 12.
-  final hasher = const PasswordHasher(cost: 4);
+  /// Fixed secret and clock so tokens are reproducible.
+  DateTime now = DateTime.utc(2026, 10, 7, 12);
+  late final sessions = SessionTokens(
+    secret: 'test-session-secret-at-least-32-characters',
+    lifetime: const Duration(days: 30),
+    clock: () => now,
+  );
+
+  /// Cheap Argon2id parameters keep tests fast; production uses
+  /// [Argon2idParameters.recommended].
+  final hasher = const PasswordHasher(parameters: Argon2idParameters(memoryKiB: 8192, iterations: 1));
   var _qrCounter = 0;
   final databaseHealth = FakeDatabaseHealthRepository();
   final languages = FakeLanguageRepository();
   final translations = FakeTranslationRepository();
   late final FixedPermissionEvaluator permissions;
   late final Handler handler;
+
+  /// GET with `Authorization: Bearer <token>`.
+  Future<Response> getAuthorized(String path, String token) => get(path, headers: {'authorization': 'Bearer $token'});
 
   Future<Response> get(String path, {Map<String, String> headers = const {}}) =>
       Future.sync(() => handler(Request('GET', Uri.parse('http://localhost$path'), headers: headers)));

@@ -184,6 +184,12 @@ class FakeOnboardingRepository implements OnboardingRepository {
     passwordHashes[userId] = passwordHash;
     return true;
   }
+
+  /// userId → languageID stored during onboarding.
+  final languages = <int, int>{};
+
+  @override
+  Future<void> setLanguage(SqlExecutor tx, int userId, int languageId) async => languages[userId] = languageId;
 }
 
 class FakeGroupRepository implements GroupRepository {
@@ -248,12 +254,35 @@ class FakeDatabaseHealthRepository implements DatabaseHealthRepository {
 }
 
 class FakeUserRepository implements UserRepository {
-  FakeUserRepository(this.activeUserIds);
+  FakeUserRepository(this.activeUserIds, {Map<int, String>? passwordHashes, this.onboarding})
+    : passwordHashes = passwordHashes ?? {};
 
   final Set<int> activeUserIds;
 
+  /// userId → stored hash (shared with [FakeOnboardingRepository] in TestApp).
+  final Map<int, String> passwordHashes;
+
+  /// Source of names/companies for [account].
+  final FakeOnboardingRepository? onboarding;
+
   @override
   Future<bool> isActiveUser(int userId) async => activeUserIds.contains(userId);
+
+  @override
+  Future<String?> activePasswordHash(int userId) async =>
+      activeUserIds.contains(userId) ? passwordHashes[userId] : null;
+
+  @override
+  Future<EmployeeAccount?> account(int userId) async {
+    final user = onboarding?.users.values.where((u) => u.userId == userId).firstOrNull;
+    if (user == null) return null;
+    return EmployeeAccount(
+      firstName: user.firstName,
+      lastName: user.lastName,
+      code: user.code,
+      companies: onboarding!.companies[user.userId] ?? const [],
+    );
+  }
 }
 
 class FakeLanguageRepository implements LanguageRepository {

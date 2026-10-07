@@ -1,3 +1,4 @@
+import '../auth/password_hasher.dart';
 import 'app_environment.dart';
 import 'config_exception.dart';
 import 'database_config.dart';
@@ -14,6 +15,9 @@ class AppConfig {
     required this.corsOrigins,
     required this.database,
     required this.devUserId,
+    required this.sessionSecret,
+    required this.sessionLifetime,
+    required this.passwordHashing,
   });
 
   /// Builds the configuration from [env] and enforces the safety rules:
@@ -21,6 +25,8 @@ class AppConfig {
   /// - `JITAN_ENV` unset means production.
   /// - In production, any non-empty `JITAN_DEV_*` variable is a startup error,
   ///   so the development identity cannot be enabled by accident.
+  /// - In production, `JITAN_SESSION_SECRET` (at least 32 characters) is
+  ///   required: without it sessions could not be trusted across restarts.
   factory AppConfig.fromEnvironment(Map<String, String> env) {
     final environment = AppEnvironment.parse(env['JITAN_ENV']);
 
@@ -58,7 +64,37 @@ class AppConfig {
       devUserId: environment.allowsDevelopmentMechanisms
           ? _optionalPositiveInt(env, 'JITAN_DEV_USER_ID')
           : null,
+      sessionSecret: _sessionSecret(env, environment),
+      sessionLifetime: Duration(days: _optionalPositiveInt(env, 'JITAN_SESSION_LIFETIME_DAYS') ?? 30),
+      passwordHashing: _passwordHashing(env),
     );
+  }
+
+  static const _minSessionSecretLength = 32;
+
+  static String? _sessionSecret(Map<String, String> env, AppEnvironment environment) {
+    final secret = _optional(env, 'JITAN_SESSION_SECRET');
+    if (secret == null) {
+      if (environment.allowsDevelopmentMechanisms) return null;
+      throw const ConfigException('JITAN_SESSION_SECRET is required in production.');
+    }
+    if (secret.length < _minSessionSecretLength) {
+      throw const ConfigException('JITAN_SESSION_SECRET must be at least $_minSessionSecretLength characters.');
+    }
+    return secret;
+  }
+
+  static Argon2idParameters _passwordHashing(Map<String, String> env) {
+    const recommended = Argon2idParameters.recommended;
+    final parameters = Argon2idParameters(
+      memoryKiB: _optionalPositiveInt(env, 'JITAN_ARGON2_MEMORY_KIB') ?? recommended.memoryKiB,
+      iterations: _optionalPositiveInt(env, 'JITAN_ARGON2_ITERATIONS') ?? recommended.iterations,
+      parallelism: _optionalPositiveInt(env, 'JITAN_ARGON2_PARALLELISM') ?? recommended.parallelism,
+    );
+    if (!parameters.isWithinBounds) {
+      throw ConfigException('Argon2id parameters out of bounds: $parameters.');
+    }
+    return parameters;
   }
 
   static const _devPrefix = 'JITAN_DEV_';
@@ -75,6 +111,16 @@ class AppConfig {
   /// `tblUser.userID` used as the acting user by the development identity.
   /// Always `null` in production.
   final int? devUserId;
+
+  /// Key that signs session tokens. `null` only in development/test, where a
+  /// random one is generated at startup (sessions then end on restart).
+  final String? sessionSecret;
+
+  /// How long a session token is valid (PRODUCT-CLARIFY-SESSION-LIFETIME).
+  final Duration sessionLifetime;
+
+  /// Argon2id parameters for new password hashes.
+  final Argon2idParameters passwordHashing;
 
   static String? _optional(Map<String, String> env, String key) {
     final value = env[key]?.trim();
