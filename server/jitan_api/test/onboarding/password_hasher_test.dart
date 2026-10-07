@@ -53,7 +53,7 @@ void main() {
       for (final stored in [
         '',
         'not-a-hash',
-        r'$2b$12$abcdefghijklmnopqrstuuJ9Kc2T1t0FfQOqGq0Y8u6qkq0bCq4m', // legacy bcrypt
+        r'$2b$12$abcdefghijklmnopqrstuuJ9Kc2T1t0FfQOqGq0Y8u6qkq0bCq4m', // another system's format (CLARIFY-01)
         r'$argon2i$v=19$m=19456,t=2,p=1$zErgkdjGsO0Ach9svPT+8Q$lVRMkkxj5BHFhLsdVqkjsewhIzwbq01+cB6r4+yTnOE',
         r'$argon2id$v=19$m=9999999,t=2,p=1$zErgkdjGsO0Ach9svPT+8Q$lVRMkkxj5BHFhLsdVqkjsewhIzwbq01+cB6r4+yTnOE',
         r'$argon2id$v=19$m=19456,t=2,p=1$!!!$lVRMkkxj5BHFhLsdVqkjsewhIzwbq01+cB6r4+yTnOE',

@@ -46,7 +46,7 @@ void main() {
     await tapText(tester, 'Continue');
   }
 
-  testWidgets('scan → confirm → language → method → permissions → password → Ready → Home, no sign-in', (
+  testWidgets('scan → confirm → method → permissions → language → password → Ready → Home, no sign-in', (
     tester,
   ) async {
     await onboardUpToPassword(tester);

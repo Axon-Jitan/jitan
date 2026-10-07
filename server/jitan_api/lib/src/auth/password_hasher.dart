@@ -76,8 +76,8 @@ class PasswordHasher {
   }
 
   /// Whether [password] matches [encodedHash]. Anything that is not a
-  /// well-formed Argon2id hash within bounds (e.g. a legacy bcrypt hash or a
-  /// corrupted value) is a mismatch, never an error. Constant-time compare.
+  /// well-formed Argon2id hash within bounds (e.g. another system's format,
+  /// CLARIFY-01, or a corrupted value) is a mismatch, never an error. Constant-time compare.
   Future<bool> verify(String password, String encodedHash) => Isolate.run(() {
         final decoded = _decode(encodedHash);
         if (decoded == null) return false;

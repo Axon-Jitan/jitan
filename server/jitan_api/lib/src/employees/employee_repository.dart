@@ -89,8 +89,8 @@ class EmployeeRepository {
   Future<bool> codeExists(SqlExecutor executor, String code) async =>
       (await executor.query('SELECT 1 AS found FROM tblUser WHERE userCode = :code', {'code': code})).isNotEmpty;
 
-  /// Inserts an active, non-MFD user and returns its `userID`. No password,
-  /// PIN or email: those are set later (onboarding).
+  /// Inserts an active, non-MFD user and returns its `userID`. No password:
+  /// the employee sets it during onboarding (`userPassword IS NULL` until then).
   Future<int> insertUser(
     SqlExecutor tx, {
     required String firstName,

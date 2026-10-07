@@ -26,7 +26,7 @@ void main() {
   });
   tearDown(() => c.dispose());
 
-  /// Scan → confirm → language → method → permissions: at the password step.
+  /// Scan → confirm → method → permissions → language: at the password step.
   Future<void> toPassword({RegistrationMethod method = RegistrationMethod.automatic}) async {
     c.getStarted();
     await c.submitQr(testQr);
