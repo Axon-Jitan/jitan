@@ -21,5 +21,5 @@ class DevelopmentPermissionEvaluator implements PermissionEvaluator {
   }
 
   @override
-  Future<bool> isAllowed(RequestIdentity identity, Permission permission) async => true;
+  Future<bool> isAllowed(RequestIdentity identity, Permission permission, {int? companyId}) async => true;
 }

@@ -2,4 +2,5 @@
 /// listed (ENGINEERING_RULES §31: no dead navigation).
 abstract final class AdminRoutes {
   static const companies = '/companies';
+  static const employees = '/employees';
 }

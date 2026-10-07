@@ -42,6 +42,7 @@ dart run bin/server.dart
   (no sign-in needed, so the login screen can be translated)
 - `GET /me/language`: the signed-in user's language from `tblUserLanguage`
 - `GET /companies?search=`: company list (needs an identity, see below)
+- `GET /companies/{id}/employees?search=`: that company's employees
 
 **Development identity.** Real login isn't built yet. With `JITAN_ENV=development`, set
 `JITAN_DEV_USER_ID` to an active `tblUser.userID`; every request then acts as that user. A
@@ -57,7 +58,8 @@ missing texts fall back to English.
 
 ```sh
 cd server/jitan_api
-dart run tool/dev_seed.dart                   # prints the userID to use as JITAN_DEV_USER_ID
+dart run tool/dev_seed.dart                   # [DEV] companies, users, groups; prints the
+                                              # userID to use as JITAN_DEV_USER_ID
 dart run tool/dev_seed.dart --pseudo-language # also: a fake "[DEV] Pseudo" database language
                                               # (texts in ⟦…⟧) assigned to the dev user
 dart run tool/dev_seed.dart --remove          # deletes everything the seed created
@@ -69,8 +71,14 @@ Refuses to run outside `development`/`test`.
 
 ```sh
 cd apps/admin_web
-flutter run -d chrome --web-port 5000 --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080
+flutter run -d chrome --web-port 5000 \
+  --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080 \
+  --dart-define=JITAN_DEV_TOOLS=true
 ```
+
+`JITAN_DEV_TOOLS=true` (development only) shows the **current company selector** above every
+page. Company-scoped pages such as Employees need a current company, and the production
+company switcher is not designed yet. Leave it out of production builds.
 
 `JITAN_API_BASE_URL` is required. Without it the app shows a configuration error instead
 of guessing. The API must list the web origin in `JITAN_CORS_ORIGINS`

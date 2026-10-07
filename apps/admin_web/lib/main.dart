@@ -4,6 +4,7 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import 'src/app/admin_bootstrap.dart';
+import 'src/app/admin_services.dart';
 import 'src/app/configuration_error_app.dart';
 import 'src/config/admin_web_config.dart';
 
@@ -20,7 +21,11 @@ void main() {
   runApp(
     AdminBootstrap(
       translationService: TranslationService(LanguagesApi(transport)),
-      companiesApi: CompaniesApi(transport),
+      services: AdminServices(
+        companiesApi: CompaniesApi(transport),
+        employeesApi: EmployeesApi(transport),
+        devTools: config.devTools,
+      ),
     ),
   );
 }

@@ -7,6 +7,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../support/fake_companies_api.dart';
 import '../support/fake_languages_api.dart';
+import '../support/test_services.dart';
 
 /// The full client translation path for the Company list (I18N-01).
 void main() {
@@ -17,11 +18,13 @@ void main() {
   };
 
   late FakeLanguagesApi languages;
+  late TestServices fakes;
   late FakeCompaniesApi companies;
 
   setUp(() {
     languages = FakeLanguagesApi({'nl': dutch});
-    companies = FakeCompaniesApi();
+    fakes = TestServices();
+    companies = fakes.companies;
   });
 
   Future<void> pumpBootstrap(WidgetTester tester) async {
@@ -29,7 +32,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      AdminBootstrap(translationService: TranslationService(languages), companiesApi: companies),
+      AdminBootstrap(translationService: TranslationService(languages), services: fakes.services),
     );
   }
 
@@ -87,7 +90,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(AdminBootstrap(translationService: service, companiesApi: companies));
+    await tester.pumpWidget(AdminBootstrap(translationService: service, services: fakes.services));
 
     expect(find.text('Bedrijven'), findsOneWidget, reason: 'no English flash');
   });

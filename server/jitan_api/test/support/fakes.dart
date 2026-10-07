@@ -2,6 +2,7 @@ import 'package:jitan_api/src/auth/permission.dart';
 import 'package:jitan_api/src/auth/permission_evaluator.dart';
 import 'package:jitan_api/src/auth/request_identity.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
+import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
@@ -23,6 +24,24 @@ class FakeCompanyRepository implements CompanyRepository {
     searches.add(nameContains);
     if (failWith != null) throw failWith!;
     return companies;
+  }
+
+  /// IDs [exists] answers true for (non-MFD companies).
+  Set<int> existingIds = {};
+
+  @override
+  Future<bool> exists(int companyId) async => existingIds.contains(companyId);
+}
+
+class FakeEmployeeRepository implements EmployeeRepository {
+  /// companyId → employees.
+  Map<int, List<EmployeeSummary>> byCompany = {};
+  final calls = <(int, String?)>[];
+
+  @override
+  Future<List<EmployeeSummary>> listForCompany(int companyId, {String? nameOrCodeContains}) async {
+    calls.add((companyId, nameOrCodeContains));
+    return byCompany[companyId] ?? const [];
   }
 }
 
@@ -74,11 +93,13 @@ class FixedPermissionEvaluator implements PermissionEvaluator {
   FixedPermissionEvaluator({required this.allow});
 
   final bool allow;
-  final checked = <(int, Permission)>[];
+
+  /// (userId, permission, companyId) of every check.
+  final checked = <(int, Permission, int?)>[];
 
   @override
-  Future<bool> isAllowed(RequestIdentity identity, Permission permission) async {
-    checked.add((identity.userId, permission));
+  Future<bool> isAllowed(RequestIdentity identity, Permission permission, {int? companyId}) async {
+    checked.add((identity.userId, permission, companyId));
     return allow;
   }
 }

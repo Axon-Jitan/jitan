@@ -24,7 +24,7 @@ void main() {
           {'id': 2, 'name': 'PCA', 'isActive': false, 'employeeCount': 36, 'lastUpdatedAt': null},
         ],
       });
-      expect(app.permissions.checked, [(7, Permission.viewCompanies)]);
+      expect(app.permissions.checked, [(7, Permission.viewCompanies, null)]);
     });
 
     test('returns an empty list when there are no companies', () async {

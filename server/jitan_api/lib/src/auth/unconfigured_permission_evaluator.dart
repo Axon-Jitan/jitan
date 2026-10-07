@@ -8,5 +8,6 @@ class UnconfiguredPermissionEvaluator implements PermissionEvaluator {
   const UnconfiguredPermissionEvaluator();
 
   @override
-  Future<bool> isAllowed(RequestIdentity identity, Permission permission) async => false;
+  Future<bool> isAllowed(RequestIdentity identity, Permission permission, {int? companyId}) async =>
+      false;
 }

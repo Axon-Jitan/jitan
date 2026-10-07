@@ -8,4 +8,7 @@
 enum Permission {
   /// See the company list (HR/Admin "Companies" screen).
   viewCompanies,
+
+  /// See one company's employees (company-scoped).
+  viewEmployees,
 }

@@ -9,6 +9,11 @@ abstract final class AdminTextKeys {
   static const configErrorMessage = 'app.config.error.message';
 
   static const navCompanies = 'nav.companies';
+  static const navEmployees = 'nav.employees';
+
+  static const devCompanySelectorLabel = 'dev.companySelector.label';
+  static const devCompanySelectorPlaceholder = 'dev.companySelector.placeholder';
+  static const devCompanySelectorLoadFailed = 'dev.companySelector.loadFailed';
 
   static const companyTitle = 'company.title';
   static const companyListSubtitle = 'company.list.subtitle';
@@ -26,4 +31,27 @@ abstract final class AdminTextKeys {
 
   /// Argument: `{search}`.
   static const companyNoMatchMessage = 'company.noMatch.message';
+
+  static const employeeTitle = 'employee.title';
+  static const employeeListSubtitle = 'employee.list.subtitle';
+  static const employeeSearch = 'employee.search';
+  static const employeeListLoading = 'employee.list.loading';
+  static const employeeColumnName = 'employee.column.name';
+  static const employeeColumnCode = 'employee.column.code';
+  static const employeeColumnType = 'employee.column.type';
+  static const employeeColumnLocation = 'employee.column.location';
+  static const employeeColumnOnboarding = 'employee.column.onboarding';
+  static const employeeColumnStatus = 'employee.column.status';
+  static const employeeLocationUnavailable = 'employee.location.unavailable';
+  static const employeeOnboardingUnavailable = 'employee.onboarding.unavailable';
+  static const employeeEmptyTitle = 'employee.empty.title';
+
+  /// Argument: `{company}`.
+  static const employeeEmptyMessage = 'employee.empty.message';
+  static const employeeNoMatchTitle = 'employee.noMatch.title';
+
+  /// Argument: `{search}`.
+  static const employeeNoMatchMessage = 'employee.noMatch.message';
+  static const employeeNoCompanyTitle = 'employee.noCompany.title';
+  static const employeeNoCompanyMessage = 'employee.noCompany.message';
 }

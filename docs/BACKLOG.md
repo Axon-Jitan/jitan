@@ -131,7 +131,7 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 
 | Task | Scope | Status |
 |---|---|---|
-| EMP-01 | Employee list for the current company: search, Type from `tblGroup`, all states, responsive, translation keys | `IN PROGRESS` |
+| EMP-01 | Employee list for the current company: search, Type from `tblGroup`, all states, responsive, translation keys. Location/Onboarding show "—" (GAP-11/GAP-04), Policy omitted | `DONE` |
 | EMP-02 | Add employee: only fields the ERD supports; validation; tests | `TODO` |
 | EMP-03 | Employee details | `TODO` |
 | EMP-04 | Company assignment (`tblUserCompany`) | `TODO` |

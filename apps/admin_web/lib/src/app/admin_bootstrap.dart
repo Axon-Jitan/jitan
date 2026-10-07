@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import 'admin_app.dart';
+import 'admin_services.dart';
 
 /// Shows the app immediately: in the user's language if it is already in
 /// the translation cache, otherwise in built-in English. Then switches to the
@@ -13,10 +13,10 @@ import 'admin_app.dart';
 /// user language or bundle cannot be loaded, the app simply stays in English
 /// (the service logs why).
 class AdminBootstrap extends StatefulWidget {
-  const AdminBootstrap({super.key, required this.translationService, required this.companiesApi});
+  const AdminBootstrap({super.key, required this.translationService, required this.services});
 
   final TranslationService translationService;
-  final CompaniesApi companiesApi;
+  final AdminServices services;
 
   @override
   State<AdminBootstrap> createState() => _AdminBootstrapState();
@@ -42,6 +42,6 @@ class _AdminBootstrapState extends State<AdminBootstrap> {
   @override
   Widget build(BuildContext context) => TranslationScope(
         translations: _translations,
-        child: AdminApp(companiesApi: widget.companiesApi),
+        child: AdminApp(services: widget.services),
       );
 }

@@ -38,6 +38,8 @@ const builtInEnglish = <String, String>{
   'common.error.forbidden.message': 'Your account doesn’t have access to this page.',
   'common.error.database.title': 'Jitan is temporarily unavailable',
   'common.error.database.message': 'Please try again in a moment.',
+  'common.error.notFound.title': 'Not found',
+  'common.error.notFound.message': 'It may have been removed. Reload to see the current data.',
   'common.error.unexpected.title': 'Something went wrong',
   'common.error.unexpected.message': 'Try again. If it keeps happening, contact your administrator.',
 
@@ -47,6 +49,12 @@ const builtInEnglish = <String, String>{
   'app.config.error.message':
       'The API address is missing. Build or run with --dart-define=JITAN_API_BASE_URL=<url>.',
   'nav.companies': 'Companies',
+  'nav.employees': 'Employees',
+
+  // Development-only tools (visible only in builds with JITAN_DEV_TOOLS=true)
+  'dev.companySelector.label': 'DEV · Current company',
+  'dev.companySelector.placeholder': 'Choose a company',
+  'dev.companySelector.loadFailed': 'Companies could not be loaded.',
 
   // ── Companies ─────────────────────────────────────────────────────────
   'company.title': 'Companies',
@@ -63,4 +71,24 @@ const builtInEnglish = <String, String>{
   'company.empty.message': 'Companies added to Jitan will appear here.',
   'company.noMatch.title': 'No matching companies',
   'company.noMatch.message': 'No company name contains “{search}”.',
+
+  // ── Employees ─────────────────────────────────────────────────────────
+  'employee.title': 'Employees',
+  'employee.list.subtitle': 'Manage employees for the selected company and track onboarding.',
+  'employee.search': 'Search name or employee code',
+  'employee.list.loading': 'Loading employees…',
+  'employee.column.name': 'Employee',
+  'employee.column.code': 'Code',
+  'employee.column.type': 'Type',
+  'employee.column.location': 'Location',
+  'employee.column.onboarding': 'Onboarding',
+  'employee.column.status': 'Status',
+  'employee.location.unavailable': 'Employee locations are not available yet.',
+  'employee.onboarding.unavailable': 'Onboarding status is not available yet.',
+  'employee.empty.title': 'No employees yet',
+  'employee.empty.message': 'Employees of {company} will appear here.',
+  'employee.noMatch.title': 'No matching employees',
+  'employee.noMatch.message': 'No employee name or code contains “{search}”.',
+  'employee.noCompany.title': 'No company selected',
+  'employee.noCompany.message': 'Select a company to see its employees.',
 };

@@ -10,6 +10,18 @@ extension JsonReading on Map<String, Object?> {
     throw FormatException('Expected "$key" to be a string, got ${value.runtimeType}.');
   }
 
+  String? readOptionalString(String key) {
+    final value = this[key];
+    if (value == null || value is String) return value as String?;
+    throw FormatException('Expected "$key" to be a string or null, got ${value.runtimeType}.');
+  }
+
+  List<String> readStringList(String key) {
+    final value = this[key];
+    if (value is List<Object?> && value.every((item) => item is String)) return value.cast<String>();
+    throw FormatException('Expected "$key" to be a list of strings, got ${value.runtimeType}.');
+  }
+
   int readInt(String key) {
     final value = this[key];
     if (value is int) return value;

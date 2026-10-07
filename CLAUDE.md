@@ -110,8 +110,10 @@ hardcode or invent them.
    and its event-log row in **one transaction**.
 7. **Company scoping is mandatory.** Employees belong to companies through
    `tblUserCompany`, which is many-to-many, so one person can be in several companies. HR
-   managing Almeco sees only users with an Almeco membership. Scope is enforced
-   server-side in the repository/service layer, never only in the UI.
+   works inside a **current company** and sees only that company's data. Company-scoped
+   endpoints take the company in the path (`/companies/{id}/…`), query only that company,
+   and pass it to `Authorizer.require(…, companyId: id)` so the permission evaluator can
+   enforce access. Never only in the UI.
 8. **Passwords and PINs are hashed server-side** (`userPassword`, `userPINCode`). They are
    never visible to HR/Admin, never logged, never returned by an API. Algorithm pending
    **CLARIFY-01** (blocks production auth only; development uses the dev identity).
@@ -145,7 +147,7 @@ dart analyze                       # repo root, must report no issues
 cd server/jitan_api && dart test   # also: packages/jitan_models, jitan_api_client, jitan_core
 cd apps/admin_web && flutter test  # also: packages/jitan_ui
 cd server/jitan_api && dart run bin/server.dart
-cd apps/admin_web && flutter run -d chrome --web-port 5000 --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080
+cd apps/admin_web && flutter run -d chrome --web-port 5000 --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080 --dart-define=JITAN_DEV_TOOLS=true
 ```
 
 Details (env vars, dev seed, integration tests): [README.md](README.md).
@@ -170,6 +172,7 @@ named so it can be found:
 | `DevelopmentIdentityMiddleware` | real authentication middleware attaching `RequestIdentity` | CLARIFY-01 |
 | `DevelopmentPermissionEvaluator` / `UnconfiguredPermissionEvaluator` | evaluator over `tblCredGroup`/`tblAppModulesCredGroup`/`tblFunction` | CLARIFY-10, -11 |
 | Sidebar role caption omitted | signed-in user's credential group from a `/me` endpoint | CLARIFY-11 |
+| `DevCompanySelector` (admin_web, only with `JITAN_DEV_TOOLS=true`) | the production company switcher | switcher design (PRODUCT-CLARIFY-EMPLOYEES-LIST) |
 
 Backend modules (each with controller / service / repository / models / validation):
 `auth companies employees onboarding languages locations geofences schedules

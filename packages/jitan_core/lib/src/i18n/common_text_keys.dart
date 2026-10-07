@@ -25,6 +25,8 @@ abstract final class CommonTextKeys {
   static const errorForbiddenMessage = 'common.error.forbidden.message';
   static const errorDatabaseTitle = 'common.error.database.title';
   static const errorDatabaseMessage = 'common.error.database.message';
+  static const errorNotFoundTitle = 'common.error.notFound.title';
+  static const errorNotFoundMessage = 'common.error.notFound.message';
   static const errorUnexpectedTitle = 'common.error.unexpected.title';
   static const errorUnexpectedMessage = 'common.error.unexpected.message';
 }

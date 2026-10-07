@@ -20,6 +20,10 @@ FailureTextKeys failureTextKeysFor(ApiClientException failure) {
         title: CommonTextKeys.errorForbiddenTitle,
         message: CommonTextKeys.errorForbiddenMessage,
       ),
+    ApiErrorCode.notFound => (
+        title: CommonTextKeys.errorNotFoundTitle,
+        message: CommonTextKeys.errorNotFoundMessage,
+      ),
     ApiErrorCode.databaseUnavailable => (
         title: CommonTextKeys.errorDatabaseTitle,
         message: CommonTextKeys.errorDatabaseMessage,

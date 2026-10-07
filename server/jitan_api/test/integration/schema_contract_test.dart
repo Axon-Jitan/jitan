@@ -14,7 +14,9 @@ import '../support/test_database.dart';
 const _usedColumns = {
   'tblCompany': ['companyID', 'companyName', 'companyActive', 'companyMFD'],
   'tblUserCompany': ['userID', 'companyID'],
-  'tblUser': ['userID', 'userActive', 'userMFD'],
+  'tblUser': ['userID', 'userName', 'userSurname', 'userCode', 'userActive', 'userMFD'],
+  'tblUserGroup': ['userID', 'groupID'],
+  'tblGroup': ['groupID', 'groupName', 'groupActive', 'groupMFD'],
   'tblEventLog': ['companyID', 'eventLogTimestamp'],
   'tblLanguage': ['languageID', 'languageName', 'languageCode', 'languageActive', 'languageMFD'],
   'tblTranslation': ['translationID', 'languageID', 'translationUIName', 'translationUIText'],

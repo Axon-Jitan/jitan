@@ -16,6 +16,10 @@
 // (tblLanguage → tblTranslation → tblUserLanguage → API → app) can be seen
 // working: wrapped text came from the database, plain text is the fallback.
 //
+// Groups: "[DEV] White collar" and "[DEV] Blue collar"; seeded employees
+// alternate between them, and one per company has both (to show the
+// several-groups case).
+//
 // Not seeded: tblEventLog (event types are pending CLARIFY-11), so the
 // company list's "Last updated" stays empty for seeded companies.
 
@@ -79,6 +83,9 @@ Future<void> _seed(Database db, {required bool pseudoLanguage}) async {
   final devAdminId = await _ensureUser(db, code: '${_userCodePrefix}ADMIN', first: '[DEV]', last: 'Developer');
   stdout.writeln('Development user: tblUser.userID=$devAdminId  ->  set JITAN_DEV_USER_ID=$devAdminId');
 
+  final whiteCollar = await _ensureGroup(db, '${_companyPrefix}White collar');
+  final blueCollar = await _ensureGroup(db, '${_companyPrefix}Blue collar');
+
   for (final (name, active, members) in _companies) {
     final companyId = await _ensureCompany(db, '$_companyPrefix$name', active: active);
     await _ensureMembership(db, devAdminId, companyId);
@@ -86,6 +93,8 @@ Future<void> _seed(Database db, {required bool pseudoLanguage}) async {
       final code = '$_userCodePrefix${name.replaceAll(' ', '').toUpperCase()}-$i';
       final userId = await _ensureUser(db, code: code, first: '[DEV]', last: '$name employee $i');
       await _ensureMembership(db, userId, companyId);
+      await _ensureUserGroup(db, userId, i.isOdd ? whiteCollar : blueCollar);
+      if (i == members) await _ensureUserGroup(db, userId, i.isOdd ? blueCollar : whiteCollar);
     }
     stdout.writeln('Company "$_companyPrefix$name" (id $companyId, ${active ? 'active' : 'inactive'}): $members employees');
   }
@@ -152,6 +161,10 @@ Future<void> _remove(Database db) async {
     "SELECT companyID FROM tblCompany WHERE companyName LIKE CONCAT(:prefix, '%')",
     {'prefix': _companyPrefix},
   );
+  final groups = await db.query(
+    "SELECT groupID FROM tblGroup WHERE groupName LIKE CONCAT(:prefix, '%')",
+    {'prefix': _companyPrefix},
+  );
   final languages = await db.query(
     'SELECT languageID FROM tblLanguage WHERE languageCode = :code AND languageName = :name',
     {'code': _pseudoLanguageCode, 'name': _pseudoLanguageName},
@@ -159,6 +172,7 @@ Future<void> _remove(Database db) async {
   for (final row in users) {
     final id = row.readInt('userID');
     await db.query('DELETE FROM tblUserLanguage WHERE userID = :id', {'id': id});
+    await db.query('DELETE FROM tblUserGroup WHERE userID = :id', {'id': id});
     await db.query('DELETE FROM tblUserCompany WHERE userID = :id', {'id': id});
     await db.query('DELETE FROM tblUser WHERE userID = :id', {'id': id});
   }
@@ -167,14 +181,19 @@ Future<void> _remove(Database db) async {
     await db.query('DELETE FROM tblUserCompany WHERE companyID = :id', {'id': id});
     await db.query('DELETE FROM tblCompany WHERE companyID = :id', {'id': id});
   }
+  for (final row in groups) {
+    final id = row.readInt('groupID');
+    await db.query('DELETE FROM tblUserGroup WHERE groupID = :id', {'id': id});
+    await db.query('DELETE FROM tblGroup WHERE groupID = :id', {'id': id});
+  }
   for (final row in languages) {
     final id = row.readInt('languageID');
     await db.query('DELETE FROM tblUserLanguage WHERE languageID = :id', {'id': id});
     await db.query('DELETE FROM tblTranslation WHERE languageID = :id', {'id': id});
     await db.query('DELETE FROM tblLanguage WHERE languageID = :id', {'id': id});
   }
-  stdout.writeln('Removed ${users.length} dev users, ${companies.length} dev companies '
-      'and ${languages.length} dev language(s).');
+  stdout.writeln('Removed ${users.length} dev users, ${companies.length} dev companies, '
+      '${groups.length} dev groups and ${languages.length} dev language(s).');
 }
 
 Future<int> _ensureCompany(Database db, String name, {required bool active}) async {
@@ -206,6 +225,27 @@ Future<int> _ensureUser(Database db, {required String code, required String firs
     {'first': first, 'last': last, 'code': code, 'qr': 'DEV-QR-$code'},
   );
   return await find() ?? (throw StateError('Inserted user "$code" but cannot read it back.'));
+}
+
+Future<int> _ensureGroup(Database db, String name) async {
+  Future<int?> find() async {
+    final rows = await db.query('SELECT groupID FROM tblGroup WHERE groupName = :name', {'name': name});
+    return rows.isEmpty ? null : rows.first.readInt('groupID');
+  }
+
+  final existing = await find();
+  if (existing != null) return existing;
+  await db.query('INSERT INTO tblGroup (groupName, groupActive, groupMFD) VALUES (:name, 1, 0)', {'name': name});
+  return await find() ?? (throw StateError('Inserted group "$name" but cannot read it back.'));
+}
+
+Future<void> _ensureUserGroup(Database db, int userId, int groupId) async {
+  final existing = await db.query(
+    'SELECT 1 AS found FROM tblUserGroup WHERE userID = :user AND groupID = :group',
+    {'user': userId, 'group': groupId},
+  );
+  if (existing.isNotEmpty) return;
+  await db.query('INSERT INTO tblUserGroup (userID, groupID) VALUES (:user, :group)', {'user': userId, 'group': groupId});
 }
 
 Future<void> _ensureMembership(Database db, int userId, int companyId) async {

@@ -14,6 +14,9 @@ import 'package:jitan_api/src/config/app_config.dart';
 import 'package:jitan_api/src/config/config_exception.dart';
 import 'package:jitan_api/src/config/env_file.dart';
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/employees/employee_repository.dart';
+import 'package:jitan_api/src/employees/employee_routes.dart';
+import 'package:jitan_api/src/employees/employee_service.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
@@ -47,6 +50,7 @@ Future<void> main() async {
 
   final db = Database.connect(config.database);
   final users = UserRepository(db);
+  final companyRepository = CompanyRepository(db);
 
   final PermissionEvaluator permissions = config.environment.allowsDevelopmentMechanisms
       ? DevelopmentPermissionEvaluator(config.environment)
@@ -68,7 +72,8 @@ Future<void> main() async {
   final handler = buildApp(
     corsOrigins: config.corsOrigins,
     health: HealthRoutes(DatabaseHealthRepository(db)),
-    companies: CompanyRoutes(authorizer, CompanyService(CompanyRepository(db))),
+    companies: CompanyRoutes(authorizer, CompanyService(companyRepository)),
+    employees: EmployeeRoutes(authorizer, EmployeeService(EmployeeRepository(db), companyRepository)),
     languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db))),
     identity: identity,
   );

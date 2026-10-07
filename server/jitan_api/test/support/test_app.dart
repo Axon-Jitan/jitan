@@ -6,6 +6,8 @@ import 'package:jitan_api/src/auth/development_identity_middleware.dart';
 import 'package:jitan_api/src/companies/company_routes.dart';
 import 'package:jitan_api/src/companies/company_service.dart';
 import 'package:jitan_api/src/config/app_environment.dart';
+import 'package:jitan_api/src/employees/employee_routes.dart';
+import 'package:jitan_api/src/employees/employee_service.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
@@ -26,6 +28,7 @@ class TestApp {
       corsOrigins: corsOrigins,
       health: HealthRoutes(databaseHealth),
       companies: CompanyRoutes(Authorizer(permissions), CompanyService(companies)),
+      employees: EmployeeRoutes(Authorizer(permissions), EmployeeService(employees, companies)),
       languages: LanguageRoutes(LanguageService(languages, translations)),
       identity: devUserId == null
           ? null
@@ -38,6 +41,7 @@ class TestApp {
   }
 
   final companies = FakeCompanyRepository();
+  final employees = FakeEmployeeRepository();
   final databaseHealth = FakeDatabaseHealthRepository();
   final languages = FakeLanguageRepository();
   final translations = FakeTranslationRepository();

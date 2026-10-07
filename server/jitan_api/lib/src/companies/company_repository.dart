@@ -2,6 +2,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../database/database.dart';
 import '../database/db_row.dart';
+import '../database/like_pattern.dart';
 
 /// Data access for `tblCompany` and the company list's derived columns.
 class CompanyRepository {
@@ -31,9 +32,19 @@ class CompanyRepository {
       'WHERE c.companyMFD = 0 '
       '$filter'
       'ORDER BY c.companyName, c.companyID',
-      {if (nameContains != null) 'namePattern': '%${_escapeLike(nameContains)}%'},
+      {if (nameContains != null) 'namePattern': containsLikePattern(nameContains)},
     );
     return rows.map(_toCompanySummary).toList();
+  }
+
+  /// Whether [companyId] exists and is not marked for deletion. Inactive
+  /// companies count: their data stays viewable.
+  Future<bool> exists(int companyId) async {
+    final rows = await _db.query(
+      'SELECT 1 AS found FROM tblCompany WHERE companyID = :companyId AND companyMFD = 0',
+      {'companyId': companyId},
+    );
+    return rows.isNotEmpty;
   }
 
   static CompanySummary _toCompanySummary(DbRow row) => CompanySummary(
@@ -43,8 +54,4 @@ class CompanyRepository {
         employeeCount: row.readInt('employeeCount'),
         lastUpdatedAt: row.readOptionalDateTime('lastUpdatedAt'),
       );
-
-  /// Escapes `\`, `%` and `_` with MySQL's default LIKE escape character.
-  static String _escapeLike(String value) =>
-      value.replaceAll(r'\', r'\\').replaceAll('%', r'\%').replaceAll('_', r'\_');
 }
