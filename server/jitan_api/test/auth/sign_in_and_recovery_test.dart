@@ -104,7 +104,8 @@ void main() {
       return (app, await _tokenOf(await app.post('/auth/sign-in', _signIn())));
     }
 
-    String change(String password) => jsonEncode({'newPassword': password});
+    String change(String password, {String current = _password}) =>
+        jsonEncode({'currentPassword': current, 'newPassword': password});
 
     test('sets a new Argon2id password, audited; this device stays signed in, others are signed out', () async {
       final (app, token) = await signedIn();
@@ -129,7 +130,19 @@ void main() {
       expect(app.transactions.outcomes, ['commit']);
     });
 
-    test('the current password is not needed (forgot it, still signed in); the new one must follow the policy', () async {
+    test('a wrong current password is refused on its field; nothing changes, no session ends', () async {
+      final (app, token) = await signedIn();
+
+      final wrong = await app.postAuthorized('/me/password', change('a brand new password', current: 'not mine'), token);
+
+      expect(wrong.statusCode, 400);
+      expect(await _error(wrong), containsPair('field', 'currentPassword'));
+      expect(await app.hasher.verify(_password, app.onboarding.passwordHashes[1]!), isTrue, reason: 'unchanged');
+      expect(app.audit.events, isEmpty);
+      expect((await app.getAuthorized('/me', token)).statusCode, 200, reason: 'still signed in');
+    });
+
+    test('the new password must follow the policy', () async {
       final (app, token) = await signedIn();
 
       final tooShort = await app.postAuthorized('/me/password', change('short'), token);
@@ -242,7 +255,11 @@ void main() {
 
     final texts = [
       await (await app.post('/auth/sign-in', _signIn(password: secret))).readAsString(),
-      await (await app.postAuthorized('/me/password', jsonEncode({'newPassword': secret}), token)).readAsString(),
+      await (await app.postAuthorized(
+        '/me/password',
+        jsonEncode({'currentPassword': _password, 'newPassword': secret}),
+        token,
+      )).readAsString(),
       await (await app.post('/auth/sign-in', _signIn(password: secret))).readAsString(),
       ...records,
     ];

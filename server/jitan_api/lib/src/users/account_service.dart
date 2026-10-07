@@ -29,22 +29,31 @@ class AccountService {
   final SessionTokens _sessions;
   final PasswordHasher _hasher;
 
-  /// Profile → Password & web login → Change password.
+  /// Profile → Password & web login → Change password (mobile and web).
   ///
-  /// The session proves who the employee is; the current password is not
-  /// asked, so someone who forgot it but is still signed in on a trusted
-  /// device can set a new one without HR/Admin. The new Argon2id hash
-  /// replaces the old one in one audited transaction. Every other session
-  /// ends (their password fingerprint no longer matches); this device gets a
-  /// new session and stays signed in.
+  /// The current password is verified against the stored Argon2id hash; a
+  /// wrong one is a field error on `currentPassword` and changes nothing.
+  /// The new hash replaces the old one in one audited transaction. Every
+  /// other session ends (their password fingerprint no longer matches); this
+  /// device gets a new session and stays signed in.
   Future<SessionResponse> changePassword(RequestIdentity identity, ChangePasswordRequest request) async {
     final deviceId = identity.deviceId ??
         (throw const ApiException.forbidden('Changing the password needs a signed-in device.'));
+    final currentHash = await _users.activePasswordHash(identity.userId) ??
+        (throw const ApiException.unauthenticated('The session is not valid. Sign in again.'));
+    if (request.currentPassword.isEmpty ||
+        request.currentPassword.length > PasswordPolicy.maxLength ||
+        !await _hasher.verify(request.currentPassword, currentHash)) {
+      throw const ApiException.validation(
+        ChangePasswordRequest.fieldCurrentPassword,
+        'The current password is incorrect.',
+      );
+    }
     PasswordPolicy.check(request.newPassword, field: ChangePasswordRequest.fieldNewPassword);
     final hash = await _hasher.hash(request.newPassword);
 
     await _transactions.transaction((tx) async {
-      if (!await _credentials.replacePassword(tx, identity.userId, hash)) {
+      if (!await _credentials.replacePassword(tx, identity.userId, currentHash: currentHash, newHash: hash)) {
         throw const ApiException.unauthenticated('The session is not valid. Sign in again.');
       }
       await _audit.record(

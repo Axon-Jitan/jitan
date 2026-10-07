@@ -73,4 +73,12 @@ abstract final class JitanColors {
 
   /// Outline of an unselected radio indicator.
   static const radioBorder = Color(0xFFB9C0BD);
+
+  /// Unselected language dot (Onboarding / 06B Language).
+  static const radioIdle = Color(0xFFD6DAD7);
+
+  /// Disabled web button: fill and label (Reset account access, not
+  /// activated).
+  static const disabledFill = Color(0xFFE8E7E3);
+  static const disabledText = Color(0xFFA2AAA7);
 }

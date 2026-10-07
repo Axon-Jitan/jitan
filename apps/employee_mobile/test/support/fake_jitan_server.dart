@@ -40,6 +40,8 @@ class FakeJitanServer {
   /// Languages served besides built-in English.
   List<Map<String, Object?>> languages = [
     {'id': 2, 'code': 'nl', 'name': 'Nederlands'},
+    {'id': 3, 'code': 'fr', 'name': 'Français'},
+    {'id': 4, 'code': 'de', 'name': 'Deutsch'},
   ];
 
   final requests = <http.Request>[];
@@ -63,7 +65,7 @@ class FakeJitanServer {
       '/languages' => _json({'languages': languages}),
       '/translations' => _json({
         'language': request.url.queryParameters['language'],
-        'translations': {'onboarding.method.title': 'Hoe wil je je tijd registreren?'},
+        'translations': {'onboarding.password.title': 'Stel je wachtwoord in', 'language.name.fr': 'Frans'},
       }),
       '/me' => _me(request),
       '/auth/sign-in' => _signIn(request),
@@ -141,7 +143,16 @@ class FakeJitanServer {
   /// New password: every existing session ends, this device gets a new one.
   http.Response _changePassword(http.Request request) {
     if (!_authorized(request)) return _error(401, 'unauthenticated');
-    final newPassword = (jsonDecode(request.body) as Map)['newPassword'] as String;
+    final body = jsonDecode(request.body) as Map;
+    final newPassword = body['newPassword'] as String;
+    if (body['currentPassword'] != password) {
+      return http.Response(
+        jsonEncode({
+          'error': {'code': 'validation_failed', 'message': 'x', 'field': 'currentPassword'},
+        }),
+        400,
+      );
+    }
     if (rejectPassword) {
       return http.Response(
         jsonEncode({

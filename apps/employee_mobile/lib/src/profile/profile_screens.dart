@@ -276,8 +276,7 @@ class PasswordWebLoginScreen extends StatelessWidget {
   );
 }
 
-/// Change password: new password twice, same rules and field states as
-/// onboarding "07 Set password". No Figma frame yet (DESIGN-CLARIFY-AUTH).
+/// Figma "Profile / Change password": current password, new password twice.
 /// Pops `true` once the server confirmed the change.
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key, required this.profile});
@@ -294,6 +293,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     session: widget.profile.session,
     onSessionEnded: _sessionEnded,
   );
+  final _current = TextEditingController();
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
 
@@ -305,6 +305,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _current.dispose();
     _password.dispose();
     _confirmation.dispose();
     super.dispose();
@@ -312,7 +313,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   Future<void> _submit() async {
     final navigator = Navigator.of(context);
-    if (await _controller.submit(_password.text, _confirmation.text)) navigator.pop(true);
+    final changed = await _controller.submit(
+      current: _current.text,
+      password: _password.text,
+      confirmation: _confirmation.text,
+    );
+    if (changed) navigator.pop(true);
   }
 
   @override
@@ -324,18 +330,46 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       final hideLabel = context.t(EmployeeTextKeys.passwordHide);
       return _Page(
         children: [
-          _SubHeader(
-            title: context.t(EmployeeTextKeys.changePasswordTitle),
-            text: context.t(EmployeeTextKeys.changePasswordText),
+          Row(
+            children: [
+              IconButton(
+                tooltip: context.t(CommonTextKeys.back),
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerLeft,
+                icon: const Icon(Icons.chevron_left, size: 30, color: JitanColors.ink),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+              JitanWordmark(style: JitanMobileTextStyles.logo.copyWith(fontSize: 24)),
+            ],
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
+          Semantics(
+            header: true,
+            child: Text(context.t(EmployeeTextKeys.changePasswordTitle), style: JitanMobileTextStyles.formTitle),
+          ),
+          const SizedBox(height: 10),
+          Text(context.t(EmployeeTextKeys.changePasswordText), style: JitanMobileTextStyles.caption),
+          const SizedBox(height: 52),
           AutofillGroup(
             child: Column(
               children: [
                 PasswordField(
+                  controller: _current,
+                  label: context.t(EmployeeTextKeys.changePasswordCurrentLabel),
+                  hint: context.t(EmployeeTextKeys.changePasswordCurrentHint),
+                  showLabel: showLabel,
+                  hideLabel: hideLabel,
+                  error: _controller.currentPasswordWrong
+                      ? context.t(EmployeeTextKeys.changePasswordCurrentWrong)
+                      : null,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.password],
+                ),
+                const SizedBox(height: 26),
+                PasswordField(
                   controller: _password,
                   label: context.t(EmployeeTextKeys.changePasswordLabel),
-                  hint: context.t(EmployeeTextKeys.passwordHint),
+                  hint: context.t(EmployeeTextKeys.changePasswordNewHint),
                   showLabel: showLabel,
                   hideLabel: hideLabel,
                   error: switch (problem) {
@@ -347,11 +381,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.newPassword],
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
                 PasswordField(
                   controller: _confirmation,
                   label: context.t(EmployeeTextKeys.passwordConfirmLabel),
-                  hint: context.t(EmployeeTextKeys.passwordConfirmHint),
+                  hint: context.t(EmployeeTextKeys.changePasswordConfirmHint),
                   showLabel: showLabel,
                   hideLabel: hideLabel,
                   error: problem == PasswordProblem.mismatch ? context.t(EmployeeTextKeys.passwordErrorMismatch) : null,
@@ -375,17 +409,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
             ),
           ],
-          const SizedBox(height: 28),
+          const SizedBox(height: 40),
           NoteBox(
-            title: context.t(EmployeeTextKeys.passwordNoteTitle),
-            text: context.t(EmployeeTextKeys.passwordNoteText),
+            title: context.t(EmployeeTextKeys.changePasswordRulesTitle),
+            text: context.t(EmployeeTextKeys.changePasswordRulesText),
+            textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 9),
             minHeight: 86,
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 34),
           JitanMobileButton(
             label: context.t(EmployeeTextKeys.passwordChangeAction),
             style: JitanMobileButtonStyle.brand,
-            size: JitanMobileButtonSize.medium,
+            size: JitanMobileButtonSize.compact,
             busy: _controller.busy,
             onPressed: _submit,
           ),

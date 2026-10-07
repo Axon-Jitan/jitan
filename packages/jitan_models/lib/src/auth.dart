@@ -29,20 +29,24 @@ class SignInRequest {
   String toString() => 'SignInRequest(code: $code, password: <redacted>)';
 }
 
-/// Body of `POST /me/password`: a signed-in employee sets a new password.
-/// The session proves who they are, so the current password is not needed
-/// (an employee who forgot it but is still signed in can recover this way).
+/// Body of `POST /me/password`: a signed-in employee replaces their password
+/// (Figma "Profile / Change password", "Employee Web / 07B"). The current
+/// password is verified server-side.
 class ChangePasswordRequest {
-  const ChangePasswordRequest({required this.newPassword});
+  const ChangePasswordRequest({required this.currentPassword, required this.newPassword});
 
-  factory ChangePasswordRequest.fromJson(Map<String, Object?> json) =>
-      ChangePasswordRequest(newPassword: json.readString('newPassword'));
+  factory ChangePasswordRequest.fromJson(Map<String, Object?> json) => ChangePasswordRequest(
+        currentPassword: json.readString('currentPassword'),
+        newPassword: json.readString('newPassword'),
+      );
 
+  final String currentPassword;
   final String newPassword;
 
+  static const fieldCurrentPassword = 'currentPassword';
   static const fieldNewPassword = 'newPassword';
 
-  Map<String, Object?> toJson() => {'newPassword': newPassword};
+  Map<String, Object?> toJson() => {'currentPassword': currentPassword, 'newPassword': newPassword};
 
   @override
   String toString() => 'ChangePasswordRequest(<redacted>)';

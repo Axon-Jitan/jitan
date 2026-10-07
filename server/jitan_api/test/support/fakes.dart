@@ -233,11 +233,11 @@ class FakeCredentialRepository implements CredentialRepository {
   ];
 
   @override
-  Future<bool> replacePassword(SqlExecutor tx, int userId, String passwordHash) async {
+  Future<bool> replacePassword(SqlExecutor tx, int userId, {required String currentHash, required String newHash}) async {
     final user = onboarding.users.values.where((u) => u.userId == userId).firstOrNull;
     if (user == null || !user.isActive || onboarding.markedForDeletion.contains(userId)) return false;
-    if (!onboarding.passwordHashes.containsKey(userId)) return false;
-    onboarding.passwordHashes[userId] = passwordHash;
+    if (onboarding.passwordHashes[userId] != currentHash) return false;
+    onboarding.passwordHashes[userId] = newHash;
     return true;
   }
 

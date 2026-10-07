@@ -125,7 +125,6 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
           child: JitanSecondaryButton(
             label: context.t(AdminTextKeys.employeeResetAccessAction),
             foreground: JitanColors.errorStrong,
-            tooltip: details.isActivated ? null : context.t(AdminTextKeys.employeeResetAccessUnavailable),
             onPressed: details.isActivated ? () => _resetAccess(context, details) : null,
           ),
         ),

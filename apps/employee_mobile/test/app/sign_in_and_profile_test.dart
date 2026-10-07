@@ -145,6 +145,14 @@ void main() {
   });
 
   group('Profile', () {
+    /// Current / new / confirm, then "Change password".
+    Future<void> fillChange(WidgetTester tester, {required String current, required String password, String? confirmation}) async {
+      await tester.enterText(find.byType(TextField).at(0), current);
+      await tester.enterText(find.byType(TextField).at(1), password);
+      await tester.enterText(find.byType(TextField).at(2), confirmation ?? password);
+      await tap(tester, find.widgetWithText(FilledButton, 'Change password'));
+    }
+
     Future<void> openPasswordScreen(WidgetTester tester) async {
       await startApp(tester);
       await signIn(tester);
@@ -158,37 +166,44 @@ void main() {
       tester,
     ) async {
       await openPasswordScreen(tester);
+      expect(find.text('Current password'), findsOneWidget);
       final oldToken = h.store.values['session.token'];
 
-      await tester.enterText(find.byType(TextField).at(0), 'a brand new password');
-      await tester.enterText(find.byType(TextField).at(1), 'a brand new password');
-      await tap(tester, find.widgetWithText(FilledButton, 'Change password'));
+      await fillChange(tester, current: _password, password: 'a brand new password');
 
       expect(find.text('Password changed.'), findsOneWidget);
       expect(h.server.password, 'a brand new password');
       final newToken = h.store.values['session.token'];
-      expect(newToken, isNot(oldToken));
-      expect(h.server.issuedTokens, [newToken], reason: 'old sessions revoked');
-      expect(jsonDecode(h.server.requestsTo('/me/password').single.body), {'newPassword': 'a brand new password'});
+      expect(newToken, isNot(oldToken), reason: 'this device keeps a (new) session');
+      expect(h.server.issuedTokens, [newToken], reason: 'other sessions revoked');
+      expect(jsonDecode(h.server.requestsTo('/me/password').single.body), {
+        'currentPassword': _password,
+        'newPassword': 'a brand new password',
+      });
+    });
+
+    testWidgets('a wrong current password is an inline error; nothing changes', (tester) async {
+      await openPasswordScreen(tester);
+
+      await fillChange(tester, current: 'not my password', password: 'a brand new password');
+
+      expect(find.text('The current password is incorrect.'), findsOneWidget);
+      expect(h.server.password, _password);
+      expect(h.server.issuedTokens, contains(h.store.values['session.token']), reason: 'still signed in');
     });
 
     testWidgets('mismatch and too short are inline; network failure leaves the password unchanged', (tester) async {
       await openPasswordScreen(tester);
 
-      await tester.enterText(find.byType(TextField).at(0), 'short');
-      await tester.enterText(find.byType(TextField).at(1), 'short');
-      await tap(tester, find.widgetWithText(FilledButton, 'Change password'));
+      await fillChange(tester, current: _password, password: 'short');
       expect(find.text('Use at least 8 characters.'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextField).at(0), 'a brand new password');
-      await tester.enterText(find.byType(TextField).at(1), 'a brand new passwort');
-      await tap(tester, find.widgetWithText(FilledButton, 'Change password'));
+      await fillChange(tester, current: _password, password: 'a brand new password', confirmation: 'a brand new passwort');
       expect(find.text('Passwords don’t match.'), findsOneWidget);
       expect(h.server.requestsTo('/me/password'), isEmpty);
 
       h.server.dropNext.add('/me/password');
-      await tester.enterText(find.byType(TextField).at(1), 'a brand new password');
-      await tap(tester, find.widgetWithText(FilledButton, 'Change password'));
+      await fillChange(tester, current: _password, password: 'a brand new password');
       expect(find.text('Can’t reach Jitan. Your password has not been changed.'), findsOneWidget);
       expect(h.server.password, _password);
     });
@@ -229,7 +244,10 @@ void main() {
       await tap(tester, find.byKey(fakeCameraKey));
 
       expect(find.text('Recover account'), findsOneWidget, reason: 'still scanning');
-      expect(find.text('If your account has not been reset first, Jitan will refuse recovery.'), findsOneWidget);
+      // Auth / 06B Recovery refused
+      expect(find.text('Recovery is not available yet.'), findsOneWidget);
+      expect(find.text('Account reset required'), findsOneWidget);
+      expect(find.text('Ask HR/Admin to reset your Jitan account access before scanning this QR.'), findsOneWidget);
       expect(h.server.requestsTo('/onboarding/start'), hasLength(1), reason: 'the refused QR is not resent');
       expect(h.server.password, _password);
       expect(h.store.values.containsKey('session.token'), isFalse);

@@ -14,10 +14,10 @@ enum ChangePasswordFailure {
   unreachable,
 }
 
-/// Profile → Password & web login → Change password. The session proves
-/// who the employee is (no current password needed). On success the server
-/// returns a new session for this device, stored here; every other device is
-/// signed out.
+/// Profile → Password & web login → Change password (Figma "Profile /
+/// Change password"). The server verifies the current password. On success
+/// it returns a new session for this device, stored here; every other device
+/// is signed out.
 class ChangePasswordController extends ChangeNotifier {
   ChangePasswordController({required this._meApi, required this._session, required this._onSessionEnded});
 
@@ -30,33 +30,43 @@ class ChangePasswordController extends ChangeNotifier {
   bool _busy = false;
   bool get busy => _busy;
 
+  /// Problem with the new password (and its confirmation).
   PasswordProblem? _problem;
   PasswordProblem? get problem => _problem;
+
+  /// The server did not accept the current password.
+  bool _currentPasswordWrong = false;
+  bool get currentPasswordWrong => _currentPasswordWrong;
 
   ChangePasswordFailure? _failure;
   ChangePasswordFailure? get failure => _failure;
 
   /// Returns `true` when the new password is set and this device holds the
   /// new session.
-  Future<bool> submit(String password, String confirmation) async {
+  Future<bool> submit({required String current, required String password, required String confirmation}) async {
     if (_busy) return false;
-    _problem = PasswordRules.check(password, confirmation);
     _failure = null;
-    if (_problem != null) {
+    _currentPasswordWrong = current.isEmpty;
+    _problem = PasswordRules.check(password, confirmation);
+    if (_currentPasswordWrong || _problem != null) {
       notifyListeners();
       return false;
     }
     _busy = true;
     notifyListeners();
     try {
-      final result = await _meApi.changePassword(password);
+      final result = await _meApi.changePassword(currentPassword: current, newPassword: password);
       await _session.save(result.session);
       return true;
     } on ApiClientException catch (e) {
       _log.info('Change password failed: ${e.kind.name} ${e.statusCode ?? ''} ${e.error?.code ?? ''}');
+      final error = e.error;
       if (e.statusCode == 401) {
         _onSessionEnded();
-      } else if (e.error?.code == ApiErrorCode.validationFailed) {
+      } else if (error?.code == ApiErrorCode.validationFailed &&
+          error?.field == ChangePasswordRequest.fieldCurrentPassword) {
+        _currentPasswordWrong = true;
+      } else if (error?.code == ApiErrorCode.validationFailed) {
         _problem = PasswordProblem.rejected;
       } else {
         _failure = ChangePasswordFailure.unreachable;

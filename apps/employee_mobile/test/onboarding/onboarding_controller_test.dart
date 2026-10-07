@@ -31,11 +31,12 @@ void main() {
     c.getStarted();
     await c.submitQr(testQr);
     c.confirmAccount();
-    await pumpEventQueue();
-    c.confirmLanguage();
     c.chooseMethod(method);
     c.confirmMethod();
     await c.requestPermissions();
+    await pumpEventQueue();
+    expect(c.step, OnboardingStep.language);
+    c.confirmLanguage();
     expect(c.step, OnboardingStep.password);
   }
 
@@ -50,13 +51,16 @@ void main() {
       expect(c.account?.firstName, 'Disan');
 
       c.confirmAccount();
+      expect(c.step, OnboardingStep.method);
+      c.confirmMethod();
+      await c.requestPermissions();
       await pumpEventQueue();
-      expect(c.languages.map((l) => l.code), ['en', 'nl'], reason: 'English always first');
+      expect(c.step, OnboardingStep.language, reason: 'Figma 06B: language after permissions');
+      expect(c.languages.map((l) => l.code), ['en', 'nl', 'fr', 'de'], reason: 'English always first, then the database');
       await c.chooseLanguage('nl');
       expect(chosenLanguages, ['nl'], reason: 'applied to the app at once');
       c.confirmLanguage();
-      c.confirmMethod();
-      await c.requestPermissions();
+      expect(c.step, OnboardingStep.password);
       await c.submitPassword('correct horse battery', 'correct horse battery');
 
       expect(c.step, OnboardingStep.ready);
@@ -99,6 +103,8 @@ void main() {
       h.server.dropNext.add('/languages');
       await c.submitQr(testQr);
       c.confirmAccount();
+      c.confirmMethod();
+      await c.requestPermissions();
       await pumpEventQueue();
 
       expect(c.languages.map((l) => l.code), ['en']);
@@ -242,9 +248,9 @@ void main() {
   test('back walks the steps in reverse and forgets the scanned account at the scanner', () async {
     await toPassword();
     for (final expected in [
+      OnboardingStep.language,
       OnboardingStep.permissions,
       OnboardingStep.method,
-      OnboardingStep.language,
       OnboardingStep.confirm,
       OnboardingStep.join,
     ]) {

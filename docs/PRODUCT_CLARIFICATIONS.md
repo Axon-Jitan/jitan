@@ -126,51 +126,49 @@ apps and maintained in code (`builtInEnglish`).
 ## DESIGN-CLARIFY-ONBOARDING: Gaps between Figma and the agreed onboarding flow
 Status: `OPEN` · development choices in place, does not block
 
-The Employee app (ONB-02) follows Figma `01 — Employee App` except where Figma conflicts
-with decisions already taken, or has no screen:
+The Employee app follows Figma `01 — Employee App` (flow: scan → confirm → registration
+method → permissions → 06B Language → 07 Set password → Ready) except where Figma
+conflicts with decisions already taken:
 
-1. **Language step: no Figma frame.** Built like "05 Registration method" (choice cards,
-   English first, other active languages from the database). Please design it.
-2. **"03 Employee identifier" is skipped.** The personal QR already identifies the
+1. **"03 Employee identifier" is skipped.** The personal QR already identifies the
    employee (EMP-08), so the code screen isn't needed.
-3. **Join copy changed.** Figma says "company QR" / "shown on your company terminal". The
+2. **Join copy changed.** Figma says "company QR" / "shown on your company terminal". The
    onboarding QR is personal and shown by HR/Admin, so the app says "Scan the personal Jitan
    QR that HR/Admin shows you" and "Scan QR".
-4. **"Set this later" removed** from "07 Set password": the password is mandatory (ONB-01).
-   The step counter reads "8 of 9" because the flow has the extra language step.
-5. **Job title on "04 Account found" omitted.** The ERD has no job title.
-6. ~~"Sign in" and "Contact HR/Admin" not shown~~ **Resolved (AUTH-01):** "Sign in" opens
-   Auth / 01; "Contact HR/Admin" opens the recovery guidance (see DESIGN-CLARIFY-AUTH).
-7. **Ready summary** says "Allow location in Settings to use automatic registration"
+3. **"Set this later" removed** from "07 Set password": the password is mandatory (ONB-01).
+4. **Job title on "04 Account found" omitted.** The ERD has no job title.
+5. **Ready summary** says "Allow location in Settings to use automatic registration"
    (warning colour) instead of "Required permissions configured" when automatic
    registration was chosen but location was refused. A refusal never blocks onboarding.
-8. **Home** is a placeholder ("Hello, {name}") until the Today screens are built.
+6. **Home** is a placeholder ("Hello, {name}") until the Today screens are built.
+
+Resolved by Figma: 06B Language (languages from `tblLanguage`, own name + name in the UI
+language from `language.name.<code>` translations, so new languages need only data),
+"Already activated? Sign in" (Welcome), Onboarding Error / 02 "Contact HR/Admin" as an
+instruction.
 
 ---
 
-## DESIGN-CLARIFY-AUTH: Sign-in and recovery: where the app differs from Figma
+## DESIGN-CLARIFY-AUTH: Sign-in and recovery: open questions
 Status: `OPEN` · small, does not block
 
-Built from the approved Figma frames: Auth / 01–07, Onboarding Error / 02 (Contact
-HR/Admin as an instruction), Profile / Password & web login / Sign out, and Admin /
-Employees — Employee details + Reset account access modal. Remaining differences:
+Built from the approved Figma frames: Auth / 01–07 and 06B, Profile / Password & web login
+/ Change password / Sign out, Admin / Employees — Employee details, Reset account access
+modal and its disabled state. Resolved and removed from this list: Auth / 01 layout,
+recovery refused, disabled reset, mobile Change password, Welcome "Sign in" and Sign in
+"Set up with my QR" links, language selection.
 
-1. **Auth / 01 Sign in overlaps in Figma**: "Scan QR to recover account" (top 560) is
-   drawn over the "First time using Jitan?" note (top 540). The app stacks them: Sign in,
-   "or", Scan QR to recover account, then the note.
-2. **Auth / 06 refused state has no frame**: when the QR is refused (access not reset, or
-   unknown QR) the "HR/Admin reset required" note turns red and scanning continues; the
-   same QR is not resent.
-3. **Forgot password → Continue** opens Auth / 06 (its text tells the employee to ask
-   HR/Admin for the reset). Nothing is sent; the code alone never resets anything.
-4. **Reset account access** button: Figma shows it enabled on a not-activated employee.
-   The app keeps it there but disabled, with a tooltip, since there is nothing to reset.
-5. **Change password form** (Profile → Password & web login → Change password) has no
-   frame: new password twice, same rules and inline errors as onboarding "07".
-6. **Password & web login copy**: Figma mentions an email login and a reset link; Jitan has
-   no email and recovery is HR/Admin-assisted, so the copy says so.
-7. **Profile / Employee** shows only what exists (identity, code, Password & web login,
-   Sign out); Home opens it from a profile icon until the navigation bar exists.
-8. **Entry points** not in Figma: "Already activated? Sign in" on Welcome and "Set up with
-   my QR" under the sign-in note (back to onboarding). The Sign in button is disabled
-   until both fields are filled.
+Still open:
+
+1. **"Password & web login" copy** (mobile `137:20`) says "use your email or employee
+   login" and "Jitan will send a reset link to your verified contact method". Jitan has no
+   email, and V1 recovery is HR/Admin-assisted, so the app shows: "Use your employee code
+   with this password to sign in to Jitan on a new device" and "If you're signed out
+   everywhere, contact HR/Admin to reset your Jitan access". Please update the frame.
+2. **Wrong current password** on Change password has no frame: the app shows an inline
+   field error "The current password is incorrect." (same style as the other field errors).
+3. **Welcome link position**: Figma places "Already activated? Sign in" (top 786) inside
+   the "Get started" button area (756–812); the app puts it directly below the button.
+4. **Profile / Employee** shows only what exists (identity, code, Password & web login, Sign
+   out); the other rows and the bottom navigation come with their features. Home opens
+   Profile from a profile icon until the navigation bar exists.

@@ -30,13 +30,14 @@ void main() {
     expect(find.text('Is this you?'), findsOneWidget);
     expect(find.text('Disan Ssebowa'), findsOneWidget);
     await tapText(tester, 'Yes, this is me');
-    expect(find.text('Choose your language'), findsOneWidget);
-    await tapText(tester, 'Continue');
     expect(find.text('Automatic registration'), findsOneWidget);
     await tapText(tester, 'Continue');
     expect(find.text('Finish your setup.'), findsOneWidget);
     await tapText(tester, 'Continue');
+    expect(find.text('Choose your language'), findsOneWidget);
+    await tapText(tester, 'Continue');
     expect(find.text('Set your password'), findsOneWidget);
+    expect(find.text('7 of 8'), findsOneWidget);
   }
 
   Future<void> enterPasswords(WidgetTester tester, String password, String confirmation) async {
@@ -85,17 +86,32 @@ void main() {
     expect(find.text('Set your password'), findsOneWidget);
   });
 
-  testWidgets('choosing a language translates the following screens at once', (tester) async {
+  testWidgets('06B Language: every database language, own name + translated name; the choice applies at once', (
+    tester,
+  ) async {
     await startApp(tester);
     await tapText(tester, 'Get started');
     await tapText(tester, 'Scan QR');
     await tapText(tester, 'Yes, this is me');
-
-    await tapText(tester, 'Nederlands');
+    await tapText(tester, 'Continue');
     await tapText(tester, 'Continue');
 
-    expect(find.text('Hoe wil je je tijd registreren?'), findsOneWidget);
-    expect(find.text('Automatic registration'), findsOneWidget, reason: 'untranslated keys fall back to English');
+    for (final (name, translated) in [
+      ('English', 'English'),
+      ('Nederlands', 'Dutch'),
+      ('Français', 'French'),
+      ('Deutsch', 'German'),
+    ]) {
+      expect(find.text(name), findsWidgets);
+      expect(find.text(translated), findsWidgets);
+    }
+
+    await tapText(tester, 'Nederlands');
+    expect(find.text('Frans'), findsOneWidget, reason: 'translated names follow the chosen language');
+    await tapText(tester, 'Continue');
+
+    expect(find.text('Stel je wachtwoord in'), findsOneWidget);
+    expect(find.text('Confirm password'), findsOneWidget, reason: 'untranslated keys fall back to English');
   });
 
   testWidgets('an already activated QR shows the error and never restarts onboarding', (tester) async {

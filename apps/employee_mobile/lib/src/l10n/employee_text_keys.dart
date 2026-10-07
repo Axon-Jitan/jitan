@@ -176,4 +176,20 @@ abstract final class EmployeeTextKeys {
   static const newPasswordNoteTitle = 'auth.newPassword.note.title';
   static const newPasswordNoteText = 'auth.newPassword.note.text';
   static const newPasswordAction = 'auth.newPassword.action';
+
+  static const recoverRefused = 'auth.recover.refused';
+  static const recoverRefusedTitle = 'auth.recover.refused.title';
+  static const recoverRefusedText = 'auth.recover.refused.text';
+  static const changePasswordCurrentLabel = 'profile.changePassword.current.label';
+  static const changePasswordCurrentHint = 'profile.changePassword.current.hint';
+  static const changePasswordCurrentWrong = 'profile.changePassword.current.wrong';
+  static const changePasswordNewHint = 'profile.changePassword.new.hint';
+  static const changePasswordConfirmHint = 'profile.changePassword.confirm.hint';
+  static const changePasswordRulesTitle = 'profile.changePassword.rules.title';
+  static const changePasswordRulesText = 'profile.changePassword.rules.text';
+
+  /// A language's name in the UI language ("Dutch"), per `tblLanguage` code.
+  /// Optional: look it up with `tOrNull`; languages without one show only
+  /// their own name.
+  static String languageName(String languageCode) => 'language.name.$languageCode';
 }

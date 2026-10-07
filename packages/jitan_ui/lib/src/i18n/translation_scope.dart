@@ -27,4 +27,7 @@ extension TranslationLookup on BuildContext {
       TranslationScope.of(this).t(key, args: args);
 
   String tPlural(String key, int count) => TranslationScope.of(this).plural(key, count);
+
+  /// [Translations.tOrNull]: `null` when no text exists for [key].
+  String? tOrNull(String key) => TranslationScope.of(this).tOrNull(key);
 }

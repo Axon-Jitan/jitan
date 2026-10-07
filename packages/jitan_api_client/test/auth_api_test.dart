@@ -47,12 +47,12 @@ void main() {
     final sent = <http.Request>[];
     final api = MeApi(transport(sent, (_) => http.Response(jsonEncode({'account': account, 'session': session}), 200)));
 
-    final result = await api.changePassword('a brand new password');
+    final result = await api.changePassword(currentPassword: 'old password', newPassword: 'a brand new password');
 
     expect(result.session.accessToken, 'T.O.K');
     expect(sent.single.url.path, '/me/password');
     expect(sent.single.headers['authorization'], 'Bearer current-token');
-    expect(jsonDecode(sent.single.body), {'newPassword': 'a brand new password'});
+    expect(jsonDecode(sent.single.body), {'currentPassword': 'old password', 'newPassword': 'a brand new password'});
   });
 
   test('reset account access accepts 204 No Content and surfaces 409 account_not_activated', () async {

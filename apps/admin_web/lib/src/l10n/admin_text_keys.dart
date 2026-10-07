@@ -116,7 +116,6 @@ abstract final class AdminTextKeys {
   static const employeeResetAccessEffectPassword = 'employee.resetAccess.effects.password';
   static const employeeResetAccessEffectRecovery = 'employee.resetAccess.effects.recovery';
   static const employeeResetAccessEffectQr = 'employee.resetAccess.effects.qr';
-  static const employeeResetAccessUnavailable = 'employee.resetAccess.unavailable';
   static const employeeResetAccessConfirm = 'employee.resetAccess.confirm';
 
   /// Argument: `{name}`.

@@ -47,7 +47,8 @@ dart run bin/server.dart
 - `GET /me`: the signed-in employee (`Authorization: Bearer <token>`)
 - `POST /auth/sign-in`: employee code + password → session for this device (generic
   `invalid_credentials` on failure)
-- `POST /me/password`: a signed-in employee sets a new password; returns a new session
+- `POST /me/password`: a signed-in employee changes the password (current password
+  verified server-side); returns a new session
   for this device, all other sessions end
 - `POST /companies/{id}/employees/{userId}/reset-access`: HR/Admin "Reset account access"
   (clears the password, keeps the QR, ends every session; 204)

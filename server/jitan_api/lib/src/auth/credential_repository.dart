@@ -30,13 +30,15 @@ class CredentialRepository {
     ];
   }
 
-  /// Replaces the password of an active, non-deleted, activated user;
-  /// returns whether it did.
-  Future<bool> replacePassword(SqlExecutor tx, int userId, String passwordHash) async =>
+  /// Replaces the password of an active, non-deleted user, but only while
+  /// the stored hash is still [currentHash] (the one the current password was
+  /// verified against), so a concurrent change or reset is never overwritten.
+  /// Returns whether it did.
+  Future<bool> replacePassword(SqlExecutor tx, int userId, {required String currentHash, required String newHash}) async =>
       (await tx.execute(
-        'UPDATE tblUser SET userPassword = :hash '
-        'WHERE userID = :userId AND userActive = 1 AND userMFD = 0 AND userPassword IS NOT NULL',
-        {'hash': passwordHash, 'userId': userId},
+        'UPDATE tblUser SET userPassword = :newHash '
+        'WHERE userID = :userId AND userActive = 1 AND userMFD = 0 AND userPassword = :currentHash',
+        {'newHash': newHash, 'currentHash': currentHash, 'userId': userId},
       )).affectedRows ==
       1;
 

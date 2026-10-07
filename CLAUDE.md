@@ -132,7 +132,7 @@ hardcode or invent them.
     for re-entry (new device, reinstall, expired session, sign-out). Failures are
     generic (`invalid_credentials`, same Argon2id work for unknown codes); "account
     unavailable" only after the correct password. Forgot password is HR/Admin-assisted:
-    a signed-in employee changes it (`POST /me/password`, no current password); a
+    a signed-in employee changes it (`POST /me/password`, current password verified); a
     locked-out one asks HR/Admin for **Reset account access**
     (`POST /companies/{id}/employees/{userId}/reset-access`): `userPassword = NULL`,
     audited, QR unchanged, every session ends. The employee then uses **Scan QR to

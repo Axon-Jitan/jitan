@@ -39,6 +39,11 @@ class Translations {
     return args.isEmpty ? text : _substitute(text, args);
   }
 
+  /// The text for [key] when this language or English has one; `null`
+  /// otherwise (not logged). For optional texts built from data, e.g. a
+  /// language's name for each `tblLanguage` row.
+  String? tOrNull(String key) => _selected[key] ?? _fallback[key];
+
   /// `<key>.one` for a count of 1, `<key>.other` otherwise, with `{n}`
   /// replaced by [count].
   ///

@@ -6,14 +6,13 @@ import '../theme/jitan_text_styles.dart';
 
 /// The warm-grey web button (Figma "Button / Cancel", "Button / Reset account
 /// access"): same height and radius as [JitanPrimaryButton]. [onPressed]
-/// `null` disables it; [tooltip] then explains why.
+/// `null` disables it (Figma "— Disabled": grey fill, grey label).
 class JitanSecondaryButton extends StatelessWidget {
   const JitanSecondaryButton({
     super.key,
     required this.label,
     required this.onPressed,
     this.foreground = JitanColors.ink,
-    this.tooltip,
     this.height = JitanDimensions.fieldHeight,
   });
 
@@ -23,27 +22,23 @@ class JitanSecondaryButton extends StatelessWidget {
   /// Label colour; [JitanColors.errorStrong] for an action that removes
   /// access ("Reset account access").
   final Color foreground;
-  final String? tooltip;
   final double height;
 
   @override
-  Widget build(BuildContext context) {
-    final button = SizedBox(
-      height: height,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: JitanColors.inputFill,
-          foregroundColor: foreground,
-          disabledBackgroundColor: JitanColors.inputFill,
-          disabledForegroundColor: foreground.withValues(alpha: 0.4),
-          textStyle: JitanTextStyles.buttonLabel,
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(JitanDimensions.inputRadius)),
-        ),
-        child: Text(label),
+  Widget build(BuildContext context) => SizedBox(
+    height: height,
+    child: FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: JitanColors.inputFill,
+        foregroundColor: foreground,
+        disabledBackgroundColor: JitanColors.disabledFill,
+        disabledForegroundColor: JitanColors.disabledText,
+        textStyle: JitanTextStyles.buttonLabel,
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(JitanDimensions.inputRadius)),
       ),
-    );
-    return tooltip == null ? button : Tooltip(message: tooltip, child: button);
-  }
+      child: Text(label),
+    ),
+  );
 }

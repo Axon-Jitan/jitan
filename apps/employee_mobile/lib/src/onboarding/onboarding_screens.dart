@@ -10,8 +10,8 @@ import '../widgets/mobile_widgets.dart';
 // Vertical spacing below is measured from the 390 × 844 Figma frames
 // ("Onboarding / 01 … 08").
 
-/// 01 Welcome. The "Sign in" link (not in Figma, DESIGN-CLARIFY-AUTH) is for
-/// an already activated employee on a new device or after a reinstall.
+/// 01 Welcome. "Already activated? Sign in" (Figma 199:3) is for an
+/// activated employee on a new device or after a reinstall.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key, required this.controller, required this.onSignIn});
 
@@ -28,7 +28,10 @@ class WelcomeScreen extends StatelessWidget {
         child: TextButton(
           onPressed: onSignIn,
           style: TextButton.styleFrom(foregroundColor: JitanColors.inkMuted),
-          child: Text(context.t(EmployeeTextKeys.welcomeSignIn), style: JitanMobileTextStyles.link),
+          child: Text(
+            context.t(EmployeeTextKeys.welcomeSignIn),
+            style: JitanMobileTextStyles.link.copyWith(fontSize: 11, color: JitanColors.vermilion),
+          ),
         ),
       ),
     ],
@@ -158,8 +161,10 @@ class ConfirmScreen extends StatelessWidget {
   }
 }
 
-/// Language choice. No Figma frame yet: built like "05 Registration method"
-/// (DESIGN-CLARIFY-ONBOARDING-LANGUAGE).
+/// Onboarding / 06B Language, after Permissions. Languages come from
+/// `tblLanguage` (any number); English is built in and always first. Each
+/// card shows the language's own name and, when a translation exists, its
+/// name in the current UI language.
 class LanguageScreen extends StatelessWidget {
   const LanguageScreen({super.key, required this.controller});
 
@@ -167,20 +172,26 @@ class LanguageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => OnboardingPage(
+    showLogo: false,
     actions: [
-      JitanMobileButton(label: context.t(CommonTextKeys.continueAction), onPressed: controller.confirmLanguage),
+      JitanMobileButton(
+        label: context.t(CommonTextKeys.continueAction),
+        style: JitanMobileButtonStyle.brand,
+        size: JitanMobileButtonSize.compact,
+        onPressed: controller.confirmLanguage,
+      ),
     ],
     children: [
-      const SizedBox(height: 45),
-      Semantics(header: true, child: Text(context.t(EmployeeTextKeys.languageTitle), style: JitanMobileTextStyles.title)),
-      const SizedBox(height: 11),
-      Text(context.t(EmployeeTextKeys.languageText), style: JitanMobileTextStyles.body),
-      const SizedBox(height: 32),
+      const SizedBox(height: 4),
+      Semantics(header: true, child: Text(context.t(EmployeeTextKeys.languageTitle), style: JitanMobileTextStyles.formTitle)),
+      const SizedBox(height: 10),
+      Text(context.t(EmployeeTextKeys.languageText), style: JitanMobileTextStyles.caption),
+      const SizedBox(height: 60),
       for (final language in controller.languages) ...[
-        ChoiceCard(
-          title: language.code == englishLanguageCode ? context.t(EmployeeTextKeys.languageEnglish) : language.name,
+        _LanguageCard(
+          name: language.code == englishLanguageCode ? context.t(EmployeeTextKeys.languageEnglish) : language.name,
+          translatedName: context.tOrNull(EmployeeTextKeys.languageName(language.code)),
           selected: controller.languageCode == language.code,
-          minHeight: 58,
           onTap: () => controller.chooseLanguage(language.code),
         ),
         const SizedBox(height: 12),
@@ -197,6 +208,70 @@ class LanguageScreen extends StatelessWidget {
         ),
       ],
     ],
+  );
+}
+
+class _LanguageCard extends StatelessWidget {
+  const _LanguageCard({required this.name, required this.translatedName, required this.selected, required this.onTap});
+
+  final String name;
+  final String? translatedName;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    inMutuallyExclusiveGroup: true,
+    checked: selected,
+    button: true,
+    child: Material(
+      color: selected ? JitanColors.infoSurface : JitanColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: selected ? JitanColors.info : JitanColors.inputBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 64,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(13, 0, 18, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: JitanMobileTextStyles.noteTitle.copyWith(
+                          fontSize: 12,
+                          color: selected ? JitanColors.info : JitanColors.ink,
+                        ),
+                      ),
+                      if (translatedName != null) ...[
+                        const SizedBox(height: 8),
+                        Text(translatedName!, style: JitanMobileTextStyles.noteText.copyWith(fontSize: 9)),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: selected ? JitanColors.info : JitanColors.radioIdle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 }
 
@@ -318,8 +393,8 @@ class PasswordScreen extends StatefulWidget {
   final OnboardingController controller;
 
   /// Position of this screen in the flow, for the "n of total" counter.
-  static const stepNumber = 8;
-  static const stepCount = 9;
+  static const stepNumber = 7;
+  static const stepCount = 8;
 
   @override
   State<PasswordScreen> createState() => _PasswordScreenState();

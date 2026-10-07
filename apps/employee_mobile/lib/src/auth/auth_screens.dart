@@ -123,7 +123,7 @@ class _SignInScreenState extends State<SignInScreen> {
         busy: widget.controller.busy,
         onPressed: AuthController.canSubmit(_code.text, _password.text) ? _submit : null,
       ),
-      const SizedBox(height: 18),
+      const SizedBox(height: 24),
       Row(
         children: [
           const Expanded(child: Divider(color: JitanColors.inputBorder, height: 1)),
@@ -134,13 +134,13 @@ class _SignInScreenState extends State<SignInScreen> {
           const Expanded(child: Divider(color: JitanColors.inputBorder, height: 1)),
         ],
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 18),
       JitanMobileButton(
         label: context.t(EmployeeTextKeys.signInRecoverQr),
         size: JitanMobileButtonSize.compact,
         onPressed: widget.controller.openRecovery,
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 24),
       NoteBox(
         title: context.t(EmployeeTextKeys.signInHelpTitle),
         text: context.t(EmployeeTextKeys.signInHelp),
@@ -150,8 +150,11 @@ class _SignInScreenState extends State<SignInScreen> {
       Center(
         child: TextButton(
           onPressed: widget.onUseQr,
-          style: TextButton.styleFrom(foregroundColor: JitanColors.inkMuted),
-          child: Text(context.t(EmployeeTextKeys.signInUseQr), style: JitanMobileTextStyles.link.copyWith(fontSize: 11)),
+          style: TextButton.styleFrom(foregroundColor: JitanColors.vermilion),
+          child: Text(
+            context.t(EmployeeTextKeys.signInUseQr),
+            style: JitanMobileTextStyles.link.copyWith(fontSize: 11, color: JitanColors.vermilion),
+          ),
         ),
       ),
     ],
@@ -214,8 +217,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 }
 
 /// Auth / 06 Recover with QR: embedded camera. The QR is accepted only
-/// after HR/Admin "Reset account access"; otherwise the "HR/Admin reset
-/// required" note turns into an error and scanning continues.
+/// after HR/Admin "Reset account access"; otherwise it shows Auth / 06B
+/// Recovery refused ("Account reset required") and scanning continues.
 class RecoverWithQrScreen extends StatelessWidget {
   const RecoverWithQrScreen({super.key, required this.controller, required this.scannerView});
 
@@ -258,12 +261,22 @@ class RecoverWithQrScreen extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 26),
+        if (refused)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              context.t(EmployeeTextKeys.recoverRefused),
+              textAlign: TextAlign.center,
+              style: JitanMobileTextStyles.noteTitle.copyWith(color: JitanColors.errorStrong),
+            ),
+          )
+        else
+          const SizedBox(height: 26),
         Semantics(
           liveRegion: true,
           child: NoteBox(
-            title: context.t(EmployeeTextKeys.recoverNoteTitle),
-            text: context.t(EmployeeTextKeys.recoverNoteText),
+            title: context.t(refused ? EmployeeTextKeys.recoverRefusedTitle : EmployeeTextKeys.recoverNoteTitle),
+            text: context.t(refused ? EmployeeTextKeys.recoverRefusedText : EmployeeTextKeys.recoverNoteText),
             background: refused ? JitanColors.errorSurface : JitanColors.warningSurface,
             foreground: refused ? JitanColors.errorStrong : JitanColors.warning,
             textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 9),

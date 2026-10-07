@@ -10,10 +10,12 @@ void main() {
   });
 
   test('change-password request round-trips and never prints the password', () {
-    const request = ChangePasswordRequest(newPassword: 'new secret pass');
+    const request = ChangePasswordRequest(currentPassword: 'old secret pass', newPassword: 'new secret pass');
 
-    expect(ChangePasswordRequest.fromJson(request.toJson()).newPassword, 'new secret pass');
+    final back = ChangePasswordRequest.fromJson(request.toJson());
+    expect((back.currentPassword, back.newPassword), ('old secret pass', 'new secret pass'));
     expect('$request', isNot(contains('new secret pass')));
+    expect('$request', isNot(contains('old secret pass')));
   });
 
   test('missing fields are format errors', () {

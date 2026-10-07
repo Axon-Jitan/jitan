@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
@@ -14,7 +16,7 @@ export '../auth/password_rules.dart' show PasswordProblem;
 final _log = Logger('onboarding');
 
 /// The screens of onboarding, in order (Figma `01 — Employee App`).
-enum OnboardingStep { welcome, join, confirm, language, method, permissions, password, ready, error }
+enum OnboardingStep { welcome, join, confirm, method, permissions, language, password, ready, error }
 
 /// Which Figma "Onboarding Error" screen to show.
 enum OnboardingProblem {
@@ -40,8 +42,8 @@ enum OnboardingProblem {
   sessionRecovery,
 }
 
-/// Drives onboarding: scan → confirm → language → registration method →
-/// permissions → password → ready (the session is created with the
+/// Drives onboarding: scan → confirm → registration method → permissions →
+/// language (Figma 06B) → password → ready (the session is created with the
 /// password, so no sign-in follows).
 ///
 /// Rules from the server (ONB-01, ONB-05): a QR whose onboarding is complete
@@ -115,10 +117,10 @@ class OnboardingController extends ChangeNotifier {
       OnboardingStep.welcome => null,
       OnboardingStep.join => OnboardingStep.welcome,
       OnboardingStep.confirm => OnboardingStep.join,
-      OnboardingStep.language => OnboardingStep.confirm,
-      OnboardingStep.method => OnboardingStep.language,
+      OnboardingStep.method => OnboardingStep.confirm,
       OnboardingStep.permissions => OnboardingStep.method,
-      OnboardingStep.password => OnboardingStep.permissions,
+      OnboardingStep.language => OnboardingStep.permissions,
+      OnboardingStep.password => OnboardingStep.language,
       // Signed in: nothing to go back to.
       OnboardingStep.ready => null,
       OnboardingStep.error => OnboardingStep.join,
@@ -143,8 +145,7 @@ class OnboardingController extends ChangeNotifier {
   // ── 04 Confirm ─────────────────────────────────────────────────────────
 
   void confirmAccount() {
-    _go(OnboardingStep.language);
-    if (_languages.isEmpty) _loadLanguages();
+    _go(OnboardingStep.method);
   }
 
   /// "Not you? Go back": scan again.
@@ -177,7 +178,7 @@ class OnboardingController extends ChangeNotifier {
     await _onLanguageChosen(code);
   }
 
-  void confirmLanguage() => _go(OnboardingStep.method);
+  void confirmLanguage() => _go(OnboardingStep.password);
 
   // ── 05 Registration method ─────────────────────────────────────────────
 
@@ -204,7 +205,8 @@ class OnboardingController extends ChangeNotifier {
     } finally {
       _busy = false;
     }
-    _go(OnboardingStep.password);
+    _go(OnboardingStep.language);
+    if (_languages.isEmpty) unawaited(_loadLanguages());
   }
 
   // ── 07 Password → complete → signed in ─────────────────────────────────
