@@ -39,11 +39,49 @@ class Database implements SqlExecutor, TransactionRunner {
   Future<SqlWriteResult> execute(String sql, [Map<String, Object?> params = const {}]) async =>
       _writeResult(await _run(() => _pool.execute(sql, _checked(params))));
 
+  /// Runs [action] in one transaction on one connection: COMMIT when it
+  /// completes, ROLLBACK when it throws, and the error is rethrown.
+  ///
+  /// The connection is always returned to the pool. The driver's own
+  /// `MySQLConnectionPool.transactional` does not release it when the
+  /// callback throws (mysql_client_plus 0.1.3), so every failed transaction
+  /// would leak a connection until the pool is exhausted and all requests
+  /// wait forever. Here the failure is caught inside the pool callback and
+  /// rethrown only after the connection is back in the pool.
   @override
-  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) =>
-      _run(() => _pool.transactional((connection) => action(_ConnectionExecutor(connection))));
+  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) async {
+    final outcome = await _run(
+      () async => _pool.withConnection((connection) async {
+        try {
+          return _Outcome<T>.value(
+            await connection.transactional((tx) => action(_ConnectionExecutor(tx))),
+          );
+        } catch (error, stackTrace) {
+          return _Outcome<T>.error(error, stackTrace);
+        }
+      }),
+    );
+    return outcome.unwrap();
+  }
 
   Future<void> close() => _pool.close();
+}
+
+/// A transaction's result or failure, carried out of the pool callback so
+/// the connection is released before the failure is rethrown.
+class _Outcome<T> {
+  _Outcome.value(T this._value) : _error = null, _stackTrace = null;
+  _Outcome.error(Object this._error, StackTrace this._stackTrace) : _value = null;
+
+  final T? _value;
+  final Object? _error;
+  final StackTrace? _stackTrace;
+
+  T unwrap() {
+    final error = _error;
+    if (error != null) Error.throwWithStackTrace(_mapDriverError(error), _stackTrace!);
+    return _value as T;
+  }
 }
 
 /// The single connection a transaction runs on.
@@ -71,19 +109,22 @@ const _connectionErrorCodes = {1040, 1044, 1045, 1049};
 Future<T> _run<T>(Future<T> Function() call) async {
   try {
     return await call();
-  } on MySQLServerException catch (e) {
-    if (_connectionErrorCodes.contains(e.errorCode)) {
-      throw DatabaseUnavailableException('MySQL error ${e.errorCode}: ${e.message}');
-    }
-    throw DatabaseQueryException(e.message, errorCode: e.errorCode);
-  } on MySQLClientException catch (e) {
-    throw DatabaseUnavailableException(e.message);
-  } on IOException catch (e) {
-    throw DatabaseUnavailableException(e);
-  } on TimeoutException catch (e) {
-    throw DatabaseUnavailableException(e);
+  } catch (e) {
+    final mapped = _mapDriverError(e);
+    if (identical(mapped, e)) rethrow;
+    throw mapped;
   }
 }
+
+/// The Jitan exception for a driver failure; anything else unchanged.
+Object _mapDriverError(Object e) => switch (e) {
+  MySQLServerException(:final errorCode, :final message) when _connectionErrorCodes.contains(errorCode) =>
+    DatabaseUnavailableException('MySQL error $errorCode: $message'),
+  MySQLServerException(:final errorCode, :final message) => DatabaseQueryException(message, errorCode: errorCode),
+  MySQLClientException(:final message) => DatabaseUnavailableException(message),
+  IOException() || TimeoutException() => DatabaseUnavailableException(e),
+  _ => e,
+};
 
 List<DbRow> _rows(IResultSet result) => [for (final row in result.rows) DbRow(row.assoc())];
 

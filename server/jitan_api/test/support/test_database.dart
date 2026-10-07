@@ -18,7 +18,7 @@ class TestDatabase {
   static String? get skipReason =>
       _load() == null ? 'Set JITAN_TEST_DB_HOST/NAME/USER/PASSWORD (or .env.test) to run.' : null;
 
-  static Database connect() => Database.connect(_load()!.config, maxConnections: 2);
+  static Database connect({int maxConnections = 2}) => Database.connect(_load()!.config, maxConnections: maxConnections);
 
   static TestDatabase? _load() {
     final file = File('.env.test');
