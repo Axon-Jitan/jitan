@@ -1,7 +1,7 @@
 import 'json_reading.dart';
 
-/// Body of `POST /onboarding/start`: the scanned personal QR value
-/// (`tblUser.userQRcode`).
+/// Body of `POST /onboarding/start`: the scanned temporary onboarding QR
+/// (never the permanent Terminal QR).
 class OnboardingStartRequest {
   const OnboardingStartRequest({required this.qrCode});
 

@@ -12,8 +12,24 @@ abstract final class ApiErrorCode {
   /// `tblUser.userCode` is already used by another user.
   static const duplicateEmployeeCode = 'duplicate_employee_code';
 
-  /// The scanned QR is not a known employee's personal QR.
+  /// The scanned QR is not a valid Jitan temporary QR (malformed, not signed
+  /// by this server, or for an unknown employee).
   static const invalidQrCode = 'invalid_qr_code';
+
+  /// The temporary QR has expired or was replaced by a newer one: HR/Admin
+  /// generates a new one.
+  static const qrExpired = 'qr_expired';
+
+  /// The temporary QR was already used (or is being used on another device).
+  static const qrAlreadyUsed = 'qr_already_used';
+
+  /// A temporary QR for another purpose (e.g. a recovery QR scanned during
+  /// onboarding).
+  static const qrWrongPurpose = 'qr_wrong_purpose';
+
+  /// Recovery while the account still has a password: HR/Admin must reset
+  /// access first.
+  static const accountNotReset = 'account_not_reset';
 
   /// The employee's account is disabled; onboarding is not possible.
   static const accountInactive = 'account_inactive';
