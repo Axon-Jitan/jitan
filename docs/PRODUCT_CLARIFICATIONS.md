@@ -130,11 +130,10 @@ The Employee app follows Figma `01 — Employee App` (flow: scan → confirm →
 method → permissions → 06B Language → 07 Set password → Ready) except where Figma
 conflicts with decisions already taken:
 
-1. **"03 Employee identifier" is skipped.** The personal QR already identifies the
-   employee (EMP-08), so the code screen isn't needed.
-2. **Join copy changed.** Figma says "company QR" / "shown on your company terminal". The
-   onboarding QR is personal and shown by HR/Admin, so the app says "Scan the personal Jitan
-   QR that HR/Admin shows you" and "Scan QR".
+1. **"03 Employee identifier" is skipped.** The temporary onboarding QR already identifies
+   the employee, so the code screen isn't needed.
+2. **Join copy** follows the updated Figma (`4:10`): "Scan your setup QR", a temporary
+   onboarding QR from HR/Admin, "Scan onboarding QR".
 3. **"Set this later" removed** from "07 Set password": the password is mandatory (ONB-01).
 4. **Job title on "04 Account found" omitted.** The ERD has no job title.
 5. **Ready summary** says "Allow location in Settings to use automatic registration"

@@ -142,8 +142,8 @@ class AuthController extends ChangeNotifier {
   void openForgotPassword() => _go(AuthStep.forgotPassword);
 
   /// Forgot password → Continue: nothing is sent or reset; the employee is
-  /// told to ask HR/Admin for a reset and to scan their QR ("Recover with
-  /// QR").
+  /// told to ask HR/Admin for a reset and a temporary recovery QR ("Recover
+  /// account").
   void submitForgotPassword(String code) {
     _code = code.trim();
     openRecovery();

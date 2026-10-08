@@ -128,8 +128,8 @@ flutter run --dart-define=JITAN_API_BASE_URL=http://10.0.2.2:8080   # Android em
 
 `JITAN_API_BASE_URL` is required (absolute URL). Debug builds may use plain `http://`
 (development only, `android/app/src/debug/AndroidManifest.xml`); release builds need
-HTTPS. To onboard, open an employee in the HR/Admin app, show the onboarding QR and scan
-it with the app. Completing onboarding signs the device in; the session token is kept in
+HTTPS. To onboard, open an employee in the HR/Admin app, choose **Generate temporary QR**
+and scan it with the app within 10 minutes. Completing onboarding signs the device in; the session token is kept in
 the platform's secure storage.
 
 iOS: `permission_handler` needs its permission macros (`PERMISSION_CAMERA`,

@@ -13,7 +13,7 @@ import '../profile/profile_screens.dart';
 import 'employee_services.dart';
 
 /// Where the app is. Signed out has two ways in: onboarding (first time,
-/// with the personal QR, which signs the device in by itself) and sign-in
+/// with a temporary onboarding QR, which signs the device in by itself) and sign-in
 /// (already activated: new device, reinstall, expired session, sign-out).
 enum _Phase { restoring, onboarding, signIn, signedIn }
 

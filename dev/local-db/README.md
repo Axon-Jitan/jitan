@@ -53,7 +53,9 @@ authentication requires it, and the container's certificate is self-signed.
 
 Plus: groups White/Blue collar, credential groups Employee/HR/Admin, languages en/nl/fr/de,
 a few Dutch translations, and audit event types named like the code (`AuditEventType`).
-QR values are random; they are in `seed.sql` for the end-to-end tests. Passwords are
+The `userQRcode` values are the permanent **Terminal** QRs (random); the end-to-end tests
+use them only to check that they never onboard or recover. Onboarding and recovery use
+temporary QRs generated through the API. Passwords are
 Argon2id hashes made with Jitan's own `PasswordHasher`; they exist only here.
 
 ## Differences from the IT development database (to check when it arrives)

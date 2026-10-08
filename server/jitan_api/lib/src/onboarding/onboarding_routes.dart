@@ -9,7 +9,7 @@ import 'onboarding_service.dart';
 
 /// Onboarding endpoints. Consumer: the Employee app's onboarding flow
 /// (ONB-02). **No sign-in**: the employee has no password yet; the scanned
-/// personal QR is the credential.
+/// temporary onboarding QR is the credential.
 ///
 /// - `POST /onboarding/start` `{qrCode}` → the account to confirm
 /// - `POST /onboarding/complete` `{qrCode, password, deviceId, languageCode?}`
