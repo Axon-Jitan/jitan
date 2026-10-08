@@ -190,7 +190,7 @@ class LanguageScreen extends StatelessWidget {
       for (final language in controller.languages) ...[
         _LanguageCard(
           name: language.code == englishLanguageCode ? context.t(EmployeeTextKeys.languageEnglish) : language.name,
-          translatedName: context.tOrNull(EmployeeTextKeys.languageName(language.code)),
+          translatedName: context.tOrNull(CommonTextKeys.languageName(language.code)),
           selected: controller.languageCode == language.code,
           onTap: () => controller.chooseLanguage(language.code),
         ),

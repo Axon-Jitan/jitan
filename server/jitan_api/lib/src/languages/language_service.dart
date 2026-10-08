@@ -2,6 +2,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../http/api_exception.dart';
 import 'language_repository.dart';
+import 'user_language_service.dart';
 import 'translation_repository.dart';
 
 /// Languages and database-driven UI translations (I18N-01).
@@ -10,10 +11,11 @@ import 'translation_repository.dart';
 /// (selected language → English → key) is applied by the client
 /// translation service.
 class LanguageService {
-  const LanguageService(this._languages, this._translations);
+  const LanguageService(this._languages, this._translations, this._languageChanges);
 
   final LanguageRepository _languages;
   final TranslationRepository _translations;
+  final UserLanguageService _languageChanges;
 
   static const maxLanguageCodeLength = 16;
 
@@ -39,6 +41,18 @@ class LanguageService {
       languageCode: language.code,
       texts: await _translations.textsForLanguage(language.id),
     );
+  }
+
+  /// The signed-in user changes their own preferred language, any time.
+  /// Returns the language now in effect.
+  Future<String> setUserLanguage(int userId, SetUserLanguageRequest request) async {
+    final code = request.languageCode.trim();
+    final language = code.isEmpty || code.length > maxLanguageCodeLength ? null : await _languages.findActiveByCode(code);
+    if (language == null) {
+      throw const ApiException.validation(SetUserLanguageRequest.fieldLanguageCode, 'Choose an active language.');
+    }
+    await _languageChanges.change(actorUserId: userId, userId: userId, languageId: language.id);
+    return language.code;
   }
 
   /// The user's language from `tblUserLanguage`.

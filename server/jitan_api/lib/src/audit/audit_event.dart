@@ -29,7 +29,11 @@ enum AuditEventType {
   groupAssigned('employee.group.assigned'),
 
   /// HR/Admin assigned a credential group (`tblUserCredGroup`).
-  credentialGroupAssigned('employee.credential_group.assigned');
+  credentialGroupAssigned('employee.credential_group.assigned'),
+
+  /// The preferred language changed (by the employee or HR/Admin). Generic:
+  /// `tblEventLog` cannot say which language (GAP-12, accepted for V1).
+  languageChanged('employee.language.changed');
 
   const AuditEventType(this.typeName);
 

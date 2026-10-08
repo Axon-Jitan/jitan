@@ -34,6 +34,8 @@ import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
+import 'package:jitan_api/src/languages/user_language_repository.dart';
+import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
@@ -96,6 +98,13 @@ Future<void> main() async {
       ).middleware,
   ];
 
+  final languageChanges = UserLanguageService(
+    userLanguages: const UserLanguageRepository(),
+    employees: EmployeeRepository(db),
+    audit: const AuditLogRepository(),
+    transactions: db,
+  );
+
   final handler = buildApp(
     corsOrigins: config.corsOrigins,
     health: HealthRoutes(DatabaseHealthRepository(db)),
@@ -119,10 +128,12 @@ Future<void> main() async {
         audit: const AuditLogRepository(),
         transactions: db,
         executor: db,
+        userLanguages: const UserLanguageRepository(),
+        languageChanges: languageChanges,
       ),
     ),
     groups: GroupRoutes(authorizer, groupRepository),
-    languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db))),
+    languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db), languageChanges)),
     onboarding: OnboardingRoutes(
       OnboardingService(
         onboarding: const OnboardingRepository(),

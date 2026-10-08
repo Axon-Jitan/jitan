@@ -55,6 +55,7 @@ class _ManageAssignmentsDialogState extends State<ManageAssignmentsDialog> {
   String _tabLabel(BuildContext context, AssignmentKind kind) => switch (kind) {
     AssignmentKind.companies => context.t(AdminTextKeys.assignmentsTabCompanies),
     AssignmentKind.groups => context.t(AdminTextKeys.assignmentsTabGroups),
+    AssignmentKind.language => context.t(AdminTextKeys.assignmentsTabLanguage),
     AssignmentKind.credentialGroups => context.t(AdminTextKeys.assignmentsTabAccess),
   };
 
@@ -92,6 +93,7 @@ class _ManageAssignmentsDialogState extends State<ManageAssignmentsDialog> {
               switch (tab.kind) {
                 AssignmentKind.companies => _CompaniesTab(controller: _controller, tab: tab, currentCompanyId: employee.companyId),
                 AssignmentKind.groups => _GroupsTab(controller: _controller, tab: tab),
+                AssignmentKind.language => _LanguageTab(controller: _controller, tab: tab),
                 AssignmentKind.credentialGroups => _AccessTab(controller: _controller, tab: tab),
               },
               if (failure != null) ...[
@@ -258,6 +260,49 @@ class _GroupsTab extends StatelessWidget {
               title: context.t(AdminTextKeys.assignmentsGroupsNoteTitle),
               text: context.t(AdminTextKeys.assignmentsGroupsNoteText),
             ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+/// EMP-06: the one preferred language (`tblUserLanguage`), radio choice
+/// from `tblLanguage`. Saving replaces it (a preference update).
+class _LanguageTab extends StatelessWidget {
+  const _LanguageTab({required this.controller, required this.tab});
+
+  final ManageAssignmentsController controller;
+  final AssignmentTab tab;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _SectionHeader(
+        title: context.t(AdminTextKeys.assignmentsLanguageTitle),
+        text: context.t(AdminTextKeys.assignmentsLanguageText),
+      ),
+      _TabBody(
+        controller: controller,
+        tab: tab,
+        builder: (options) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final option in options) ...[
+              JitanOptionCard(
+                title: option.name,
+                detail: switch (option.code) {
+                  final code? => context.tOrNull(CommonTextKeys.languageName(code)),
+                  null => null,
+                },
+                indicator: JitanOptionIndicator.radio,
+                height: 60,
+                selected: tab.isSelected(option),
+                onTap: tab.canToggle(option) && !controller.saving ? () => controller.toggle(tab, option) : null,
+              ),
+              const SizedBox(height: 7),
+            ],
           ],
         ),
       ),

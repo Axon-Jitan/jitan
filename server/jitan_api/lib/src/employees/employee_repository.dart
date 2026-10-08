@@ -24,6 +24,12 @@ class EmployeeRepository {
       _list(_db, companyId, nameOrCodeContains: nameOrCodeContains);
 
   /// One member of [companyId], or `null`.
+  /// Locks [userId]'s `tblUser` row until the transaction ends, so changes
+  /// to one user's relationships run one after the other. `false` when the
+  /// user does not exist.
+  Future<bool> lockUser(SqlExecutor tx, int userId) async =>
+      (await tx.query('SELECT userID FROM tblUser WHERE userID = :userId FOR UPDATE', {'userId': userId})).isNotEmpty;
+
   Future<EmployeeSummary?> findInCompany(SqlExecutor executor, int companyId, int userId) async =>
       (await _list(executor, companyId, userId: userId)).firstOrNull;
 

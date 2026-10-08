@@ -7,6 +7,8 @@ import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
 import 'package:jitan_api/src/employees/employee_assignment_service.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
+import 'package:jitan_api/src/languages/user_language_repository.dart';
+import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
@@ -26,6 +28,7 @@ void main() {
   final companyIds = <String, int>{};
   final groupIds = <String, int>{};
   final credGroupIds = <String, int>{};
+  final languageIds = <String, int>{};
   late int userId;
   late int actorId;
   const repo = EmployeeAssignmentRepository();
@@ -37,6 +40,13 @@ void main() {
     audit: const AuditLogRepository(),
     transactions: db,
     executor: db,
+    userLanguages: const UserLanguageRepository(),
+    languageChanges: UserLanguageService(
+      userLanguages: const UserLanguageRepository(),
+      employees: EmployeeRepository(db),
+      audit: const AuditLogRepository(),
+      transactions: db,
+    ),
   );
 
   Future<int> insertCompany(String key, {required bool active, bool mfd = false}) async {
@@ -64,6 +74,14 @@ void main() {
     return credGroupIds[key] = id;
   }
 
+  Future<int> insertLanguage(String key, {required bool active, bool mfd = false}) async {
+    final id = (await db.execute(
+      'INSERT INTO tblLanguage (languageName, languageCode, languageActive, languageMFD) VALUES (:name, :code, :active, :mfd)',
+      {'name': '[DEV-TEST] $key $stamp', 'code': 'x$key$stamp', 'active': active, 'mfd': mfd},
+    )).lastInsertId;
+    return languageIds[key] = id;
+  }
+
   Future<int> insertUser(String code) async => (await db.execute(
     'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
     "VALUES ('[DEV-TEST]', 'Assign', :code, :qr, 1, 0)",
@@ -87,6 +105,9 @@ void main() {
     await insertCredGroup('active', active: true);
     await insertCredGroup('inactive', active: false);
     await insertCredGroup('deleted', active: true, mfd: true);
+    await insertLanguage('one', active: true);
+    await insertLanguage('two', active: true);
+    await insertLanguage('off', active: false);
     userId = await insertUser('DTA$stamp');
     actorId = await insertUser('DTH$stamp');
     await db.execute('INSERT INTO tblUserCompany (userID, companyID) VALUES (:u, :c)', {
@@ -105,7 +126,11 @@ void main() {
       await db.execute('DELETE FROM tblUserCompany WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUserGroup WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUserCredGroup WHERE userID = :id', {'id': id});
+      await db.execute('DELETE FROM tblUserLanguage WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUser WHERE userID = :id', {'id': id});
+    }
+    for (final id in languageIds.values) {
+      await db.execute('DELETE FROM tblLanguage WHERE languageID = :id', {'id': id});
     }
     for (final id in credGroupIds.values) {
       await db.execute('DELETE FROM tblCredGroup WHERE credGroupID = :id', {'id': id});
@@ -246,5 +271,38 @@ void main() {
     expect(logs, hasLength(1));
     expect(logs.single.readInt('userIDInit'), actorId);
     expect(logs.single.readInt('userCredGroupID'), pairs.single.readInt('userCredGroupID'));
+  });
+
+  test('language: concurrent changes leave one row; each change audited generically', () async {
+    final home = companyIds['home']!;
+    final one = languageIds['one']!;
+    final two = languageIds['two']!;
+    final options = {for (final o in await const UserLanguageRepository().options(db, userId)) o.id: o};
+    expect(options.containsKey(languageIds['off']), isFalse);
+    expect(options[one]!.code, 'xone$stamp');
+
+    await Future.wait([
+      service().setLanguage(actorId, home, userId, SetLanguageRequest(languageId: one)),
+      service().setLanguage(actorId, home, userId, SetLanguageRequest(languageId: two)),
+    ]);
+
+    final rows = await db.query('SELECT languageID FROM tblUserLanguage WHERE userID = :u', {'u': userId});
+    expect(rows, hasLength(1), reason: 'the user row lock serializes the two changes');
+    final logs = await db.query(
+      'SELECT l.userIDInit, t.eventTypeName FROM tblEventLog l '
+      'LEFT JOIN tblEventLogEventType et ON et.eventLogID = l.eventLogID '
+      'LEFT JOIN tblEventType t ON t.eventTypeID = et.eventTypeID '
+      'WHERE l.userIDTarget = :u AND l.groupID IS NULL AND l.companyID IS NULL AND l.credGroupID IS NULL',
+      {'u': userId},
+    );
+    expect(logs, hasLength(2), reason: 'first sets, second replaces: two changes');
+    expect(logs.map((r) => r.readInt('userIDInit')).toSet(), {actorId});
+
+    await service().setLanguage(actorId, home, userId, SetLanguageRequest(languageId: rows.single.readInt('languageID')));
+    final after = await db.query(
+      'SELECT COUNT(*) AS n FROM tblEventLog WHERE userIDTarget = :u AND groupID IS NULL AND companyID IS NULL AND credGroupID IS NULL',
+      {'u': userId},
+    );
+    expect(after.single.readInt('n'), 2, reason: 'choosing the current language is not a change');
   });
 }

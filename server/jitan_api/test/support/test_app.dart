@@ -20,6 +20,7 @@ import 'package:jitan_api/src/groups/group_routes.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
+import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_api/src/auth/password_hasher.dart';
 import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
@@ -62,10 +63,12 @@ class TestApp {
           audit: audit,
           transactions: transactions,
           executor: unusedExecutor,
+          userLanguages: userLanguages,
+          languageChanges: languageChanges,
         ),
       ),
       groups: GroupRoutes(Authorizer(permissions), groups),
-      languages: LanguageRoutes(LanguageService(languages, translations)),
+      languages: LanguageRoutes(LanguageService(languages, translations, languageChanges)),
       onboarding: OnboardingRoutes(
         OnboardingService(
           onboarding: onboarding,
@@ -134,6 +137,13 @@ class TestApp {
   var _qrCounter = 0;
   final databaseHealth = FakeDatabaseHealthRepository();
   final languages = FakeLanguageRepository();
+  final userLanguages = FakeUserLanguageRepository();
+  late final languageChanges = UserLanguageService(
+    userLanguages: userLanguages,
+    employees: employees,
+    audit: audit,
+    transactions: transactions,
+  );
   final translations = FakeTranslationRepository();
   late final FixedPermissionEvaluator permissions;
   late final Handler handler;
@@ -155,6 +165,13 @@ class TestApp {
 
   Future<Response> get(String path, {Map<String, String> headers = const {}}) =>
       Future.sync(() => handler(Request('GET', Uri.parse('http://localhost$path'), headers: headers)));
+
+  /// PUT with a raw body (already JSON-encoded, or deliberately malformed).
+  Future<Response> put(String path, String body) => Future.sync(
+    () => handler(
+      Request('PUT', Uri.parse('http://localhost$path'), body: body, headers: {'content-type': 'application/json'}),
+    ),
+  );
 
   /// POST with a raw body (already JSON-encoded, or deliberately malformed).
   Future<Response> post(String path, String body) => Future.sync(

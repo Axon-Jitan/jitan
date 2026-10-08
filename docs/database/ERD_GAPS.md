@@ -37,7 +37,6 @@ answered, and they block only the production cut-over of authentication and auth
 | Exceptions | GAP-08 |
 | Terminal | GAP-09 |
 | Visitors | GAP-10 |
-| Employees: Manage assignments → Language (EMP-06) | GAP-12 |
 
 **Milestone 1 needs GAP-03 (primary workplace) and GAP-04 (onboarding QR) resolved.**
 CLARIFY-01 (password hashing) is needed before production, not before development.
@@ -243,26 +242,14 @@ valid for Terminal check-in/out. The guard is enforced twice: a check before wor
    "Location" means something else (e.g. the company).
 
 ## GAP-12: Auditing an employee's language change
-**ERD GAP — requires clarification with IT.** · Status: `OPEN` · raised 2026-10-08
+**Status: `ACCEPTED` for V1** (product decision 2026-10-08) · no schema change
 
-1. **Requirement** (EMP-06, Figma `Manage assignments / Language` `201:673`): HR/Admin set
-   an employee's preferred app language, and the change is recorded in `tblEventLog`
-   like every other assignment change (ENGINEERING_RULES §11).
-2. **Considered:** `tblEventLog` (FK columns), `tblEventType`, `tblUserLanguage`,
-   `tblLanguage`.
-3. **Why not:** `tblEventLog` has no `languageID` or `userLanguageID` column, so an
-   event row can say *that* the language changed but not *to which* language. With one
-   language per user (CLARIFY-07), a change updates the `tblUserLanguage` row in place,
-   so the previous language is lost too: the history cannot be reconstructed. Encoding
-   the language in the event-type name would repurpose `tblEventType`.
-4. **Missing:** one of
-   - `languageID` / `userLanguageID` on `tblEventLog` (as for groups, companies and
-     credential groups), or
-   - IT's confirmation that an event row with only the actor, the employee and the type
-     (`employee.language.changed`) is a sufficient audit for a language change.
-
-Until answered, the Language tab is not built. The employee's own choice during
-onboarding (ONB) is unaffected.
+`tblEventLog` has no `languageID` / `userLanguageID`, so a language-change event cannot say
+which language was chosen, and the one `tblUserLanguage` row is updated in place. Decision:
+changing language is a **preference update, not a deletion**; Jitan records a generic
+`employee.language.changed` event (actor, employee, type, timestamp) and does not keep the
+previous/new value. If IT later adds the columns, the event gains the references; nothing
+else changes.
 
 ---
 
@@ -311,10 +298,11 @@ already follow it. Every geofence evaluation parses it.
 ## CLARIFY-06: `tblTimeReg.addressID` nullability · `OPEN`
 What address does a manual entry, or a QR scan in a van, carry? Is the column nullable?
 
-## CLARIFY-07: User language · `OPEN`
-`tblUserLanguage` allows several languages per user. Is the rule one row per user (the
-selected language), with the fallback being a system default? Or are several rows
-ranked somehow?
+## CLARIFY-07: User language · `RESOLVED` (product decision 2026-10-08)
+`tblUserLanguage` allows several languages per user. Decision: **one current preferred
+language per user**, changed by updating that row (employee: `PUT /me/language`; HR/Admin:
+Manage assignments → Language). No row means English. Several rows are reported as a data
+error (409), never silently resolved.
 
 ## CLARIFY-08: Translation key uniqueness · `RESOLVED` by ERD.jpg
 ERD.jpg marks `(languageID, translationUIName)` as a unique pair (yellow; legend "in same
@@ -363,7 +351,11 @@ Please share current rows of `tblCredGroup`, `tblAppModules`, `tblFunction`, `tb
 row exists, the event is stored **without** a type link and a warning is logged. Either
 IT adds rows with these names, or the code adopts IT's names; nothing else changes.
 Names in use: `employee.created`, `employee.personal_qr.generated`,
-`employee.onboarding.completed`, `employee.password.changed`, `employee.access.reset`.
+`employee.onboarding.completed`, `employee.password.changed`, `employee.access.reset`,
+`employee.company.assigned`, `employee.group.assigned`,
+`employee.credential_group.assigned`, `employee.language.changed`. **These need rows in
+IT's `tblEventType`.** Jitan looks them up by name and never assumes an ID; the IDs in
+`dev/local-db/seed.sql` exist only in the disposable local database.
 Recovery after a reset uses the onboarding endpoints, so the new password is logged as
 `employee.onboarding.completed` too (the database cannot tell a first setup from a
 recovery; the preceding `employee.access.reset` row shows which it was).

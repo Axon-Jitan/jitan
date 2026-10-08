@@ -187,9 +187,4 @@ abstract final class EmployeeTextKeys {
   static const changePasswordConfirmHint = 'profile.changePassword.confirm.hint';
   static const changePasswordRulesTitle = 'profile.changePassword.rules.title';
   static const changePasswordRulesText = 'profile.changePassword.rules.text';
-
-  /// A language's name in the UI language ("Dutch"), per `tblLanguage` code.
-  /// Optional: look it up with `tOrNull`; languages without one show only
-  /// their own name.
-  static String languageName(String languageCode) => 'language.name.$languageCode';
 }

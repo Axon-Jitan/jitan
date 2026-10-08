@@ -16,6 +16,7 @@ import 'employee_assignment_service.dart';
 /// - `POST /companies/{companyId}/employees/{userId}/assignments/companies`
 ///   with an `AddAssignmentsRequest` (adds only)
 /// - `GET/POST …/assignments/groups` (universal groups, adds only)
+/// - `GET/PUT …/assignments/language` (one preferred language, replaced)
 /// - `GET/POST …/assignments/credential-groups` (access, adds only; POST
 ///   needs `manageEmployeeAccess` in every company of the employee)
 class EmployeeAssignmentRoutes {
@@ -31,8 +32,28 @@ class EmployeeAssignmentRoutes {
     ..post('$_path/companies', _addCompanies)
     ..get('$_path/groups', _groups)
     ..post('$_path/groups', _addGroups)
+    ..get('$_path/language', _languages)
+    ..put('$_path/language', _setLanguage)
     ..get('$_path/credential-groups', _credentialGroups)
     ..post('$_path/credential-groups', _addCredentialGroups);
+
+  Future<Response> _languages(Request request, String companyId, String userId) async {
+    final id = int.parse(companyId);
+    await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
+    return jsonResponse((await _assignments.languages(id, int.parse(userId))).toJson());
+  }
+
+  Future<Response> _setLanguage(Request request, String companyId, String userId) async {
+    final id = int.parse(companyId);
+    final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
+    final SetLanguageRequest body;
+    try {
+      body = SetLanguageRequest.fromJson(await readJsonObject(request));
+    } on FormatException catch (e) {
+      throw ApiException.badRequest(e.message);
+    }
+    return jsonResponse((await _assignments.setLanguage(identity.userId, id, int.parse(userId), body)).toJson());
+  }
 
   Future<Response> _credentialGroups(Request request, String companyId, String userId) async {
     final id = int.parse(companyId);

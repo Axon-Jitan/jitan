@@ -51,6 +51,20 @@ class ApiTransport {
     );
   }
 
+  /// PUTs [body] as JSON (replace a value, e.g. a preferred language).
+  Future<Map<String, Object?>> putJson(String path, Map<String, Object?> body) {
+    final uri = baseUri.resolve(path);
+    return _send(
+      'PUT',
+      uri,
+      () => _http.put(
+        uri,
+        headers: _headers(const {'accept': 'application/json', 'content-type': 'application/json; charset=utf-8'}),
+        body: jsonEncode(body),
+      ),
+    );
+  }
+
   /// POSTs an action that answers `204 No Content` (e.g. reset-access).
   Future<void> postNoContent(String path, {Map<String, Object?>? body}) async {
     final uri = baseUri.resolve(path);

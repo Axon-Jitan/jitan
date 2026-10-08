@@ -59,7 +59,8 @@ INSERT INTO tblEventType (eventTypeID, eventTypeName) VALUES
   (5, 'employee.access.reset'),
   (6, 'employee.company.assigned'),
   (7, 'employee.group.assigned'),
-  (8, 'employee.credential_group.assigned');
+  (8, 'employee.credential_group.assigned'),
+  (9, 'employee.language.changed');
 
 -- People. userQRcode values are random (never derived from IDs or codes).
 --  1 Hanne Claes      HR in Almeco + PCA, activated   (local password Hanne-Local-Dev-1)

@@ -14,6 +14,7 @@ import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
+import 'package:jitan_api/src/languages/user_language_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
@@ -125,6 +126,16 @@ class FakeEmployeeRepository implements EmployeeRepository {
               isActivated: true,
             )
           : null);
+
+  /// Users [lockUser] reports as existing; `null` = every user exists.
+  Set<int>? existingUserIds;
+  final lockedUsers = <int>[];
+
+  @override
+  Future<bool> lockUser(SqlExecutor tx, int userId) async {
+    lockedUsers.add(userId);
+    return existingUserIds?.contains(userId) ?? true;
+  }
 
   /// (companyId, userId) pairs [findInCompany] finds.
   Set<(int, int)> members = {};
@@ -434,6 +445,42 @@ class FakeLanguageRepository implements LanguageRepository {
 
   @override
   Future<List<String>> activeLanguageCodesForUser(int userId) async => userLanguages[userId] ?? const [];
+}
+
+class FakeUserLanguageRepository implements UserLanguageRepository {
+  /// languageID → (name, code, active); MFD languages are simply absent.
+  Map<int, ({String name, String code, bool active})> languages = {};
+
+  /// userID → their tblUserLanguage rows.
+  final rows = <int, List<UserLanguageRow>>{};
+  var _nextId = 500;
+
+  @override
+  Future<List<UserLanguageRow>> assigned(SqlExecutor executor, int userId, {bool forUpdate = false}) async =>
+      [...?rows[userId]];
+
+  @override
+  Future<void> save(SqlExecutor tx, int userId, int languageId, {UserLanguageRow? current}) async {
+    final list = rows.putIfAbsent(userId, () => []);
+    if (current == null) {
+      list.add((userLanguageId: _nextId++, languageId: languageId));
+    } else {
+      list[list.indexOf(current)] = (userLanguageId: current.userLanguageId, languageId: languageId);
+    }
+  }
+
+  @override
+  Future<bool> isSelectable(SqlExecutor executor, int languageId) async => languages[languageId]?.active ?? false;
+
+  @override
+  Future<List<AssignmentOption>> options(SqlExecutor executor, int userId) async {
+    final mine = {for (final r in rows[userId] ?? const <UserLanguageRow>[]) r.languageId};
+    return [
+      for (final MapEntry(key: id, value: l) in (languages.entries.toList()..sort((a, b) => a.value.name.compareTo(b.value.name))))
+        if (l.active || mine.contains(id))
+          AssignmentOption(id: id, name: l.name, code: l.code, isActive: l.active, isAssigned: mine.contains(id)),
+    ];
+  }
 }
 
 class FakeTranslationRepository implements TranslationRepository {

@@ -19,6 +19,21 @@ LanguagesApi _api(Map<String, Object> responsesByPath, {List<Uri>? requested}) =
     );
 
 void main() {
+  test("changes the signed-in user's language with PUT /me/language", () async {
+    final sent = <http.Request>[];
+    final api = LanguagesApi(ApiTransport(
+      baseUri: Uri.parse('http://api.test/'),
+      httpClient: MockClient((request) async {
+        sent.add(request);
+        return http.Response(jsonEncode({'languageCode': 'nl'}), 200);
+      }),
+    ));
+
+    expect(await api.setCurrentUserLanguage('nl'), 'nl');
+    expect('${sent.single.method} ${sent.single.url.path}', 'PUT /me/language');
+    expect(jsonDecode(sent.single.body), {'languageCode': 'nl'});
+  });
+
   test('lists languages', () async {
     final api = _api({
       '/languages': {

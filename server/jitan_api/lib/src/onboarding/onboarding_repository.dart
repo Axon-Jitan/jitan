@@ -1,6 +1,7 @@
 import 'package:logging/logging.dart';
 
 import '../database/sql_executor.dart';
+import '../languages/user_language_repository.dart';
 
 final _log = Logger('onboarding');
 
@@ -82,23 +83,14 @@ class OnboardingRepository {
   /// Makes [languageId] the user's language (one per user, CLARIFY-07): adds
   /// it when the user has none, changes it when the user has exactly one.
   /// With several assigned (inconsistent data), nothing is changed and the
-  /// problem is logged rather than guessed at.
+  /// problem is logged rather than guessed at, so onboarding still finishes.
   Future<void> setLanguage(SqlExecutor tx, int userId, int languageId) async {
-    final current = await tx.query('SELECT userLanguageID FROM tblUserLanguage WHERE userID = :userId', {
-      'userId': userId,
-    });
-    if (current.isEmpty) {
-      await tx.execute(
-        'INSERT INTO tblUserLanguage (userID, languageID) VALUES (:userId, :languageId)',
-        {'userId': userId, 'languageId': languageId},
-      );
-    } else if (current.length == 1) {
-      await tx.execute(
-        'UPDATE tblUserLanguage SET languageID = :languageId WHERE userLanguageID = :id',
-        {'languageId': languageId, 'id': current.single.readInt('userLanguageID')},
-      );
-    } else {
+    const userLanguages = UserLanguageRepository();
+    final current = await userLanguages.assigned(tx, userId, forUpdate: true);
+    if (current.length > 1) {
       _log.warning('User $userId has ${current.length} languages (CLARIFY-07); onboarding choice not stored.');
+      return;
     }
+    await userLanguages.save(tx, userId, languageId, current: current.firstOrNull);
   }
 }

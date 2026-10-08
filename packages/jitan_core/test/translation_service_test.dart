@@ -18,6 +18,9 @@ class FakeLanguagesApi implements LanguagesApi {
   final requests = <String>[];
 
   @override
+  Future<String?> setCurrentUserLanguage(String languageCode) async => userLanguage = languageCode;
+
+  @override
   Future<TranslationBundle> translationBundle(String languageCode) async {
     requests.add(languageCode);
     if (bundleFailure != null) throw bundleFailure!;

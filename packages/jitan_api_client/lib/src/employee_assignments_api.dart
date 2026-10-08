@@ -11,6 +11,10 @@ enum AssignmentKind {
   /// `tblUserGroup` (EMP-05). Groups are universal across companies.
   groups('groups'),
 
+  /// `tblUserLanguage` (EMP-06): one preferred language, replaced with
+  /// [EmployeeAssignmentsApi.setLanguage] instead of added.
+  language('language'),
+
   /// `tblUserCredGroup` (EMP-07): access roles, from the database.
   credentialGroups('credential-groups');
 
@@ -34,6 +38,14 @@ class EmployeeAssignmentsApi {
   /// Adds the options [ids]; returns the updated list.
   Future<AssignmentOptions> add(int companyId, int userId, AssignmentKind kind, List<int> ids) async =>
       _decode(await _transport.postJson(_path(companyId, userId, kind), AddAssignmentsRequest(ids: ids).toJson()));
+
+  /// Replaces the employee's preferred language; returns the updated list.
+  Future<AssignmentOptions> setLanguage(int companyId, int userId, int languageId) async => _decode(
+        await _transport.putJson(
+          _path(companyId, userId, AssignmentKind.language),
+          SetLanguageRequest(languageId: languageId).toJson(),
+        ),
+      );
 
   static String _path(int companyId, int userId, AssignmentKind kind) =>
       'companies/$companyId/employees/$userId/assignments/${kind.path}';

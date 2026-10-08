@@ -30,7 +30,7 @@ const _usedColumns = {
   'tblEventLogEventType': ['eventLogEventTypeID', 'eventTypeID', 'eventLogID'],
   'tblLanguage': ['languageID', 'languageName', 'languageCode', 'languageActive', 'languageMFD'],
   'tblTranslation': ['translationID', 'languageID', 'translationUIName', 'translationUIText'],
-  'tblUserLanguage': ['userID', 'languageID'],
+  'tblUserLanguage': ['userLanguageID', 'userID', 'languageID'],
 };
 
 void main() {

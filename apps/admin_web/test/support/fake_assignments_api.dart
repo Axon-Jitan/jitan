@@ -19,6 +19,20 @@ class FakeEmployeeAssignmentsApi implements EmployeeAssignmentsApi {
     return AssignmentOptions(options: byKind[kind] ?? const []);
   }
 
+  /// (companyId, userId, languageId) of every language change.
+  final languageChanges = <(int, int, int)>[];
+
+  @override
+  Future<AssignmentOptions> setLanguage(int companyId, int userId, int languageId) async {
+    languageChanges.add((companyId, userId, languageId));
+    if (addFailure != null) throw addFailure!;
+    byKind[AssignmentKind.language] = [
+      for (final o in byKind[AssignmentKind.language] ?? const <AssignmentOption>[])
+        AssignmentOption(id: o.id, name: o.name, code: o.code, isActive: o.isActive, isAssigned: o.id == languageId),
+    ];
+    return AssignmentOptions(options: byKind[AssignmentKind.language]!);
+  }
+
   @override
   Future<AssignmentOptions> add(int companyId, int userId, AssignmentKind kind, List<int> ids) async {
     adds.add((companyId, userId, kind, ids));

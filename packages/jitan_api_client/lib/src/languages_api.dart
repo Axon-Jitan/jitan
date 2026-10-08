@@ -26,6 +26,15 @@ class LanguagesApi {
         () async => UserLanguageResponse.fromJson(await _transport.getJson('me/language')).languageCode,
       );
 
+  /// Changes the signed-in user's own language; returns the code now in
+  /// effect.
+  Future<String?> setCurrentUserLanguage(String languageCode) => _decode(
+        'me/language',
+        () async => UserLanguageResponse.fromJson(
+          await _transport.putJson('me/language', SetUserLanguageRequest(languageCode: languageCode).toJson()),
+        ).languageCode,
+      );
+
   static Future<T> _decode<T>(String path, Future<T> Function() call) async {
     try {
       return await call();

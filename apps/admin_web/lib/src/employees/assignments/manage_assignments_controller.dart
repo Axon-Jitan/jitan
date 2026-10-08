@@ -15,11 +15,18 @@ class AssignmentTab {
   /// Options ticked to be added on Save.
   final pending = <int>{};
 
-  bool isSelected(AssignmentOption option) => option.isAssigned || pending.contains(option.id);
+  /// One choice that replaces the current one (language), instead of
+  /// several that are added.
+  bool get isSingleChoice => kind == AssignmentKind.language;
 
-  /// Only active, not yet assigned options can be ticked. Existing
-  /// assignments are locked: removal waits for IT (junction rows).
-  bool canToggle(AssignmentOption option) => option.isActive && !option.isAssigned;
+  bool isSelected(AssignmentOption option) => isSingleChoice && pending.isNotEmpty
+      ? pending.contains(option.id)
+      : option.isAssigned || pending.contains(option.id);
+
+  /// The server decides what may be assigned ([AssignmentOption.isAssignable]).
+  /// Existing assignments are locked: removal waits for IT (junction rows).
+  /// For a single choice, the current option can be picked to undo a change.
+  bool canToggle(AssignmentOption option) => option.isAssignable || (isSingleChoice && option.isAssigned);
 }
 
 /// State of "Manage employee assignments" (Figma Admin/HR Employees 04–07)
@@ -38,6 +45,7 @@ class ManageAssignmentsController extends ChangeNotifier {
   final tabs = [
     AssignmentTab(AssignmentKind.companies),
     AssignmentTab(AssignmentKind.groups),
+    AssignmentTab(AssignmentKind.language),
     AssignmentTab(AssignmentKind.credentialGroups),
   ];
 
@@ -66,7 +74,12 @@ class ManageAssignmentsController extends ChangeNotifier {
 
   void toggle(AssignmentTab tab, AssignmentOption option) {
     if (_saving || !tab.canToggle(option)) return;
-    if (!tab.pending.remove(option.id)) tab.pending.add(option.id);
+    if (tab.isSingleChoice) {
+      tab.pending.clear();
+      if (!option.isAssigned) tab.pending.add(option.id);
+    } else if (!tab.pending.remove(option.id)) {
+      tab.pending.add(option.id);
+    }
     _saveFailure = null;
     notifyListeners();
   }
@@ -91,7 +104,10 @@ class ManageAssignmentsController extends ChangeNotifier {
     notifyListeners();
     try {
       for (final tab in tabs.where((t) => t.pending.isNotEmpty)) {
-        tab.options = (await _api.add(companyId, userId, tab.kind, tab.pending.toList()..sort())).options;
+        tab.options = (tab.isSingleChoice
+                ? await _api.setLanguage(companyId, userId, tab.pending.single)
+                : await _api.add(companyId, userId, tab.kind, tab.pending.toList()..sort()))
+            .options;
         tab.pending.clear();
       }
       return true;

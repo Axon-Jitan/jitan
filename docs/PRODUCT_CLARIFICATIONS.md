@@ -172,3 +172,12 @@ Still open:
 4. **Profile / Employee** shows only what exists (identity, code, Password & web login, Sign
    out); the other rows and the bottom navigation come with their features. Home opens
    Profile from a profile icon until the navigation bar exists.
+
+## DESIGN-CLARIFY-PROFILE-LANGUAGE: Employee changes their language after onboarding
+Status: `OPEN` · small, does not block
+
+Employees may change their preferred language whenever they want (decision 2026-10-08).
+The server endpoint (`PUT /me/language`, audited) and the client
+(`LanguagesApi.setCurrentUserLanguage`) are built. Figma has a language choice only in
+onboarding (06B, `199:47`); the Employee App Profile (`62:2`) has no Language row. Please
+add one (e.g. reusing the 06B list) so the app can expose it.

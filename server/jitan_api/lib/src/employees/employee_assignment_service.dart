@@ -6,6 +6,8 @@ import '../companies/company_repository.dart';
 import '../database/database_exception.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
+import '../languages/user_language_repository.dart';
+import '../languages/user_language_service.dart';
 import 'employee_assignment_repository.dart';
 import 'employee_repository.dart';
 
@@ -24,6 +26,8 @@ class EmployeeAssignmentService {
     required this._audit,
     required this._transactions,
     required this._executor,
+    required this._userLanguages,
+    required this._languageChanges,
   });
 
   final EmployeeAssignmentRepository _assignments;
@@ -32,6 +36,8 @@ class EmployeeAssignmentService {
   final AuditLogRepository _audit;
   final TransactionRunner _transactions;
   final SqlExecutor _executor;
+  final UserLanguageRepository _userLanguages;
+  final UserLanguageService _languageChanges;
 
   /// Largest number of ids one request may add.
   static const maxIds = 100;
@@ -138,6 +144,28 @@ class EmployeeAssignmentService {
       }
     });
     return groups(companyId, userId);
+  }
+
+  // ── EMP-06 Preferred language ──────────────────────────────────────────
+
+  /// Active languages (and the employee's, even if since deactivated). The
+  /// employee has at most one.
+  Future<AssignmentOptions> languages(int companyId, int userId) async {
+    await _requireMember(_executor, companyId, userId);
+    return AssignmentOptions(options: await _userLanguages.options(_executor, userId));
+  }
+
+  /// Replaces the employee's preferred language: a preference update,
+  /// audited as `employee.language.changed`.
+  Future<AssignmentOptions> setLanguage(int actorUserId, int companyId, int userId, SetLanguageRequest request) async {
+    await _requireMember(_executor, companyId, userId);
+    await _languageChanges.change(
+      actorUserId: actorUserId,
+      userId: userId,
+      languageId: request.languageId,
+      precondition: (tx) => _requireMember(tx, companyId, userId),
+    );
+    return languages(companyId, userId);
   }
 
   // ── EMP-07 Access (credential groups) ──────────────────────────────────

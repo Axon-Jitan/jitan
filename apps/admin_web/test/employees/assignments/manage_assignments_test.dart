@@ -33,8 +33,12 @@ FakeEmployeeAssignmentsApi _api() => FakeEmployeeAssignmentsApi()
   ..byKind = {
     AssignmentKind.companies: [_akwa, _almeco, _pca],
     AssignmentKind.groups: [_blue, _white],
+    AssignmentKind.language: [_english, _dutch],
     AssignmentKind.credentialGroups: [_employeeRole, _hrRole],
   };
+
+const _english = AssignmentOption(id: 1, name: 'English', code: 'en', isActive: true, isAssigned: true);
+const _dutch = AssignmentOption(id: 2, name: 'Nederlands', code: 'nl', isActive: true, isAssigned: false);
 
 const _employeeRole = AssignmentOption(id: 1, name: 'Employee', isActive: true, isAssigned: true);
 const _hrRole = AssignmentOption(id: 2, name: 'HR', isActive: true, isAssigned: false);
@@ -281,6 +285,81 @@ void main() {
     c.choose(access, 2);
     expect(access.pending, {2});
     c.choose(access, null);
+    expect(c.hasChanges, isFalse);
+  });
+  group('Language tab (one preferred language)', () {
+    Future<FakeEmployeeAssignmentsApi> openLanguage(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1440, 1024);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final fake = _api();
+      await tester.pumpWidget(
+        TranslationScope(
+          translations: Translations.english(),
+          child: MaterialApp(
+            theme: JitanTheme.light(),
+            home: Scaffold(body: ManageAssignmentsDialog(api: fake, employee: _disan)),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Language'));
+      await tester.pump();
+      return fake;
+    }
+
+    testWidgets('matches Figma: title, native names with the English name below, radio', (tester) async {
+      await openLanguage(tester);
+
+      expect(find.text('Preferred app language'), findsOneWidget);
+      expect(find.text('Choose the language used in the employee app and Employee Web.'), findsOneWidget);
+      expect(find.text('Nederlands'), findsOneWidget);
+      expect(find.text('Dutch'), findsOneWidget);
+      expect(
+        tester.widgetList<JitanOptionCard>(find.byType(JitanOptionCard)).map((c) => (c.title, c.selected, c.indicator)),
+        [('English', true, JitanOptionIndicator.radio), ('Nederlands', false, JitanOptionIndicator.radio)],
+      );
+    });
+
+    testWidgets('choosing Nederlands moves the selection and saving replaces the language', (tester) async {
+      final api = await openLanguage(tester);
+
+      await tester.tap(find.text('Nederlands'));
+      await tester.pump();
+      expect(
+        tester.widgetList<JitanOptionCard>(find.byType(JitanOptionCard)).map((c) => c.selected),
+        [false, true],
+        reason: 'one choice: English is no longer shown selected',
+      );
+      await tester.tap(find.text('Save changes'));
+      await tester.pump();
+
+      expect(api.languageChanges.single, (1, 2, 2));
+      expect(api.adds, isEmpty);
+    });
+  });
+
+  test('language: picking the current one again undoes the change', () async {
+    final c = ManageAssignmentsController(api: _api(), companyId: 1, userId: 2);
+    await pumpEventQueue();
+    final language = c.tabs.firstWhere((t) => t.kind == AssignmentKind.language);
+
+    c.toggle(language, _dutch);
+    expect(language.pending, {2});
+    c.toggle(language, _english);
+    expect(c.hasChanges, isFalse);
+  });
+
+  test('the server decides what can be ticked (isAssignable)', () async {
+    final api = _api()
+      ..byKind[AssignmentKind.groups] = [
+        const AssignmentOption(id: 2, name: 'Blue collar', isActive: true, isAssigned: false, isAssignable: false),
+      ];
+    final c = ManageAssignmentsController(api: api, companyId: 1, userId: 2);
+    await pumpEventQueue();
+    final groups = c.tabs.firstWhere((t) => t.kind == AssignmentKind.groups);
+
+    c.toggle(groups, groups.options!.single);
     expect(c.hasChanges, isFalse);
   });
 }

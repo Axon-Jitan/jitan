@@ -4,6 +4,11 @@
 /// `tblTranslation`. Keys describe meaning, not copy. Plural keys are bases:
 /// the texts are `<base>.one` and `<base>.other` (see `Translations.plural`).
 abstract final class CommonTextKeys {
+  /// A language's name in the UI language ("Dutch"), per `tblLanguage` code.
+  /// Optional: look it up with `tOrNull`; languages without one show only
+  /// their own name.
+  static String languageName(String languageCode) => 'language.name.$languageCode';
+
   static const retry = 'common.retry';
   static const back = 'common.back';
   static const continueAction = 'common.continue';
