@@ -186,6 +186,19 @@ void main() {
     });
   });
 
+  test('a device storage failure before the final request shows a retryable error, never a crash', () async {
+    await toPassword();
+    h.store.failWrites = true;
+
+    await c.submitPassword('correct horse battery', 'correct horse battery');
+
+    expect((c.step, c.problem), (OnboardingStep.error, OnboardingProblem.networkFailure));
+    expect(h.server.requestsTo('/onboarding/complete'), isEmpty);
+    h.store.failWrites = false;
+    await c.retry();
+    expect(c.step, OnboardingStep.ready);
+  });
+
   group('final step', () {
     test('lost response: "Couldn’t finish setup", retry recovers the session without repeating onboarding', () async {
       await toPassword();

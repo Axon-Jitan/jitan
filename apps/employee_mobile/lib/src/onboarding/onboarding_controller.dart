@@ -348,6 +348,13 @@ class OnboardingController extends ChangeNotifier {
       _busy = false;
       onError(e);
       return;
+    } catch (e) {
+      // Not an API answer: e.g. this device's secure storage failed. Nothing
+      // was confirmed, so "Try again" is safe (as for a lost answer).
+      _log.severe('Onboarding step failed on this device ($e).');
+      _busy = false;
+      _show(OnboardingProblem.networkFailure);
+      return;
     }
     _busy = false;
     notifyListeners();
