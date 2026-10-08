@@ -401,6 +401,15 @@ one employee's QR reveals nothing about another's. Questions for IT: does an exi
 system expect a specific format or length for this column? What is its maximum length?
 If the format must change, codes can be regenerated: no QR has been issued yet.
 
+## CLARIFY-14: Which ERD version is authoritative · `OPEN` · IT CLARIFICATION (2026-10-08)
+
+A newer IT-approved diagram reportedly includes `tblSchedule.companyID` and
+`tblUserSchedule.userCompanyID`. The repository's `ERD.jpg` (2026-10-07) and the older draft
+(`2026-09-24 - ERD-organized.drawio.png`) do not, and neither shows the approved Active/MFD
+on `tblUserCompany`/`tblUserGroup`. Please send the current diagram; it replaces `ERD.jpg`
+and decides whether schedules are company-scoped. Until then no schedule code assumes
+either version.
+
 ## CLARIFY-13: Onboarding vs recovery state · `OPEN` · IT CLARIFICATION (decided interim rule, safe)
 
 Onboarding and recovery both set `userPassword`, but must stay separate operations, and an

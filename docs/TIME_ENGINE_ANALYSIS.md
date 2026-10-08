@@ -5,6 +5,25 @@ requirements, ROADMAP §15–19 and §23, Figma `HR / Policies` (`215:28` Roundi
 options, `216:*` Effective date / Scheduled change), [ERD.jpg](database/ERD.jpg),
 [ERD.md](database/ERD.md) and [ERD_GAPS.md](database/ERD_GAPS.md).
 
+## ERD version check (open)
+
+The product team reports a newer IT-approved diagram with **`tblSchedule.companyID`** and
+**`tblUserSchedule.userCompanyID`**. Neither the repository's [ERD.jpg](database/ERD.jpg)
+(2026-10-07) nor the older draft `2026-09-24 - ERD-organized.drawio.png` contains them, and
+the newer diagram has not been received. Until it is, company-scoped schedules are
+**unconfirmed, not unsupported**: nothing here assumes either version, and the local
+database keeps the repository ERD. Requested: the newer diagram, to replace `ERD.jpg`.
+
+## Product decisions (2026-10-08)
+
+1. Scheduled-time tolerance is **inclusive** (±15 min around 08:00 includes 07:45 and 08:15).
+2. The tolerance belongs to the **schedule**: `tblSchedule.scheduleMarginMin`.
+3. Rounding applies the same way to geofencing, Terminal QR and manual registration.
+4. Actual timestamps are always preserved.
+5. Approved registrations never change silently when rounding rules change.
+6. HR/Admin will schedule future policy changes, but only once effective-date persistence
+   is resolved (GAP-13).
+
 **Status:** the pure rounding calculation is built and tested
 (`server/jitan_api/lib/src/time_registration/rounding/`). Nothing is stored or read for it
 yet: no table, column or persistence behaviour was added or assumed.
@@ -14,9 +33,9 @@ yet: no table, column or persistence behaviour was added or assumed.
 | Table | What it holds | Missing for the engine |
 |---|---|---|
 | `tblScheduleType` | Kind of period (Work, Break, Lunch, Travel), Active/MFD | — |
-| `tblSchedule` | One period on one weekday (`dayID`): type, start/stop hour+minute, `scheduleMarginMin`, Active/MFD | company; effective dates; date-specific exceptions |
+| `tblSchedule` | One period on one weekday (`dayID`): type, start/stop hour+minute, `scheduleMarginMin` (= the scheduled-time tolerance, decided), Active/MFD | company (**unconfirmed**: newer diagram); effective dates; date-specific exceptions |
 | `tblDays` | Weekdays | — |
-| `tblUserSchedule` | User ↔ schedule (unique pair) | Active/MFD; effective dates; company |
+| `tblUserSchedule` | User ↔ schedule (unique pair) | Active/MFD; effective dates; membership (`userCompanyID`: **unconfirmed**, newer diagram) |
 | `tblRoundingRule` | `roundingRuleValueInMin`, `roundingRuleRoundUp`, Active/MFD | start vs finish; effective dates; company |
 | `tblScheduleRoundingRule` | Schedule ↔ rounding rule (unique pair) | Active/MFD; effective dates |
 | `tblTimeReg` | One event: user, address, type, **one** timestamp, manual flag, comment, when modified, Active/MFD | registered time; applied rule; approval state; company |
@@ -32,7 +51,7 @@ yet: no table, column or persistence behaviour was added or assumed.
 | R1c | "Halfway rounding: Round forward" | Possibly `roundingRuleRoundUp` (forward = up). Same column as R1b: it cannot mean both | **IT confirmation** (CLARIFY-03) |
 | R2 | Actual timestamps preserved | `tblTimeReg.timeRegTimestamp` = the actual time; never overwritten | **Supported directly**, provided registered time is not written into it (GAP-01) |
 | R3 | Registered times calculated automatically | Calculation: built (`RoundingCalculator`). Inputs: `tblUserSchedule` → `tblSchedule` (weekday, start/stop) → `tblScheduleRoundingRule` → `tblRoundingRule`. Whether the registered time is stored or computed on read is open | Calculation **supported**; storage **IT decision** (GAP-01) |
-| R4 | Scheduled-time tolerance separate from interval rounding | `tblSchedule.scheduleMarginMin` looks like the tolerance (per schedule). Figma sets it per policy ("±15 minutes"). The engine takes it as a separate input | **IT confirmation** (CLARIFY-03: is it the margin?) + **business rule**: per schedule or per policy? |
+| R4 | Scheduled-time tolerance separate from interval rounding | **Decided:** the tolerance is per schedule, `tblSchedule.scheduleMarginMin`, inclusive. The engine takes it as a separate input | **Supported** (IT to confirm the column means minutes either side, CLARIFY-03) |
 | R5 | Same rules for geofencing, QR and manual registration | The rule is chosen from the employee's schedule, not from the source; the engine has no source input, so it is identical by construction. Telling a start from a finish needs the event kind, which `tblTimeRegType` may or may not encode | Rounding **supported**; start/finish detection needs **CLARIFY-02** |
 | R6 | Historical approved registrations never change silently when policies change | No effective dates on rules, schedule links or user schedules; no stored registered time; no "approved" state on `tblTimeReg`. If registered times are computed on read, editing a rule changes history. Figma's "Effective date: Scheduled … 12 Oct 2026" and "Existing approved registrations keep their original applied rules" have nowhere to live | **ERD GAP** (extends GAP-01; new GAP-13 below) |
 | R7 | HR/Admin manage Schedule Types, Schedules and their rounding rules | Tables exist with Active/MFD (`tblScheduleType`, `tblSchedule`, `tblRoundingRule`); audit FKs exist on `tblEventLog` (`scheduleTypeID`, `scheduleID`, `dayID`, `roundingRuleID`, `scheduleRoundingRuleID`, `userScheduleID`) | **Supported** for create / edit / deactivate. Removing a link in `tblScheduleRoundingRule` or `tblUserSchedule` (no Active/MFD) is **IT confirmation** (CLARIFY-09) |
@@ -47,9 +66,11 @@ yet: no table, column or persistence behaviour was added or assumed.
    to schedules or rules**: `tblUserSchedule` links *users*. "The Office policy applies to
    White collar" cannot be stored; it would have to be copied to each user. **Business
    decision + IT** (in GAP-13).
-2. **Multi-company employees** (IT, 2026-10-08): `tblUserSchedule`, `tblSchedule` and
-   `tblTimeReg` have no company. An employee working for two companies has one set of
-   schedules and cannot have different rules per company (GAP-03).
+2. **Multi-company employees** (IT, 2026-10-08): in the repository ERD, `tblUserSchedule`,
+   `tblSchedule` and `tblTimeReg` have no company. A newer diagram reportedly adds
+   `tblSchedule.companyID` and `tblUserSchedule.userCompanyID`; that would make schedules
+   company-scoped. **Pending the diagram** (see "ERD version check"). `tblTimeReg` still has
+   no company in any version seen (GAP-03).
 3. **Timezone** (GAP-02): schedules are wall-clock times (`scheduleHrStart = 8`), and so
    are the stored timestamps as far as we know. The engine computes on wall-clock fields
    and never converts; comparing correctly needs GAP-02 answered.
