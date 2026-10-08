@@ -31,6 +31,9 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  # Screenshot driver for the emulator visual review (integration_test/visual_review_test.dart).
+  flutter_driver:
+    sdk: flutter
 
 flutter:
   uses-material-design: true
