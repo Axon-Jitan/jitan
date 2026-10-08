@@ -55,19 +55,21 @@ class FakeEmployeesApi implements EmployeesApi {
 
   void detailsFail(ApiClientException failure) => _pendingDetails.last.completeError(failure);
 
-  /// (companyId, userId) of every onboarding QR request.
-  final qrRequests = <(int, int)>[];
-  final _pendingQr = <Completer<String>>[];
+  /// (companyId, userId, purpose) of every temporary QR request.
+  final qrRequests = <(int, int, TemporaryQrPurpose)>[];
+  final _pendingQr = <Completer<TemporaryQrResponse>>[];
 
   @override
-  Future<String> onboardingQr(int companyId, int userId) {
-    qrRequests.add((companyId, userId));
-    final completer = Completer<String>();
+  Future<TemporaryQrResponse> temporaryQr(int companyId, int userId, TemporaryQrPurpose purpose) {
+    qrRequests.add((companyId, userId, purpose));
+    final completer = Completer<TemporaryQrResponse>();
     _pendingQr.add(completer);
     return completer.future;
   }
 
-  void qrSucceeds(String value) => _pendingQr.last.complete(value);
+  /// Answers the last request with [value], valid until [expiresAt].
+  void qrSucceeds(String value, {required DateTime expiresAt}) =>
+      _pendingQr.last.complete(TemporaryQrResponse(qrCode: value, purpose: qrRequests.last.$3, expiresAt: expiresAt));
 
   void qrFails(ApiClientException failure) => _pendingQr.last.completeError(failure);
 

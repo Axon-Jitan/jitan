@@ -7,7 +7,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'assignments/manage_assignments_dialog.dart';
-import 'onboarding_qr_dialog.dart';
+import 'temporary_qr/temporary_qr_dialog.dart';
 import 'reset_access_dialog.dart';
 
 /// Opens the Employee details modal for [userId] in [companyId].
@@ -131,7 +131,12 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
         const SizedBox(height: 24),
         _OnboardingCard(
           activated: details.isActivated,
-          onShowQr: () => showOnboardingQrDialog(context, employeesApi: widget.employeesApi, employee: details),
+          onGenerateQr: () => showTemporaryQrDialog(
+            context,
+            employeesApi: widget.employeesApi,
+            employee: details,
+            purpose: TemporaryQrPurpose.onboarding,
+          ),
         ),
         const SizedBox(height: 46),
         Align(
@@ -176,6 +181,15 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
     final success = context.t(AdminTextKeys.employeeResetAccessSuccess, args: {'name': name.isEmpty ? details.code : name});
     if (!await showResetAccessDialog(context, employeesApi: widget.employeesApi, employee: details)) return;
     messenger?.showSnackBar(SnackBar(content: Text(success)));
+    // Figma 207:6: after the reset, HR/Admin shows the temporary recovery QR.
+    if (context.mounted) {
+      await showTemporaryQrDialog(
+        context,
+        employeesApi: widget.employeesApi,
+        employee: details,
+        purpose: TemporaryQrPurpose.recovery,
+      );
+    }
     // The server is the source of truth: reload to show "Not activated".
     await _load();
   }
@@ -194,13 +208,14 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
   }
 }
 
-/// Figma's Onboarding card (`153:357`): status, explanation, QR action.
-/// Once activated, the same QR is the employee's personal Terminal QR.
+/// Figma's Onboarding card (`153:1126`): status, explanation, and "Generate
+/// temporary QR" until the employee has set a password. The permanent
+/// Terminal QR is never shown here.
 class _OnboardingCard extends StatelessWidget {
-  const _OnboardingCard({required this.activated, required this.onShowQr});
+  const _OnboardingCard({required this.activated, required this.onGenerateQr});
 
   final bool activated;
-  final VoidCallback onShowQr;
+  final VoidCallback onGenerateQr;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -232,16 +247,16 @@ class _OnboardingCard extends StatelessWidget {
             context.t(activated ? AdminTextKeys.employeeOnboardingCompletedText : AdminTextKeys.employeeOnboardingText),
             style: JitanTextStyles.modalSubtitle,
           ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: JitanPrimaryButton(
-              label: context.t(
-                activated ? AdminTextKeys.employeeOnboardingShowQr : AdminTextKeys.employeeOnboardingAction,
+          if (!activated) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: JitanPrimaryButton(
+                label: context.t(AdminTextKeys.employeeOnboardingAction),
+                onPressed: onGenerateQr,
               ),
-              onPressed: onShowQr,
             ),
-          ),
+          ],
         ],
       ),
     ),

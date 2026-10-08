@@ -33,21 +33,23 @@ class EmployeesApi {
     }
   }
 
-  /// The value of [userId]'s onboarding / personal QR. The server stores
-  /// one first if the employee has none. A credential: never log it.
-  Future<String> onboardingQr(int companyId, int userId) async {
-    final json = await _transport.postJson('companies/$companyId/employees/$userId/onboarding-qr', const {});
+  /// A new temporary QR for [userId] (onboarding, or recovery after Reset
+  /// account access): 10 minutes, single use; the previous one of the same
+  /// purpose stops working. A credential: show it only as a QR, never log it.
+  Future<TemporaryQrResponse> temporaryQr(int companyId, int userId, TemporaryQrPurpose purpose) async {
+    final json = await _transport.postJson('companies/$companyId/employees/$userId/${purpose.wireName}-qr', const {});
     try {
-      return PersonalQrResponse.fromJson(json).qrCode;
+      return TemporaryQrResponse.fromJson(json);
     } on FormatException catch (e) {
-      throw ApiClientException.invalidResponse(200, 'Onboarding QR: ${e.message}');
+      throw ApiClientException.invalidResponse(200, 'Temporary QR: ${e.message}');
     }
   }
 
   /// Creates an employee in [companyId]; returns it as the server stored it.
-  /// HR/Admin "Reset account access": clears the employee's password so
-  /// they set up Jitan again with their existing QR. Every session of theirs
-  /// ends. Fails with `account_not_activated` when there is nothing to reset.
+  /// HR/Admin "Reset account access": clears the employee's password and
+  /// ends every session of theirs; a temporary recovery QR ([temporaryQr])
+  /// then lets them set a new one. Fails with `account_not_activated` when
+  /// there is nothing to reset.
   Future<void> resetAccess(int companyId, int userId) =>
       _transport.postNoContent('companies/$companyId/employees/$userId/reset-access');
 

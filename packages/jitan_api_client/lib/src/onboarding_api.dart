@@ -4,16 +4,15 @@ import 'api_client_exception.dart';
 import 'api_transport.dart';
 
 /// `/onboarding/*`: used by the Employee app's onboarding flow (ONB-02).
-/// No sign-in; the scanned personal QR is the credential.
+/// No sign-in; the scanned temporary onboarding QR is the credential.
 class OnboardingApi {
   const OnboardingApi(this._transport);
 
   final ApiTransport _transport;
 
-  /// The account behind a scanned QR, for the employee to confirm.
-  ///
-  /// Fails with `onboarding_already_completed` once a password is set: the
-  /// same QR then only works at Jitan Terminal.
+  /// The account behind a scanned temporary onboarding QR, for the employee
+  /// to confirm. Fails with e.g. `onboarding_already_completed`,
+  /// `qr_expired`, `qr_already_used`, `qr_wrong_purpose`.
   Future<EmployeeAccount> start(String qrCode) async {
     final json = await _transport.postJson('onboarding/start', OnboardingStartRequest(qrCode: qrCode).toJson());
     return _decode('Onboarding account', () => EmployeeAccount.fromJson(json));

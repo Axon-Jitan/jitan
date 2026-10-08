@@ -86,10 +86,11 @@ void main() {
     expect(inModal('—'), findsNWidgets(2));
     // Account field and Onboarding card status: not activated yet.
     expect(inModal('Not activated'), findsNWidgets(2));
-    expect(inModal('Generate onboarding QR'), findsOneWidget);
+    expect(inModal('Generate temporary QR'), findsOneWidget);
+    expect(inModal('Generate a short-lived QR to set up this account. Terminal QR stays separate.'), findsOneWidget);
   });
 
-  testWidgets('an activated employee: Account Activated, card offers the personal QR', (tester) async {
+  testWidgets('an activated employee: Account Activated, no QR is offered (the Terminal QR is never shown)', (tester) async {
     await pumpPageAndOpen(tester);
     employees.detailsSucceed(
       const EmployeeDetails(
@@ -109,12 +110,9 @@ void main() {
 
     expect(inModal('Activated'), findsNWidgets(2));
     expect(inModal('Not activated'), findsNothing);
-    expect(inModal('Show personal QR'), findsOneWidget);
-    expect(inModal('Generate onboarding QR'), findsNothing);
-    expect(
-      inModal('Onboarding is complete. This is now the employee’s personal QR for Jitan Terminal.'),
-      findsOneWidget,
-    );
+    expect(inModal('Generate temporary QR'), findsNothing);
+    expect(inModal('Show personal QR'), findsNothing);
+    expect(inModal('Onboarding is complete. If the employee is locked out, use Reset account access.'), findsOneWidget);
   });
 
   testWidgets('a failure shows an error with retry', (tester) async {
@@ -172,7 +170,7 @@ void main() {
       for (final effect in [
         '• sign out active sessions',
         '• clear the current password hash',
-        '• allow account recovery with the existing QR',
+        '• allow recovery with a temporary recovery QR',
         '• keep the employee’s Terminal QR unchanged',
       ]) {
         expect(find.text(effect), findsOneWidget);
@@ -184,7 +182,7 @@ void main() {
       expect(find.text('Reset account access?'), findsNothing);
     });
 
-    testWidgets('confirmed: resets in that company, confirms, and reloads the details', (tester) async {
+    testWidgets('confirmed: resets, then shows the temporary recovery QR, then reloads the details', (tester) async {
       await pumpPageAndOpen(tester);
       employees.detailsSucceed(activated);
       await settle(tester);
@@ -198,7 +196,14 @@ void main() {
       await settle(tester);
 
       expect(find.text('Reset account access?'), findsNothing);
-      expect(find.text('Access reset. Disan Ssebowa can now scan their Jitan QR to set a new password.'), findsOneWidget);
+      expect(find.text('Access reset for Disan Ssebowa. Show them the temporary recovery QR.'), findsOneWidget);
+      expect(employees.qrRequests, [(7, 1, TemporaryQrPurpose.recovery)]);
+      employees.qrSucceeds('recovery-token', expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)));
+      await tester.pump();
+      expect(find.text('Temporary password recovery QR'), findsOneWidget);
+      expect(find.text('This QR is not the employee’s permanent Terminal QR.'), findsOneWidget);
+      await tester.tap(find.text('Close'));
+      await settle(tester);
       expect(employees.detailRequests, hasLength(2), reason: 'reloaded from the server');
       employees.detailsSucceed(_disan);
       await settle(tester);

@@ -20,11 +20,11 @@ Future<bool> showResetAccessDialog(
     ) ??
     false;
 
-/// Figma "Admin / Employees — Reset account access modal" (`196:242`).
+/// Figma "Admin / Employees — Reset account access modal" (`196:242`, `207:97`).
 ///
 /// The reset signs the employee out everywhere, clears the password hash,
-/// lets them recover with their existing QR, and keeps that QR (their
-/// Terminal QR) unchanged.
+/// lets them recover with a temporary recovery QR, and keeps their
+/// Terminal QR unchanged.
 class ResetAccessDialog extends StatefulWidget {
   const ResetAccessDialog({super.key, required this.employeesApi, required this.employee});
 
