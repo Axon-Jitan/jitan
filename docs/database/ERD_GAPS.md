@@ -37,6 +37,7 @@ answered, and they block only the production cut-over of authentication and auth
 | Exceptions | GAP-08 |
 | Terminal | GAP-09 |
 | Visitors | GAP-10 |
+| Employees: Manage assignments → Language (EMP-06) | GAP-12 |
 
 **Milestone 1 needs GAP-03 (primary workplace) and GAP-04 (onboarding QR) resolved.**
 CLARIFY-01 (password hashing) is needed before production, not before development.
@@ -240,6 +241,28 @@ valid for Terminal check-in/out. The guard is enforced twice: a check before wor
    interpreted fact presented as configuration (ENGINEERING_RULES §10).
 4. **Missing:** a user → address (workplace) relationship, or confirmation that
    "Location" means something else (e.g. the company).
+
+## GAP-12: Auditing an employee's language change
+**ERD GAP — requires clarification with IT.** · Status: `OPEN` · raised 2026-10-08
+
+1. **Requirement** (EMP-06, Figma `Manage assignments / Language` `201:673`): HR/Admin set
+   an employee's preferred app language, and the change is recorded in `tblEventLog`
+   like every other assignment change (ENGINEERING_RULES §11).
+2. **Considered:** `tblEventLog` (FK columns), `tblEventType`, `tblUserLanguage`,
+   `tblLanguage`.
+3. **Why not:** `tblEventLog` has no `languageID` or `userLanguageID` column, so an
+   event row can say *that* the language changed but not *to which* language. With one
+   language per user (CLARIFY-07), a change updates the `tblUserLanguage` row in place,
+   so the previous language is lost too: the history cannot be reconstructed. Encoding
+   the language in the event-type name would repurpose `tblEventType`.
+4. **Missing:** one of
+   - `languageID` / `userLanguageID` on `tblEventLog` (as for groups, companies and
+     credential groups), or
+   - IT's confirmation that an event row with only the actor, the employee and the type
+     (`employee.language.changed`) is a sufficient audit for a language change.
+
+Until answered, the Language tab is not built. The employee's own choice during
+onboarding (ONB) is unaffected.
 
 ---
 
