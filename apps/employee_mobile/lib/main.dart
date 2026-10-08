@@ -30,6 +30,7 @@ void main() {
     EmployeeApp(
       services: EmployeeServices(
         onboardingApi: OnboardingApi(transport),
+        recoveryApi: RecoveryApi(transport),
         authApi: AuthApi(transport),
         languagesApi: languagesApi,
         meApi: MeApi(transport),

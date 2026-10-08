@@ -126,7 +126,10 @@ void main() {
       await tapText(tester, 'Continue');
 
       expect(find.text('Recover account'), findsOneWidget);
-      expect(find.text('Ask HR/Admin to reset your Jitan access, then scan the QR they show you.'), findsOneWidget);
+      expect(
+        find.text('Ask HR/Admin to reset your account and generate a temporary recovery QR. Then scan it here.'),
+        findsOneWidget,
+      );
       expect(h.server.requests, isEmpty, reason: 'the employee code alone sends and resets nothing');
       expect(h.server.password, _password);
 
@@ -222,12 +225,13 @@ void main() {
     });
   });
 
-  group('Auth / 06–07 Recover with QR', () {
+  group('Auth / 06–07 Recover with a temporary recovery QR', () {
     Future<void> openRecovery(WidgetTester tester) async {
       await startApp(tester);
       await tap(tester, find.widgetWithText(FilledButton, 'Scan QR to recover account'));
       expect(find.text('Recover account'), findsOneWidget);
       expect(find.text('HR/Admin reset required'), findsOneWidget);
+      expect(find.text('Recovery codes expire after 10 minutes and can only be used once.'), findsOneWidget);
     }
 
     Future<void> setNewPassword(WidgetTester tester, String password) async {
@@ -237,23 +241,34 @@ void main() {
       await tap(tester, find.widgetWithText(FilledButton, 'Set password & sign in'));
     }
 
-    testWidgets('before HR/Admin resets access the QR is refused; nothing changes', (tester) async {
+    testWidgets('before HR/Admin resets access (06B): refused, nothing changes, not resent', (tester) async {
+      h.scannedValue = recoveryQr;
       await openRecovery(tester);
 
       await tap(tester, find.byKey(fakeCameraKey));
       await tap(tester, find.byKey(fakeCameraKey));
 
       expect(find.text('Recover account'), findsOneWidget, reason: 'still scanning');
-      // Auth / 06B Recovery refused
       expect(find.text('Recovery is not available yet.'), findsOneWidget);
       expect(find.text('Account reset required'), findsOneWidget);
-      expect(find.text('Ask HR/Admin to reset your Jitan account access before scanning this QR.'), findsOneWidget);
-      expect(h.server.requestsTo('/onboarding/start'), hasLength(1), reason: 'the refused QR is not resent');
+      expect(find.text('Ask HR/Admin to reset access and generate a new temporary recovery QR.'), findsOneWidget);
+      expect(h.server.requestsTo('/recovery/start'), hasLength(1), reason: 'the refused QR is not resent');
       expect(h.server.password, _password);
       expect(h.store.values.containsKey('session.token'), isFalse);
     });
 
-    testWidgets('after HR/Admin resets access: scan the same QR, set a new password, land on Home', (tester) async {
+    testWidgets('the permanent Terminal QR cannot recover an account', (tester) async {
+      h.server.password = null;
+      h.scannedValue = terminalQr;
+      await openRecovery(tester);
+
+      await tap(tester, find.byKey(fakeCameraKey));
+
+      expect(find.text('Recovery is not available yet.'), findsOneWidget);
+      expect(find.text('Set a new password'), findsNothing);
+    });
+
+    testWidgets('after the reset: scan the recovery QR, set a new password, land on Home', (tester) async {
       // Signed in, then HR/Admin resets access: the password is cleared and
       // every session ends (the server refuses the old token).
       await startApp(tester);
@@ -266,9 +281,14 @@ void main() {
       await startApp(tester);
       expect(find.text('Sign in to Jitan'), findsOneWidget, reason: 'the old session is revoked');
 
+      h.scannedValue = recoveryQr;
       await tap(tester, find.widgetWithText(FilledButton, 'Scan QR to recover account'));
       await tap(tester, find.byKey(fakeCameraKey));
-      expect(find.text('Your account reset was approved. Create a new password to finish recovery.'), findsOneWidget);
+      expect(
+        find.text('Your temporary recovery QR was verified. Set a new password to finish account recovery.'),
+        findsOneWidget,
+      );
+      expect(find.text('Your Terminal QR stays the same'), findsOneWidget);
       await setNewPassword(tester, 'my new password');
 
       expect(find.text('Hello, Disan'), findsOneWidget, reason: 'straight to Home');
@@ -276,32 +296,50 @@ void main() {
       final newToken = h.store.values['session.token'];
       expect(newToken, isNot(oldToken));
       expect(h.server.issuedTokens, [newToken], reason: 'a fresh session');
-      final body = jsonDecode(h.server.requestsTo('/onboarding/complete').single.body) as Map;
-      expect(body['qrCode'], testQr, reason: 'the existing QR');
-      expect(body['languageCode'], isNull, reason: 'recovery keeps the language');
+      final body = jsonDecode(h.server.requestsTo('/recovery/complete').single.body) as Map;
+      expect(body['qrCode'], recoveryQr);
+      expect(h.server.requestsTo('/onboarding/complete'), isEmpty);
     });
 
-    testWidgets('once the new password is set, recovering again with the QR is refused', (tester) async {
+    testWidgets('the used recovery QR cannot be used again: Auth / 06C "QR expired or used"', (tester) async {
       h.server.password = null;
+      h.scannedValue = recoveryQr;
       await openRecovery(tester);
       await tap(tester, find.byKey(fakeCameraKey));
       await setNewPassword(tester, 'my new password');
       expect(find.text('Hello, Disan'), findsOneWidget);
 
-      // Sign out, then try the QR again.
+      // Sign out, then try the same QR again.
       await tap(tester, find.byTooltip('Profile'));
       await tap(tester, find.widgetWithText(TextButton, 'Sign out'));
       await tap(tester, find.widgetWithText(FilledButton, 'Sign out'));
       await tap(tester, find.widgetWithText(FilledButton, 'Scan QR to recover account'));
       await tap(tester, find.byKey(fakeCameraKey));
 
-      expect(find.text('Recover account'), findsOneWidget);
+      expect(find.text('QR expired or used'), findsOneWidget);
+      expect(find.text('This temporary recovery QR is no longer valid. Ask HR/Admin to generate a new one.'), findsOneWidget);
+      expect(find.text('New recovery QR required'), findsOneWidget);
+      expect(find.text('The old QR cannot be reused. Your Terminal QR is unaffected.'), findsOneWidget);
+      expect(find.text('Scan a new temporary recovery QR'), findsOneWidget);
       expect(find.text('Set a new password'), findsNothing);
       expect(h.server.password, 'my new password');
     });
 
+    testWidgets('an expired recovery QR: 06C', (tester) async {
+      h.server
+        ..password = null
+        ..expiredQrs.add(recoveryQr);
+      h.scannedValue = recoveryQr;
+      await openRecovery(tester);
+
+      await tap(tester, find.byKey(fakeCameraKey));
+
+      expect(find.text('QR expired or used'), findsOneWidget);
+    });
+
     testWidgets('new password rules are inline on "Set a new password"', (tester) async {
       h.server.password = null;
+      h.scannedValue = recoveryQr;
       await openRecovery(tester);
       await tap(tester, find.byKey(fakeCameraKey));
 
@@ -310,22 +348,24 @@ void main() {
       await tap(tester, find.widgetWithText(FilledButton, 'Set password & sign in'));
 
       expect(find.text('Passwords don’t match.'), findsOneWidget);
-      expect(h.server.requestsTo('/onboarding/complete'), isEmpty);
+      expect(h.server.requestsTo('/recovery/complete'), isEmpty);
     });
 
-    testWidgets('network failure while setting the new password: "Can’t reach Jitan", retry finishes', (
+    testWidgets('network failure while setting the new password: "Can’t reach Jitan", retry finishes once', (
       tester,
     ) async {
       h.server.password = null;
+      h.scannedValue = recoveryQr;
       await openRecovery(tester);
       await tap(tester, find.byKey(fakeCameraKey));
-      h.server.dropNext.add('/onboarding/complete');
+      h.server.dropNext.add('/recovery/complete');
 
       await setNewPassword(tester, 'my new password');
       expect(find.text('Can’t reach Jitan'), findsOneWidget);
 
       await tapText(tester, 'Try again');
       expect(find.text('Hello, Disan'), findsOneWidget);
+      expect(h.server.password, 'my new password');
     });
   });
 }

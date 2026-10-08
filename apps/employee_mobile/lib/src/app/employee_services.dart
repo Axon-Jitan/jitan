@@ -10,6 +10,7 @@ import '../onboarding/qr_scan_screen.dart';
 class EmployeeServices {
   const EmployeeServices({
     required this.onboardingApi,
+    required this.recoveryApi,
     required this.authApi,
     required this.languagesApi,
     required this.meApi,
@@ -22,6 +23,7 @@ class EmployeeServices {
   });
 
   final OnboardingApi onboardingApi;
+  final RecoveryApi recoveryApi;
   final AuthApi authApi;
   final LanguagesApi languagesApi;
   final MeApi meApi;

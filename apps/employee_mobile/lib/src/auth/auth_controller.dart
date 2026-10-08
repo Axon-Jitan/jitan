@@ -38,6 +38,15 @@ enum AuthProblem {
   unreachable,
 }
 
+/// Why "Recover account" refuses a scanned QR.
+enum RecoveryRefusal {
+  /// Auth / 06B: access was not reset (or the QR is not a recovery QR).
+  resetRequired,
+
+  /// Auth / 06C: the temporary recovery QR expired, was replaced or used.
+  qrExpiredOrUsed,
+}
+
 /// What "Try again" on 05 repeats.
 enum _Retry { signIn, recoveryScan, recoveryPassword }
 
@@ -47,22 +56,21 @@ enum _Retry { signIn, recoveryScan, recoveryPassword }
 /// itself.
 ///
 /// Recovery (V1, HR/Admin-assisted). The employee code alone never resets
-/// anything: Forgot password leads to "Recover with QR", which asks HR/Admin
-/// to reset access first. After HR/Admin "Reset account access" the
-/// employee's password is cleared, so their existing QR is accepted once
-/// (`userPassword IS NULL`, the same server rule as onboarding); they set a
-/// new password and are signed in. Before a reset, or once the new password
-/// is set, the QR is refused.
+/// anything: Forgot password leads to "Recover account", which asks HR/Admin
+/// to reset access first. After HR/Admin "Reset account access" (password
+/// cleared, every session ended) HR/Admin shows a **temporary recovery QR**
+/// (10 minutes, single use); the employee scans it, sets a new password and
+/// is signed in. The permanent Terminal QR never recovers an account.
 class AuthController extends ChangeNotifier {
   AuthController({
     required this._authApi,
-    required this._onboardingApi,
+    required this._recoveryApi,
     required this._session,
     required this._onSignedIn,
   });
 
   final AuthApi _authApi;
-  final OnboardingApi _onboardingApi;
+  final RecoveryApi _recoveryApi;
   final SessionManager _session;
 
   /// The device is signed in: open Home.
@@ -92,10 +100,10 @@ class AuthController extends ChangeNotifier {
   /// A QR the server just refused; ignored if the camera reads it again.
   String? _refusedQr;
 
-  /// Recovery was refused: access not reset (or unknown QR). The "HR/Admin
-  /// reset required" note is then shown as an error.
-  bool _recoveryRefused = false;
-  bool get recoveryRefused => _recoveryRefused;
+  /// Why the last scanned QR was refused, if it was: "Recover account" then
+  /// shows Auth / 06B or 06C.
+  RecoveryRefusal? _recoveryRefusal;
+  RecoveryRefusal? get recoveryRefusal => _recoveryRefusal;
 
   PasswordProblem? _passwordProblem;
   PasswordProblem? get passwordProblem => _passwordProblem;
@@ -143,38 +151,44 @@ class AuthController extends ChangeNotifier {
 
   /// "Scan QR to recover account" (Sign in) or after Forgot password.
   void openRecovery() {
-    _recoveryRefused = false;
+    _recoveryRefusal = null;
     _refusedQr = null;
     _go(AuthStep.recoverWithQr);
   }
 
-  /// A QR read on "Recover with QR". Accepted only when HR/Admin reset the
-  /// employee's access (no password set).
+  /// A QR read on "Recover account". Accepted only as a valid temporary
+  /// recovery QR for an account whose access HR/Admin reset.
   Future<void> submitRecoveryQr(String qrCode) async {
     if (_busy || qrCode == _refusedQr) return;
     _recoveryQr = qrCode;
     await _run(_Retry.recoveryScan, () async {
-      await _onboardingApi.start(qrCode);
+      await _recoveryApi.start(qrCode);
       _passwordProblem = null;
-      _recoveryRefused = false;
+      _recoveryRefusal = null;
       _go(AuthStep.setNewPassword);
-    }, onServerError: (code) {
-      switch (code) {
-        case ApiErrorCode.accountInactive:
-          _show(AuthProblem.accountUnavailable);
-        case ApiErrorCode.invalidQrCode || ApiErrorCode.onboardingAlreadyCompleted:
-          _refuseRecovery(qrCode);
-        default:
-          _show(AuthProblem.unreachable);
-      }
-    });
+    }, onServerError: (code) => _onRecoveryRefused(code, qrCode));
   }
 
-  void _refuseRecovery(String qrCode) {
+  /// Server answers to a recovery QR: inactive accounts get Auth / 04, the
+  /// rest keep the employee on "Recover account" with the reason.
+  void _onRecoveryRefused(String? code, String qrCode) {
+    switch (code) {
+      case ApiErrorCode.accountInactive:
+        _show(AuthProblem.accountUnavailable);
+      case ApiErrorCode.qrExpired || ApiErrorCode.qrAlreadyUsed:
+        _refuseRecovery(qrCode, RecoveryRefusal.qrExpiredOrUsed);
+      case ApiErrorCode.invalidQrCode || ApiErrorCode.qrWrongPurpose || ApiErrorCode.accountNotReset:
+        _refuseRecovery(qrCode, RecoveryRefusal.resetRequired);
+      default:
+        _show(AuthProblem.unreachable);
+    }
+  }
+
+  void _refuseRecovery(String qrCode, RecoveryRefusal refusal) {
     _refusedQr = qrCode;
     _recoveryQr = null;
     _pendingPassword = null;
-    _recoveryRefused = true;
+    _recoveryRefusal = refusal;
     _step = AuthStep.recoverWithQr;
   }
 
@@ -196,21 +210,16 @@ class AuthController extends ChangeNotifier {
     final password = _pendingPassword;
     if (qr == null || password == null) return;
     await _run(_Retry.recoveryPassword, () async {
-      final result = await _onboardingApi.complete(
-        OnboardingCompleteRequest(qrCode: qr, password: password, deviceId: await _session.deviceId()),
+      final result = await _recoveryApi.complete(
+        RecoveryCompleteRequest(qrCode: qr, password: password, deviceId: await _session.deviceId()),
       );
       await _signedIn(result);
     }, onServerError: (code) {
-      switch (code) {
-        case ApiErrorCode.validationFailed:
-          _pendingPassword = null;
-          _passwordProblem = PasswordProblem.rejected;
-        case ApiErrorCode.accountInactive:
-          _show(AuthProblem.accountUnavailable);
-        case ApiErrorCode.invalidQrCode || ApiErrorCode.onboardingAlreadyCompleted:
-          _refuseRecovery(qr);
-        default:
-          _show(AuthProblem.unreachable);
+      if (code == ApiErrorCode.validationFailed) {
+        _pendingPassword = null;
+        _passwordProblem = PasswordProblem.rejected;
+      } else {
+        _onRecoveryRefused(code, qr);
       }
     });
   }

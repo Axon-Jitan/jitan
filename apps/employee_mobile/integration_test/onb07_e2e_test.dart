@@ -2,7 +2,8 @@
 // and a freshly seeded database (dev/local-db). Real HTTP, real MySQL, real
 // secure storage. Only the camera read and the OS permission prompts are
 // stood in: an emulator cannot reliably aim at a QR, and system dialogs
-// would block automation.
+// would block automation. Temporary QRs are generated through the API the
+// way HR/Admin does (development identity = HR user 1).
 //
 //   cd dev/local-db && docker compose down -v && docker compose up -d
 //   (API in development mode, JITAN_DEV_USER_ID=1, on port 8080)
@@ -26,9 +27,10 @@ import 'package:integration_test/integration_test.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 
-// Seed fixtures (dev/local-db/seed.sql).
-const _disanQr = '5xYTglqwzf36v9UidULWYleBWfwt7Cjp';
-const _kevinQr = 'MvrbloqIf-j151FU_94120bzpkqi4K6o';
+// Seed fixtures (dev/local-db/seed.sql): permanent Terminal QRs. They must
+// never onboard or recover an account.
+const _disanTerminalQr = '5xYTglqwzf36v9UidULWYleBWfwt7Cjp';
+const _kevinTerminalQr = 'MvrbloqIf-j151FU_94120bzpkqi4K6o';
 
 class _GrantAll implements PermissionsGateway {
   @override
@@ -45,13 +47,21 @@ void main() {
   const store = PlatformSecureStore();
 
   /// What the "camera" reads next.
-  var scanned = _disanQr;
+  var scanned = _disanTerminalQr;
+
+  /// HR/Admin "Generate temporary QR" for [userId] in Almeco.
+  Future<String> temporaryQr(int userId, String purpose) async {
+    final response = await http.post(config.apiBaseUri.resolve('companies/1/employees/$userId/$purpose-qr'));
+    expect(response.statusCode, 200, reason: '$purpose QR for $userId');
+    return (jsonDecode(response.body) as Map)['qrCode'] as String;
+  }
 
   EmployeeServices services(SessionManager session) {
     final transport = ApiTransport(baseUri: config.apiBaseUri, accessToken: () => session.accessToken);
     final languages = LanguagesApi(transport);
     return EmployeeServices(
       onboardingApi: OnboardingApi(transport),
+      recoveryApi: RecoveryApi(transport),
       authApi: AuthApi(transport),
       languagesApi: languages,
       meApi: MeApi(transport),
@@ -105,17 +115,23 @@ void main() {
     await waitFor(tester, find.text('Sign in to Jitan'));
   }
 
-  testWidgets('ONB-07: onboarding, sign-in, refusal, HR reset and QR recovery on a device', (tester) async {
+  testWidgets('ONB-07: temporary-QR onboarding, sign-in, refusal, HR reset and temporary-QR recovery', (tester) async {
     for (final key in ['session.token', 'session.expiresAt', 'device.signedInBefore', 'settings.registrationMethod']) {
       await store.delete(key);
     }
     final session = SessionManager(store);
     await tester.pumpWidget(EmployeeApp(services: services(session)));
 
-    // ── Onboarding: Disan, from QR to Home, no second sign-in ──────────────
+    // ── The permanent Terminal QR does not onboard ─────────────────────────
     await tapText(tester, 'Get started');
-    scanned = _disanQr;
-    await tapText(tester, 'Scan QR');
+    scanned = _disanTerminalQr;
+    await tapText(tester, 'Scan onboarding QR');
+    await waitFor(tester, find.text('QR not recognised'));
+    await tapText(tester, 'Try again');
+
+    // ── Onboarding: Disan, temporary QR to Home, no second sign-in ─────────
+    scanned = await temporaryQr(2, 'onboarding');
+    await tapText(tester, 'Scan onboarding QR');
     await waitFor(tester, find.text('Disan Ssebowa'));
     await tapText(tester, 'Yes, this is me');
     await tapText(tester, 'Continue'); // registration method (automatic)
@@ -155,11 +171,11 @@ void main() {
     await tapText(tester, 'Back');
 
     // ── Recovery is refused before HR/Admin resets access ──────────────────
-    scanned = _kevinQr;
+    scanned = _kevinTerminalQr;
     await tap(tester, find.widgetWithText(FilledButton, 'Scan QR to recover account'));
     await tapText(tester, 'camera reads QR');
     await waitFor(tester, find.text('Recovery is not available yet.'));
-    expect(find.text('Account reset required'), findsOneWidget);
+    expect(find.text('Account reset required'), findsOneWidget, reason: 'the Terminal QR does not recover');
 
     // ── HR/Admin resets Kevin's access (dev identity = HR user 1) ──────────
     final reset = await http.post(config.apiBaseUri.resolve('companies/1/employees/3/reset-access'));
@@ -170,7 +186,9 @@ void main() {
     );
     expect(me.statusCode, 401, reason: 'the reset revoked Kevin\'s session');
 
-    // ── QR recovery with the same QR → new password → Home ────────────────
+    // ── Temporary recovery QR → new password → Home ───────────────────────
+    final recoveryQr = await temporaryQr(3, 'recovery');
+    scanned = recoveryQr;
     await tapText(tester, 'Back');
     await tap(tester, find.widgetWithText(FilledButton, 'Scan QR to recover account'));
     await tapText(tester, 'camera reads QR');
@@ -185,12 +203,13 @@ void main() {
       config.apiBaseUri.resolve('me'),
       headers: {'authorization': 'Bearer $recoveredToken'},
     );
-    expect((jsonDecode(account.body) as Map)['code'], 'KDV', reason: 'same QR, same employee');
+    expect((jsonDecode(account.body) as Map)['code'], 'KDV');
 
-    // ── Recovering again is refused: the password is set ───────────────────
+    // ── The used recovery QR cannot be used again (Auth / 06C) ─────────────
     await signOut(tester);
     await tap(tester, find.widgetWithText(FilledButton, 'Scan QR to recover account'));
     await tapText(tester, 'camera reads QR');
-    await waitFor(tester, find.text('Recovery is not available yet.'));
+    await waitFor(tester, find.text('QR expired or used'));
+    expect(find.text('New recovery QR required'), findsOneWidget);
   });
 }

@@ -11,15 +11,29 @@ import 'package:http/testing.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 
-const testQr = 'qr-AAAAAAAAAAAAAAAAAAAAAAAA';
+/// A temporary onboarding QR HR/Admin generated for the employee.
+const testQr = 'onboarding-qr.AAAAAAAAAAAAAAAA.sig';
+
+/// A temporary recovery QR HR/Admin generated after Reset account access.
+const recoveryQr = 'recovery-qr.BBBBBBBBBBBBBBBB.sig';
+
+/// The employee's permanent Terminal QR: it must never onboard or recover.
+const terminalQr = 'terminal-qr-CCCCCCCCCCCCCCCC';
 
 /// Tap target of the fake embedded camera ([TestHarness]).
 const fakeCameraKey = ValueKey('fake-camera');
 
-/// The Jitan API as onboarding sees it, in memory, over the real API client:
-/// the same rules as the server (re-onboarding guard, session recovery with
-/// the same password, bearer token for `/me`).
+/// The Jitan API as the app sees it, in memory, over the real API client:
+/// the same rules as the server (temporary QRs by purpose, single use,
+/// expiry; re-onboarding guard; the same device finishing with the same
+/// password; bearer token for `/me`).
 class FakeJitanServer {
+  /// Temporary QRs that expired or were replaced.
+  final expiredQrs = <String>{};
+
+  /// Temporary QRs that were used (with the password they set).
+  final usedQrs = <String, String>{};
+
   /// Whether the employee behind [testQr] has set a password.
   String? password;
   bool active = true;
@@ -62,6 +76,8 @@ class FakeJitanServer {
     return switch (path) {
       '/onboarding/start' => _start(request),
       '/onboarding/complete' => _complete(request),
+      '/recovery/start' => _recoveryStart(request),
+      '/recovery/complete' => _recoveryComplete(request),
       '/languages' => _json({'languages': languages}),
       '/translations' => _json({
         'language': request.url.queryParameters['language'],
@@ -75,9 +91,19 @@ class FakeJitanServer {
     };
   });
 
+  /// The common QR checks: the purpose's own QR, unexpired, unused.
+  http.Response? _qrRefusal(Object? qr, {required String expected, required String other}) {
+    if (qr == other) return _error(400, 'qr_wrong_purpose');
+    if (qr != expected) return _error(400, 'invalid_qr_code');
+    if (expiredQrs.contains(qr)) return _error(410, 'qr_expired');
+    return null;
+  }
+
   http.Response _start(http.Request request) {
     final qr = (jsonDecode(request.body) as Map)['qrCode'];
-    if (qr != testQr) return _error(404, 'invalid_qr_code');
+    final refusal = _qrRefusal(qr, expected: testQr, other: recoveryQr);
+    if (refusal != null) return refusal;
+    if (usedQrs.containsKey(qr)) return _error(409, 'qr_already_used');
     if (!active) return _error(403, 'account_inactive');
     if (password != null) return _error(409, 'onboarding_already_completed');
     return _json(_account);
@@ -85,7 +111,8 @@ class FakeJitanServer {
 
   http.Response _complete(http.Request request) {
     final body = jsonDecode(request.body) as Map;
-    if (body['qrCode'] != testQr) return _error(404, 'invalid_qr_code');
+    final refusal = _qrRefusal(body['qrCode'], expected: testQr, other: recoveryQr);
+    if (refusal != null) return refusal;
     if (!active) return _error(403, 'account_inactive');
     if (rejectPassword) {
       return http.Response(
@@ -101,6 +128,7 @@ class FakeJitanServer {
     }
     if (password != null && password != body['password']) return _error(409, 'onboarding_already_completed');
     password = body['password'] as String;
+    usedQrs[testQr] = password!;
     if (loseCompleteResponse) {
       loseCompleteResponse = false;
       throw http.ClientException('response lost');
@@ -111,6 +139,33 @@ class FakeJitanServer {
       'account': _account,
       'session': {'accessToken': token, 'expiresAt': '2099-01-01T00:00:00.000Z'},
     });
+  }
+
+  http.Response _recoveryStart(http.Request request) {
+    final qr = (jsonDecode(request.body) as Map)['qrCode'];
+    final refusal = _qrRefusal(qr, expected: recoveryQr, other: testQr);
+    if (refusal != null) return refusal;
+    if (usedQrs.containsKey(qr)) return _error(409, 'qr_already_used');
+    if (!active) return _error(403, 'account_inactive');
+    if (password != null) return _error(409, 'account_not_reset');
+    return _json(_account);
+  }
+
+  http.Response _recoveryComplete(http.Request request) {
+    final body = jsonDecode(request.body) as Map;
+    final refusal = _qrRefusal(body['qrCode'], expected: recoveryQr, other: testQr);
+    if (refusal != null) return refusal;
+    if (!active) return _error(403, 'account_inactive');
+    if (anotherDeviceWins) {
+      usedQrs[recoveryQr] = 'someone else';
+      return _error(409, 'qr_already_used');
+    }
+    final usedWith = usedQrs[recoveryQr];
+    if (usedWith != null && usedWith != body['password']) return _error(409, 'qr_already_used');
+    if (usedWith == null && password != null) return _error(409, 'account_not_reset');
+    password = body['password'] as String;
+    usedQrs[recoveryQr] = password!;
+    return _session();
   }
 
   bool _authorized(http.Request request) {
@@ -230,6 +285,7 @@ class TestHarness {
     final languagesApi = LanguagesApi(transport);
     services = EmployeeServices(
       onboardingApi: OnboardingApi(transport),
+      recoveryApi: RecoveryApi(transport),
       authApi: AuthApi(transport),
       languagesApi: languagesApi,
       meApi: MeApi(transport),

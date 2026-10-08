@@ -103,7 +103,7 @@ class _EmployeeAppState extends State<EmployeeApp> {
     _disposeFlows();
     final auth = AuthController(
       authApi: _services.authApi,
-      onboardingApi: _services.onboardingApi,
+      recoveryApi: _services.recoveryApi,
       session: _services.session,
       onSignedIn: _enterSignedIn,
     );

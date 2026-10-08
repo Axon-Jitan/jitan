@@ -40,15 +40,24 @@ enum OnboardingProblem {
 
   /// 07: onboarding completed, but this device could not store the session.
   sessionRecovery,
+
+  /// The temporary onboarding QR expired, was replaced by a newer one or was
+  /// already used: HR/Admin generates a new one.
+  qrExpired,
+
+  /// A temporary QR for something else (e.g. a recovery QR).
+  wrongQr,
 }
 
 /// Drives onboarding: scan → confirm → registration method → permissions →
 /// language (Figma 06B) → password → ready (the session is created with the
 /// password, so no sign-in follows).
 ///
-/// Rules from the server (ONB-01, ONB-05): a QR whose onboarding is complete
-/// never restarts it; only one device can complete it; repeating the final
-/// step with the same password after a lost response signs in again.
+/// Rules from the server (ONB-01, ONB-05, IT decision 2026-10-08): only a
+/// temporary onboarding QR from HR/Admin starts onboarding (10 minutes,
+/// single use); scanning does not use it up; only one device can complete;
+/// repeating the final step with the same QR and password after a lost
+/// response signs this device in.
 class OnboardingController extends ChangeNotifier {
   OnboardingController({
     required this._onboardingApi,
@@ -279,7 +288,8 @@ class OnboardingController extends ChangeNotifier {
       case ApiErrorCode.validationFailed when error.field == OnboardingCompleteRequest.fieldLanguageCode:
         _languageInvalid = true;
         _go(OnboardingStep.language);
-      case ApiErrorCode.onboardingAlreadyCompleted:
+      case ApiErrorCode.onboardingAlreadyCompleted || ApiErrorCode.qrAlreadyUsed:
+        // Concurrent activation: another device finished with this QR.
         _pendingPassword = null;
         _show(OnboardingProblem.activatedElsewhere);
       default:
@@ -292,6 +302,8 @@ class OnboardingController extends ChangeNotifier {
     ApiErrorCode.invalidQrCode => OnboardingProblem.invalidQr,
     ApiErrorCode.onboardingAlreadyCompleted => OnboardingProblem.alreadyActivated,
     ApiErrorCode.accountInactive => OnboardingProblem.accountUnavailable,
+    ApiErrorCode.qrExpired || ApiErrorCode.qrAlreadyUsed => OnboardingProblem.qrExpired,
+    ApiErrorCode.qrWrongPurpose => OnboardingProblem.wrongQr,
     _ => OnboardingProblem.serverUnavailable,
   };
 

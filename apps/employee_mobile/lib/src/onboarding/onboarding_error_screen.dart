@@ -77,6 +77,22 @@ class OnboardingErrorScreen extends StatelessWidget {
         EmployeeTextKeys.errorServerHelp,
         [primary(CommonTextKeys.retry), back],
       ),
+      OnboardingProblem.qrExpired => (
+        StatusTone.error,
+        EmployeeTextKeys.errorQrExpiredTitle,
+        EmployeeTextKeys.errorQrExpiredText,
+        EmployeeTextKeys.errorQrExpiredHelpTitle,
+        EmployeeTextKeys.errorQrExpiredHelp,
+        [primary(CommonTextKeys.retry), back],
+      ),
+      OnboardingProblem.wrongQr => (
+        StatusTone.warning,
+        EmployeeTextKeys.errorWrongQrTitle,
+        EmployeeTextKeys.errorWrongQrText,
+        EmployeeTextKeys.errorWrongQrHelpTitle,
+        EmployeeTextKeys.errorWrongQrHelp,
+        [primary(CommonTextKeys.retry), back],
+      ),
       OnboardingProblem.sessionRecovery => (
         StatusTone.info,
         EmployeeTextKeys.errorSessionRecoveryTitle,

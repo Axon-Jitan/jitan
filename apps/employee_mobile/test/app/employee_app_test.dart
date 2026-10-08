@@ -26,7 +26,7 @@ void main() {
   Future<void> onboardUpToPassword(WidgetTester tester) async {
     await startApp(tester);
     await tapText(tester, 'Get started');
-    await tapText(tester, 'Scan QR');
+    await tapText(tester, 'Scan onboarding QR');
     expect(find.text('Is this you?'), findsOneWidget);
     expect(find.text('Disan Ssebowa'), findsOneWidget);
     await tapText(tester, 'Yes, this is me');
@@ -91,7 +91,7 @@ void main() {
   ) async {
     await startApp(tester);
     await tapText(tester, 'Get started');
-    await tapText(tester, 'Scan QR');
+    await tapText(tester, 'Scan onboarding QR');
     await tapText(tester, 'Yes, this is me');
     await tapText(tester, 'Continue');
     await tapText(tester, 'Continue');
@@ -118,7 +118,7 @@ void main() {
     h.server.password = 'set earlier';
     await startApp(tester);
     await tapText(tester, 'Get started');
-    await tapText(tester, 'Scan QR');
+    await tapText(tester, 'Scan onboarding QR');
 
     expect(find.text('Account already activated'), findsOneWidget);
     expect(find.text('Onboarding cannot restart'), findsOneWidget);
@@ -132,7 +132,7 @@ void main() {
     h.server.password = 'set earlier';
     await startApp(tester);
     await tapText(tester, 'Get started');
-    await tapText(tester, 'Scan QR');
+    await tapText(tester, 'Scan onboarding QR');
 
     expect(find.text('Contact HR/Admin'), findsOneWidget);
     expect(find.text('Ask HR/Admin to reset your Jitan account access.'), findsOneWidget);
@@ -155,9 +155,9 @@ void main() {
     h.scannedValue = null;
     await startApp(tester);
     await tapText(tester, 'Get started');
-    await tapText(tester, 'Scan QR');
+    await tapText(tester, 'Scan onboarding QR');
 
-    expect(find.text('Join your workplace'), findsOneWidget);
+    expect(find.text('Scan your setup QR'), findsOneWidget);
     expect(h.server.requestsTo('/onboarding/start'), isEmpty);
   });
 
@@ -211,6 +211,46 @@ void main() {
 
       expect(find.text('Get started'), findsOneWidget);
       expect(h.server.requestsTo('/me'), isEmpty);
+    });
+  });
+
+  group('temporary onboarding QR states', () {
+    Future<void> scan(WidgetTester tester, String qr) async {
+      h.scannedValue = qr;
+      await startApp(tester);
+      await tapText(tester, 'Get started');
+      await tapText(tester, 'Scan onboarding QR');
+    }
+
+    testWidgets('the permanent Terminal QR does not onboard: "QR not recognised"', (tester) async {
+      await scan(tester, terminalQr);
+
+      expect(find.text('QR not recognised'), findsOneWidget);
+    });
+
+    testWidgets('an expired or replaced QR: "QR expired or used", Try again scans anew', (tester) async {
+      h.server.expiredQrs.add(testQr);
+      await scan(tester, testQr);
+
+      expect(find.text('QR expired or used'), findsOneWidget);
+      expect(find.text('This temporary onboarding QR is no longer valid. Ask HR/Admin to generate a new one.'), findsOneWidget);
+      h.server.expiredQrs.clear();
+      await tapText(tester, 'Try again');
+      expect(find.text('Scan your setup QR'), findsOneWidget);
+    });
+
+    testWidgets('an already used QR is refused the same way', (tester) async {
+      h.server.usedQrs[testQr] = 'someone';
+      await scan(tester, testQr);
+
+      expect(find.text('QR expired or used'), findsOneWidget);
+    });
+
+    testWidgets('a recovery QR during onboarding: "Not an onboarding QR"', (tester) async {
+      await scan(tester, recoveryQr);
+
+      expect(find.text('Not an onboarding QR'), findsOneWidget);
+      expect(h.server.requestsTo('/onboarding/complete'), isEmpty);
     });
   });
 }

@@ -105,6 +105,14 @@ abstract final class EmployeeTextKeys {
   static const errorSessionRecoveryHelpTitle = 'onboarding.error.sessionRecovery.helpTitle';
   static const errorSessionRecoveryHelp = 'onboarding.error.sessionRecovery.help';
   static const errorSessionRecoveryAction = 'onboarding.error.sessionRecovery.action';
+  static const errorQrExpiredTitle = 'onboarding.error.qrExpired.title';
+  static const errorQrExpiredText = 'onboarding.error.qrExpired.text';
+  static const errorQrExpiredHelpTitle = 'onboarding.error.qrExpired.helpTitle';
+  static const errorQrExpiredHelp = 'onboarding.error.qrExpired.help';
+  static const errorWrongQrTitle = 'onboarding.error.wrongQr.title';
+  static const errorWrongQrText = 'onboarding.error.wrongQr.text';
+  static const errorWrongQrHelpTitle = 'onboarding.error.wrongQr.helpTitle';
+  static const errorWrongQrHelp = 'onboarding.error.wrongQr.help';
 
   /// Argument: `{name}`.
   static const homeGreeting = 'home.greeting';
@@ -180,6 +188,11 @@ abstract final class EmployeeTextKeys {
   static const recoverRefused = 'auth.recover.refused';
   static const recoverRefusedTitle = 'auth.recover.refused.title';
   static const recoverRefusedText = 'auth.recover.refused.text';
+  static const recoverExpiredTitle = 'auth.recover.expired.title';
+  static const recoverExpiredText = 'auth.recover.expired.text';
+  static const recoverExpiredScanHint = 'auth.recover.expired.scanHint';
+  static const recoverExpiredNoteTitle = 'auth.recover.expired.note.title';
+  static const recoverExpiredNoteText = 'auth.recover.expired.note.text';
   static const changePasswordCurrentLabel = 'profile.changePassword.current.label';
   static const changePasswordCurrentHint = 'profile.changePassword.current.hint';
   static const changePasswordCurrentWrong = 'profile.changePassword.current.wrong';

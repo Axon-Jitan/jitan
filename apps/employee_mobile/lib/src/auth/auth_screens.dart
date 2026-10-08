@@ -227,10 +227,20 @@ class RecoverWithQrScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final refused = controller.recoveryRefused;
+    final refusal = controller.recoveryRefusal;
+    final expired = refusal == RecoveryRefusal.qrExpiredOrUsed;
+    final (noteTitle, noteText) = switch (refusal) {
+      null => (EmployeeTextKeys.recoverNoteTitle, EmployeeTextKeys.recoverNoteText),
+      RecoveryRefusal.resetRequired => (EmployeeTextKeys.recoverRefusedTitle, EmployeeTextKeys.recoverRefusedText),
+      RecoveryRefusal.qrExpiredOrUsed => (EmployeeTextKeys.recoverExpiredNoteTitle, EmployeeTextKeys.recoverExpiredNoteText),
+    };
     return _AuthScaffold(
       children: [
-        _AuthHeader(title: context.t(EmployeeTextKeys.recoverTitle), text: context.t(EmployeeTextKeys.recoverText)),
+        // Auth / 06, 06B (refused) and 06C (QR expired or used).
+        _AuthHeader(
+          title: context.t(expired ? EmployeeTextKeys.recoverExpiredTitle : EmployeeTextKeys.recoverTitle),
+          text: context.t(expired ? EmployeeTextKeys.recoverExpiredText : EmployeeTextKeys.recoverText),
+        ),
         const SizedBox(height: 56),
         AspectRatio(
           aspectRatio: 1,
@@ -250,7 +260,7 @@ class RecoverWithQrScreen extends StatelessWidget {
                       child: controller.busy
                           ? const CircularProgressIndicator(color: JitanColors.surface)
                           : Text(
-                              context.t(EmployeeTextKeys.recoverScanHint),
+                              context.t(expired ? EmployeeTextKeys.recoverExpiredScanHint : EmployeeTextKeys.recoverScanHint),
                               textAlign: TextAlign.center,
                               style: JitanMobileTextStyles.noteTitle.copyWith(fontSize: 12, color: JitanColors.surface),
                             ),
@@ -261,7 +271,7 @@ class RecoverWithQrScreen extends StatelessWidget {
             ),
           ),
         ),
-        if (refused)
+        if (refusal == RecoveryRefusal.resetRequired)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Text(
@@ -275,10 +285,10 @@ class RecoverWithQrScreen extends StatelessWidget {
         Semantics(
           liveRegion: true,
           child: NoteBox(
-            title: context.t(refused ? EmployeeTextKeys.recoverRefusedTitle : EmployeeTextKeys.recoverNoteTitle),
-            text: context.t(refused ? EmployeeTextKeys.recoverRefusedText : EmployeeTextKeys.recoverNoteText),
-            background: refused ? JitanColors.errorSurface : JitanColors.warningSurface,
-            foreground: refused ? JitanColors.errorStrong : JitanColors.warning,
+            title: context.t(noteTitle),
+            text: context.t(noteText),
+            background: refusal != null ? JitanColors.errorSurface : JitanColors.warningSurface,
+            foreground: refusal != null ? JitanColors.errorStrong : JitanColors.warning,
             textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 9),
             minHeight: 94,
           ),
