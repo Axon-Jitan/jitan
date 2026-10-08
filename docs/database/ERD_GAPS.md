@@ -64,7 +64,7 @@ answered, and they block only the production cut-over of authentication and auth
 | Employees: list (Figma `153:137`) | **not blocked**. Location (GAP-11) and Onboarding (GAP-04) show "—"; Policy omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY) |
 | Employee onboarding (**Milestone 1**) | **not blocked**: QR = userQRcode, activated = `userPassword IS NOT NULL` (ONB-01 done server-side) |
 | Employee Web QR login, privacy screens | GAP-05 |
-| Core time engine (rounding, sessions, writing registrations) | GAP-01, GAP-02, CLARIFY-02. **Not blocked:** the read-only registration stream (TR-01, built) |
+| Core time engine (rounding, sessions, writing registrations) | GAP-01, GAP-02, GAP-13, CLARIFY-02, CLARIFY-03. **Not blocked:** the read-only registration stream (TR-01) and the pure rounding calculation (built) |
 | Geofencing | GAP-06, CLARIFY-04, CLARIFY-05 |
 | Rounding (**Milestone 2**) | GAP-01, CLARIFY-03 |
 | Registration method choice | GAP-07 |
@@ -287,6 +287,23 @@ changing language is a **preference update, not a deletion**; Jitan records a ge
 `employee.language.changed` event (actor, employee, type, timestamp) and does not keep the
 previous/new value. If IT later adds the columns, the event gains the references; nothing
 else changes.
+
+## GAP-13: Rounding rules over time and per employee group
+**ERD GAP — requires clarification with IT.** · Status: `OPEN` · raised 2026-10-08
+
+1. **Requirement** (agreed rounding requirements; Figma `HR / Policies` `215:28`, `216:*`):
+   a rounding/policy change applies immediately or from a scheduled date; historical
+   approved registrations keep the rule that was applied; a policy applies to an employee
+   group (e.g. "Office" → White collar).
+2. **Considered:** `tblRoundingRule`, `tblScheduleRoundingRule`, `tblSchedule`,
+   `tblUserSchedule`, `tblGroup`, `tblTimeReg`, `tblEventLog`.
+3. **Why not:** no effective dates on rules, schedule-rule links or user schedules; no
+   stored registered time or applied rule (GAP-01), so recomputing after a change silently
+   rewrites history; no approval state on `tblTimeReg`; nothing links a group to schedules
+   or rules (only users, via `tblUserSchedule`); no Active/MFD on the two junction tables.
+4. **Missing:** effective dating (or stored registered time + applied rule), an approval
+   state, and a group → schedule/rule relationship. Analysis:
+   [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md).
 
 ---
 

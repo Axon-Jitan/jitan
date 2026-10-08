@@ -19,6 +19,7 @@ imported here so every session loads them:
 | [docs/database/ERD_GAPS.md](docs/database/ERD_GAPS.md) | Before building anything the roadmap wants but the ERD may not hold. Also holds IT clarifications. |
 | [docs/PRODUCT_CLARIFICATIONS.md](docs/PRODUCT_CLARIFICATIONS.md) | Before building behaviour the product hasn't defined yet (e.g. offline) |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | Named follow-up tasks (I18N-01 translations, DB-VERIFY-01) |
+| [docs/TIME_ENGINE_ANALYSIS.md](docs/TIME_ENGINE_ANALYSIS.md) | Before any rounding, schedule or registered-time work: requirements vs the ERD |
 | [Figma: Jitan](https://www.figma.com/design/KBsMGoDoYHR9AJq5sAnPb1) | Before building any screen: approved flows are the UI/UX source of truth (rule §30) |
 
 ### Figma pages
