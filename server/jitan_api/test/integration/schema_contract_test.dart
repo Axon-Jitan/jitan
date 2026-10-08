@@ -13,12 +13,12 @@ import '../support/test_database.dart';
 /// repository starts using a new column.
 const _usedColumns = {
   'tblCompany': ['companyID', 'companyName', 'companyActive', 'companyMFD'],
-  'tblUserCompany': ['userCompanyID', 'userID', 'companyID'],
+  'tblUserCompany': ['userCompanyID', 'userID', 'companyID', 'userCompanyActive', 'userCompanyMFD'],
   'tblUser': [
     'userID', 'userName', 'userSurname', 'userCode', 'userQRcode', 'cellphoneNumber',
     'userKioskMode', 'userPassword', 'userActive', 'userMFD',
   ],
-  'tblUserGroup': ['userGroupID', 'userID', 'groupID'],
+  'tblUserGroup': ['userGroupID', 'userID', 'groupID', 'userGroupActive', 'userGroupMFD'],
   'tblGroup': ['groupID', 'groupName', 'groupActive', 'groupMFD'],
   'tblEventLog': [
     'eventLogID', 'eventLogTimestamp', 'userIDInit', 'userIDTarget', 'companyID', 'userCompanyID',

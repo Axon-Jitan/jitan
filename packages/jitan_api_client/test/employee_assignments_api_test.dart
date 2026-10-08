@@ -8,8 +8,8 @@ import 'package:test/test.dart';
 void main() {
   final options = {
     'options': [
-      {'id': 1, 'name': 'Almeco', 'isActive': true, 'isAssigned': true, 'isAssignable': false},
-      {'id': 2, 'name': 'PCA', 'isActive': true, 'isAssigned': false, 'isAssignable': true},
+      {'id': 1, 'name': 'Almeco', 'isActive': true, 'isAssigned': true, 'isAssignable': false, 'isRemovable': false},
+      {'id': 2, 'name': 'PCA', 'isActive': true, 'isAssigned': false, 'isAssignable': true, 'isRemovable': false},
     ],
   };
 
@@ -68,6 +68,25 @@ void main() {
       'PUT /companies/1/employees/2/assignments/language',
     ]);
     expect(jsonDecode(sent.last.body), {'languageId': 3});
+  });
+
+  test('removing a company or group uses DELETE on its id', () async {
+    final sent = <http.Request>[];
+    final api = EmployeeAssignmentsApi(ApiTransport(
+      baseUri: Uri.parse('http://api.test/'),
+      httpClient: MockClient((request) async {
+        sent.add(request);
+        return http.Response(jsonEncode(options), 200);
+      }),
+    ));
+
+    await api.remove(1, 2, AssignmentKind.companies, 3);
+    await api.remove(1, 2, AssignmentKind.groups, 4);
+
+    expect(sent.map((r) => '${r.method} ${r.url.path}'), [
+      'DELETE /companies/1/employees/2/assignments/companies/3',
+      'DELETE /companies/1/employees/2/assignments/groups/4',
+    ]);
   });
 
   test('group assignments use the groups path', () async {

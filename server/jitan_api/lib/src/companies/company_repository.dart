@@ -3,6 +3,7 @@ import 'package:jitan_models/jitan_models.dart';
 import '../database/database.dart';
 import '../database/db_row.dart';
 import '../database/like_pattern.dart';
+import '../employees/membership_filters.dart';
 
 /// Data access for `tblCompany` and the company list's derived columns.
 class CompanyRepository {
@@ -25,7 +26,8 @@ class CompanyRepository {
       'SELECT c.companyID, c.companyName, c.companyActive, '
       '(SELECT COUNT(*) FROM tblUserCompany uc '
       ' JOIN tblUser u ON u.userID = uc.userID '
-      ' WHERE uc.companyID = c.companyID AND u.userMFD = 0) AS employeeCount, '
+      ' WHERE uc.companyID = c.companyID AND ${MembershipFilters.activeCompany('uc')} AND u.userMFD = 0) '
+      'AS employeeCount, '
       '(SELECT MAX(e.eventLogTimestamp) FROM tblEventLog e '
       ' WHERE e.companyID = c.companyID) AS lastUpdatedAt '
       'FROM tblCompany c '

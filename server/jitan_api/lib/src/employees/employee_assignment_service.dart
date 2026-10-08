@@ -14,14 +14,12 @@ import 'employee_repository.dart';
 /// "Manage employee assignments" (Figma Admin/HR Employees 04–07). Always
 /// within one company: the employee must belong to the company in the path.
 ///
-/// Adds only. Removing an assignment deletes a junction row, which waits
-/// for IT (ERD.md); the endpoints accept additions and leave existing
-/// assignments untouched. Every addition is audited in the same
-/// transaction.
-///
-/// **One company per employee** (MVP decision 2026-10-08): an employee who
-/// belongs to a company cannot be added to another. Transfers wait for IT's
-/// relationship lifecycle; existing memberships are never removed.
+/// Companies and groups can be added and removed (IT decision 2026-10-08):
+/// removal is a soft delete (`Active = 0, MFD = 1`, row kept), re-adding
+/// reactivates the row. An employee may work for several companies. The
+/// company in the path is not removable in its own context, so an employee
+/// always keeps at least one company. Credential groups are only added
+/// (CLARIFY-09). Every change is audited in the same transaction.
 class EmployeeAssignmentService {
   EmployeeAssignmentService({
     required this._assignments,
@@ -51,25 +49,22 @@ class EmployeeAssignmentService {
 
   // ── EMP-04 Companies ───────────────────────────────────────────────────
 
-  /// Companies, with every company the employee does not belong to marked
-  /// not assignable while they belong to one (one company per employee).
+  /// Companies: active ones can be added; current memberships other than
+  /// the company in the path can be removed.
   Future<AssignmentOptions> companies(int companyId, int userId) async {
     await _requireMember(_executor, companyId, userId);
-    final members = await _assignments.memberCompanyIds(_executor, userId);
     return AssignmentOptions(
       options: [
         for (final o in await _assignments.companyOptions(_executor, userId))
-          o.isAssigned || members.isEmpty ? o : o.withAssignable(false),
+          o.copyWith(isRemovable: o.isAssigned && o.id != companyId),
       ],
     );
   }
 
-  /// Adds [userId] to the company in [request]. It must be an active,
-  /// non-MFD company (validation error on `ids` otherwise). Companies the
-  /// employee already belongs to are skipped, never duplicated. A new
-  /// company is refused (409 `employee_company_limit`) while the employee
-  /// belongs to another: checked first, then again after taking the
-  /// user-row lock, so concurrent requests cannot add a second one.
+  /// Adds [userId] to the companies in [request] (several allowed). Each
+  /// must be an active, non-MFD company (validation error on `ids`
+  /// otherwise). Current memberships are skipped; a removed one is
+  /// reactivated, never duplicated.
   ///
   /// [mayManage] answers whether the actor may manage employees of a target
   /// company: adding someone to a company needs authority there too, not
@@ -92,7 +87,6 @@ class EmployeeAssignmentService {
     }
     final toAdd = [for (final id in ids) if (!options[id]!.isAssigned) id];
     if (toAdd.isEmpty) return companies(companyId, userId);
-    _requireNoOtherCompany(toAdd, await _assignments.memberCompanyIds(_executor, userId));
     for (final target in toAdd) {
       await mayManage(target);
     }
@@ -100,7 +94,6 @@ class EmployeeAssignmentService {
     await _addTransaction((tx) async {
       await _lockEmployee(tx, userId);
       await _requireMember(tx, companyId, userId);
-      _requireNoOtherCompany(toAdd, await _assignments.memberCompanyIds(tx, userId));
       for (final target in toAdd) {
         final userCompanyId = await _assignments.addCompany(tx, userId, target);
         if (userCompanyId == null) continue; // added meanwhile: nothing to do
@@ -121,18 +114,50 @@ class EmployeeAssignmentService {
     return companies(companyId, userId);
   }
 
-  /// One company per employee: adding [toAdd] must not give the employee a
-  /// second company besides [members].
-  static void _requireNoOtherCompany(List<int> toAdd, List<int> members) {
-    final companiesAfter = {...members, ...toAdd};
-    if (companiesAfter.length > 1) {
-      throw const ApiException(
-        409,
-        ApiErrorCode.employeeCompanyLimit,
-        'An employee belongs to one company. Moving employees between companies is not available yet.',
+  /// Removes [userId] from [targetCompanyId] (soft delete, audited). The
+  /// employee's account and other memberships are untouched. Needs the
+  /// permission in the target company too ([mayManage]). The company in the
+  /// path cannot be removed here (validation error), so at least one
+  /// membership always remains. Removing a membership that is already gone
+  /// changes nothing.
+  Future<AssignmentOptions> removeCompany(
+    int actorUserId,
+    int companyId,
+    int userId,
+    int targetCompanyId, {
+    required Future<void> Function(int targetCompanyId) mayManage,
+  }) async {
+    if (targetCompanyId == companyId) {
+      throw const ApiException.validation(
+        fieldRemovedId,
+        'An employee cannot be removed from the company you are working in.',
       );
     }
+    await _requireMember(_executor, companyId, userId);
+    await mayManage(targetCompanyId);
+    await _addTransaction((tx) async {
+      await _lockEmployee(tx, userId);
+      await _requireMember(tx, companyId, userId);
+      final userCompanyId = await _assignments.removeCompany(tx, userId, targetCompanyId);
+      if (userCompanyId == null) return;
+      await _audit.record(
+        tx,
+        AuditEvent(
+          type: AuditEventType.companyRemoved,
+          actorUserId: actorUserId,
+          references: {
+            EventLogReference.user: userId,
+            EventLogReference.company: targetCompanyId,
+            EventLogReference.userCompany: userCompanyId,
+          },
+        ),
+      );
+    });
+    return companies(companyId, userId);
   }
+
+  /// Path segment of the removed option, for validation errors.
+  static const fieldRemovedId = 'id';
 
   // ── EMP-05 Groups ──────────────────────────────────────────────────────
 
@@ -141,11 +166,15 @@ class EmployeeAssignmentService {
   /// with company membership and permissions.
   Future<AssignmentOptions> groups(int companyId, int userId) async {
     await _requireMember(_executor, companyId, userId);
-    return AssignmentOptions(options: await _assignments.groupOptions(_executor, userId));
+    return AssignmentOptions(
+      options: [
+        for (final o in await _assignments.groupOptions(_executor, userId)) o.copyWith(isRemovable: o.isAssigned),
+      ],
+    );
   }
 
-  /// Adds the active, non-MFD groups in [request]; already assigned ones are
-  /// skipped, never duplicated.
+  /// Adds the active, non-MFD groups in [request]; current ones are skipped,
+  /// a removed one is reactivated, never duplicated.
   Future<AssignmentOptions> addGroups(int actorUserId, int companyId, int userId, AddAssignmentsRequest request) async {
     final ids = _checkedIds(request);
     await _requireMember(_executor, companyId, userId);
@@ -175,6 +204,31 @@ class EmployeeAssignmentService {
           ),
         );
       }
+    });
+    return groups(companyId, userId);
+  }
+
+  /// Removes group [groupId] from [userId] (soft delete, audited). Removing
+  /// an assignment that is already gone changes nothing.
+  Future<AssignmentOptions> removeGroup(int actorUserId, int companyId, int userId, int groupId) async {
+    await _requireMember(_executor, companyId, userId);
+    await _addTransaction((tx) async {
+      await _lockEmployee(tx, userId);
+      await _requireMember(tx, companyId, userId);
+      final userGroupId = await _assignments.removeGroup(tx, userId, groupId);
+      if (userGroupId == null) return;
+      await _audit.record(
+        tx,
+        AuditEvent(
+          type: AuditEventType.groupRemoved,
+          actorUserId: actorUserId,
+          references: {
+            EventLogReference.user: userId,
+            EventLogReference.group: groupId,
+            EventLogReference.userGroup: userGroupId,
+          },
+        ),
+      );
     });
     return groups(companyId, userId);
   }
@@ -211,7 +265,7 @@ class EmployeeAssignmentService {
     return AssignmentOptions(
       options: [
         for (final o in await _assignments.credentialGroupOptions(_executor, userId))
-          held.contains(o.id) ? o : o.withAssignable(false),
+          held.contains(o.id) ? o : o.copyWith(isAssignable: false),
       ],
     );
   }

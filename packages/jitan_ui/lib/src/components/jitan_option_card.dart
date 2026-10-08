@@ -25,6 +25,7 @@ class JitanOptionCard extends StatelessWidget {
     this.detail,
     this.indicator = JitanOptionIndicator.checkbox,
     this.height = 68,
+    this.removable = false,
   });
 
   final String title;
@@ -33,6 +34,10 @@ class JitanOptionCard extends StatelessWidget {
   final VoidCallback? onTap;
   final JitanOptionIndicator indicator;
   final double height;
+
+  /// A current assignment that tapping removes (Figma "Selected / removable":
+  /// a green check).
+  final bool removable;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -68,7 +73,7 @@ class JitanOptionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                _Indicator(selected: selected, indicator: indicator, locked: onTap == null),
+                _Indicator(selected: selected, indicator: indicator, locked: onTap == null, removable: removable),
               ],
             ),
           ),
@@ -79,7 +84,9 @@ class JitanOptionCard extends StatelessWidget {
 }
 
 class _Indicator extends StatelessWidget {
-  const _Indicator({required this.selected, required this.indicator, required this.locked});
+  const _Indicator({required this.selected, required this.indicator, required this.locked, required this.removable});
+
+  final bool removable;
 
   final bool selected;
   final JitanOptionIndicator indicator;
@@ -87,7 +94,11 @@ class _Indicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = locked && selected ? JitanColors.info.withValues(alpha: 0.6) : JitanColors.info;
+    final color = removable
+        ? JitanColors.success
+        : locked && selected
+        ? JitanColors.info.withValues(alpha: 0.6)
+        : JitanColors.info;
     return switch (indicator) {
       JitanOptionIndicator.checkbox => Container(
         width: 22,

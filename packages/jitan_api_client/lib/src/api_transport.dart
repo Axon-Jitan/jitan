@@ -65,6 +65,12 @@ class ApiTransport {
     );
   }
 
+  /// DELETEs a resource that answers with JSON (e.g. the updated list).
+  Future<Map<String, Object?>> deleteJson(String path) {
+    final uri = baseUri.resolve(path);
+    return _send('DELETE', uri, () => _http.delete(uri, headers: _headers(const {'accept': 'application/json'})));
+  }
+
   /// POSTs an action that answers `204 No Content` (e.g. reset-access).
   Future<void> postNoContent(String path, {Map<String, Object?>? body}) async {
     final uri = baseUri.resolve(path);

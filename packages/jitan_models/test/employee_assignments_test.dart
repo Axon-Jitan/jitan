@@ -22,7 +22,9 @@ void main() {
 
     expect(free.isAssignable, isTrue);
     expect(const AssignmentOption(id: 1, name: 'x', isActive: false, isAssigned: false).isAssignable, isFalse);
-    expect(AssignmentOption.fromJson(free.withAssignable(false).toJson()).isAssignable, isFalse);
+    expect(AssignmentOption.fromJson(free.copyWith(isAssignable: false).toJson()).isAssignable, isFalse);
+    expect(free.isRemovable, isFalse);
+    expect(AssignmentOption.fromJson(free.copyWith(isRemovable: true).toJson()).isRemovable, isTrue);
     expect(AssignmentOption.fromJson(nl.toJson()).code, 'nl');
     expect(free.toJson().containsKey('code'), isFalse);
   });

@@ -112,10 +112,10 @@ void main() {
     await insertLanguage('off', active: false);
     userId = await insertUser('DTA$stamp');
     actorId = await insertUser('DTH$stamp');
-    await db.execute('INSERT INTO tblUserCompany (userID, companyID) VALUES (:u, :c)', {
-      'u': userId,
-      'c': companyIds['home'],
-    });
+    await db.execute(
+      'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)',
+      {'u': userId, 'c': companyIds['home']},
+    );
   });
 
   tearDownAll(() async {
@@ -180,28 +180,72 @@ void main() {
     await db.execute('DELETE FROM tblUserCompany WHERE userID = :u AND companyID = :c', {'u': userId, 'c': other});
   });
 
-  test('service: one company per employee, also for concurrent requests; nothing written', () async {
+  Future<List<String>> eventTypes(String column, int id) async => [
+    for (final row in await db.query(
+      'SELECT t.eventTypeName FROM tblEventLog l JOIN tblEventLogEventType et ON et.eventLogID = l.eventLogID '
+      'JOIN tblEventType t ON t.eventTypeID = et.eventTypeID '
+      'WHERE l.userIDTarget = :u AND l.$column = :id ORDER BY l.eventLogID',
+      {'u': userId, 'id': id},
+    ))
+      row.readString('eventTypeName'),
+  ];
+
+  test('companies: a second membership, soft removal (row kept, hidden), reactivation of the same row', () async {
     final home = companyIds['home']!;
     final other = companyIds['other']!;
-    final before = await db.query('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :u', {'u': userId});
+    Future<List<(int, bool, bool)>> rows() async => [
+      for (final row in await db.query(
+        'SELECT userCompanyID, userCompanyActive, userCompanyMFD FROM tblUserCompany WHERE userID = :u AND companyID = :c',
+        {'u': userId, 'c': other},
+      ))
+        (row.readInt('userCompanyID'), row.readBool('userCompanyActive'), row.readBool('userCompanyMFD')),
+    ];
 
-    final results = await Future.wait([
-      for (var i = 0; i < 2; i++)
-        service()
-            .addCompanies(actorId, home, userId, AddAssignmentsRequest(ids: [other]), mayManage: (_) async {})
-            .then<Object?>((_) => null, onError: (Object e) => e),
+    await service().addCompanies(actorId, home, userId, AddAssignmentsRequest(ids: [other]), mayManage: (_) async {});
+    final [(id, active, mfd)] = await rows();
+    expect((active, mfd), (true, false));
+    expect(await const EmployeeAssignmentRepository().memberCompanyIds(db, userId), containsAll([home, other]));
+    expect(await EmployeeRepository(db).findInCompany(db, other, userId), isNotNull, reason: 'visible in PCA');
+
+    final afterRemoval = await service().removeCompany(actorId, home, userId, other, mayManage: (_) async {});
+    expect(await rows(), [(id, false, true)], reason: 'Active = 0, MFD = 1; never deleted');
+    expect(afterRemoval.options.firstWhere((o) => o.id == other).isAssigned, isFalse);
+    expect(await EmployeeRepository(db).findInCompany(db, other, userId), isNull, reason: 'hidden from that company');
+    expect(await EmployeeRepository(db).findInCompany(db, home, userId), isNotNull, reason: 'other membership untouched');
+    final user = await db.query('SELECT userActive FROM tblUser WHERE userID = :u', {'u': userId});
+    expect(user.single.readBool('userActive'), isTrue, reason: 'the account stays active');
+
+    await service().addCompanies(actorId, home, userId, AddAssignmentsRequest(ids: [other]), mayManage: (_) async {});
+    expect(await rows(), [(id, true, false)], reason: 'the same row reactivated');
+    expect(await eventTypes('userCompanyID', id), [
+      'employee.company.assigned',
+      'employee.company.removed',
+      'employee.company.assigned',
     ]);
 
-    expect(results, everyElement(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.employeeCompanyLimit)));
-    final after = await db.query('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :u', {'u': userId});
-    expect(after.single.readInt('n'), before.single.readInt('n'));
-    expect(await memberships(other), 0);
-    expect(
-      (await db.query('SELECT COUNT(*) AS n FROM tblEventLog WHERE userIDTarget = :u AND companyID IS NOT NULL', {'u': userId}))
-          .single
-          .readInt('n'),
-      0,
+    await service().removeCompany(actorId, home, userId, other, mayManage: (_) async {});
+    await expectLater(
+      service().removeCompany(actorId, home, userId, home, mayManage: (_) async {}),
+      throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)),
     );
+    expect(await EmployeeRepository(db).findInCompany(db, home, userId), isNotNull, reason: 'one company remains');
+  });
+
+  test('two concurrent removals of one membership audit it once', () async {
+    final home = companyIds['home']!;
+    final other = companyIds['other']!;
+    await service().addCompanies(actorId, home, userId, AddAssignmentsRequest(ids: [other]), mayManage: (_) async {});
+    final id = (await db.query(
+      'SELECT userCompanyID FROM tblUserCompany WHERE userID = :u AND companyID = :c',
+      {'u': userId, 'c': other},
+    )).single.readInt('userCompanyID');
+    final before = (await eventTypes('userCompanyID', id)).length;
+
+    await Future.wait([
+      for (var i = 0; i < 2; i++) service().removeCompany(actorId, home, userId, other, mayManage: (_) async {}),
+    ]);
+
+    expect((await eventTypes('userCompanyID', id)).length, before + 1);
   });
 
   test('groups: universal options, idempotent concurrent add, one audit row with groupID and userGroupID', () async {
@@ -319,5 +363,34 @@ void main() {
     );
     final options = await service().credentialGroups(actorId, companyIds['home']!, userId);
     expect(options.options.firstWhere((o) => o.id == foreign).isAssignable, isFalse);
+  });
+
+  test('groups: soft removal keeps the row, hides it; reactivation reuses it', () async {
+    final home = companyIds['home']!;
+    final group = groupIds['active']!;
+    await service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [group]));
+    final id = (await db.query(
+      'SELECT userGroupID FROM tblUserGroup WHERE userID = :u AND groupID = :g',
+      {'u': userId, 'g': group},
+    )).single.readInt('userGroupID');
+
+    final removed = await service().removeGroup(actorId, home, userId, group);
+
+    final row = (await db.query(
+      'SELECT userGroupActive, userGroupMFD FROM tblUserGroup WHERE userGroupID = :id',
+      {'id': id},
+    )).single;
+    expect((row.readBool('userGroupActive'), row.readBool('userGroupMFD')), (false, true));
+    expect(removed.options.firstWhere((o) => o.id == group).isAssigned, isFalse);
+    expect((await EmployeeRepository(db).findDetails(home, userId))!.groups, isNot(contains('[DEV-TEST] active $stamp')));
+
+    await service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [group]));
+    expect(
+      (await db.query('SELECT COUNT(*) AS n FROM tblUserGroup WHERE userID = :u AND groupID = :g', {'u': userId, 'g': group}))
+          .single
+          .readInt('n'),
+      1,
+    );
+    expect((await eventTypes('userGroupID', id)).skip(1), ['employee.group.removed', 'employee.group.assigned']);
   });
 }

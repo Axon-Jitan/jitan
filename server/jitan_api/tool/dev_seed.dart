@@ -245,7 +245,10 @@ Future<void> _ensureUserGroup(Database db, int userId, int groupId) async {
     {'user': userId, 'group': groupId},
   );
   if (existing.isNotEmpty) return;
-  await db.query('INSERT INTO tblUserGroup (userID, groupID) VALUES (:user, :group)', {'user': userId, 'group': groupId});
+  await db.query(
+    'INSERT INTO tblUserGroup (userID, groupID, userGroupActive, userGroupMFD) VALUES (:user, :group, 1, 0)',
+    {'user': userId, 'group': groupId},
+  );
 }
 
 Future<void> _ensureMembership(Database db, int userId, int companyId) async {
@@ -255,7 +258,7 @@ Future<void> _ensureMembership(Database db, int userId, int companyId) async {
   );
   if (existing.isNotEmpty) return;
   await db.query(
-    'INSERT INTO tblUserCompany (userID, companyID) VALUES (:user, :company)',
+    'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:user, :company, 1, 0)',
     {'user': userId, 'company': companyId},
   );
 }

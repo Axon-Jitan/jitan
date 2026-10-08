@@ -2,6 +2,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../database/like_pattern.dart';
 import '../database/sql_executor.dart';
+import 'membership_filters.dart';
 
 /// Data access for a company's employees: `tblUser` via `tblUserCompany`,
 /// with groups from `tblUserGroup` → `tblGroup`.
@@ -39,7 +40,7 @@ class EmployeeRepository {
       'SELECT u.userID, u.userName, u.userSurname, u.userCode, u.cellphoneNumber, u.userActive, '
       '(u.userPassword IS NOT NULL) AS isActivated, c.companyID, c.companyName '
       'FROM tblUser u '
-      'JOIN tblUserCompany uc ON uc.userID = u.userID '
+      'JOIN tblUserCompany uc ON uc.userID = u.userID AND ${MembershipFilters.activeCompany('uc')} '
       'JOIN tblCompany c ON c.companyID = uc.companyID '
       'WHERE uc.companyID = :companyId AND u.userID = :userId AND u.userMFD = 0 AND c.companyMFD = 0',
       {'companyId': companyId, 'userId': userId},
@@ -48,7 +49,7 @@ class EmployeeRepository {
     final row = rows.single;
     final groups = await _db.query(
       'SELECT g.groupName FROM tblUserGroup ug JOIN tblGroup g ON g.groupID = ug.groupID '
-      'WHERE ug.userID = :userId AND g.groupActive = 1 AND g.groupMFD = 0 '
+      'WHERE ug.userID = :userId AND ${MembershipFilters.activeGroup('ug')} AND g.groupActive = 1 AND g.groupMFD = 0 '
       'ORDER BY g.groupName, g.groupID',
       {'userId': userId},
     );
@@ -91,14 +92,15 @@ class EmployeeRepository {
 
   /// Links [userId] to [companyId]; returns the `userCompanyID`.
   Future<int> addToCompany(SqlExecutor tx, int userId, int companyId) async => (await tx.execute(
-        'INSERT INTO tblUserCompany (userID, companyID) VALUES (:userId, :companyId)',
+        'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) '
+        'VALUES (:userId, :companyId, 1, 0)',
         {'userId': userId, 'companyId': companyId},
       ))
           .lastInsertId;
 
   /// Links [userId] to [groupId]; returns the `userGroupID`.
   Future<int> addToGroup(SqlExecutor tx, int userId, int groupId) async => (await tx.execute(
-        'INSERT INTO tblUserGroup (userID, groupID) VALUES (:userId, :groupId)',
+        'INSERT INTO tblUserGroup (userID, groupID, userGroupActive, userGroupMFD) VALUES (:userId, :groupId, 1, 0)',
         {'userId': userId, 'groupId': groupId},
       ))
           .lastInsertId;
@@ -117,7 +119,7 @@ class EmployeeRepository {
     final users = await executor.query(
       'SELECT u.userID, u.userName, u.userSurname, u.userCode, u.userActive, '
       '(u.userPassword IS NOT NULL) AS isActivated '
-      'FROM tblUser u JOIN tblUserCompany uc ON uc.userID = u.userID '
+      'FROM tblUser u JOIN tblUserCompany uc ON uc.userID = u.userID AND ${MembershipFilters.activeCompany('uc')} '
       'WHERE uc.companyID = :companyId AND u.userMFD = 0 '
       '$searchFilter'
       '$userFilter'
@@ -133,8 +135,9 @@ class EmployeeRepository {
     final groupRows = await executor.query(
       'SELECT ug.userID, g.groupName FROM tblUserGroup ug '
       'JOIN tblGroup g ON g.groupID = ug.groupID '
-      'JOIN tblUserCompany uc ON uc.userID = ug.userID '
-      'WHERE uc.companyID = :companyId AND g.groupActive = 1 AND g.groupMFD = 0 '
+      'JOIN tblUserCompany uc ON uc.userID = ug.userID AND ${MembershipFilters.activeCompany('uc')} '
+      'WHERE uc.companyID = :companyId AND ${MembershipFilters.activeGroup('ug')} '
+      'AND g.groupActive = 1 AND g.groupMFD = 0 '
       'ORDER BY g.groupName, g.groupID',
       {'companyId': companyId},
     );

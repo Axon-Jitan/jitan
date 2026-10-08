@@ -308,7 +308,17 @@ class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
       throw const DatabaseQueryException('Deadlock found', errorCode: 1213);
     }
     if (userGroups.containsKey((userId, groupId))) return null;
-    return userGroups[(userId, groupId)] = _nextId++;
+    return userGroups[(userId, groupId)] = removedGroups.remove((userId, groupId)) ?? _nextId++;
+  }
+
+  /// Soft-removed group links (Active = 0, MFD = 1), kept with their id.
+  final removedGroups = <(int, int), int>{};
+
+  @override
+  Future<int?> removeGroup(SqlExecutor tx, int userId, int groupId) async {
+    final id = userGroups.remove((userId, groupId));
+    if (id != null) removedGroups[(userId, groupId)] = id;
+    return id;
   }
 
   @override
@@ -321,7 +331,17 @@ class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
   @override
   Future<int?> addCompany(SqlExecutor tx, int userId, int companyId) async {
     if (userCompanies.containsKey((userId, companyId))) return null;
-    return userCompanies[(userId, companyId)] = _nextId++;
+    return userCompanies[(userId, companyId)] = removedCompanies.remove((userId, companyId)) ?? _nextId++;
+  }
+
+  /// Soft-removed memberships (Active = 0, MFD = 1), kept with their id.
+  final removedCompanies = <(int, int), int>{};
+
+  @override
+  Future<int?> removeCompany(SqlExecutor tx, int userId, int companyId) async {
+    final id = userCompanies.remove((userId, companyId));
+    if (id != null) removedCompanies[(userId, companyId)] = id;
+    return id;
   }
 }
 

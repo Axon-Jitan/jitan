@@ -4,14 +4,16 @@ import 'json_reading.dart';
 /// language or credential group) and whether the employee already has it.
 class AssignmentOption {
   /// [isAssignable] defaults to "active and not yet assigned"; the server
-  /// narrows it where a business rule forbids more (one company per
-  /// employee, no access beyond the actor's own).
+  /// narrows it where a business rule forbids more (no access beyond the
+  /// actor's own). [isRemovable] is set by the server where removal exists
+  /// (companies and groups, soft delete).
   const AssignmentOption({
     required this.id,
     required this.name,
     required this.isActive,
     required this.isAssigned,
     bool? isAssignable,
+    this.isRemovable = false,
     this.code,
   }) : isAssignable = isAssignable ?? (isActive && !isAssigned);
 
@@ -21,6 +23,7 @@ class AssignmentOption {
         isActive: json.readBool('isActive'),
         isAssigned: json.readBool('isAssigned'),
         isAssignable: json.readBool('isAssignable'),
+        isRemovable: json.readBool('isRemovable'),
         code: json.readOptionalString('code'),
       );
 
@@ -36,11 +39,21 @@ class AssignmentOption {
   /// only display it.
   final bool isAssignable;
 
+  /// Whether HR/Admin may remove this current assignment here (soft delete).
+  final bool isRemovable;
+
   /// A language's `tblLanguage.languageCode`; `null` for other kinds.
   final String? code;
 
-  AssignmentOption withAssignable(bool value) =>
-      AssignmentOption(id: id, name: name, isActive: isActive, isAssigned: isAssigned, isAssignable: value, code: code);
+  AssignmentOption copyWith({bool? isAssignable, bool? isRemovable}) => AssignmentOption(
+        id: id,
+        name: name,
+        isActive: isActive,
+        isAssigned: isAssigned,
+        isAssignable: isAssignable ?? this.isAssignable,
+        isRemovable: isRemovable ?? this.isRemovable,
+        code: code,
+      );
 
   Map<String, Object?> toJson() => {
         'id': id,
@@ -48,6 +61,7 @@ class AssignmentOption {
         'isActive': isActive,
         'isAssigned': isAssigned,
         'isAssignable': isAssignable,
+        'isRemovable': isRemovable,
         if (code != null) 'code': code,
       };
 }

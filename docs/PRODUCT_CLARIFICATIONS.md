@@ -200,9 +200,9 @@ Status: `OPEN` · small, does not block
    regenerated there).
 
 ## PRODUCT-CLARIFY-LAST-COMPANY: Removing an employee's last company
-Status: `OPEN` · small
+Status: `SETTLED BY DESIGN` (2026-10-08)
 
-Removing an employee's **last** active company would leave them in no company, so no
-HR/Admin could see or manage them. Jitan refuses it (`409 employee_last_company`) until
-the product decides (e.g. disable the employee instead). The current company is not
-offered for removal inside its own context (Figma shows it as "Current company").
+The company HR/Admin is working in ("Current company" in Figma `207:292`) cannot be
+removed in its own context, and an employee is managed only through a company they belong
+to, so an employee always keeps at least one company. Removing someone from Jitan
+altogether is not part of assignment management (that would be disabling the employee).

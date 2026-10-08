@@ -52,7 +52,7 @@ void main() {
   }
 
   Future<void> addMembership(int userId, int companyId) => db.query(
-        'INSERT INTO tblUserCompany (userID, companyID) VALUES (:user, :company)',
+        'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:user, :company, 1, 0)',
         {'user': userId, 'company': companyId},
       );
 

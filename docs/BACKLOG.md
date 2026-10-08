@@ -137,6 +137,18 @@ cannot be a deadlock victim) and then uses plain reads; no locking reads with jo
 or replace the driver before production (also see the transaction-pool leak worked
 around in `Database.transaction`).
 
+## QR-TEMP: Temporary onboarding and recovery QRs
+Status: `DONE` (2026-10-08, IT decision) · production multi-instance store pending IT
+
+Signed 10-minute single-use QR tokens (`TemporaryQrTokens`, HMAC-SHA256) with one-time
+state in `TemporaryTokenStore` (in memory; never MySQL). HR/Admin: Generate temporary QR
+(`…/onboarding-qr`, Figma `153:1214`) and, after Reset account access, the recovery QR
+(`…/recovery-qr`, `207:111`), with countdown, expiry and regeneration. Employee app:
+onboarding and Sign in → Recover account accept only these QRs (`/onboarding/*`,
+`/recovery/*`), with the expired / used / wrong-purpose states (Auth/06C). The permanent
+`userQRcode` is the Terminal QR only. Completion is claim → MySQL → consume; the same
+device can finish an interrupted completion with the same password.
+
 ## Employee management
 
 Order agreed 2026-10-07. Employee Onboarding follows immediately after.
@@ -146,8 +158,8 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-01 | Employee list for the current company: search, Type from `tblGroup`, all states, responsive, translation keys. Location/Onboarding show "—" (GAP-11/GAP-04), Policy omitted | `DONE` |
 | EMP-02 | Add employee: first/last name, code, type (`tblGroup`), phone, in the current company; one transaction incl. audit; duplicate-code and validation errors on their fields. Location and Work policy omitted | `DONE` |
 | EMP-03 | Employee details modal from a row click: type, phone, status; Location/Account "—", Work policy omitted | `DONE` |
-| EMP-04 | Company assignment (`tblUserCompany`): Employee details → Manage assignments → Companies (Figma `201:472`). **One company per employee** (MVP decision 2026-10-08): other companies are not assignable and a second one is refused server-side (`409 employee_company_limit`, rechecked under the user-row lock with a locking read, so concurrent requests cannot bypass it). Existing memberships are kept and shown; transfers wait for CLARIFY-09. Adds are audited (`employee.company.assigned`) and need `manageEmployeeAssignments` in both companies | `DONE` |
-| EMP-05 | Group assignment (`tblUserGroup`): Manage assignments → Groups (Figma `201:572`). Groups are universal (IT, 2026-10-08): all active, non-MFD groups, no company selector. Adds only (CLARIFY-09), duplicates skipped, audited (`employee.group.assigned`); permission `manageEmployeeAssignments` in the employee's company. Groups grant no company access | `DONE` |
+| EMP-04 | Company assignment (`tblUserCompany`): Employee details → Manage assignments → Companies (Figma `201:472`, `207:292`). **Several companies per employee** (IT, 2026-10-08). Add (audited `employee.company.assigned`, needs `manageEmployeeAssignments` in both companies) and **remove** with confirmation (Figma `207:329`): soft delete `userCompanyActive = 0, userCompanyMFD = 1`, row kept and hidden, audited `employee.company.removed`; re-adding reactivates the same row. The company in the path is not removable in its own context, so one membership always remains | `DONE` |
+| EMP-05 | Group assignment (`tblUserGroup`): Manage assignments → Groups (Figma `201:572`, `207:406`). Universal groups (IT, 2026-10-08), no company selector. Add (audited `employee.group.assigned`) and **remove** with confirmation (Figma `207:441`): soft delete `userGroupActive = 0, userGroupMFD = 1`, audited `employee.group.removed`; re-adding reactivates the row. Groups grant no company access | `DONE` |
 | EMP-06 | Preferred language (`tblUserLanguage`): Manage assignments → Language (Figma `201:673`) and `PUT /me/language` for the employee. One language per user, updated in place under a user-row lock (concurrent changes never leave two rows); generic audit `employee.language.changed` (GAP-12 accepted). Employee app screen awaits design (DESIGN-CLARIFY-PROFILE-LANGUAGE) | `DONE` |
 | EMP-07 | Credential-group assignment (`tblUserCredGroup`): Manage assignments → Access (Figma `201:778`). Names and levels from `tblCredGroup`, no role names in code. Adds only (CLARIFY-09), duplicates skipped, audited (`employee.credential_group.assigned`). Permission `manageEmployeeAccess` in **every** company of the employee (a credential group is user-wide). **No privilege escalation**: until IT defines the hierarchy (CLARIFY-10), an actor may grant only credential groups they hold themselves; anything else is 403 and not offered in the picker. This holds even with the dev evaluator, so nobody can raise their own access | `DONE` |
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text | `DONE` |

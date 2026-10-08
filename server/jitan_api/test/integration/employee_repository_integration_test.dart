@@ -63,10 +63,10 @@ void main() {
   }
 
   Future<void> member(int userId, int companyId) =>
-      db.query('INSERT INTO tblUserCompany (userID, companyID) VALUES (:u, :c)', {'u': userId, 'c': companyId});
+      db.query('INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)', {'u': userId, 'c': companyId});
 
   Future<void> inGroup(int userId, int groupId) =>
-      db.query('INSERT INTO tblUserGroup (userID, groupID) VALUES (:u, :g)', {'u': userId, 'g': groupId});
+      db.query('INSERT INTO tblUserGroup (userID, groupID, userGroupActive, userGroupMFD) VALUES (:u, :g, 1, 0)', {'u': userId, 'g': groupId});
 
   late int almeco;
   late int pca;

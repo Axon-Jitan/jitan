@@ -210,6 +210,9 @@ class TestApp {
   Future<Response> get(String path, {Map<String, String> headers = const {}}) =>
       Future.sync(() => handler(Request('GET', Uri.parse('http://localhost$path'), headers: headers)));
 
+  Future<Response> delete(String path) =>
+      Future.sync(() => handler(Request('DELETE', Uri.parse('http://localhost$path'))));
+
   /// PUT with a raw body (already JSON-encoded, or deliberately malformed).
   Future<Response> put(String path, String body) => Future.sync(
     () => handler(

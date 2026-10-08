@@ -10,6 +10,23 @@ class FakeEmployeeAssignmentsApi implements EmployeeAssignmentsApi {
   ApiClientException? loadFailure;
   ApiClientException? addFailure;
 
+  /// Thrown by [remove] when set.
+  ApiClientException? removeFailure;
+
+  /// (companyId, userId, kind, id) of every removal.
+  final removes = <(int, int, AssignmentKind, int)>[];
+
+  @override
+  Future<AssignmentOptions> remove(int companyId, int userId, AssignmentKind kind, int id) async {
+    removes.add((companyId, userId, kind, id));
+    if (removeFailure != null) throw removeFailure!;
+    byKind[kind] = [
+      for (final o in byKind[kind] ?? const <AssignmentOption>[])
+        o.id == id ? AssignmentOption(id: o.id, name: o.name, isActive: o.isActive, isAssigned: false) : o,
+    ];
+    return AssignmentOptions(options: byKind[kind]!);
+  }
+
   /// (companyId, userId, kind, ids) of every add.
   final adds = <(int, int, AssignmentKind, List<int>)>[];
 

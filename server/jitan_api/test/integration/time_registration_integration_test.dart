@@ -58,7 +58,7 @@ void main() {
     )).lastInsertId;
     userId = await insertUser('DTR$stamp');
     otherUserId = await insertUser('DTO$stamp');
-    await db.execute('INSERT INTO tblUserCompany (userID, companyID) VALUES (:u, :c)', {'u': userId, 'c': companyId});
+    await db.execute('INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)', {'u': userId, 'c': companyId});
     typeId = (await db.execute(
       'INSERT INTO tblTimeRegType (timeRegTypeName, timeRegTypeActive, timeRegTypeMFD) VALUES (:n, 1, 0)',
       {'n': '[DEV-TEST] type $stamp'},

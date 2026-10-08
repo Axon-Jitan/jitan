@@ -156,11 +156,19 @@ abstract final class AdminTextKeys {
   static const assignmentsTabGroups = 'employee.assignments.tab.groups';
   static const assignmentsGroupsTitle = 'employee.assignments.groups.title';
   static const assignmentsGroupsText = 'employee.assignments.groups.text';
-  static const assignmentsGroupsAssigned = 'employee.assignments.groups.assigned';
   static const assignmentsGroupsAvailable = 'employee.assignments.groups.available';
   static const assignmentsGroupsHint = 'employee.assignments.groups.hint';
-  static const assignmentsGroupsNoteTitle = 'employee.assignments.groups.note.title';
-  static const assignmentsGroupsNoteText = 'employee.assignments.groups.note.text';
+  static const assignmentsRemovable = 'employee.assignments.removable';
+
+  // Remove Company / Group confirmation (Figma 207:329, 207:441)
+  static const removeCompanyTitle = 'employee.assignments.remove.company.title';
+  static const removeGroupTitle = 'employee.assignments.remove.group.title';
+  static const removeAssignmentSubtitle = 'employee.assignments.remove.subtitle';
+  static const removeAssignmentWhatHappens = 'employee.assignments.remove.whatHappens';
+  static const removeCompanySoftDelete = 'employee.assignments.remove.company.softDelete';
+  static const removeGroupSoftDelete = 'employee.assignments.remove.group.softDelete';
+  static const removeAssignmentAudit = 'employee.assignments.remove.audit';
+  static const removeAssignmentConfirm = 'employee.assignments.remove.confirm';
   static const assignmentsTabLanguage = 'employee.assignments.tab.language';
   static const assignmentsLanguageTitle = 'employee.assignments.language.title';
   static const assignmentsLanguageText = 'employee.assignments.language.text';

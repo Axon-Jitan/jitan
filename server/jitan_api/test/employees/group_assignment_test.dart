@@ -135,6 +135,39 @@ void main() {
       expect(app.audit.events, isEmpty);
     });
 
+    test('existing groups are removable; removal is a soft delete, audited, and reversible', () async {
+      final app = _app();
+      final options = (await jsonBody(await app.get(_path)))['options']! as List<Object?>;
+      expect(
+        [for (final o in options.cast<Map<String, Object?>>()) if (o['isRemovable'] == true) o['name']],
+        ['Retired', 'White collar'],
+      );
+
+      final removed = await app.delete('$_path/1');
+
+      expect(removed.statusCode, 200);
+      expect(app.assignments.removedGroups, {(2, 1): 21}, reason: 'Active = 0, MFD = 1, row kept');
+      expect(app.audit.events.single.type, AuditEventType.groupRemoved);
+      expect(app.audit.events.single.references, {
+        EventLogReference.user: 2,
+        EventLogReference.group: 1,
+        EventLogReference.userGroup: 21,
+      });
+
+      await app.post(_path, _add([1]));
+
+      expect(app.assignments.userGroups[(2, 1)], 21, reason: 'reactivated, not duplicated');
+      expect(app.audit.events.last.type, AuditEventType.groupAssigned);
+    });
+
+    test("removing a group needs the permission in the path company; another company's employee is 404", () async {
+      final denied = _app()..permissions.deniedCompanies = {1};
+      expect((await denied.delete('$_path/1')).statusCode, 403);
+      expect(denied.assignments.userGroups.containsKey((2, 1)), isTrue);
+
+      expect((await _app().delete('/companies/2/employees/2/assignments/groups/1')).statusCode, 404);
+    });
+
     test('empty or malformed requests are refused', () async {
       final app = _app();
 

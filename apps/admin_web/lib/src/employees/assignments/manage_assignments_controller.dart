@@ -84,6 +84,28 @@ class ManageAssignmentsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _removing = false;
+  bool get removing => _removing;
+
+  /// Removes [option] from [tab] at once (after HR/Admin confirmed): a soft
+  /// delete on the server. Returns the failure, or `null` once the server
+  /// confirmed; the tab then shows the server's list.
+  Future<ApiClientException?> remove(AssignmentTab tab, AssignmentOption option) async {
+    if (_removing || _saving || !option.isRemovable) return null;
+    _removing = true;
+    notifyListeners();
+    try {
+      tab.options = (await _api.remove(companyId, userId, tab.kind, option.id)).options;
+      tab.pending.remove(option.id);
+      return null;
+    } on ApiClientException catch (e) {
+      return e;
+    } finally {
+      _removing = false;
+      notifyListeners();
+    }
+  }
+
   /// Picker tabs (Access): [optionId] becomes the one option to add, or
   /// none when `null`.
   void choose(AssignmentTab tab, int? optionId) {

@@ -15,7 +15,10 @@ import 'employee_assignment_service.dart';
 /// - `GET  /companies/{companyId}/employees/{userId}/assignments/companies`
 /// - `POST /companies/{companyId}/employees/{userId}/assignments/companies`
 ///   with an `AddAssignmentsRequest` (adds only)
-/// - `GET/POST …/assignments/groups` (universal groups, adds only)
+/// - `DELETE …/assignments/companies/{companyId}`: remove a membership (soft
+///   delete; needs the permission in that company too; not the path company)
+/// - `GET/POST …/assignments/groups` (universal groups)
+/// - `DELETE …/assignments/groups/{groupId}`: remove a group (soft delete)
 /// - `GET/PUT …/assignments/language` (one preferred language, replaced)
 /// - `GET/POST …/assignments/credential-groups` (access, adds only; POST
 ///   needs `manageEmployeeAccess` in every company of the employee)
@@ -32,6 +35,8 @@ class EmployeeAssignmentRoutes {
     ..post('$_path/companies', _addCompanies)
     ..get('$_path/groups', _groups)
     ..post('$_path/groups', _addGroups)
+    ..delete('$_path/companies/<targetId|[0-9]+>', _removeCompany)
+    ..delete('$_path/groups/<targetId|[0-9]+>', _removeGroup)
     ..get('$_path/language', _languages)
     ..put('$_path/language', _setLanguage)
     ..get('$_path/credential-groups', _credentialGroups)
@@ -71,6 +76,26 @@ class EmployeeAssignmentRoutes {
       await _body(request),
       mayManage: (member) => _authorizer.require(request, Permission.manageEmployeeAccess, companyId: member),
     );
+    return jsonResponse(result.toJson());
+  }
+
+  Future<Response> _removeCompany(Request request, String companyId, String userId, String targetId) async {
+    final id = int.parse(companyId);
+    final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
+    final result = await _assignments.removeCompany(
+      identity.userId,
+      id,
+      int.parse(userId),
+      int.parse(targetId),
+      mayManage: (target) => _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: target),
+    );
+    return jsonResponse(result.toJson());
+  }
+
+  Future<Response> _removeGroup(Request request, String companyId, String userId, String targetId) async {
+    final id = int.parse(companyId);
+    final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
+    final result = await _assignments.removeGroup(identity.userId, id, int.parse(userId), int.parse(targetId));
     return jsonResponse(result.toJson());
   }
 

@@ -7,6 +7,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../../common/api_failure_text.dart';
 import '../../l10n/admin_text_keys.dart';
 import 'manage_assignments_controller.dart';
+import 'remove_assignment_dialog.dart';
 
 /// Opens "Manage employee assignments" for [employee]; returns `true` when
 /// something was saved.
@@ -202,11 +203,13 @@ class _CompaniesTab extends StatelessWidget {
                 title: option.name,
                 detail: context.t(switch (option) {
                   _ when option.id == currentCompanyId => AdminTextKeys.assignmentsCompaniesCurrent,
+                  AssignmentOption(isRemovable: true) => AdminTextKeys.assignmentsRemovable,
                   AssignmentOption(isActive: false) => CommonTextKeys.statusInactive,
                   _ => AdminTextKeys.assignmentsCompaniesAdditional,
                 }),
                 selected: tab.isSelected(option),
-                onTap: tab.canToggle(option) && !controller.saving ? () => controller.toggle(tab, option) : null,
+                removable: option.isRemovable,
+                onTap: _onTap(context, controller, tab, option),
               ),
               const SizedBox(height: 13),
             ],
@@ -247,21 +250,19 @@ class _GroupsTab extends StatelessWidget {
             for (final option in options) ...[
               JitanOptionCard(
                 title: option.name,
-                detail: context.t(
-                  option.isAssigned ? AdminTextKeys.assignmentsGroupsAssigned : AdminTextKeys.assignmentsGroupsAvailable,
-                ),
+                detail: switch (option) {
+                  AssignmentOption(isRemovable: true) => context.t(AdminTextKeys.assignmentsRemovable),
+                  AssignmentOption(isAssigned: false) => context.t(AdminTextKeys.assignmentsGroupsAvailable),
+                  _ => null,
+                },
                 selected: tab.isSelected(option),
-                onTap: tab.canToggle(option) && !controller.saving ? () => controller.toggle(tab, option) : null,
+                removable: option.isRemovable,
+                onTap: _onTap(context, controller, tab, option),
               ),
               const SizedBox(height: 12),
             ],
             const SizedBox(height: 23),
             Text(context.t(AdminTextKeys.assignmentsGroupsHint), style: JitanTextStyles.stateMessage.copyWith(fontSize: 10)),
-            const SizedBox(height: 26),
-            _NoteBox(
-              title: context.t(AdminTextKeys.assignmentsGroupsNoteTitle),
-              text: context.t(AdminTextKeys.assignmentsGroupsNoteText),
-            ),
           ],
         ),
       ),
@@ -377,6 +378,17 @@ class _AccessTab extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// Tapping an option: a current, removable assignment asks to confirm its
+/// removal (Figma 207:329 / 207:441); an assignable one is ticked to be
+/// added on Save; anything else is locked.
+VoidCallback? _onTap(BuildContext context, ManageAssignmentsController controller, AssignmentTab tab, AssignmentOption option) {
+  if (controller.saving || controller.removing) return null;
+  if (option.isRemovable) {
+    return () => showRemoveAssignmentDialog(context, controller: controller, tab: tab, option: option);
+  }
+  return tab.canToggle(option) ? () => controller.toggle(tab, option) : null;
 }
 
 /// The warm-grey explanation box under a tab's options.

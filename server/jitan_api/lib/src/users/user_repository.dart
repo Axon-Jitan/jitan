@@ -1,6 +1,7 @@
 import 'package:jitan_models/jitan_models.dart';
 
 import '../database/database.dart';
+import '../employees/membership_filters.dart';
 
 /// Data access for `tblUser`.
 class UserRepository {
@@ -38,7 +39,8 @@ class UserRepository {
     if (rows.isEmpty) return null;
     final companies = await _db.query(
       'SELECT c.companyName FROM tblUserCompany uc JOIN tblCompany c ON c.companyID = uc.companyID '
-      'WHERE uc.userID = :userId AND c.companyMFD = 0 ORDER BY c.companyName',
+      'WHERE uc.userID = :userId AND ${MembershipFilters.activeCompany('uc')} AND c.companyMFD = 0 '
+      'ORDER BY c.companyName',
       {'userId': userId},
     );
     final row = rows.first;

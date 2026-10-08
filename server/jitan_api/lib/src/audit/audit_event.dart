@@ -28,11 +28,19 @@ enum AuditEventType {
   /// The employee set a new password with a temporary recovery QR.
   accessRecovered('employee.access.recovered'),
 
-  /// HR/Admin added the employee to a company (`tblUserCompany`).
+  /// HR/Admin added the employee to a company (`tblUserCompany`), or
+  /// reactivated a removed membership.
   companyAssigned('employee.company.assigned'),
 
-  /// HR/Admin assigned an employee group (`tblUserGroup`).
+  /// HR/Admin removed the employee from a company (soft delete).
+  companyRemoved('employee.company.removed'),
+
+  /// HR/Admin assigned an employee group (`tblUserGroup`), or reactivated a
+  /// removed one.
   groupAssigned('employee.group.assigned'),
+
+  /// HR/Admin removed an employee group (soft delete).
+  groupRemoved('employee.group.removed'),
 
   /// HR/Admin assigned a credential group (`tblUserCredGroup`).
   credentialGroupAssigned('employee.credential_group.assigned'),

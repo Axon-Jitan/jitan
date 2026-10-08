@@ -2,6 +2,7 @@ import 'package:logging/logging.dart';
 
 import '../database/sql_executor.dart';
 import '../languages/user_language_repository.dart';
+import '../employees/membership_filters.dart';
 
 final _log = Logger('onboarding');
 
@@ -57,7 +58,8 @@ class OnboardingRepository {
   Future<List<String>> companyNames(SqlExecutor executor, int userId) async {
     final rows = await executor.query(
       'SELECT c.companyName FROM tblUserCompany uc JOIN tblCompany c ON c.companyID = uc.companyID '
-      'WHERE uc.userID = :userId AND c.companyMFD = 0 ORDER BY c.companyName',
+      'WHERE uc.userID = :userId AND ${MembershipFilters.activeCompany('uc')} AND c.companyMFD = 0 '
+      'ORDER BY c.companyName',
       {'userId': userId},
     );
     return [for (final row in rows) row.readString('companyName')];

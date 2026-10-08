@@ -23,8 +23,7 @@ const _disan = EmployeeDetails(
 );
 
 const _almeco = AssignmentOption(id: 1, name: 'Almeco', isActive: true, isAssigned: true);
-/// One company per employee: the server offers PCA as not assignable.
-const _pca = AssignmentOption(id: 2, name: 'PCA', isActive: true, isAssigned: false, isAssignable: false);
+const _pca = AssignmentOption(id: 2, name: 'PCA', isActive: true, isAssigned: false);
 const _akwa = AssignmentOption(id: 3, name: 'Akwa', isActive: false, isAssigned: true);
 
 const _blue = AssignmentOption(id: 2, name: 'Blue collar', isActive: true, isAssigned: false);
@@ -54,8 +53,10 @@ void main() {
 
       c.toggle(companies, _almeco);
       c.toggle(companies, _akwa);
+      expect(c.hasChanges, isFalse, reason: 'existing memberships are not unticked: removal is a confirmed action');
       c.toggle(companies, _pca);
-      expect(c.hasChanges, isFalse, reason: 'removal waits for IT; one company per employee');
+      expect(companies.pending, {2}, reason: 'several companies allowed');
+      c.toggle(companies, _pca);
 
       c.toggle(groups, _white);
       expect(c.hasChanges, isFalse);
@@ -127,27 +128,31 @@ void main() {
       expect(find.text('Manage employee assignments'), findsOneWidget);
       expect(find.text('Disan Ssebowa  ·  Almeco  ·  Employee code SBW'), findsOneWidget);
       expect(find.text('Company membership'), findsOneWidget);
-      expect(
-        find.text('Each employee belongs to one company. Moving an employee to another company is not available yet.'),
-        findsOneWidget,
-      );
+      expect(find.text('Choose the companies this employee belongs to. Multiple selections are allowed.'), findsOneWidget);
       expect(find.text('Current company'), findsOneWidget);
+      expect(find.text('Additional company'), findsOneWidget);
       expect(find.text('Inactive'), findsOneWidget, reason: 'an existing membership stays listed');
-      expect(find.text('PCA'), findsNothing, reason: 'one company per employee: no other company is offered');
       expect(find.text('Company-scoped access'), findsOneWidget);
       expect(find.text('Changes take effect after saving.'), findsOneWidget);
     });
 
-    testWidgets('one company per employee: nothing to tick, Save stays disabled', (tester) async {
+    testWidgets('Save is disabled until something is ticked; ticking PCA and saving adds a second company', (tester) async {
       final api = await open(tester);
       FilledButton save() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save changes'));
       expect(save().onPressed, isNull);
 
       await tester.tap(find.text('Almeco'));
       await tester.pump();
+      expect(save().onPressed, isNull, reason: 'the current company is locked');
 
-      expect(save().onPressed, isNull, reason: 'an existing membership cannot be unticked');
-      expect(api.adds, isEmpty);
+      await tester.tap(find.text('PCA'));
+      await tester.pump();
+      await tester.tap(find.text('Save changes'));
+      await tester.pump();
+
+      final (companyId, userId, kind, ids) = api.adds.single;
+      expect((companyId, userId, kind), (1, 2, AssignmentKind.companies));
+      expect(ids, [2]);
     });
 
     testWidgets('a load failure shows a retryable error', (tester) async {
@@ -197,14 +202,13 @@ void main() {
       return fake;
     }
 
-    testWidgets('matches Figma: no company selector, assigned group locked, removal note', (tester) async {
+    testWidgets('matches Figma: no company selector, available groups to add', (tester) async {
       await openGroups(tester);
 
       expect(find.text('Employee groups / type'), findsOneWidget);
       expect(find.text('Groups are universal. Assigned groups apply across every company the employee belongs to.'), findsOneWidget);
-      expect(find.text('Already assigned · removal unavailable'), findsOneWidget);
       expect(find.text('Not assigned · available to add'), findsOneWidget);
-      expect(find.text('Removing groups is temporarily unavailable'), findsOneWidget);
+      expect(find.text('Removing groups is temporarily unavailable'), findsNothing);
       expect(find.byType(DropdownButton<int>), findsNothing);
       expect(find.text('Almeco'), findsNothing, reason: 'no company list on the Groups tab');
     });
@@ -363,5 +367,98 @@ void main() {
 
     c.toggle(groups, groups.options!.single);
     expect(c.hasChanges, isFalse);
+  });
+
+  group('removing a company or group (soft delete, Figma 207:329 / 207:441)', () {
+    const removableWhite = AssignmentOption(id: 1, name: 'White collar', isActive: true, isAssigned: true, isRemovable: true);
+    const removablePca = AssignmentOption(id: 2, name: 'PCA', isActive: true, isAssigned: true, isRemovable: true);
+
+    Future<FakeEmployeeAssignmentsApi> openTab(WidgetTester tester, String tab) async {
+      tester.view.physicalSize = const Size(1440, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final fake = _api()
+        ..byKind[AssignmentKind.groups] = [_blue, removableWhite]
+        ..byKind[AssignmentKind.companies] = [_almeco, removablePca];
+      await tester.pumpWidget(
+        TranslationScope(
+          translations: Translations.english(),
+          child: MaterialApp(
+            theme: JitanTheme.light(),
+            home: Scaffold(body: ManageAssignmentsDialog(api: fake, employee: _disan)),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text(tab));
+      await tester.pump();
+      return fake;
+    }
+
+    testWidgets('an assigned group says "Assigned · select to remove"; tapping asks to confirm', (tester) async {
+      final api = await openTab(tester, 'Groups');
+
+      expect(find.text('Assigned · select to remove'), findsOneWidget);
+      expect(tester.widget<JitanOptionCard>(find.widgetWithText(JitanOptionCard, 'White collar')).removable, isTrue);
+
+      await tester.tap(find.text('White collar'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Remove employee from group?'), findsOneWidget);
+      expect(find.text('The assignment will disappear from Jitan but remain in the database.'), findsOneWidget);
+      expect(find.text('Set Active = false and MFD = true in tblUserGroup.'), findsOneWidget);
+      expect(find.text('Record the change, actor and time in tblEventLog.'), findsOneWidget);
+      expect(api.removes, isEmpty, reason: 'nothing happens before the confirmation');
+
+      await tester.tap(find.text('Remove assignment'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(api.removes.single, (1, 2, AssignmentKind.groups, 1));
+      expect(find.text('Remove employee from group?'), findsNothing);
+      expect(find.text('Assigned · select to remove'), findsNothing, reason: 'the list comes from the server');
+    });
+
+    testWidgets('Cancel removes nothing', (tester) async {
+      final api = await openTab(tester, 'Groups');
+
+      await tester.tap(find.text('White collar'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Cancel').last);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(api.removes, isEmpty);
+      expect(find.text('Assigned · select to remove'), findsOneWidget);
+    });
+
+    testWidgets('an additional company is removed after confirmation; the current one is not offered', (tester) async {
+      final api = await openTab(tester, 'Companies');
+
+      expect(find.text('Current company'), findsOneWidget);
+      await tester.tap(find.text('Almeco'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Remove employee from company?'), findsNothing, reason: 'the current company is locked');
+
+      await tester.tap(find.text('PCA'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Remove employee from company?'), findsOneWidget);
+      expect(find.text('Set Active = false and MFD = true in tblUserCompany.'), findsOneWidget);
+      await tester.tap(find.text('Remove assignment'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(api.removes.single, (1, 2, AssignmentKind.companies, 2));
+    });
+
+    testWidgets('a refused removal is explained and the dialog stays open', (tester) async {
+      final api = await openTab(tester, 'Groups');
+      api.removeFailure = const ApiClientException.network('offline');
+
+      await tester.tap(find.text('White collar'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Remove assignment'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Remove employee from group?'), findsOneWidget);
+      expect(find.byType(JitanInlineError), findsOneWidget);
+    });
   });
 }
