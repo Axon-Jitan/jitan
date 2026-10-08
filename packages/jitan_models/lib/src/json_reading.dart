@@ -46,6 +46,12 @@ extension JsonReading on Map<String, Object?> {
     throw FormatException('Expected "$key" to be a boolean, got ${value.runtimeType}.');
   }
 
+  bool? readOptionalBool(String key) {
+    final value = this[key];
+    if (value == null || value is bool) return value as bool?;
+    throw FormatException('Expected "$key" to be a boolean or null, got ${value.runtimeType}.');
+  }
+
   DateTime? readOptionalDateTime(String key) {
     final value = this[key];
     if (value == null) return null;

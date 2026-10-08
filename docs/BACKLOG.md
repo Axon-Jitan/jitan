@@ -153,6 +153,28 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text | `DONE` |
 | EMP-09 | Bulk import (Figma "Import CSV / Excel", roadmap §8): upload → preview → validate → import | `TODO` |
 
+## TR-01: Read-only time-registration foundation
+Status: `DONE` (2026-10-08) · the time engine itself waits for GAP-01, GAP-02, CLARIFY-02
+
+The raw `tblTimeReg` stream, read-only, for the HR/Admin Time Records screen and the
+employee's history (staged: their screens come later).
+
+- `GET /companies/{id}/employees/{userId}/time-registrations` (permission
+  `viewTimeRegistrations` in that company; the employee must belong to it, since
+  `tblTimeReg` has no company) and `GET /me/time-registrations` (own data).
+- Only `timeRegActive = 1 AND timeRegMFD = 0`; required `from` (inclusive) / `to`
+  (exclusive) as wall-clock values **without** timezone (GAP-02: refused with an offset,
+  never converted); oldest first by timestamp then id; `limit` 1–500 (default 100) and an
+  opaque keyset `cursor`, stable across equal timestamps.
+- Returned as stored: wall-clock timestamp, `tblTimeRegType` id and name with no meaning
+  attached (CLARIFY-02), address name, `timeRegManualEntry` (`null` stays unknown),
+  comment, `timeRegWhenModified`.
+- Shared models `TimeRegistration` / `TimeRegistrationPage` (jitan_models), client
+  `TimeRegistrationsApi` (jitan_api_client); unit, client and MySQL integration tests.
+
+Not built, on purpose: rounding, work sessions (no derived session is presented as a
+record), and any writing or correcting of registrations.
+
 ## Employee onboarding (next)
 
 | Task | Scope | Status |

@@ -39,6 +39,9 @@ import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
+import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
+import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
+import 'package:jitan_api/src/time_registration/time_registration_service.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
 import 'package:jitan_api/src/users/account_service.dart';
 import 'package:jitan_api/src/users/me_routes.dart';
@@ -152,6 +155,15 @@ Future<void> main() async {
         executor: db,
         sessions: sessions,
         hasher: hasher,
+      ),
+    ),
+    timeRegistrations: TimeRegistrationRoutes(
+      authorizer,
+      TimeRegistrationService(
+        registrations: TimeRegistrationRepository(db),
+        employees: EmployeeRepository(db),
+        companies: companyRepository,
+        executor: db,
       ),
     ),
     me: MeRoutes(

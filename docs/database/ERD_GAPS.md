@@ -13,6 +13,29 @@ Status values: `OPEN` · `RESOLVED (date, decision)` · `WITHDRAWN (reason)`
 
 ---
 
+## Open questions for IT (priority)
+
+These four block the next roadmap step (the time engine and production authorization).
+Jitan does not assume answers to them; details are in each section below.
+
+1. **GAP-01: actual vs registered time.** `tblTimeReg` has one timestamp. How should
+   both the actual detected time and the rounded/corrected time be preserved? Is the
+   registered time computed when read, or stored somewhere? How is an HR correction
+   stored without losing the original?
+2. **GAP-02: timezones.** Is `timeRegTimestamp` stored in UTC or in local time? Where
+   does a company's (or workplace's) timezone come from?
+3. **CLARIFY-02: `tblTimeRegType`.** What does a type represent: the kind of event
+   (in / out / break), the source (geofence / QR / manual), or both? Please share the
+   seeded rows.
+4. **CLARIFY-10: credential groups.** Which credential groups may an actor grant? Is
+   `credGroupLevel` a hierarchy, and in which direction? How do credential groups,
+   modules and functions combine into permissions?
+
+Until then Jitan reads `tblTimeReg` as stored (read-only, TR-01), does no rounding and
+writes no registrations, and lets an actor grant only credential groups they hold.
+
+---
+
 ## Blocking summary
 
 Per [ENGINEERING_RULES.md](../ENGINEERING_RULES.md) §0, a gap blocks only the specific
@@ -29,7 +52,7 @@ answered, and they block only the production cut-over of authentication and auth
 | Employees: list (Figma `153:137`) | **not blocked**. Location (GAP-11) and Onboarding (GAP-04) show "—"; Policy omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY) |
 | Employee onboarding (**Milestone 1**) | **not blocked**: QR = userQRcode, activated = `userPassword IS NOT NULL` (ONB-01 done server-side) |
 | Employee Web QR login, privacy screens | GAP-05 |
-| Core time engine | GAP-01, GAP-02, CLARIFY-02 |
+| Core time engine (rounding, sessions, writing registrations) | GAP-01, GAP-02, CLARIFY-02. **Not blocked:** the read-only registration stream (TR-01, built) |
 | Geofencing | GAP-06, CLARIFY-04, CLARIFY-05 |
 | Rounding (**Milestone 2**) | GAP-01, CLARIFY-03 |
 | Registration method choice | GAP-07 |
@@ -114,6 +137,9 @@ Recorded so they aren't raised again.
    to companies, not individual registrations. For an employee in both Almeco and PCA,
    nothing says which company a given `tblTimeReg` row counts for, because the address
    would have told us and it has no company.
+   With one company per employee (MVP decision 2026-10-08), TR-01 scopes an employee's
+   registrations through their membership. An employee who has a historical second
+   membership is shown with all their registrations in each company.
 4. **Missing:**
    - an address → company relationship
    - which address is a company's *primary* workplace

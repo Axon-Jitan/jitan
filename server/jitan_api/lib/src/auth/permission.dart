@@ -36,4 +36,8 @@ enum Permission {
   /// so it needs this permission in **every** company the employee belongs
   /// to. Separate from [manageEmployeeAssignments]: it changes access.
   manageEmployeeAccess,
+
+  /// Read an employee's time registrations (`tblTimeReg`) as HR/Admin
+  /// (company-scoped, through the employee's membership).
+  viewTimeRegistrations,
 }

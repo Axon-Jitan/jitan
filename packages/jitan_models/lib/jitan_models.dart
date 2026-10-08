@@ -13,3 +13,4 @@ export 'src/json_reading.dart';
 export 'src/language.dart';
 export 'src/onboarding.dart';
 export 'src/personal_qr_response.dart';
+export 'src/time_registration.dart';

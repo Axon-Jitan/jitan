@@ -13,6 +13,7 @@ import 'http/cors_middleware.dart';
 import 'http/error_middleware.dart';
 import 'languages/language_routes.dart';
 import 'onboarding/onboarding_routes.dart';
+import 'time_registration/time_registration_routes.dart';
 import 'users/me_routes.dart';
 
 final _log = Logger('http.requests');
@@ -38,6 +39,7 @@ Handler buildApp({
   required OnboardingRoutes onboarding,
   required SignInRoutes signIn,
   required MeRoutes me,
+  required TimeRegistrationRoutes timeRegistrations,
   List<Middleware> authentication = const [],
 }) {
   final apiRoutes = Router(notFoundHandler: _notFound)
@@ -46,7 +48,8 @@ Handler buildApp({
     ..mount('/', assignments.router.call)
     ..mount('/', groups.router.call)
     ..mount('/', languages.authenticatedRouter.call)
-    ..mount('/', me.router.call);
+    ..mount('/', me.router.call)
+    ..mount('/', timeRegistrations.router.call);
 
   var api = const Pipeline();
   for (final middleware in authentication) {

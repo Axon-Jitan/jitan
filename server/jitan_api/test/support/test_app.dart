@@ -21,6 +21,8 @@ import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
+import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
+import 'package:jitan_api/src/time_registration/time_registration_service.dart';
 import 'package:jitan_api/src/auth/password_hasher.dart';
 import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
@@ -89,6 +91,15 @@ class TestApp {
           hasher: hasher,
         ),
       ),
+      timeRegistrations: TimeRegistrationRoutes(
+        Authorizer(permissions),
+        TimeRegistrationService(
+          registrations: timeRegistrations,
+          employees: employees,
+          companies: companies,
+          executor: unusedExecutor,
+        ),
+      ),
       me: MeRoutes(
         users,
         AccountService(
@@ -138,6 +149,7 @@ class TestApp {
   final databaseHealth = FakeDatabaseHealthRepository();
   final languages = FakeLanguageRepository();
   final userLanguages = FakeUserLanguageRepository();
+  final timeRegistrations = FakeTimeRegistrationRepository();
   late final languageChanges = UserLanguageService(
     userLanguages: userLanguages,
     employees: employees,

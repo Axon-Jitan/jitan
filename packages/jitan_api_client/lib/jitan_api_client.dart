@@ -11,3 +11,4 @@ export 'src/groups_api.dart';
 export 'src/languages_api.dart';
 export 'src/me_api.dart';
 export 'src/onboarding_api.dart';
+export 'src/time_registrations_api.dart';

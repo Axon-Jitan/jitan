@@ -16,6 +16,7 @@ import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
 import 'package:jitan_api/src/languages/user_language_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
+import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
 
@@ -479,6 +480,28 @@ class FakeUserLanguageRepository implements UserLanguageRepository {
         if (l.active || mine.contains(id))
           AssignmentOption(id: id, name: l.name, code: l.code, isActive: l.active, isAssigned: mine.contains(id)),
     ];
+  }
+}
+
+/// Serves [rows] as already filtered by the database (Active/MFD, range and
+/// order are checked by the MySQL integration test) and records each query.
+class FakeTimeRegistrationRepository implements TimeRegistrationRepository {
+  List<TimeRegistration> rows = [];
+  final queries = <({int userId, DateTime from, DateTime to, int limit, TimeRegistrationPosition? after})>[];
+
+  @override
+  Future<List<TimeRegistration>> listForUser(
+    int userId, {
+    required DateTime from,
+    required DateTime to,
+    required int limit,
+    TimeRegistrationPosition? after,
+  }) async {
+    queries.add((userId: userId, from: from, to: to, limit: limit, after: after));
+    return [
+      for (final r in rows)
+        if (after == null || r.timestamp.isAfter(after.timestamp) || (r.timestamp == after.timestamp && r.id > after.id)) r,
+    ].take(limit).toList();
   }
 }
 

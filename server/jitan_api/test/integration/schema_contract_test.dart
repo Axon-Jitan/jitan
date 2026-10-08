@@ -24,6 +24,12 @@ const _usedColumns = {
     'eventLogID', 'eventLogTimestamp', 'userIDInit', 'userIDTarget', 'companyID', 'userCompanyID',
     'groupID', 'userGroupID', 'credGroupID', 'userCredGroupID',
   ],
+  'tblTimeReg': [
+    'timeRegID', 'userID', 'addressID', 'timeRegTypeID', 'timeRegTimestamp', 'timeRegManualEntry',
+    'timeRegComment', 'timeRegWhenModified', 'timeRegActive', 'timeRegMFD',
+  ],
+  'tblTimeRegType': ['timeRegTypeID', 'timeRegTypeName', 'timeRegTypeActive', 'timeRegTypeMFD'],
+  'tblAddress': ['addressID', 'addressLogicalName'],
   'tblCredGroup': ['credGroupID', 'credGroupName', 'credGroupLevel', 'credGroupActive', 'credGroupMFD'],
   'tblUserCredGroup': ['userCredGroupID', 'userID', 'credGroupID'],
   'tblEventType': ['eventTypeID', 'eventTypeName'],

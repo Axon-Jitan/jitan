@@ -46,6 +46,9 @@ class DbRow {
     throw _unexpected(column, raw ?? 'NULL', 'a boolean flag');
   }
 
+  /// A nullable flag: `null` stays `null` (not recorded), never `false`.
+  bool? readOptionalBool(String column) => _raw(column) == null ? null : readBool(column);
+
   /// Reads a MySQL `DATETIME` (`yyyy-MM-dd HH:mm:ss[.ffffff]`) as a
   /// wall-clock [DateTime] without timezone (see ERD GAP-02).
   DateTime? readOptionalDateTime(String column) {
