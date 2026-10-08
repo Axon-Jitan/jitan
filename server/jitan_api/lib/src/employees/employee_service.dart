@@ -8,6 +8,8 @@ import '../database/database_exception.dart';
 import '../database/sql_executor.dart';
 import '../groups/group_repository.dart';
 import '../http/api_exception.dart';
+import '../onboarding/account_setup_rules.dart';
+import '../onboarding/onboarding_repository.dart';
 import 'employee_repository.dart';
 import '../temporary_qr/temporary_qr_service.dart';
 import 'personal_qr_code.dart';
@@ -21,6 +23,7 @@ class EmployeeService {
     required this._audit,
     required this._transactions,
     required this._temporaryQr,
+    this._accounts = const OnboardingRepository(),
     this._credentials = const CredentialRepository(),
     this._personalQrCode = newPersonalQrCode,
   });
@@ -31,6 +34,7 @@ class EmployeeService {
   final AuditLogRepository _audit;
   final TransactionRunner _transactions;
   final TemporaryQrService _temporaryQr;
+  final OnboardingRepository _accounts;
   final CredentialRepository _credentials;
   final String Function() _personalQrCode;
 
@@ -53,8 +57,16 @@ class EmployeeService {
   /// company reveals nothing.
   Future<EmployeeDetails> details(int companyId, int userId) async {
     await _requireCompany(companyId);
-    return await _employees.findDetails(companyId, userId) ??
+    final details = await _employees.findDetails(companyId, userId) ??
         (throw ApiException.notFound('Employee $userId is not in company $companyId.'));
+    if (details.isActivated) return details;
+    final state = await _transactions.transaction((tx) => _setupState(tx, userId));
+    return details.copyWith(accessResetPending: state == AccountSetupState.resetPending);
+  }
+
+  Future<AccountSetupState?> _setupState(SqlExecutor executor, int userId) async {
+    final user = await _accounts.findById(executor, userId);
+    return user == null ? null : AccountSetupRules.stateOf(_accounts, executor, user);
   }
 
   /// HR/Admin "Reset account access" for an employee who is locked out.
@@ -111,6 +123,24 @@ class EmployeeService {
           (throw ApiException.notFound('Employee $userId is not in company $companyId.'));
       if (!employee.isActive) {
         throw const ApiException(409, ApiErrorCode.accountInactive, 'This employee is not active.');
+      }
+      final state = employee.isActivated ? AccountSetupState.activated : await _setupState(tx, userId);
+      // Onboarding only for an account that never had a password; recovery
+      // only after Reset account access (the HR-authorized recovery).
+      if (purpose == TemporaryQrPurpose.onboarding && state == AccountSetupState.resetPending) {
+        throw const ApiException(
+          409,
+          ApiErrorCode.onboardingAlreadyCompleted,
+          'This employee’s access was reset: generate a recovery QR instead.',
+        );
+      }
+      if (purpose == TemporaryQrPurpose.recovery && state != AccountSetupState.resetPending && !employee.isActivated) {
+        throw AccountSetupRules.notReset();
+      }
+      if (state == AccountSetupState.unexplained) {
+        throw const ApiException.configurationError(
+          'This account has no password but no pending reset. Reset account access is needed (check with IT).',
+        );
       }
       if (employee.isActivated) {
         throw switch (purpose) {

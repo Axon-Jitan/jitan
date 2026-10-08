@@ -384,6 +384,29 @@ one employee's QR reveals nothing about another's. Questions for IT: does an exi
 system expect a specific format or length for this column? What is its maximum length?
 If the format must change, codes can be regenerated: no QR has been issued yet.
 
+## CLARIFY-13: Onboarding vs recovery state · `OPEN` · IT CLARIFICATION (decided interim rule, safe)
+
+Onboarding and recovery both set `userPassword`, but must stay separate operations, and an
+account without a password may only recover after an HR-authorized reset. `tblUser` has no
+column saying *why* a password is NULL (never activated vs reset). The persisted record of
+an HR/Admin reset is its `employee.access.reset` row in `tblEventLog`, written in the same
+transaction that clears the password. Jitan therefore derives the state from the newest of
+the user's `employee.onboarding.completed` / `employee.access.reset` /
+`employee.access.recovered` events (`AccountSetupRules`):
+
+| `userPassword` | Newest access event | State | Allowed |
+|---|---|---|---|
+| set | any | activated | neither (sign-in, change password) |
+| NULL | none | never activated | **onboarding only** (onboarding QR) |
+| NULL | `employee.access.reset` | reset pending | **recovery only** (recovery QR) |
+| NULL | onboarding / recovery | unexplained (cleared outside Jitan) | neither: HR/Admin and IT must look |
+
+Checked when HR/Admin generates a QR, when a QR is scanned, and again under the row lock
+when the password is stored. **Dependency:** the rule needs the `tblEventType` rows of
+CLARIFY-11. Without them no event has a type: recovery is then refused (fails closed) and a
+reset employee looks "never activated". Questions for IT: is reading the audit trail for
+this acceptable, or should a column record the reset state?
+
 ## CLARIFY-11: Seed data · `OPEN` · IT CLARIFICATION, blocks production authorization only
 Please share current rows of `tblCredGroup`, `tblAppModules`, `tblFunction`, `tblGroup`,
 `tblScheduleType`, `tblTimeRegType`, `tblLocationType`, `tblEventType`, `tblDays`,

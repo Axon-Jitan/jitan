@@ -40,4 +40,23 @@ void main() {
 
     expect(details.toJson().keys, isNot(anyOf(contains('password'), contains('pin'), contains('qr'))));
   });
+
+  test('accessResetPending round-trips and defaults to false for older payloads', () {
+    const details = EmployeeDetails(
+      id: 1,
+      companyId: 7,
+      companyName: 'Almeco',
+      firstName: null,
+      lastName: null,
+      code: 'SBW',
+      groups: [],
+      phone: null,
+      isActive: true,
+      isActivated: false,
+      accessResetPending: true,
+    );
+
+    expect(EmployeeDetails.fromJson(details.toJson()).accessResetPending, isTrue);
+    expect(EmployeeDetails.fromJson({...details.toJson()}..remove('accessResetPending')).accessResetPending, isFalse);
+  });
 }

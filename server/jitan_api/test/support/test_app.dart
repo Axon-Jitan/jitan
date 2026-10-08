@@ -46,6 +46,7 @@ class TestApp {
   }) {
     permissions = FixedPermissionEvaluator(allow: allowPermissions);
     users = FakeUserRepository(activeUserIds, passwordHashes: onboarding.passwordHashes, onboarding: onboarding);
+    onboarding.audit = audit;
     employees.activatedLookup =
         (id) => onboarding.users.containsKey(id) ? onboarding.passwordHashes.containsKey(id) : null;
     handler = buildApp(
@@ -62,6 +63,7 @@ class TestApp {
           transactions: transactions,
           credentials: credentials,
           temporaryQr: temporaryQr,
+          accounts: onboarding,
           personalQrCode: () => 'QR-${++_qrCounter}',
         ),
       ),

@@ -54,6 +54,23 @@ class OnboardingRepository {
     );
   }
 
+  /// The name of the newest account-access event of [userId] among
+  /// [eventNames] (onboarding completed, access reset, access recovered), or
+  /// `null` when there is none. These events are written in the same
+  /// transaction as the password change they describe, so they are the
+  /// persisted record of an HR/Admin reset (no ERD column holds it).
+  Future<String?> latestAccessEvent(SqlExecutor executor, int userId, List<String> eventNames) async {
+    final rows = await executor.query(
+      'SELECT t.eventTypeName FROM tblEventLog l '
+      'JOIN tblEventLogEventType et ON et.eventLogID = l.eventLogID '
+      'JOIN tblEventType t ON t.eventTypeID = et.eventTypeID '
+      'WHERE l.userIDTarget = :userId AND t.eventTypeName IN (${[for (var i = 0; i < eventNames.length; i++) ':n$i'].join(', ')}) '
+      'ORDER BY l.eventLogID DESC LIMIT 1',
+      {'userId': userId, for (final (i, name) in eventNames.indexed) 'n$i': name},
+    );
+    return rows.isEmpty ? null : rows.single.readString('eventTypeName');
+  }
+
   /// Names of [userId]'s non-deleted companies.
   Future<List<String>> companyNames(SqlExecutor executor, int userId) async {
     final rows = await executor.query(

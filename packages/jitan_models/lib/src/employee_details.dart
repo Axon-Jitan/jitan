@@ -21,6 +21,7 @@ class EmployeeDetails {
     required this.phone,
     required this.isActive,
     required this.isActivated,
+    this.accessResetPending = false,
   });
 
   factory EmployeeDetails.fromJson(Map<String, Object?> json) => EmployeeDetails(
@@ -34,6 +35,7 @@ class EmployeeDetails {
         phone: json.readOptionalString('phone'),
         isActive: json.readBool('isActive'),
         isActivated: json.readBool('isActivated'),
+        accessResetPending: json.readOptionalBool('accessResetPending') ?? false,
       );
 
   final int id;
@@ -49,6 +51,24 @@ class EmployeeDetails {
   /// Onboarding completed (`userPassword IS NOT NULL`).
   final bool isActivated;
 
+  /// HR/Admin reset this employee's access and they have not set a new
+  /// password yet: a temporary **recovery** QR applies, not an onboarding QR.
+  final bool accessResetPending;
+
+  EmployeeDetails copyWith({bool? accessResetPending}) => EmployeeDetails(
+        id: id,
+        companyId: companyId,
+        companyName: companyName,
+        firstName: firstName,
+        lastName: lastName,
+        code: code,
+        groups: groups,
+        phone: phone,
+        isActive: isActive,
+        isActivated: isActivated,
+        accessResetPending: accessResetPending ?? this.accessResetPending,
+      );
+
   Map<String, Object?> toJson() => {
         'id': id,
         'companyId': companyId,
@@ -60,5 +80,6 @@ class EmployeeDetails {
         'phone': phone,
         'isActive': isActive,
         'isActivated': isActivated,
+        'accessResetPending': accessResetPending,
       };
 }

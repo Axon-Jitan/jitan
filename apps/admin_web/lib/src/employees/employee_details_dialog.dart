@@ -131,11 +131,13 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
         const SizedBox(height: 24),
         _OnboardingCard(
           activated: details.isActivated,
+          // After Reset account access the recovery QR applies; onboarding is
+          // only for an employee who never had a password (server rule).
           onGenerateQr: () => showTemporaryQrDialog(
             context,
             employeesApi: widget.employeesApi,
             employee: details,
-            purpose: TemporaryQrPurpose.onboarding,
+            purpose: details.accessResetPending ? TemporaryQrPurpose.recovery : TemporaryQrPurpose.onboarding,
           ),
         ),
         const SizedBox(height: 46),

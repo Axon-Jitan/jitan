@@ -51,7 +51,7 @@ class RecoveryService {
   /// be set.
   Future<EmployeeAccount> start(String qrCode) async {
     final claims = await _temporaryQr.check(qrCode, TemporaryQrPurpose.recovery);
-    final user = _requireReset(await _accounts.findById(_executor, claims.userId));
+    final user = await _requireReset(_executor, await _accounts.findById(_executor, claims.userId));
     return AccountSetupRules.account(_accounts, _executor, user);
   }
 
@@ -73,11 +73,11 @@ class RecoveryService {
       if (hash == null || !await _hasher.verify(password, hash)) throw _notReset();
       return _session(found, deviceId, hash, await AccountSetupRules.account(_accounts, _executor, found));
     }
-    _requireReset(found);
+    await _requireReset(_executor, found);
     final hash = await _hasher.hash(password);
 
     final (user, account) = await _transactions.transaction((tx) async {
-      final user = _requireReset(await _accounts.findById(tx, claims.userId, lockForUpdate: true));
+      final user = await _requireReset(tx, await _accounts.findById(tx, claims.userId, lockForUpdate: true));
       if (!await _credentials.setPasswordAfterReset(tx, user.userId, hash)) throw _notReset();
       await _audit.record(
         tx,
@@ -100,15 +100,14 @@ class RecoveryService {
     );
   }
 
-  static OnboardingUser _requireReset(OnboardingUser? user) {
+  /// Recovery needs an HR-authorized reset: no password and the reset is the
+  /// newest access event. A never-activated account onboards instead.
+  Future<OnboardingUser> _requireReset(SqlExecutor executor, OnboardingUser? user) async {
     final usable = AccountSetupRules.requireUsable(user);
-    if (usable.passwordSet) throw _notReset();
+    final state = await AccountSetupRules.stateOf(_accounts, executor, usable);
+    if (state != AccountSetupState.resetPending) throw _notReset();
     return usable;
   }
 
-  static ApiException _notReset() => const ApiException(
-        409,
-        ApiErrorCode.accountNotReset,
-        'This account still has a password. Ask HR/Admin to reset your access first.',
-      );
+  static ApiException _notReset() => AccountSetupRules.notReset();
 }

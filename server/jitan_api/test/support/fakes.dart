@@ -169,6 +169,25 @@ class FakeOnboardingRepository implements OnboardingRepository {
   /// userId → company names.
   Map<int, List<String>> companies = {};
 
+  /// The audit log whose events (newest first) give the access state, as
+  /// the real query reads `tblEventLog`.
+  FakeAuditLog? audit;
+
+  /// userId → access event recorded before the test (e.g. a reset done
+  /// outside this request flow).
+  final earlierAccessEvents = <int, String>{};
+
+  @override
+  Future<String?> latestAccessEvent(SqlExecutor executor, int userId, List<String> eventNames) async {
+    for (final event in (audit?.events ?? const <AuditEvent>[]).reversed) {
+      if (event.references[EventLogReference.user] == userId && eventNames.contains(event.type.typeName)) {
+        return event.type.typeName;
+      }
+    }
+    final earlier = earlierAccessEvents[userId];
+    return earlier != null && eventNames.contains(earlier) ? earlier : null;
+  }
+
   /// When true, [setPasswordIfNotSet] acts as if another device won the race.
   bool loseRace = false;
 

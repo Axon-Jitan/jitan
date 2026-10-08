@@ -57,7 +57,7 @@ class OnboardingService {
   /// Checks a scanned onboarding QR and returns the account to confirm.
   Future<EmployeeAccount> start(String qrCode) async {
     final claims = await _temporaryQr.check(qrCode, TemporaryQrPurpose.onboarding);
-    final user = _requireOnboardable(await _onboarding.findById(_executor, claims.userId));
+    final user = await _requireOnboardable(_executor, await _onboarding.findById(_executor, claims.userId));
     return _account(_executor, user);
   }
 
@@ -87,12 +87,12 @@ class OnboardingService {
       return _sessionAgain(found, password, deviceId);
     }
     // Refuse before the (slow) hash when onboarding cannot run…
-    _requireOnboardable(found);
+    await _requireOnboardable(_executor, found);
     final hash = await _hasher.hash(password);
 
     // …and check again under a row lock: only one device can complete.
     final (user, account) = await _transactions.transaction((tx) async {
-      final user = _requireOnboardable(await _onboarding.findById(tx, claims.userId, lockForUpdate: true));
+      final user = await _requireOnboardable(tx, await _onboarding.findById(tx, claims.userId, lockForUpdate: true));
       if (!await _onboarding.setPasswordIfNotSet(tx, user.userId, hash)) throw AccountSetupRules.alreadyCompleted();
       if (languageId != null) await _onboarding.setLanguage(tx, user.userId, languageId);
       await _audit.record(
@@ -136,9 +136,12 @@ class OnboardingService {
     throw const ApiException.validation(OnboardingCompleteRequest.fieldLanguageCode, 'Choose an available language.');
   }
 
-  static OnboardingUser _requireOnboardable(OnboardingUser? user) {
+  /// Only an account that never had a password may onboard. An account whose
+  /// access was reset recovers instead (a separate operation).
+  Future<OnboardingUser> _requireOnboardable(SqlExecutor executor, OnboardingUser? user) async {
     final usable = AccountSetupRules.requireUsable(user);
-    if (usable.passwordSet) throw AccountSetupRules.alreadyCompleted();
+    final state = await AccountSetupRules.stateOf(_onboarding, executor, usable);
+    if (state != AccountSetupState.neverActivated) throw AccountSetupRules.alreadyCompleted();
     return usable;
   }
 

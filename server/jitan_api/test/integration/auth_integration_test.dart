@@ -1,6 +1,7 @@
 @Tags(['integration'])
 library;
 
+import 'package:jitan_api/src/audit/audit_event.dart';
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/auth/credential_repository.dart';
 import 'package:jitan_api/src/auth/password_hasher.dart';
@@ -61,6 +62,19 @@ void main() {
   );
 
   Future<String> qrFor(int userId, TemporaryQrPurpose purpose) async => (await temporaryQr.issue(userId, purpose)).token;
+
+  /// Reset account access as the service does it: password cleared and the
+  /// reset recorded in the same transaction.
+  Future<bool> resetAccess(int id) => db.transaction((tx) async {
+    final cleared = await credentials.clearPassword(tx, id);
+    if (cleared) {
+      await const AuditLogRepository().record(
+        tx,
+        AuditEvent(type: AuditEventType.accountAccessReset, actorUserId: id, references: {EventLogReference.user: id}),
+      );
+    }
+    return cleared;
+  });
 
   SignInService signIn() =>
       SignInService(credentials: credentials, users: UserRepository(db), executor: db, sessions: sessions, hasher: hasher);
@@ -130,7 +144,7 @@ void main() {
   test('reset clears userPassword, keeps userQRcode; a temporary recovery QR sets a new password once', () async {
     final (id, code, terminalQr) = await activatedEmployee('R');
 
-    final cleared = await db.transaction((tx) => credentials.clearPassword(tx, id));
+    final cleared = await resetAccess(id);
     final row = (await db.query('SELECT userPassword, userQRcode FROM tblUser WHERE userID = :id', {'id': id})).single;
 
     expect(cleared, isTrue);
@@ -156,7 +170,7 @@ void main() {
 
   test('an interrupted recovery: the same device retrying finishes once; the password is set once', () async {
     final (id, code, _) = await activatedEmployee('Y');
-    await db.transaction((tx) => credentials.clearPassword(tx, id));
+    await resetAccess(id);
     final qr = await qrFor(id, TemporaryQrPurpose.recovery);
     RecoveryCompleteRequest finish(String device) =>
         RecoveryCompleteRequest(qrCode: qr, password: 'recovered pass', deviceId: device);
@@ -176,5 +190,21 @@ void main() {
     );
     expect(recovered.single.readInt('n'), 1);
     expect((await signIn().signIn(request(code, 'recovered pass'))).account.code, code);
+  });
+
+  test('onboarding and recovery stay separate on MySQL: the reset event is what allows recovery', () async {
+    final (id, _, _) = await activatedEmployee('Z');
+    await db.execute('UPDATE tblUser SET userPassword = NULL WHERE userID = :id', {'id': id});
+
+    await expectLater(
+      recovery().start(await qrFor(id, TemporaryQrPurpose.recovery)),
+      fails('account_not_reset'),
+      reason: 'no password but no recorded reset: not an HR-authorized recovery',
+    );
+
+    await db.execute('UPDATE tblUser SET userPassword = :p WHERE userID = :id', {'p': r'$argon2id$placeholder', 'id': id});
+    await resetAccess(id);
+    expect((await recovery().start(await qrFor(id, TemporaryQrPurpose.recovery))).code, 'DTA${stamp}Z');
+    await expectLater(onboarding().start(await qrFor(id, TemporaryQrPurpose.onboarding)), fails('onboarding_already_completed'));
   });
 }

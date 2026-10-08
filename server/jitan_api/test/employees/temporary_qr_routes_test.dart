@@ -14,6 +14,7 @@ TestApp _app({bool allow = true, bool active = true, bool activated = false}) {
   app.companies.existingIds = {7, 8};
   app.employees.members = {(7, 1)};
   app.employees.memberStates = {1: (isActive: active, isActivated: activated)};
+  app.onboarding.users = {1: (userId: 1, firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', isActive: active)};
   return app;
 }
 
@@ -57,15 +58,34 @@ void main() {
       expect(await jsonBody(response), containsPair('error', containsPair('code', 'onboarding_already_completed')));
     });
 
-    test('a recovery QR only after Reset account access', () async {
-      final notReset = await _app(activated: true).post(_recoveryPath, '');
-      final reset = _app();
+    test('a recovery QR only after Reset account access (the HR-authorized recovery)', () async {
+      final activated = await _app(activated: true).post(_recoveryPath, '');
+      final neverActivated = await _app().post(_recoveryPath, '');
+      final reset = _app()..onboarding.earlierAccessEvents[1] = 'employee.access.reset';
 
-      expect(notReset.statusCode, 409);
-      expect(await jsonBody(notReset), containsPair('error', containsPair('code', 'account_not_reset')));
+      for (final refused in [activated, neverActivated]) {
+        expect(refused.statusCode, 409);
+        expect(await jsonBody(refused), containsPair('error', containsPair('code', 'account_not_reset')));
+      }
       final qr = await _qr(reset, _recoveryPath);
       expect(qr.purpose, TemporaryQrPurpose.recovery);
       expect(reset.audit.events.single.type, AuditEventType.recoveryQrGenerated);
+    });
+
+    test('no onboarding QR once access was reset: onboarding and recovery stay separate', () async {
+      final app = _app()..onboarding.earlierAccessEvents[1] = 'employee.access.reset';
+
+      final response = await app.post(_onboardingPath, '');
+
+      expect(response.statusCode, 409);
+      expect(await jsonBody(response), containsPair('error', containsPair('code', 'onboarding_already_completed')));
+    });
+
+    test('no password but no pending reset (cleared outside Jitan): neither QR, a configuration error', () async {
+      final app = _app()..onboarding.earlierAccessEvents[1] = 'employee.onboarding.completed';
+
+      expect((await app.post(_onboardingPath, '')).statusCode, 409);
+      expect(await jsonBody(await app.post(_recoveryPath, '')), containsPair('error', containsPair('code', 'account_not_reset')));
     });
 
     test('not for a disabled employee', () async {

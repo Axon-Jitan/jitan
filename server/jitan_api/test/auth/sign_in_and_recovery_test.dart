@@ -202,6 +202,49 @@ void main() {
       expect(app.onboarding.passwordHashes[1], hash);
     });
 
+    test('a never-activated employee (no password, no reset) cannot recover, even with a recovery QR', () async {
+      final app = await _app(activated: false);
+
+      final generate = await app.post(recoveryQrPath, '');
+      final qr = await app.issueQr(1, TemporaryQrPurpose.recovery);
+      final start = await app.post('/recovery/start', jsonEncode({'qrCode': qr}));
+      final finish = await app.post('/recovery/complete', complete(qr));
+
+      expect((generate.statusCode, (await _error(generate))['code']), (409, 'account_not_reset'));
+      expect((start.statusCode, (await _error(start))['code']), (409, 'account_not_reset'));
+      expect((finish.statusCode, (await _error(finish))['code']), (409, 'account_not_reset'));
+      expect(app.onboarding.passwordHashes.containsKey(1), isFalse);
+    });
+
+    test('a reset employee cannot use onboarding instead of recovery', () async {
+      final app = await _app();
+      await app.post(path, '');
+      final qr = await app.issueQr(1, TemporaryQrPurpose.onboarding);
+
+      final start = await app.post('/onboarding/start', jsonEncode({'qrCode': qr}));
+      final finish = await app.post(
+        '/onboarding/complete',
+        jsonEncode({'qrCode': qr, 'password': 'my new password', 'deviceId': _device}),
+      );
+
+      expect((start.statusCode, (await _error(start))['code']), (409, 'onboarding_already_completed'));
+      expect((finish.statusCode, (await _error(finish))['code']), (409, 'onboarding_already_completed'));
+      expect(app.onboarding.passwordHashes.containsKey(1), isFalse);
+    });
+
+    test('Employee details tells HR/Admin a reset is pending (so the recovery QR applies)', () async {
+      final app = await _app();
+      app.employees.details[(7, 1)] = const EmployeeDetails(
+        id: 1, companyId: 7, companyName: 'Almeco', firstName: 'Disan', lastName: 'Ssebowa',
+        code: 'SBW', groups: [], phone: null, isActive: true, isActivated: false,
+      );
+      expect((await jsonBody(await app.get('/companies/7/employees/1')))['accessResetPending'], isFalse);
+
+      await app.post(path, '');
+
+      expect((await jsonBody(await app.get('/companies/7/employees/1')))['accessResetPending'], isTrue);
+    });
+
     test('the permanent Terminal QR cannot authorize recovery', () async {
       final app = await _app();
       await app.post(path, '');

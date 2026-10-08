@@ -115,6 +115,31 @@ void main() {
     expect(inModal('Onboarding is complete. If the employee is locked out, use Reset account access.'), findsOneWidget);
   });
 
+  testWidgets('after a reset, "Generate temporary QR" opens the recovery QR, not onboarding', (tester) async {
+    await pumpPageAndOpen(tester);
+    employees.detailsSucceed(
+      const EmployeeDetails(
+        id: 1,
+        companyId: 7,
+        companyName: 'Almeco',
+        firstName: 'Disan',
+        lastName: 'Ssebowa',
+        code: 'SBW',
+        groups: [],
+        phone: null,
+        isActive: true,
+        isActivated: false,
+        accessResetPending: true,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(inModal('Generate temporary QR'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(employees.qrRequests.single.$3, TemporaryQrPurpose.recovery);
+  });
+
   testWidgets('a failure shows an error with retry', (tester) async {
     await pumpPageAndOpen(tester);
     employees.detailsFail(const ApiClientException.server(404, ApiError(code: ApiErrorCode.notFound, message: 'x')));
