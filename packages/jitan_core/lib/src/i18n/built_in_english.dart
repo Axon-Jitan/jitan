@@ -353,5 +353,13 @@ const builtInEnglish = <String, String>{
   'employee.assignments.companies.additional': 'Additional company',
   'employee.assignments.companies.note.title': 'Company-scoped access',
   'employee.assignments.companies.note.text': 'Membership changes do not automatically grant HR/Admin permissions. Access is managed separately.',
+  'employee.assignments.tab.groups': 'Groups',
+  'employee.assignments.groups.title': 'Employee groups / type',
+  'employee.assignments.groups.text': 'Groups are universal. Assigned groups apply across every company the employee belongs to.',
+  'employee.assignments.groups.assigned': 'Already assigned · removal unavailable',
+  'employee.assignments.groups.available': 'Not assigned · available to add',
+  'employee.assignments.groups.hint': 'All active, non-deleted groups are available to every employee.',
+  'employee.assignments.groups.note.title': 'Removing groups is temporarily unavailable',
+  'employee.assignments.groups.note.text': 'You can assign new groups. Existing assignments remain until IT confirms the removal rules.',
   'employee.resetAccess.afterActivation': 'Available after activation',
 };

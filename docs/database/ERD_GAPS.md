@@ -51,6 +51,7 @@ Recorded so they aren't raised again.
 | Requirement | Maps to |
 |---|---|
 | Employee type (§7) | `tblGroup` via `tblUserGroup`: Blue collar / White collar |
+| Groups per company | None: **groups are universal** (IT decision, 2026-10-08). `tblGroup` stays without a company; an employee's groups apply in all their companies and grant no company access. Company-specific groups need IT approval first |
 | Access role HR / Admin / Employee (§30) | `tblCredGroup` via `tblUserCredGroup` |
 | Work policy (§7, §19) | No table. Distributed across `tblGroup`, `tblScheduleType`, `tblSchedule`, `tblRoundingRule`, `tblGeofence`, `tblTimeRegType` |
 | Break duration (§19) | `tblSchedule` row with a Break-type `tblScheduleType` |

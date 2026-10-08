@@ -49,6 +49,41 @@ class EmployeeAssignmentRepository {
         companyId,
       );
 
+  // ── Groups (tblUserGroup) ────────────────────────────────────────────
+
+  /// Every non-MFD group that is active or already assigned to [userId].
+  /// Groups are universal: the same for every company (IT, 2026-10-08).
+  Future<List<AssignmentOption>> groupOptions(SqlExecutor executor, int userId) async {
+    final rows = await executor.query(
+      'SELECT g.groupID, g.groupName, g.groupActive, (ug.userGroupID IS NOT NULL) AS isAssigned '
+      'FROM tblGroup g '
+      'LEFT JOIN tblUserGroup ug ON ug.groupID = g.groupID AND ug.userID = :userId '
+      'WHERE g.groupMFD = 0 AND (g.groupActive = 1 OR ug.userGroupID IS NOT NULL) '
+      'ORDER BY g.groupName, g.groupID',
+      {'userId': userId},
+    );
+    return [
+      for (final row in rows)
+        AssignmentOption(
+          id: row.readInt('groupID'),
+          name: row.readOptionalString('groupName') ?? '',
+          isActive: row.readBool('groupActive'),
+          isAssigned: row.readBool('isAssigned'),
+        ),
+    ];
+  }
+
+  /// Links [userId] to [groupId] in `tblUserGroup`; the new `userGroupID`, or
+  /// `null` when the pair already exists.
+  Future<int?> addGroup(SqlExecutor tx, int userId, int groupId) => _insertPair(
+        tx,
+        'INSERT INTO tblUserGroup (userID, groupID) '
+        'SELECT :userId, :otherId FROM DUAL WHERE NOT EXISTS '
+        '(SELECT 1 FROM tblUserGroup WHERE userID = :userId AND groupID = :otherId)',
+        userId,
+        groupId,
+      );
+
   /// Inserts a junction pair unless it exists; `null` when it did.
   Future<int?> _insertPair(SqlExecutor tx, String sql, int userId, int otherId) async {
     try {

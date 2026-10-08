@@ -135,7 +135,7 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-02 | Add employee: first/last name, code, type (`tblGroup`), phone, in the current company; one transaction incl. audit; duplicate-code and validation errors on their fields. Location and Work policy omitted | `DONE` |
 | EMP-03 | Employee details modal from a row click: type, phone, status; Location/Account "—", Work policy omitted | `DONE` |
 | EMP-04 | Company assignment (`tblUserCompany`): Employee details → Manage assignments → Companies (Figma `201:472`). Adds only (CLARIFY-09), duplicates skipped, audited (`employee.company.assigned`); permission `manageEmployeeAssignments` in the employee's company **and** in each added company | `DONE` |
-| EMP-05 | Group assignment (`tblUserGroup`) | `TODO` |
+| EMP-05 | Group assignment (`tblUserGroup`): Manage assignments → Groups (Figma `201:572`). Groups are universal (IT, 2026-10-08): all active, non-MFD groups, no company selector. Adds only (CLARIFY-09), duplicates skipped, audited (`employee.group.assigned`); permission `manageEmployeeAssignments` in the employee's company. Groups grant no company access | `DONE` |
 | EMP-06 | Language assignment (`tblUserLanguage`) | `TODO` |
 | EMP-07 | Credential-group assignment (`tblUserCredGroup`) where required | `TODO` |
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text | `DONE` |

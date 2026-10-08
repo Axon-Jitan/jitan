@@ -24,6 +24,7 @@ void main() {
   late Database db;
   final stamp = DateTime.now().microsecondsSinceEpoch % 100000000;
   final companyIds = <String, int>{};
+  final groupIds = <String, int>{};
   late int userId;
   late int actorId;
   const repo = EmployeeAssignmentRepository();
@@ -45,6 +46,14 @@ void main() {
     return companyIds[key] = id;
   }
 
+  Future<int> insertGroup(String key, {required bool active, bool mfd = false}) async {
+    final id = (await db.execute(
+      'INSERT INTO tblGroup (groupName, groupActive, groupMFD) VALUES (:name, :active, :mfd)',
+      {'name': '[DEV-TEST] $key $stamp', 'active': active, 'mfd': mfd},
+    )).lastInsertId;
+    return groupIds[key] = id;
+  }
+
   Future<int> insertUser(String code) async => (await db.execute(
     'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
     "VALUES ('[DEV-TEST]', 'Assign', :code, :qr, 1, 0)",
@@ -62,6 +71,9 @@ void main() {
     await insertCompany('other', active: true);
     await insertCompany('inactive', active: false);
     await insertCompany('deleted', active: true, mfd: true);
+    await insertGroup('active', active: true);
+    await insertGroup('inactive', active: false);
+    await insertGroup('deleted', active: true, mfd: true);
     userId = await insertUser('DTA$stamp');
     actorId = await insertUser('DTH$stamp');
     await db.execute('INSERT INTO tblUserCompany (userID, companyID) VALUES (:u, :c)', {
@@ -78,7 +90,11 @@ void main() {
         await db.execute('DELETE FROM tblEventLog WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
       }
       await db.execute('DELETE FROM tblUserCompany WHERE userID = :id', {'id': id});
+      await db.execute('DELETE FROM tblUserGroup WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUser WHERE userID = :id', {'id': id});
+    }
+    for (final id in groupIds.values) {
+      await db.execute('DELETE FROM tblGroup WHERE groupID = :id', {'id': id});
     }
     for (final id in companyIds.values) {
       await db.execute('DELETE FROM tblCompany WHERE companyID = :id', {'id': id});
@@ -145,5 +161,36 @@ void main() {
     expect(logs.single.readInt('userIDInit'), actorId);
     expect(logs.single.readInt('companyID'), other);
     expect(logs.single.readInt('userCompanyID'), membership);
+  });
+
+  test('groups: universal options, idempotent concurrent add, one audit row with groupID and userGroupID', () async {
+    final home = companyIds['home']!;
+    final active = groupIds['active']!;
+    final options = {for (final o in await repo.groupOptions(db, userId)) o.id: o};
+    expect(options[active]!.isAssigned, isFalse);
+    expect(options.containsKey(groupIds['inactive']), isFalse);
+    expect(options.containsKey(groupIds['deleted']), isFalse);
+    final companiesBefore = await db.query('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :u', {'u': userId});
+
+    final results = await Future.wait([
+      service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [active])),
+      service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [active])),
+    ]);
+
+    expect(results.first.options.firstWhere((o) => o.id == active).isAssigned, isTrue);
+    final pairs = await db.query(
+      'SELECT userGroupID FROM tblUserGroup WHERE userID = :u AND groupID = :g',
+      {'u': userId, 'g': active},
+    );
+    expect(pairs, hasLength(1), reason: 'concurrent adds create one row');
+    final logs = await db.query(
+      'SELECT userIDInit, groupID, userGroupID FROM tblEventLog WHERE userIDTarget = :u AND groupID IS NOT NULL',
+      {'u': userId},
+    );
+    expect(logs, hasLength(1), reason: 'one change, one audit row');
+    expect(logs.single.readInt('userIDInit'), actorId);
+    expect(logs.single.readInt('userGroupID'), pairs.single.readInt('userGroupID'));
+    final companiesAfter = await db.query('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :u', {'u': userId});
+    expect(companiesAfter.single.readInt('n'), companiesBefore.single.readInt('n'), reason: 'a group grants no company');
   });
 }

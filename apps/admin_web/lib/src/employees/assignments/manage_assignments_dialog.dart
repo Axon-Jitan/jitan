@@ -54,6 +54,7 @@ class _ManageAssignmentsDialogState extends State<ManageAssignmentsDialog> {
 
   String _tabLabel(BuildContext context, AssignmentKind kind) => switch (kind) {
     AssignmentKind.companies => context.t(AdminTextKeys.assignmentsTabCompanies),
+    AssignmentKind.groups => context.t(AdminTextKeys.assignmentsTabGroups),
   };
 
   @override
@@ -89,6 +90,7 @@ class _ManageAssignmentsDialogState extends State<ManageAssignmentsDialog> {
               const SizedBox(height: 26),
               switch (tab.kind) {
                 AssignmentKind.companies => _CompaniesTab(controller: _controller, tab: tab, currentCompanyId: employee.companyId),
+                AssignmentKind.groups => _GroupsTab(controller: _controller, tab: tab),
               },
               if (failure != null) ...[
                 const SizedBox(height: 16),
@@ -203,27 +205,82 @@ class _CompaniesTab extends StatelessWidget {
               const SizedBox(height: 13),
             ],
             const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-              decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(13)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.t(AdminTextKeys.assignmentsCompaniesNoteTitle),
-                    style: JitanTextStyles.stateTitle.copyWith(fontSize: 12),
-                  ),
-                  const SizedBox(height: 9),
-                  Text(
-                    context.t(AdminTextKeys.assignmentsCompaniesNoteText),
-                    style: JitanTextStyles.stateMessage.copyWith(fontSize: 10),
-                  ),
-                ],
-              ),
+            _NoteBox(
+              title: context.t(AdminTextKeys.assignmentsCompaniesNoteTitle),
+              text: context.t(AdminTextKeys.assignmentsCompaniesNoteText),
             ),
           ],
         ),
       ),
     ],
+  );
+}
+
+/// EMP-05: employee groups (`tblUserGroup`). Universal across companies (IT,
+/// 2026-10-08), so there is no company selector. Several allowed.
+class _GroupsTab extends StatelessWidget {
+  const _GroupsTab({required this.controller, required this.tab});
+
+  final ManageAssignmentsController controller;
+  final AssignmentTab tab;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _SectionHeader(
+        title: context.t(AdminTextKeys.assignmentsGroupsTitle),
+        text: context.t(AdminTextKeys.assignmentsGroupsText),
+      ),
+      _TabBody(
+        controller: controller,
+        tab: tab,
+        builder: (options) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final option in options) ...[
+              JitanOptionCard(
+                title: option.name,
+                detail: context.t(
+                  option.isAssigned ? AdminTextKeys.assignmentsGroupsAssigned : AdminTextKeys.assignmentsGroupsAvailable,
+                ),
+                selected: tab.isSelected(option),
+                onTap: tab.canToggle(option) && !controller.saving ? () => controller.toggle(tab, option) : null,
+              ),
+              const SizedBox(height: 12),
+            ],
+            const SizedBox(height: 23),
+            Text(context.t(AdminTextKeys.assignmentsGroupsHint), style: JitanTextStyles.stateMessage.copyWith(fontSize: 10)),
+            const SizedBox(height: 26),
+            _NoteBox(
+              title: context.t(AdminTextKeys.assignmentsGroupsNoteTitle),
+              text: context.t(AdminTextKeys.assignmentsGroupsNoteText),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+/// The warm-grey explanation box under a tab's options.
+class _NoteBox extends StatelessWidget {
+  const _NoteBox({required this.title, required this.text});
+
+  final String title;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+    decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(13)),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: JitanTextStyles.stateTitle.copyWith(fontSize: 12)),
+        const SizedBox(height: 9),
+        Text(text, style: JitanTextStyles.stateMessage.copyWith(fontSize: 10)),
+      ],
+    ),
   );
 }

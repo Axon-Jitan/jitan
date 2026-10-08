@@ -92,6 +92,50 @@ class EmployeeAssignmentService {
     return companies(companyId, userId);
   }
 
+  // ── EMP-05 Groups ──────────────────────────────────────────────────────
+
+  /// Groups are universal (IT, 2026-10-08): an employee's groups apply in all
+  /// their companies. Group membership grants no company access; that stays
+  /// with company membership and permissions.
+  Future<AssignmentOptions> groups(int companyId, int userId) async {
+    await _requireMember(_executor, companyId, userId);
+    return AssignmentOptions(options: await _assignments.groupOptions(_executor, userId));
+  }
+
+  /// Adds the active, non-MFD groups in [request]; already assigned ones are
+  /// skipped, never duplicated.
+  Future<AssignmentOptions> addGroups(int actorUserId, int companyId, int userId, AddAssignmentsRequest request) async {
+    final ids = _checkedIds(request);
+    await _requireMember(_executor, companyId, userId);
+    final options = {for (final o in await _assignments.groupOptions(_executor, userId)) o.id: o};
+    for (final id in ids) {
+      final option = options[id];
+      if (option == null || (!option.isActive && !option.isAssigned)) {
+        throw const ApiException.validation(AddAssignmentsRequest.fieldIds, 'Choose active groups only.');
+      }
+    }
+    await _transactions.transaction((tx) async {
+      await _requireMember(tx, companyId, userId);
+      for (final id in ids.where((id) => !options[id]!.isAssigned)) {
+        final userGroupId = await _assignments.addGroup(tx, userId, id);
+        if (userGroupId == null) continue;
+        await _audit.record(
+          tx,
+          AuditEvent(
+            type: AuditEventType.groupAssigned,
+            actorUserId: actorUserId,
+            references: {
+              EventLogReference.user: userId,
+              EventLogReference.group: id,
+              EventLogReference.userGroup: userGroupId,
+            },
+          ),
+        );
+      }
+    });
+    return groups(companyId, userId);
+  }
+
   // ── Shared ─────────────────────────────────────────────────────────────
 
   /// 404 unless the company exists (non-MFD) and [userId] is its member: an

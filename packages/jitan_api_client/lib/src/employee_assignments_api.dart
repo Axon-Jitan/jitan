@@ -6,7 +6,10 @@ import 'api_transport.dart';
 /// What a "Manage employee assignments" tab assigns.
 enum AssignmentKind {
   /// `tblUserCompany` (EMP-04).
-  companies('companies');
+  companies('companies'),
+
+  /// `tblUserGroup` (EMP-05). Groups are universal across companies.
+  groups('groups');
 
   const AssignmentKind(this.path);
 

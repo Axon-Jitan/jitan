@@ -26,15 +26,21 @@ const _almeco = AssignmentOption(id: 1, name: 'Almeco', isActive: true, isAssign
 const _pca = AssignmentOption(id: 2, name: 'PCA', isActive: true, isAssigned: false);
 const _akwa = AssignmentOption(id: 3, name: 'Akwa', isActive: false, isAssigned: true);
 
-FakeEmployeeAssignmentsApi _api() =>
-    FakeEmployeeAssignmentsApi()..byKind = {AssignmentKind.companies: [_akwa, _almeco, _pca]};
+const _blue = AssignmentOption(id: 2, name: 'Blue collar', isActive: true, isAssigned: false);
+const _white = AssignmentOption(id: 1, name: 'White collar', isActive: true, isAssigned: true);
+
+FakeEmployeeAssignmentsApi _api() => FakeEmployeeAssignmentsApi()
+  ..byKind = {
+    AssignmentKind.companies: [_akwa, _almeco, _pca],
+    AssignmentKind.groups: [_blue, _white],
+  };
 
 void main() {
   group('ManageAssignmentsController', () {
     test('only active, unassigned options can be ticked; existing ones are locked', () async {
       final c = ManageAssignmentsController(api: _api(), companyId: 1, userId: 2);
       await pumpEventQueue();
-      final tab = c.tabs.single;
+      final tab = c.tabs.first;
 
       c.toggle(tab, _almeco);
       c.toggle(tab, _akwa);
@@ -50,14 +56,14 @@ void main() {
       final api = _api();
       final c = ManageAssignmentsController(api: api, companyId: 1, userId: 2);
       await pumpEventQueue();
-      c.toggle(c.tabs.single, _pca);
+      c.toggle(c.tabs.first, _pca);
 
       expect(await c.save(), isTrue);
 
       final (companyId, userId, kind, ids) = api.adds.single;
       expect((companyId, userId, kind), (1, 2, AssignmentKind.companies));
       expect(ids, [2]);
-      expect(c.tabs.single.options!.firstWhere((o) => o.id == 2).isAssigned, isTrue);
+      expect(c.tabs.first.options!.firstWhere((o) => o.id == 2).isAssigned, isTrue);
       expect(c.hasChanges, isFalse);
     });
 
@@ -65,12 +71,12 @@ void main() {
       final api = _api()..addFailure = const ApiClientException.network('offline');
       final c = ManageAssignmentsController(api: api, companyId: 1, userId: 2);
       await pumpEventQueue();
-      c.toggle(c.tabs.single, _pca);
+      c.toggle(c.tabs.first, _pca);
 
       expect(await c.save(), isFalse);
 
       expect(c.saveFailure, isNotNull);
-      expect(c.tabs.single.pending, {2});
+      expect(c.tabs.first.pending, {2});
     });
   });
 
@@ -158,6 +164,53 @@ void main() {
       expect(api.adds, hasLength(1));
       expect(find.text('Manage employee assignments'), findsOneWidget);
       expect(find.byType(JitanInlineError), findsOneWidget);
+    });
+  });
+  group('Groups tab (universal groups)', () {
+    Future<FakeEmployeeAssignmentsApi> openGroups(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1440, 1024);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final fake = _api();
+      await tester.pumpWidget(
+        TranslationScope(
+          translations: Translations.english(),
+          child: MaterialApp(
+            theme: JitanTheme.light(),
+            home: Scaffold(body: ManageAssignmentsDialog(api: fake, employee: _disan)),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Groups'));
+      await tester.pump();
+      return fake;
+    }
+
+    testWidgets('matches Figma: no company selector, assigned group locked, removal note', (tester) async {
+      await openGroups(tester);
+
+      expect(find.text('Employee groups / type'), findsOneWidget);
+      expect(find.text('Groups are universal. Assigned groups apply across every company the employee belongs to.'), findsOneWidget);
+      expect(find.text('Already assigned · removal unavailable'), findsOneWidget);
+      expect(find.text('Not assigned · available to add'), findsOneWidget);
+      expect(find.text('Removing groups is temporarily unavailable'), findsOneWidget);
+      expect(find.byType(DropdownButton<int>), findsNothing);
+      expect(find.text('Almeco'), findsNothing, reason: 'no company list on the Groups tab');
+    });
+
+    testWidgets('ticking Blue collar and saving adds that group only', (tester) async {
+      final api = await openGroups(tester);
+
+      await tester.tap(find.text('White collar'));
+      await tester.tap(find.text('Blue collar'));
+      await tester.pump();
+      await tester.tap(find.text('Save changes'));
+      await tester.pump();
+
+      final (companyId, userId, kind, ids) = api.adds.single;
+      expect((companyId, userId, kind), (1, 2, AssignmentKind.groups));
+      expect(ids, [2]);
     });
   });
 }

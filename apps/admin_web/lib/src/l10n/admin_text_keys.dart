@@ -139,5 +139,13 @@ abstract final class AdminTextKeys {
   static const assignmentsCompaniesAdditional = 'employee.assignments.companies.additional';
   static const assignmentsCompaniesNoteTitle = 'employee.assignments.companies.note.title';
   static const assignmentsCompaniesNoteText = 'employee.assignments.companies.note.text';
+  static const assignmentsTabGroups = 'employee.assignments.tab.groups';
+  static const assignmentsGroupsTitle = 'employee.assignments.groups.title';
+  static const assignmentsGroupsText = 'employee.assignments.groups.text';
+  static const assignmentsGroupsAssigned = 'employee.assignments.groups.assigned';
+  static const assignmentsGroupsAvailable = 'employee.assignments.groups.available';
+  static const assignmentsGroupsHint = 'employee.assignments.groups.hint';
+  static const assignmentsGroupsNoteTitle = 'employee.assignments.groups.note.title';
+  static const assignmentsGroupsNoteText = 'employee.assignments.groups.note.text';
   static const employeeResetAccessAfterActivation = 'employee.resetAccess.afterActivation';
 }

@@ -15,6 +15,7 @@ import 'employee_assignment_service.dart';
 /// - `GET  /companies/{companyId}/employees/{userId}/assignments/companies`
 /// - `POST /companies/{companyId}/employees/{userId}/assignments/companies`
 ///   with an `AddAssignmentsRequest` (adds only)
+/// - `GET/POST …/assignments/groups` (universal groups, adds only)
 class EmployeeAssignmentRoutes {
   const EmployeeAssignmentRoutes(this._authorizer, this._assignments);
 
@@ -25,7 +26,22 @@ class EmployeeAssignmentRoutes {
 
   Router get router => Router()
     ..get('$_path/companies', _companies)
-    ..post('$_path/companies', _addCompanies);
+    ..post('$_path/companies', _addCompanies)
+    ..get('$_path/groups', _groups)
+    ..post('$_path/groups', _addGroups);
+
+  Future<Response> _groups(Request request, String companyId, String userId) async {
+    final id = int.parse(companyId);
+    await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
+    return jsonResponse((await _assignments.groups(id, int.parse(userId))).toJson());
+  }
+
+  Future<Response> _addGroups(Request request, String companyId, String userId) async {
+    final id = int.parse(companyId);
+    final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
+    final result = await _assignments.addGroups(identity.userId, id, int.parse(userId), await _body(request));
+    return jsonResponse(result.toJson());
+  }
 
   Future<Response> _companies(Request request, String companyId, String userId) async {
     final id = int.parse(companyId);

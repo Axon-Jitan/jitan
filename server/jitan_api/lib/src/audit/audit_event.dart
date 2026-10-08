@@ -23,7 +23,10 @@ enum AuditEventType {
   accountAccessReset('employee.access.reset'),
 
   /// HR/Admin added the employee to a company (`tblUserCompany`).
-  companyAssigned('employee.company.assigned');
+  companyAssigned('employee.company.assigned'),
+
+  /// HR/Admin assigned an employee group (`tblUserGroup`).
+  groupAssigned('employee.group.assigned');
 
   const AuditEventType(this.typeName);
 

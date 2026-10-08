@@ -35,7 +35,7 @@ class ManageAssignmentsController extends ChangeNotifier {
   final int companyId;
   final int userId;
 
-  final tabs = [AssignmentTab(AssignmentKind.companies)];
+  final tabs = [AssignmentTab(AssignmentKind.companies), AssignmentTab(AssignmentKind.groups)];
 
   bool _saving = false;
   bool get saving => _saving;

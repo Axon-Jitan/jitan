@@ -259,6 +259,24 @@ class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
   /// company first.
   int? raceOnCompany;
 
+  Map<int, ({String name, bool active})> groups = {};
+
+  /// (userId, groupId) pairs, with their userGroupID.
+  final userGroups = <(int, int), int>{};
+
+  @override
+  Future<List<AssignmentOption>> groupOptions(SqlExecutor executor, int userId) async => [
+    for (final MapEntry(key: id, value: g) in (groups.entries.toList()..sort((a, b) => a.value.name.compareTo(b.value.name))))
+      if (g.active || userGroups.containsKey((userId, id)))
+        AssignmentOption(id: id, name: g.name, isActive: g.active, isAssigned: userGroups.containsKey((userId, id))),
+  ];
+
+  @override
+  Future<int?> addGroup(SqlExecutor tx, int userId, int groupId) async {
+    if (userGroups.containsKey((userId, groupId))) return null;
+    return userGroups[(userId, groupId)] = _nextId++;
+  }
+
   @override
   Future<List<AssignmentOption>> companyOptions(SqlExecutor executor, int userId) async => [
     for (final MapEntry(key: id, value: c) in (companies.entries.toList()..sort((a, b) => a.value.name.compareTo(b.value.name))))

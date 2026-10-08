@@ -160,6 +160,11 @@ The server enforces this in the repository/service layer, not only in the UI.
 
 ## `tblGroup`
 
+**Universal across companies** (IT decision, 2026-10-08): `tblGroup` has no company and
+none is added. An employee's groups (`tblUserGroup`) apply in all their companies. Group
+membership never grants company access; that comes only from `tblUserCompany` and
+permissions. Company-specific groups would need IT approval first.
+
 Employee category. This **is** Jitan's "employee type" (roadmap §7).
 
 | Column | Type | Key |
