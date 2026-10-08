@@ -25,6 +25,7 @@ void main() {
   final stamp = DateTime.now().microsecondsSinceEpoch % 100000000;
   final companyIds = <String, int>{};
   final groupIds = <String, int>{};
+  final credGroupIds = <String, int>{};
   late int userId;
   late int actorId;
   const repo = EmployeeAssignmentRepository();
@@ -54,6 +55,15 @@ void main() {
     return groupIds[key] = id;
   }
 
+  Future<int> insertCredGroup(String key, {required bool active, bool mfd = false}) async {
+    final id = (await db.execute(
+      'INSERT INTO tblCredGroup (credGroupName, credGroupLevel, credGroupActive, credGroupMFD) '
+      'VALUES (:name, 99, :active, :mfd)',
+      {'name': '[DEV-TEST] $key $stamp', 'active': active, 'mfd': mfd},
+    )).lastInsertId;
+    return credGroupIds[key] = id;
+  }
+
   Future<int> insertUser(String code) async => (await db.execute(
     'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
     "VALUES ('[DEV-TEST]', 'Assign', :code, :qr, 1, 0)",
@@ -74,6 +84,9 @@ void main() {
     await insertGroup('active', active: true);
     await insertGroup('inactive', active: false);
     await insertGroup('deleted', active: true, mfd: true);
+    await insertCredGroup('active', active: true);
+    await insertCredGroup('inactive', active: false);
+    await insertCredGroup('deleted', active: true, mfd: true);
     userId = await insertUser('DTA$stamp');
     actorId = await insertUser('DTH$stamp');
     await db.execute('INSERT INTO tblUserCompany (userID, companyID) VALUES (:u, :c)', {
@@ -91,7 +104,11 @@ void main() {
       }
       await db.execute('DELETE FROM tblUserCompany WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUserGroup WHERE userID = :id', {'id': id});
+      await db.execute('DELETE FROM tblUserCredGroup WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUser WHERE userID = :id', {'id': id});
+    }
+    for (final id in credGroupIds.values) {
+      await db.execute('DELETE FROM tblCredGroup WHERE credGroupID = :id', {'id': id});
     }
     for (final id in groupIds.values) {
       await db.execute('DELETE FROM tblGroup WHERE groupID = :id', {'id': id});
@@ -192,5 +209,42 @@ void main() {
     expect(logs.single.readInt('userGroupID'), pairs.single.readInt('userGroupID'));
     final companiesAfter = await db.query('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :u', {'u': userId});
     expect(companiesAfter.single.readInt('n'), companiesBefore.single.readInt('n'), reason: 'a group grants no company');
+  });
+
+  test('credential groups: options, member companies, concurrent add once, audited with credGroupID', () async {
+    final home = companyIds['home']!;
+    final active = credGroupIds['active']!;
+    final options = {for (final o in await repo.credentialGroupOptions(db, userId)) o.id: o};
+    expect(options[active]!.isAssigned, isFalse);
+    expect(options.containsKey(credGroupIds['inactive']), isFalse);
+    expect(options.containsKey(credGroupIds['deleted']), isFalse);
+    expect(await repo.memberCompanyIds(db, userId), contains(home));
+
+    final asked = <int>{};
+    final results = await Future.wait([
+      for (var i = 0; i < 2; i++)
+        service().addCredentialGroups(
+          actorId,
+          home,
+          userId,
+          AddAssignmentsRequest(ids: [active]),
+          mayManage: (c) async => asked.add(c),
+        ),
+    ]);
+
+    expect(asked, (await repo.memberCompanyIds(db, userId)).toSet());
+    expect(results.first.options.firstWhere((o) => o.id == active).isAssigned, isTrue);
+    final pairs = await db.query(
+      'SELECT userCredGroupID FROM tblUserCredGroup WHERE userID = :u AND credGroupID = :g',
+      {'u': userId, 'g': active},
+    );
+    expect(pairs, hasLength(1));
+    final logs = await db.query(
+      'SELECT userIDInit, userCredGroupID FROM tblEventLog WHERE userIDTarget = :u AND credGroupID = :g',
+      {'u': userId, 'g': active},
+    );
+    expect(logs, hasLength(1));
+    expect(logs.single.readInt('userIDInit'), actorId);
+    expect(logs.single.readInt('userCredGroupID'), pairs.single.readInt('userCredGroupID'));
   });
 }

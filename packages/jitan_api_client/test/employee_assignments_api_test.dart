@@ -34,6 +34,22 @@ void main() {
     expect(jsonDecode(sent.last.body), {'ids': [2]});
   });
 
+  test('credential-group assignments use the credential-groups path', () async {
+    final sent = <http.Request>[];
+    final api = EmployeeAssignmentsApi(ApiTransport(
+      baseUri: Uri.parse('http://api.test/'),
+      httpClient: MockClient((request) async {
+        sent.add(request);
+        return http.Response(jsonEncode(options), 200);
+      }),
+    ));
+
+    await api.options(1, 2, AssignmentKind.credentialGroups);
+    await api.add(1, 2, AssignmentKind.credentialGroups, [2]);
+
+    expect(sent.map((r) => r.url.path).toSet(), {'/companies/1/employees/2/assignments/credential-groups'});
+  });
+
   test('group assignments use the groups path', () async {
     final sent = <http.Request>[];
     final api = EmployeeAssignmentsApi(ApiTransport(

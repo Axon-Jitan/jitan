@@ -30,4 +30,10 @@ enum Permission {
   /// for an employee of one company (company-scoped). Adding an employee to
   /// another company also needs this permission in that company.
   manageEmployeeAssignments,
+
+  /// Assign credential groups (`tblUserCredGroup`, access roles) to an
+  /// employee. A credential group belongs to the user, not to one company,
+  /// so it needs this permission in **every** company the employee belongs
+  /// to. Separate from [manageEmployeeAssignments]: it changes access.
+  manageEmployeeAccess,
 }

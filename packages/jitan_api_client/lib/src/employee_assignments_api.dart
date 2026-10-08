@@ -9,7 +9,10 @@ enum AssignmentKind {
   companies('companies'),
 
   /// `tblUserGroup` (EMP-05). Groups are universal across companies.
-  groups('groups');
+  groups('groups'),
+
+  /// `tblUserCredGroup` (EMP-07): access roles, from the database.
+  credentialGroups('credential-groups');
 
   const AssignmentKind(this.path);
 

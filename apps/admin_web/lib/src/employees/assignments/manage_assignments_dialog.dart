@@ -55,6 +55,7 @@ class _ManageAssignmentsDialogState extends State<ManageAssignmentsDialog> {
   String _tabLabel(BuildContext context, AssignmentKind kind) => switch (kind) {
     AssignmentKind.companies => context.t(AdminTextKeys.assignmentsTabCompanies),
     AssignmentKind.groups => context.t(AdminTextKeys.assignmentsTabGroups),
+    AssignmentKind.credentialGroups => context.t(AdminTextKeys.assignmentsTabAccess),
   };
 
   @override
@@ -91,6 +92,7 @@ class _ManageAssignmentsDialogState extends State<ManageAssignmentsDialog> {
               switch (tab.kind) {
                 AssignmentKind.companies => _CompaniesTab(controller: _controller, tab: tab, currentCompanyId: employee.companyId),
                 AssignmentKind.groups => _GroupsTab(controller: _controller, tab: tab),
+                AssignmentKind.credentialGroups => _AccessTab(controller: _controller, tab: tab),
               },
               if (failure != null) ...[
                 const SizedBox(height: 16),
@@ -258,6 +260,73 @@ class _GroupsTab extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    ],
+  );
+}
+
+/// EMP-07: credential groups (`tblUserCredGroup`), names from the database.
+/// The picker offers what can be added; existing ones are listed below and
+/// stay until IT confirms removal (CLARIFY-09).
+class _AccessTab extends StatelessWidget {
+  const _AccessTab({required this.controller, required this.tab});
+
+  final ManageAssignmentsController controller;
+  final AssignmentTab tab;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _SectionHeader(
+        title: context.t(AdminTextKeys.assignmentsAccessTitle),
+        text: context.t(AdminTextKeys.assignmentsAccessText),
+      ),
+      _TabBody(
+        controller: controller,
+        tab: tab,
+        builder: (options) {
+          final assigned = [for (final o in options) if (o.isAssigned) o];
+          final chosen = tab.pending.firstOrNull;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              JitanSelectField<int>(
+                key: ValueKey(chosen),
+                hintText: context.t(AdminTextKeys.assignmentsAccessPicker),
+                value: chosen,
+                options: [
+                  for (final o in options)
+                    if (tab.canToggle(o)) JitanSelectOption(value: o.id, label: o.name),
+                ],
+                onChanged: controller.saving ? null : (id) => controller.choose(tab, id),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                constraints: const BoxConstraints(minHeight: 118),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+                decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(14)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(context.t(AdminTextKeys.assignmentsAccessCurrent), style: JitanTextStyles.stateTitle.copyWith(fontSize: 12)),
+                    const SizedBox(height: 18),
+                    if (assigned.isEmpty)
+                      Text(context.t(AdminTextKeys.assignmentsAccessNone), style: JitanTextStyles.stateMessage.copyWith(fontSize: 11))
+                    else
+                      for (final o in assigned)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(o.name, style: JitanTextStyles.tableCell.copyWith(fontSize: 12)),
+                        ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 29),
+              Text(context.t(AdminTextKeys.assignmentsAccessHint), style: JitanTextStyles.stateMessage.copyWith(fontSize: 10)),
+            ],
+          );
+        },
       ),
     ],
   );

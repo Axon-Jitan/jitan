@@ -3,6 +3,7 @@ import 'package:jitan_models/jitan_models.dart';
 import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
 import '../companies/company_repository.dart';
+import '../database/database_exception.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
 import 'employee_assignment_repository.dart';
@@ -34,6 +35,9 @@ class EmployeeAssignmentService {
 
   /// Largest number of ids one request may add.
   static const maxIds = 100;
+
+  /// Attempts of an add transaction that MySQL picks as a deadlock victim.
+  static const _deadlockAttempts = 3;
 
   // ── EMP-04 Companies ───────────────────────────────────────────────────
 
@@ -70,7 +74,7 @@ class EmployeeAssignmentService {
       await mayManage(target);
     }
 
-    await _transactions.transaction((tx) async {
+    await _addTransaction((tx) async {
       await _requireMember(tx, companyId, userId);
       for (final target in toAdd) {
         final userCompanyId = await _assignments.addCompany(tx, userId, target);
@@ -114,7 +118,7 @@ class EmployeeAssignmentService {
         throw const ApiException.validation(AddAssignmentsRequest.fieldIds, 'Choose active groups only.');
       }
     }
-    await _transactions.transaction((tx) async {
+    await _addTransaction((tx) async {
       await _requireMember(tx, companyId, userId);
       for (final id in ids.where((id) => !options[id]!.isAssigned)) {
         final userGroupId = await _assignments.addGroup(tx, userId, id);
@@ -136,7 +140,79 @@ class EmployeeAssignmentService {
     return groups(companyId, userId);
   }
 
+  // ── EMP-07 Access (credential groups) ──────────────────────────────────
+
+  Future<AssignmentOptions> credentialGroups(int companyId, int userId) async {
+    await _requireMember(_executor, companyId, userId);
+    return AssignmentOptions(options: await _assignments.credentialGroupOptions(_executor, userId));
+  }
+
+  /// Adds the active, non-MFD credential groups in [request]; already
+  /// assigned ones are skipped, never duplicated.
+  ///
+  /// A credential group is user-wide (`tblUserCredGroup` has no company), so
+  /// it takes effect in every company the employee belongs to. [mayManage]
+  /// is therefore asked for each of them, not only the company in the path:
+  /// an HR user of one company cannot change someone's access elsewhere.
+  Future<AssignmentOptions> addCredentialGroups(
+    int actorUserId,
+    int companyId,
+    int userId,
+    AddAssignmentsRequest request, {
+    required Future<void> Function(int memberCompanyId) mayManage,
+  }) async {
+    final ids = _checkedIds(request);
+    await _requireMember(_executor, companyId, userId);
+    final options = {for (final o in await _assignments.credentialGroupOptions(_executor, userId)) o.id: o};
+    for (final id in ids) {
+      final option = options[id];
+      if (option == null || (!option.isActive && !option.isAssigned)) {
+        throw const ApiException.validation(AddAssignmentsRequest.fieldIds, 'Choose active credential groups only.');
+      }
+    }
+    final toAdd = [for (final id in ids) if (!options[id]!.isAssigned) id];
+    if (toAdd.isEmpty) return credentialGroups(companyId, userId);
+    for (final member in await _assignments.memberCompanyIds(_executor, userId)) {
+      await mayManage(member);
+    }
+
+    await _addTransaction((tx) async {
+      await _requireMember(tx, companyId, userId);
+      for (final id in toAdd) {
+        final userCredGroupId = await _assignments.addCredentialGroup(tx, userId, id);
+        if (userCredGroupId == null) continue;
+        await _audit.record(
+          tx,
+          AuditEvent(
+            type: AuditEventType.credentialGroupAssigned,
+            actorUserId: actorUserId,
+            references: {
+              EventLogReference.user: userId,
+              EventLogReference.credGroup: id,
+              EventLogReference.userCredGroup: userCredGroupId,
+            },
+          ),
+        );
+      }
+    });
+    return credentialGroups(companyId, userId);
+  }
+
   // ── Shared ─────────────────────────────────────────────────────────────
+
+  /// Runs an add transaction, retrying it when MySQL rolls it back as a
+  /// deadlock victim (two concurrent adds of the same pair lock each other's
+  /// gap). Safe because adding is idempotent: a pair that now exists is
+  /// skipped and not audited again.
+  Future<void> _addTransaction(Future<void> Function(SqlExecutor tx) body) async {
+    for (var attempt = 1; ; attempt++) {
+      try {
+        return await _transactions.transaction(body);
+      } on DatabaseQueryException catch (e) {
+        if (!e.isDeadlock || attempt == _deadlockAttempts) rethrow;
+      }
+    }
+  }
 
   /// 404 unless the company exists (non-MFD) and [userId] is its member: an
   /// employee of another company reveals nothing.

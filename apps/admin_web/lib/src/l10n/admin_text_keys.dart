@@ -147,5 +147,12 @@ abstract final class AdminTextKeys {
   static const assignmentsGroupsHint = 'employee.assignments.groups.hint';
   static const assignmentsGroupsNoteTitle = 'employee.assignments.groups.note.title';
   static const assignmentsGroupsNoteText = 'employee.assignments.groups.note.text';
+  static const assignmentsTabAccess = 'employee.assignments.tab.access';
+  static const assignmentsAccessTitle = 'employee.assignments.access.title';
+  static const assignmentsAccessText = 'employee.assignments.access.text';
+  static const assignmentsAccessPicker = 'employee.assignments.access.picker';
+  static const assignmentsAccessCurrent = 'employee.assignments.access.current';
+  static const assignmentsAccessNone = 'employee.assignments.access.none';
+  static const assignmentsAccessHint = 'employee.assignments.access.hint';
   static const employeeResetAccessAfterActivation = 'employee.resetAccess.afterActivation';
 }

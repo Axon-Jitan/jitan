@@ -26,7 +26,10 @@ enum AuditEventType {
   companyAssigned('employee.company.assigned'),
 
   /// HR/Admin assigned an employee group (`tblUserGroup`).
-  groupAssigned('employee.group.assigned');
+  groupAssigned('employee.group.assigned'),
+
+  /// HR/Admin assigned a credential group (`tblUserCredGroup`).
+  credentialGroupAssigned('employee.credential_group.assigned');
 
   const AuditEventType(this.typeName);
 
@@ -40,7 +43,9 @@ enum EventLogReference {
   company('companyID'),
   userCompany('userCompanyID'),
   group('groupID'),
-  userGroup('userGroupID');
+  userGroup('userGroupID'),
+  credGroup('credGroupID'),
+  userCredGroup('userCredGroupID');
 
   const EventLogReference(this.column);
 

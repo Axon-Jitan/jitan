@@ -118,6 +118,23 @@ void main() {
       expect(other.audit.events, isEmpty);
     });
 
+    test('a deadlock victim is retried as a whole: one row, one audit', () async {
+      final app = _app()..assignments.groupDeadlocks = 2;
+
+      expect((await app.post(_path, _add([2]))).statusCode, 200);
+
+      expect(app.transactions.outcomes, ['rollback', 'rollback', 'commit']);
+      expect(app.audit.events, hasLength(1));
+    });
+
+    test('a deadlock that keeps recurring fails after three attempts', () async {
+      final app = _app()..assignments.groupDeadlocks = 3;
+
+      expect((await app.post(_path, _add([2]))).statusCode, 500);
+      expect(app.transactions.outcomes, ['rollback', 'rollback', 'rollback']);
+      expect(app.audit.events, isEmpty);
+    });
+
     test('empty or malformed requests are refused', () async {
       final app = _app();
 

@@ -336,6 +336,15 @@ Does performing a function require **both** module access (via credential group)
 a `tblUserFunction` grant, or does a function grant work on its own? Is
 `credGroupLevel` used for anything beyond ordering?
 
+Raised by EMP-07 (2026-10-08), for the production evaluator:
+
+- `tblUserCredGroup` has no company: a credential group applies in **every** company the
+  user belongs to. Jitan therefore requires `manageEmployeeAccess` in each of the
+  employee's companies before adding one. Is a user-wide role the intended model?
+- May an actor grant a credential group above their own `credGroupLevel` (e.g. HR
+  granting Admin)? Jitan does not decide this by role name; the production evaluator
+  must, once IT confirms the rule.
+
 ## CLARIFY-12: Personal QR value (`tblUser.userQRcode`) · `OPEN` · IT CLARIFICATION, does not block development
 `userQRcode` is unique and is filled when an employee is created (EMP-02). Jitan
 generates 18 cryptographically random bytes, base64url-encoded to **24 characters**, so

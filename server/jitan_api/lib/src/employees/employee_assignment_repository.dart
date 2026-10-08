@@ -84,6 +84,53 @@ class EmployeeAssignmentRepository {
         groupId,
       );
 
+  // ── Credential groups (tblUserCredGroup) ─────────────────────────────
+
+  /// Every non-MFD credential group that is active or already assigned to
+  /// [userId], in `credGroupLevel` order. Names come from the database; no
+  /// role name is assumed.
+  Future<List<AssignmentOption>> credentialGroupOptions(SqlExecutor executor, int userId) async {
+    final rows = await executor.query(
+      'SELECT cg.credGroupID, cg.credGroupName, cg.credGroupActive, (ucg.userCredGroupID IS NOT NULL) AS isAssigned '
+      'FROM tblCredGroup cg '
+      'LEFT JOIN tblUserCredGroup ucg ON ucg.credGroupID = cg.credGroupID AND ucg.userID = :userId '
+      'WHERE cg.credGroupMFD = 0 AND (cg.credGroupActive = 1 OR ucg.userCredGroupID IS NOT NULL) '
+      'ORDER BY cg.credGroupLevel, cg.credGroupName, cg.credGroupID',
+      {'userId': userId},
+    );
+    return [
+      for (final row in rows)
+        AssignmentOption(
+          id: row.readInt('credGroupID'),
+          name: row.readOptionalString('credGroupName') ?? '',
+          isActive: row.readBool('credGroupActive'),
+          isAssigned: row.readBool('isAssigned'),
+        ),
+    ];
+  }
+
+  /// Links [userId] to [credGroupId] in `tblUserCredGroup`; the new
+  /// `userCredGroupID`, or `null` when the pair already exists.
+  Future<int?> addCredentialGroup(SqlExecutor tx, int userId, int credGroupId) => _insertPair(
+        tx,
+        'INSERT INTO tblUserCredGroup (userID, credGroupID) '
+        'SELECT :userId, :otherId FROM DUAL WHERE NOT EXISTS '
+        '(SELECT 1 FROM tblUserCredGroup WHERE userID = :userId AND credGroupID = :otherId)',
+        userId,
+        credGroupId,
+      );
+
+  /// Every non-MFD company [userId] belongs to (active or not): where a
+  /// user-wide credential group takes effect.
+  Future<List<int>> memberCompanyIds(SqlExecutor executor, int userId) async {
+    final rows = await executor.query(
+      'SELECT c.companyID FROM tblUserCompany uc JOIN tblCompany c ON c.companyID = uc.companyID '
+      'WHERE uc.userID = :userId AND c.companyMFD = 0 ORDER BY c.companyID',
+      {'userId': userId},
+    );
+    return [for (final row in rows) row.readInt('companyID')];
+  }
+
   /// Inserts a junction pair unless it exists; `null` when it did.
   Future<int?> _insertPair(SqlExecutor tx, String sql, int userId, int otherId) async {
     try {

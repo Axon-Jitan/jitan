@@ -35,7 +35,11 @@ class ManageAssignmentsController extends ChangeNotifier {
   final int companyId;
   final int userId;
 
-  final tabs = [AssignmentTab(AssignmentKind.companies), AssignmentTab(AssignmentKind.groups)];
+  final tabs = [
+    AssignmentTab(AssignmentKind.companies),
+    AssignmentTab(AssignmentKind.groups),
+    AssignmentTab(AssignmentKind.credentialGroups),
+  ];
 
   bool _saving = false;
   bool get saving => _saving;
@@ -63,6 +67,17 @@ class ManageAssignmentsController extends ChangeNotifier {
   void toggle(AssignmentTab tab, AssignmentOption option) {
     if (_saving || !tab.canToggle(option)) return;
     if (!tab.pending.remove(option.id)) tab.pending.add(option.id);
+    _saveFailure = null;
+    notifyListeners();
+  }
+
+  /// Picker tabs (Access): [optionId] becomes the one option to add, or
+  /// none when `null`.
+  void choose(AssignmentTab tab, int? optionId) {
+    if (_saving) return;
+    final option = tab.options?.where((o) => o.id == optionId).firstOrNull;
+    tab.pending.clear();
+    if (option != null && tab.canToggle(option)) tab.pending.add(option.id);
     _saveFailure = null;
     notifyListeners();
   }

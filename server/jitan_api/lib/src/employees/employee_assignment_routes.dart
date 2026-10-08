@@ -16,6 +16,8 @@ import 'employee_assignment_service.dart';
 /// - `POST /companies/{companyId}/employees/{userId}/assignments/companies`
 ///   with an `AddAssignmentsRequest` (adds only)
 /// - `GET/POST …/assignments/groups` (universal groups, adds only)
+/// - `GET/POST …/assignments/credential-groups` (access, adds only; POST
+///   needs `manageEmployeeAccess` in every company of the employee)
 class EmployeeAssignmentRoutes {
   const EmployeeAssignmentRoutes(this._authorizer, this._assignments);
 
@@ -28,7 +30,28 @@ class EmployeeAssignmentRoutes {
     ..get('$_path/companies', _companies)
     ..post('$_path/companies', _addCompanies)
     ..get('$_path/groups', _groups)
-    ..post('$_path/groups', _addGroups);
+    ..post('$_path/groups', _addGroups)
+    ..get('$_path/credential-groups', _credentialGroups)
+    ..post('$_path/credential-groups', _addCredentialGroups);
+
+  Future<Response> _credentialGroups(Request request, String companyId, String userId) async {
+    final id = int.parse(companyId);
+    await _authorizer.require(request, Permission.manageEmployeeAccess, companyId: id);
+    return jsonResponse((await _assignments.credentialGroups(id, int.parse(userId))).toJson());
+  }
+
+  Future<Response> _addCredentialGroups(Request request, String companyId, String userId) async {
+    final id = int.parse(companyId);
+    final identity = await _authorizer.require(request, Permission.manageEmployeeAccess, companyId: id);
+    final result = await _assignments.addCredentialGroups(
+      identity.userId,
+      id,
+      int.parse(userId),
+      await _body(request),
+      mayManage: (member) => _authorizer.require(request, Permission.manageEmployeeAccess, companyId: member),
+    );
+    return jsonResponse(result.toJson());
+  }
 
   Future<Response> _groups(Request request, String companyId, String userId) async {
     final id = int.parse(companyId);

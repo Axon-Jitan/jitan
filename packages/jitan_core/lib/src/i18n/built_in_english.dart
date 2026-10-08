@@ -361,5 +361,12 @@ const builtInEnglish = <String, String>{
   'employee.assignments.groups.hint': 'All active, non-deleted groups are available to every employee.',
   'employee.assignments.groups.note.title': 'Removing groups is temporarily unavailable',
   'employee.assignments.groups.note.text': 'You can assign new groups. Existing assignments remain until IT confirms the removal rules.',
+  'employee.assignments.tab.access': 'Access',
+  'employee.assignments.access.title': 'Access and credential groups',
+  'employee.assignments.access.text': 'Assign credential groups using the existing permissions model. No fixed role names are assumed.',
+  'employee.assignments.access.picker': 'Select credential group',
+  'employee.assignments.access.current': 'Current assignments',
+  'employee.assignments.access.none': 'Assigned credential groups will appear here.',
+  'employee.assignments.access.hint': 'Only authorized HR/Admin users can change access. The server enforces permissions.',
   'employee.resetAccess.afterActivation': 'Available after activation',
 };

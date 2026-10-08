@@ -22,8 +22,10 @@ const _usedColumns = {
   'tblGroup': ['groupID', 'groupName', 'groupActive', 'groupMFD'],
   'tblEventLog': [
     'eventLogID', 'eventLogTimestamp', 'userIDInit', 'userIDTarget', 'companyID', 'userCompanyID',
-    'groupID', 'userGroupID',
+    'groupID', 'userGroupID', 'credGroupID', 'userCredGroupID',
   ],
+  'tblCredGroup': ['credGroupID', 'credGroupName', 'credGroupLevel', 'credGroupActive', 'credGroupMFD'],
+  'tblUserCredGroup': ['userCredGroupID', 'userID', 'credGroupID'],
   'tblEventType': ['eventTypeID', 'eventTypeName'],
   'tblEventLogEventType': ['eventLogEventTypeID', 'eventTypeID', 'eventLogID'],
   'tblLanguage': ['languageID', 'languageName', 'languageCode', 'languageActive', 'languageMFD'],

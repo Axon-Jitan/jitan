@@ -6,6 +6,7 @@ import 'package:jitan_api/src/auth/permission.dart';
 import 'package:jitan_api/src/auth/permission_evaluator.dart';
 import 'package:jitan_api/src/auth/request_identity.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
+import 'package:jitan_api/src/database/database_exception.dart';
 import 'package:jitan_api/src/database/db_row.dart';
 import 'package:jitan_api/src/database/sql_executor.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
@@ -259,7 +260,33 @@ class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
   /// company first.
   int? raceOnCompany;
 
+  Map<int, ({String name, bool active})> credentialGroups = {};
+
+  /// (userId, credGroupId) pairs, with their userCredGroupID.
+  final userCredentialGroups = <(int, int), int>{};
+
+  @override
+  Future<List<AssignmentOption>> credentialGroupOptions(SqlExecutor executor, int userId) async => [
+    for (final MapEntry(key: id, value: g) in (credentialGroups.entries.toList()..sort((a, b) => a.key.compareTo(b.key))))
+      if (g.active || userCredentialGroups.containsKey((userId, id)))
+        AssignmentOption(id: id, name: g.name, isActive: g.active, isAssigned: userCredentialGroups.containsKey((userId, id))),
+  ];
+
+  @override
+  Future<int?> addCredentialGroup(SqlExecutor tx, int userId, int credGroupId) async {
+    if (userCredentialGroups.containsKey((userId, credGroupId))) return null;
+    return userCredentialGroups[(userId, credGroupId)] = _nextId++;
+  }
+
+  /// Companies of a user: the [userCompanies] pairs.
+  @override
+  Future<List<int>> memberCompanyIds(SqlExecutor executor, int userId) async =>
+      [for (final (u, c) in userCompanies.keys) if (u == userId) c]..sort();
+
   Map<int, ({String name, bool active})> groups = {};
+
+  /// How many [addGroup] calls fail as MySQL deadlock victims first.
+  var groupDeadlocks = 0;
 
   /// (userId, groupId) pairs, with their userGroupID.
   final userGroups = <(int, int), int>{};
@@ -273,6 +300,10 @@ class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
 
   @override
   Future<int?> addGroup(SqlExecutor tx, int userId, int groupId) async {
+    if (groupDeadlocks > 0) {
+      groupDeadlocks--;
+      throw const DatabaseQueryException('Deadlock found', errorCode: 1213);
+    }
     if (userGroups.containsKey((userId, groupId))) return null;
     return userGroups[(userId, groupId)] = _nextId++;
   }

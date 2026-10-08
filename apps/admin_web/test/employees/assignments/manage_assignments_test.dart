@@ -33,7 +33,11 @@ FakeEmployeeAssignmentsApi _api() => FakeEmployeeAssignmentsApi()
   ..byKind = {
     AssignmentKind.companies: [_akwa, _almeco, _pca],
     AssignmentKind.groups: [_blue, _white],
+    AssignmentKind.credentialGroups: [_employeeRole, _hrRole],
   };
+
+const _employeeRole = AssignmentOption(id: 1, name: 'Employee', isActive: true, isAssigned: true);
+const _hrRole = AssignmentOption(id: 2, name: 'HR', isActive: true, isAssigned: false);
 
 void main() {
   group('ManageAssignmentsController', () {
@@ -212,5 +216,71 @@ void main() {
       expect((companyId, userId, kind), (1, 2, AssignmentKind.groups));
       expect(ids, [2]);
     });
+  });
+  group('Access tab (credential groups)', () {
+    Future<FakeEmployeeAssignmentsApi> openAccess(WidgetTester tester, {FakeEmployeeAssignmentsApi? api}) async {
+      tester.view.physicalSize = const Size(1440, 1024);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final fake = api ?? _api();
+      await tester.pumpWidget(
+        TranslationScope(
+          translations: Translations.english(),
+          child: MaterialApp(
+            theme: JitanTheme.light(),
+            home: Scaffold(body: ManageAssignmentsDialog(api: fake, employee: _disan)),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Access'));
+      await tester.pump();
+      return fake;
+    }
+
+    testWidgets('matches Figma: picker, current assignments from the database, hint', (tester) async {
+      await openAccess(tester);
+
+      expect(find.text('Access and credential groups'), findsOneWidget);
+      expect(find.text('Select credential group'), findsOneWidget);
+      expect(find.text('Current assignments'), findsOneWidget);
+      expect(find.text('Employee'), findsOneWidget, reason: 'the current assignment, listed');
+      expect(find.text('Only authorized HR/Admin users can change access. The server enforces permissions.'), findsOneWidget);
+    });
+
+    testWidgets('no assignments shows the empty text', (tester) async {
+      final api = _api()..byKind[AssignmentKind.credentialGroups] = [_hrRole];
+      await openAccess(tester, api: api);
+
+      expect(find.text('Assigned credential groups will appear here.'), findsOneWidget);
+    });
+
+    testWidgets('picking HR and saving adds that credential group', (tester) async {
+      final api = await openAccess(tester);
+
+      await tester.tap(find.text('Select credential group'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('HR').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save changes'));
+      await tester.pump();
+
+      final (companyId, userId, kind, ids) = api.adds.single;
+      expect((companyId, userId, kind), (1, 2, AssignmentKind.credentialGroups));
+      expect(ids, [2]);
+    });
+  });
+
+  test('choose keeps one pending option and ignores assigned ones', () async {
+    final c = ManageAssignmentsController(api: _api(), companyId: 1, userId: 2);
+    await pumpEventQueue();
+    final access = c.tabs.last;
+
+    c.choose(access, 1);
+    expect(access.pending, isEmpty, reason: 'already assigned');
+    c.choose(access, 2);
+    expect(access.pending, {2});
+    c.choose(access, null);
+    expect(c.hasChanges, isFalse);
   });
 }

@@ -11,12 +11,12 @@ class JitanSelectOption<T> {
   final String label;
 }
 
-/// A labelled dropdown with the same look as [JitanTextField]
-/// (e.g. "Employee type").
+/// A dropdown with the same look as [JitanTextField] (e.g. "Employee
+/// type"), labelled unless [label] is `null`.
 class JitanSelectField<T> extends StatelessWidget {
   const JitanSelectField({
     super.key,
-    required this.label,
+    this.label,
     required this.options,
     required this.value,
     required this.onChanged,
@@ -24,7 +24,7 @@ class JitanSelectField<T> extends StatelessWidget {
     this.errorText,
   });
 
-  final String label;
+  final String? label;
   final List<JitanSelectOption<T>> options;
   final T? value;
 
@@ -36,25 +36,26 @@ class JitanSelectField<T> extends StatelessWidget {
   static const _iconSize = 18.0;
 
   @override
-  Widget build(BuildContext context) => JitanFieldLabel(
-        label: label,
-        child: DropdownButtonFormField<T>(
-          initialValue: value,
-          isExpanded: true,
-          isDense: true,
-          style: JitanTextStyles.inputText,
-          hint: hintText == null ? null : Text(hintText!, style: JitanTextStyles.inputHint),
-          iconSize: _iconSize,
-          // Icon height + vertical padding = the text fields' 44 px.
-          decoration: jitanFieldDecoration(
-            errorText: errorText,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
-          ),
-          items: [
-            for (final option in options)
-              DropdownMenuItem<T>(value: option.value, child: Text(option.label, overflow: TextOverflow.ellipsis)),
-          ],
-          onChanged: onChanged,
-        ),
-      );
+  Widget build(BuildContext context) {
+    final field = DropdownButtonFormField<T>(
+      initialValue: value,
+      isExpanded: true,
+      isDense: true,
+      style: JitanTextStyles.inputText,
+      hint: hintText == null ? null : Text(hintText!, style: JitanTextStyles.inputHint),
+      iconSize: _iconSize,
+      // Icon height + vertical padding = the text fields' 44 px.
+      decoration: jitanFieldDecoration(
+        errorText: errorText,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+      ),
+      items: [
+        for (final option in options)
+          DropdownMenuItem<T>(value: option.value, child: Text(option.label, overflow: TextOverflow.ellipsis)),
+      ],
+      onChanged: onChanged,
+    );
+    final label = this.label;
+    return label == null ? field : JitanFieldLabel(label: label, child: field);
+  }
 }

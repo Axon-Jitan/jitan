@@ -26,6 +26,10 @@ class DatabaseQueryException implements Exception {
   /// 1406: a value is longer than its column allows.
   bool get isValueTooLong => errorCode == 1406;
 
+  /// 1213: MySQL chose this transaction as a deadlock victim and rolled it
+  /// back entirely; it may be retried as a whole.
+  bool get isDeadlock => errorCode == 1213;
+
   @override
   String toString() => 'DatabaseQueryException(${errorCode ?? '-'}): $cause';
 }
