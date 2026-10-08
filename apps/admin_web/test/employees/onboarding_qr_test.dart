@@ -8,6 +8,7 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../support/fake_assignments_api.dart';
 import '../support/fake_companies_api.dart';
 import '../support/fake_employees_api.dart';
 
@@ -43,7 +44,7 @@ void main() {
           child: MaterialApp(
             theme: JitanTheme.light(),
             home: Scaffold(
-              body: EmployeesScreen(api: employees, groupsApi: FakeGroupsApi()),
+              body: EmployeesScreen(api: employees, groupsApi: FakeGroupsApi(), assignmentsApi: FakeEmployeeAssignmentsApi()),
             ),
           ),
         ),

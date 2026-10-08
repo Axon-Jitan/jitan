@@ -134,7 +134,7 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-01 | Employee list for the current company: search, Type from `tblGroup`, all states, responsive, translation keys. Location/Onboarding show "—" (GAP-11/GAP-04), Policy omitted | `DONE` |
 | EMP-02 | Add employee: first/last name, code, type (`tblGroup`), phone, in the current company; one transaction incl. audit; duplicate-code and validation errors on their fields. Location and Work policy omitted | `DONE` |
 | EMP-03 | Employee details modal from a row click: type, phone, status; Location/Account "—", Work policy omitted | `DONE` |
-| EMP-04 | Company assignment (`tblUserCompany`) | `TODO` |
+| EMP-04 | Company assignment (`tblUserCompany`): Employee details → Manage assignments → Companies (Figma `201:472`). Adds only (CLARIFY-09), duplicates skipped, audited (`employee.company.assigned`); permission `manageEmployeeAssignments` in the employee's company **and** in each added company | `DONE` |
 | EMP-05 | Group assignment (`tblUserGroup`) | `TODO` |
 | EMP-06 | Language assignment (`tblUserLanguage`) | `TODO` |
 | EMP-07 | Credential-group assignment (`tblUserCredGroup`) where required | `TODO` |

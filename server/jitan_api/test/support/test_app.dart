@@ -12,6 +12,8 @@ import 'package:jitan_api/src/users/me_routes.dart';
 import 'package:jitan_api/src/companies/company_routes.dart';
 import 'package:jitan_api/src/companies/company_service.dart';
 import 'package:jitan_api/src/config/app_environment.dart';
+import 'package:jitan_api/src/employees/employee_assignment_routes.dart';
+import 'package:jitan_api/src/employees/employee_assignment_service.dart';
 import 'package:jitan_api/src/employees/employee_routes.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
 import 'package:jitan_api/src/groups/group_routes.dart';
@@ -49,6 +51,17 @@ class TestApp {
           transactions: transactions,
           credentials: credentials,
           personalQrCode: () => 'QR-${++_qrCounter}',
+        ),
+      ),
+      assignments: EmployeeAssignmentRoutes(
+        Authorizer(permissions),
+        EmployeeAssignmentService(
+          assignments: assignments,
+          employees: employees,
+          companies: companies,
+          audit: audit,
+          transactions: transactions,
+          executor: unusedExecutor,
         ),
       ),
       groups: GroupRoutes(Authorizer(permissions), groups),
@@ -98,6 +111,7 @@ class TestApp {
 
   final companies = FakeCompanyRepository();
   final employees = FakeEmployeeRepository();
+  final assignments = FakeEmployeeAssignmentRepository();
   final groups = FakeGroupRepository();
   final audit = FakeAuditLog();
   final transactions = FakeTransactions();

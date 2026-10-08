@@ -292,11 +292,17 @@ What address does a manual entry, or a QR scan in a van, carry? Is the column nu
 selected language), with the fallback being a system default? Or are several rows
 ranked somehow?
 
-## CLARIFY-08: Translation key uniqueness · `OPEN`
-`(languageID, translationUIName)` is not marked unique. Should Jitan treat duplicates as
-an error, or take the lowest `translationID`?
+## CLARIFY-08: Translation key uniqueness · `RESOLVED` by ERD.jpg
+ERD.jpg marks `(languageID, translationUIName)` as a unique pair (yellow; legend "in same
+table, Unique Pair"), so a key appears once per language. Integration tests check it
+against whichever database they run on. Jitan still tolerates duplicates (lowest
+`translationID` wins, logged) in case a database does not enforce the pair.
 
-## CLARIFY-09: Junction row removal · `OPEN`
+## CLARIFY-09: Junction row removal · `OPEN` · asked to IT (2026-10-08)
+
+**Interim (EMP-04–07):** Jitan only **adds** assignments (`tblUserCompany`,
+`tblUserGroup`, `tblUserLanguage`, `tblUserCredGroup`), audited in `tblEventLog`. Existing
+assignments are shown locked; no junction row is deleted until IT answers.
 Junction tables have no Active/MFD. Does removing an assignment (e.g. an employee leaving
 a group) physically delete the junction row, with the change preserved in
 `tblEventLog`? Or should junction rows never be deleted?

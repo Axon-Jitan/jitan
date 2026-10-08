@@ -18,10 +18,11 @@ import 'employees_table.dart';
 /// "Import CSV / Excel" (Figma) is not shown: bulk import is a separate task
 /// (roadmap §8), and the page never offers a button that does nothing.
 class EmployeesScreen extends StatelessWidget {
-  const EmployeesScreen({super.key, required this.api, required this.groupsApi});
+  const EmployeesScreen({super.key, required this.api, required this.groupsApi, required this.assignmentsApi});
 
   final EmployeesApi api;
   final GroupsApi groupsApi;
+  final EmployeeAssignmentsApi assignmentsApi;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +55,13 @@ class EmployeesScreen extends StatelessWidget {
             )
           else
             // Keyed by company: switching company starts a fresh list.
-            _CompanyEmployees(key: ValueKey(company.id), api: api, groupsApi: groupsApi, company: company),
+            _CompanyEmployees(
+              key: ValueKey(company.id),
+              api: api,
+              groupsApi: groupsApi,
+              assignmentsApi: assignmentsApi,
+              company: company,
+            ),
         ],
       ),
     );
@@ -62,10 +69,17 @@ class EmployeesScreen extends StatelessWidget {
 }
 
 class _CompanyEmployees extends StatefulWidget {
-  const _CompanyEmployees({super.key, required this.api, required this.groupsApi, required this.company});
+  const _CompanyEmployees({
+    super.key,
+    required this.api,
+    required this.groupsApi,
+    required this.assignmentsApi,
+    required this.company,
+  });
 
   final EmployeesApi api;
   final GroupsApi groupsApi;
+  final EmployeeAssignmentsApi assignmentsApi;
   final CompanySummary company;
 
   @override
@@ -160,6 +174,7 @@ class _CompanyEmployeesState extends State<_CompanyEmployees> {
       onOpen: (employee) => showEmployeeDetailsDialog(
         context,
         employeesApi: widget.api,
+        assignmentsApi: widget.assignmentsApi,
         companyId: widget.company.id,
         userId: employee.id,
       ),

@@ -1,0 +1,163 @@
+import 'package:admin_web/src/employees/assignments/manage_assignments_controller.dart';
+import 'package:admin_web/src/employees/assignments/manage_assignments_dialog.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:jitan_api_client/jitan_api_client.dart';
+import 'package:jitan_core/jitan_core.dart';
+import 'package:jitan_models/jitan_models.dart';
+import 'package:jitan_ui/jitan_ui.dart';
+
+import '../../support/fake_assignments_api.dart';
+
+const _disan = EmployeeDetails(
+  id: 2,
+  companyId: 1,
+  companyName: 'Almeco',
+  firstName: 'Disan',
+  lastName: 'Ssebowa',
+  code: 'SBW',
+  groups: ['White collar'],
+  phone: null,
+  isActive: true,
+  isActivated: false,
+);
+
+const _almeco = AssignmentOption(id: 1, name: 'Almeco', isActive: true, isAssigned: true);
+const _pca = AssignmentOption(id: 2, name: 'PCA', isActive: true, isAssigned: false);
+const _akwa = AssignmentOption(id: 3, name: 'Akwa', isActive: false, isAssigned: true);
+
+FakeEmployeeAssignmentsApi _api() =>
+    FakeEmployeeAssignmentsApi()..byKind = {AssignmentKind.companies: [_akwa, _almeco, _pca]};
+
+void main() {
+  group('ManageAssignmentsController', () {
+    test('only active, unassigned options can be ticked; existing ones are locked', () async {
+      final c = ManageAssignmentsController(api: _api(), companyId: 1, userId: 2);
+      await pumpEventQueue();
+      final tab = c.tabs.single;
+
+      c.toggle(tab, _almeco);
+      c.toggle(tab, _akwa);
+      expect(c.hasChanges, isFalse, reason: 'removal waits for IT');
+
+      c.toggle(tab, _pca);
+      expect(tab.pending, {2});
+      c.toggle(tab, _pca);
+      expect(c.hasChanges, isFalse);
+    });
+
+    test('save adds only what was ticked, then reflects the server', () async {
+      final api = _api();
+      final c = ManageAssignmentsController(api: api, companyId: 1, userId: 2);
+      await pumpEventQueue();
+      c.toggle(c.tabs.single, _pca);
+
+      expect(await c.save(), isTrue);
+
+      final (companyId, userId, kind, ids) = api.adds.single;
+      expect((companyId, userId, kind), (1, 2, AssignmentKind.companies));
+      expect(ids, [2]);
+      expect(c.tabs.single.options!.firstWhere((o) => o.id == 2).isAssigned, isTrue);
+      expect(c.hasChanges, isFalse);
+    });
+
+    test('a failed save keeps the ticks so it can be retried', () async {
+      final api = _api()..addFailure = const ApiClientException.network('offline');
+      final c = ManageAssignmentsController(api: api, companyId: 1, userId: 2);
+      await pumpEventQueue();
+      c.toggle(c.tabs.single, _pca);
+
+      expect(await c.save(), isFalse);
+
+      expect(c.saveFailure, isNotNull);
+      expect(c.tabs.single.pending, {2});
+    });
+  });
+
+  group('Manage employee assignments modal (Companies tab)', () {
+    Future<FakeEmployeeAssignmentsApi> open(WidgetTester tester, {FakeEmployeeAssignmentsApi? api}) async {
+      tester.view.physicalSize = const Size(1440, 1024);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final fake = api ?? _api();
+      await tester.pumpWidget(
+        TranslationScope(
+          translations: Translations.english(),
+          child: MaterialApp(
+            theme: JitanTheme.light(),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showManageAssignmentsDialog(context, api: fake, employee: _disan),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      return fake;
+    }
+
+    testWidgets('matches the Figma content: title, employee line, tabs, options and note', (tester) async {
+      await open(tester);
+
+      expect(find.text('Manage employee assignments'), findsOneWidget);
+      expect(find.text('Disan Ssebowa  ·  Almeco  ·  Employee code SBW'), findsOneWidget);
+      expect(find.text('Company membership'), findsOneWidget);
+      expect(find.text('Current company'), findsOneWidget);
+      expect(find.text('Additional company'), findsOneWidget);
+      expect(find.text('Inactive'), findsOneWidget, reason: 'an inactive company is listed only because assigned');
+      expect(find.text('Company-scoped access'), findsOneWidget);
+      expect(find.text('Changes take effect after saving.'), findsOneWidget);
+    });
+
+    testWidgets('Save is disabled until something is ticked; ticking PCA and saving adds it', (tester) async {
+      final api = await open(tester);
+      FilledButton save() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save changes'));
+      expect(save().onPressed, isNull);
+
+      await tester.tap(find.text('Almeco'));
+      await tester.pump();
+      expect(save().onPressed, isNull, reason: 'an existing membership cannot be unticked');
+
+      await tester.tap(find.text('PCA'));
+      await tester.pump();
+      await tester.tap(find.text('Save changes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final (companyId, userId, kind, ids) = api.adds.single;
+      expect((companyId, userId, kind), (1, 2, AssignmentKind.companies));
+      expect(ids, [2]);
+      expect(find.text('Manage employee assignments'), findsNothing, reason: 'closed after saving');
+    });
+
+    testWidgets('a load failure shows a retryable error', (tester) async {
+      final api = _api()..loadFailure = const ApiClientException.network('offline');
+      await open(tester, api: api);
+
+      expect(find.text('Try again'), findsOneWidget);
+      api.loadFailure = null;
+      await tester.tap(find.text('Try again'));
+      await tester.pump();
+      expect(find.text('PCA'), findsOneWidget);
+    });
+
+    testWidgets('a failed save shows an inline error and keeps the modal open', (tester) async {
+      final api = await open(tester, api: _api()..addFailure = const ApiClientException.network('offline'));
+
+      await tester.tap(find.text('PCA'));
+      await tester.pump();
+      await tester.tap(find.text('Save changes'));
+      await tester.pump();
+
+      expect(api.adds, hasLength(1));
+      expect(find.text('Manage employee assignments'), findsOneWidget);
+      expect(find.byType(JitanInlineError), findsOneWidget);
+    });
+  });
+}

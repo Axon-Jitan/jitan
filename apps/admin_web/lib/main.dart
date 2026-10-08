@@ -25,6 +25,7 @@ void main() {
         companiesApi: CompaniesApi(transport),
         employeesApi: EmployeesApi(transport),
         groupsApi: GroupsApi(transport),
+        assignmentsApi: EmployeeAssignmentsApi(transport),
         devTools: config.devTools,
       ),
     ),

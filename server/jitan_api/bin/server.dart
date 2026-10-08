@@ -21,6 +21,9 @@ import 'package:jitan_api/src/config/app_config.dart';
 import 'package:jitan_api/src/config/config_exception.dart';
 import 'package:jitan_api/src/config/env_file.dart';
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
+import 'package:jitan_api/src/employees/employee_assignment_routes.dart';
+import 'package:jitan_api/src/employees/employee_assignment_service.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/employees/employee_routes.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
@@ -105,6 +108,17 @@ Future<void> main() async {
         groups: groupRepository,
         audit: const AuditLogRepository(),
         transactions: db,
+      ),
+    ),
+    assignments: EmployeeAssignmentRoutes(
+      authorizer,
+      EmployeeAssignmentService(
+        assignments: const EmployeeAssignmentRepository(),
+        employees: EmployeeRepository(db),
+        companies: companyRepository,
+        audit: const AuditLogRepository(),
+        transactions: db,
+        executor: db,
       ),
     ),
     groups: GroupRoutes(authorizer, groupRepository),

@@ -6,6 +6,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
+import 'assignments/manage_assignments_dialog.dart';
 import 'onboarding_qr_dialog.dart';
 import 'reset_access_dialog.dart';
 
@@ -13,11 +14,17 @@ import 'reset_access_dialog.dart';
 Future<void> showEmployeeDetailsDialog(
   BuildContext context, {
   required EmployeesApi employeesApi,
+  required EmployeeAssignmentsApi assignmentsApi,
   required int companyId,
   required int userId,
 }) => showDialog<void>(
   context: context,
-  builder: (_) => EmployeeDetailsDialog(employeesApi: employeesApi, companyId: companyId, userId: userId),
+  builder: (_) => EmployeeDetailsDialog(
+    employeesApi: employeesApi,
+    assignmentsApi: assignmentsApi,
+    companyId: companyId,
+    userId: userId,
+  ),
 );
 
 /// Figma `Admin / Employees — Employee details modal` (`153:357`).
@@ -29,9 +36,16 @@ Future<void> showEmployeeDetailsDialog(
 /// (bottom left, Figma `196:149`) starts HR/Admin-assisted recovery; it is
 /// disabled until the employee has activated (nothing to reset before).
 class EmployeeDetailsDialog extends StatefulWidget {
-  const EmployeeDetailsDialog({super.key, required this.employeesApi, required this.companyId, required this.userId});
+  const EmployeeDetailsDialog({
+    super.key,
+    required this.employeesApi,
+    required this.assignmentsApi,
+    required this.companyId,
+    required this.userId,
+  });
 
   final EmployeesApi employeesApi;
+  final EmployeeAssignmentsApi assignmentsApi;
   final int companyId;
   final int userId;
 
@@ -119,7 +133,15 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
           activated: details.isActivated,
           onShowQr: () => showOnboardingQrDialog(context, employeesApi: widget.employeesApi, employee: details),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 46),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: JitanPrimaryButton(
+            label: context.t(AdminTextKeys.assignmentsAction),
+            onPressed: () => _manageAssignments(context, details),
+          ),
+        ),
+        const SizedBox(height: 36),
         Align(
           alignment: Alignment.centerLeft,
           child: JitanSecondaryButton(
@@ -128,8 +150,24 @@ class _EmployeeDetailsDialogState extends State<EmployeeDetailsDialog> {
             onPressed: details.isActivated ? () => _resetAccess(context, details) : null,
           ),
         ),
+        if (!details.isActivated) ...[
+          const SizedBox(height: 4),
+          Text(
+            context.t(AdminTextKeys.employeeResetAccessAfterActivation),
+            style: JitanTextStyles.stateMessage.copyWith(fontSize: 9),
+          ),
+        ],
       ],
     );
+  }
+
+  Future<void> _manageAssignments(BuildContext context, EmployeeDetails details) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final saved = context.t(AdminTextKeys.assignmentsSaved);
+    if (!await showManageAssignmentsDialog(context, api: widget.assignmentsApi, employee: details)) return;
+    messenger?.showSnackBar(SnackBar(content: Text(saved)));
+    // The server is the source of truth: reload the details.
+    await _load();
   }
 
   Future<void> _resetAccess(BuildContext context, EmployeeDetails details) async {

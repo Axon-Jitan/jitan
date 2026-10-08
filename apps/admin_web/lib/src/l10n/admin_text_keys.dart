@@ -121,4 +121,23 @@ abstract final class AdminTextKeys {
   /// Argument: `{name}`.
   static const employeeResetAccessSuccess = 'employee.resetAccess.success';
   static const employeeResetAccessNotActivated = 'employee.resetAccess.notActivated';
+
+  // Manage employee assignments (Figma Employees 04–07)
+  static const assignmentsAction = 'employee.assignments.action';
+  static const assignmentsTitle = 'employee.assignments.title';
+
+  /// Arguments: `{name}`, `{company}`, `{code}`.
+  static const assignmentsSubtitle = 'employee.assignments.subtitle';
+  static const assignmentsLoading = 'employee.assignments.loading';
+  static const assignmentsFooter = 'employee.assignments.footer';
+  static const assignmentsSave = 'employee.assignments.save';
+  static const assignmentsSaved = 'employee.assignments.saved';
+  static const assignmentsTabCompanies = 'employee.assignments.tab.companies';
+  static const assignmentsCompaniesTitle = 'employee.assignments.companies.title';
+  static const assignmentsCompaniesText = 'employee.assignments.companies.text';
+  static const assignmentsCompaniesCurrent = 'employee.assignments.companies.current';
+  static const assignmentsCompaniesAdditional = 'employee.assignments.companies.additional';
+  static const assignmentsCompaniesNoteTitle = 'employee.assignments.companies.note.title';
+  static const assignmentsCompaniesNoteText = 'employee.assignments.companies.note.text';
+  static const employeeResetAccessAfterActivation = 'employee.resetAccess.afterActivation';
 }

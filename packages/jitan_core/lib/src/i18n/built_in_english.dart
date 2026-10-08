@@ -337,4 +337,21 @@ const builtInEnglish = <String, String>{
   'profile.changePassword.confirm.hint': 'Re-enter your new password',
   'profile.changePassword.rules.title': 'Password rules',
   'profile.changePassword.rules.text': 'Use at least 8 characters. We recommend 12 or more.',
+
+  // Manage employee assignments (HR/Admin)
+  'employee.assignments.action': 'Manage assignments',
+  'employee.assignments.title': 'Manage employee assignments',
+  'employee.assignments.subtitle': '{name}  ·  {company}  ·  Employee code {code}',
+  'employee.assignments.loading': 'Loading assignments…',
+  'employee.assignments.footer': 'Changes take effect after saving.',
+  'employee.assignments.save': 'Save changes',
+  'employee.assignments.saved': 'Assignments saved.',
+  'employee.assignments.tab.companies': 'Companies',
+  'employee.assignments.companies.title': 'Company membership',
+  'employee.assignments.companies.text': 'Choose the companies this employee belongs to. Multiple selections are allowed.',
+  'employee.assignments.companies.current': 'Current company',
+  'employee.assignments.companies.additional': 'Additional company',
+  'employee.assignments.companies.note.title': 'Company-scoped access',
+  'employee.assignments.companies.note.text': 'Membership changes do not automatically grant HR/Admin permissions. Access is managed separately.',
+  'employee.resetAccess.afterActivation': 'Available after activation',
 };

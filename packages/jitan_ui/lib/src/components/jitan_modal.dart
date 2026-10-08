@@ -17,6 +17,8 @@ class JitanModal extends StatelessWidget {
     this.subtitle,
     this.actions = const [],
     this.width,
+    this.onClose,
+    this.footerNote,
   });
 
   final String title;
@@ -27,6 +29,13 @@ class JitanModal extends StatelessWidget {
   /// Fixed width (still narrower on small screens); otherwise sized to the
   /// content, up to [JitanDimensions.modalWidth].
   final double? width;
+
+  /// Shows a "×" close button at the top right; `null` hides it.
+  final VoidCallback? onClose;
+
+  /// Text left of the actions, above which a divider separates the footer
+  /// (e.g. "Changes take effect after saving.").
+  final String? footerNote;
 
   @override
   Widget build(BuildContext context) => Dialog(
@@ -44,7 +53,21 @@ class JitanModal extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Semantics(header: true, child: Text(title, style: JitanTextStyles.modalTitle)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: Semantics(header: true, child: Text(title, style: JitanTextStyles.modalTitle))),
+                    if (onClose != null)
+                      IconButton(
+                        tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                        onPressed: onClose,
+                        icon: const Icon(Icons.close, size: 20, color: JitanColors.inkMuted),
+                      ),
+                  ],
+                ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 8),
                   Text(subtitle!, style: JitanTextStyles.modalSubtitle),
@@ -52,10 +75,16 @@ class JitanModal extends StatelessWidget {
                 const SizedBox(height: 32),
                 Flexible(child: SingleChildScrollView(child: body)),
                 if (actions.isNotEmpty) ...[
-                  const SizedBox(height: 32),
+                  SizedBox(height: footerNote == null ? 32 : 24),
+                  if (footerNote != null) ...[
+                    const Divider(height: 1, color: JitanColors.inputBorder),
+                    const SizedBox(height: 14),
+                  ],
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      if (footerNote != null)
+                        Expanded(child: Text(footerNote!, style: JitanTextStyles.modalSubtitle.copyWith(fontSize: 10))),
                       for (var i = 0; i < actions.length; i++) ...[
                         if (i > 0) const SizedBox(width: 12),
                         actions[i],

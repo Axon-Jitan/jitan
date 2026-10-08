@@ -4,6 +4,7 @@ import 'package:shelf_router/shelf_router.dart';
 
 import 'auth/sign_in_routes.dart';
 import 'companies/company_routes.dart';
+import 'employees/employee_assignment_routes.dart';
 import 'employees/employee_routes.dart';
 import 'groups/group_routes.dart';
 import 'health/health_routes.dart';
@@ -31,6 +32,7 @@ Handler buildApp({
   required HealthRoutes health,
   required CompanyRoutes companies,
   required EmployeeRoutes employees,
+  required EmployeeAssignmentRoutes assignments,
   required GroupRoutes groups,
   required LanguageRoutes languages,
   required OnboardingRoutes onboarding,
@@ -41,6 +43,7 @@ Handler buildApp({
   final apiRoutes = Router(notFoundHandler: _notFound)
     ..mount('/', companies.router.call)
     ..mount('/', employees.router.call)
+    ..mount('/', assignments.router.call)
     ..mount('/', groups.router.call)
     ..mount('/', languages.authenticatedRouter.call)
     ..mount('/', me.router.call);

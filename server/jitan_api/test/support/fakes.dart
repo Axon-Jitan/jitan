@@ -1,3 +1,4 @@
+import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
 import 'package:jitan_api/src/auth/credential_repository.dart';
 import 'package:jitan_api/src/audit/audit_event.dart';
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
@@ -245,6 +246,37 @@ class FakeCredentialRepository implements CredentialRepository {
   Future<bool> clearPassword(SqlExecutor tx, int userId) async => onboarding.passwordHashes.remove(userId) != null;
 }
 
+/// Junction tables in memory. [companies] are all companies (id → name,
+/// active); MFD ones are simply absent.
+class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
+  Map<int, ({String name, bool active})> companies = {};
+
+  /// (userId, companyId) pairs, with their userCompanyID.
+  final userCompanies = <(int, int), int>{};
+  var _nextId = 100;
+
+  /// When set, [addCompany] behaves as if a concurrent request added this
+  /// company first.
+  int? raceOnCompany;
+
+  @override
+  Future<List<AssignmentOption>> companyOptions(SqlExecutor executor, int userId) async => [
+    for (final MapEntry(key: id, value: c) in (companies.entries.toList()..sort((a, b) => a.value.name.compareTo(b.value.name))))
+      if (c.active || userCompanies.containsKey((userId, id)))
+        AssignmentOption(id: id, name: c.name, isActive: c.active, isAssigned: userCompanies.containsKey((userId, id))),
+  ];
+
+  @override
+  Future<int?> addCompany(SqlExecutor tx, int userId, int companyId) async {
+    if (raceOnCompany == companyId) {
+      userCompanies[(userId, companyId)] = _nextId++;
+      return null;
+    }
+    if (userCompanies.containsKey((userId, companyId))) return null;
+    return userCompanies[(userId, companyId)] = _nextId++;
+  }
+}
+
 class FakeGroupRepository implements GroupRepository {
   List<GroupSummary> groups = const [];
 
@@ -368,13 +400,16 @@ class FixedPermissionEvaluator implements PermissionEvaluator {
 
   final bool allow;
 
+  /// Companies where every permission is refused even when [allow] is true.
+  Set<int> deniedCompanies = {};
+
   /// (userId, permission, companyId) of every check.
   final checked = <(int, Permission, int?)>[];
 
   @override
   Future<bool> isAllowed(RequestIdentity identity, Permission permission, {int? companyId}) async {
     checked.add((identity.userId, permission, companyId));
-    return allow;
+    return allow && !deniedCompanies.contains(companyId);
   }
 }
 

@@ -25,4 +25,9 @@ enum Permission {
   /// "Reset account access" for an employee of one company (company-scoped):
   /// clears their password so they set up Jitan again with their QR.
   resetEmployeeAccess,
+
+  /// "Manage employee assignments" (companies, groups, language, access)
+  /// for an employee of one company (company-scoped). Adding an employee to
+  /// another company also needs this permission in that company.
+  manageEmployeeAssignments,
 }

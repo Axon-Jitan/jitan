@@ -20,7 +20,10 @@ enum AuditEventType {
 
   /// HR/Admin "Reset account access": the password was cleared, so the
   /// employee sets up Jitan again with their existing QR.
-  accountAccessReset('employee.access.reset');
+  accountAccessReset('employee.access.reset'),
+
+  /// HR/Admin added the employee to a company (`tblUserCompany`).
+  companyAssigned('employee.company.assigned');
 
   const AuditEventType(this.typeName);
 

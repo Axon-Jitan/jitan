@@ -27,7 +27,11 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
           GoRoute(
             path: AdminRoutes.employees,
             pageBuilder: (context, state) => NoTransitionPage(
-              child: EmployeesScreen(api: services.employeesApi, groupsApi: services.groupsApi),
+              child: EmployeesScreen(
+                api: services.employeesApi,
+                groupsApi: services.groupsApi,
+                assignmentsApi: services.assignmentsApi,
+              ),
             ),
           ),
         ],
