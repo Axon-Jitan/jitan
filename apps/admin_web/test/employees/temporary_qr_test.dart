@@ -108,7 +108,7 @@ void main() {
     expect(find.text('Expires in 06:35  ·  Single-use  ·  Not stored in MySQL'), findsOneWidget);
   });
 
-  testWidgets('expired: the code is hidden, EXPIRED is shown, Generate new QR replaces it', (tester) async {
+  testWidgets('expired: Figma 207:215 "Temporary QR expired"; Generate new QR replaces it', (tester) async {
     var now = _now;
     await openAlone(tester, TemporaryQrPurpose.onboarding, () => now);
     employees.qrSucceeds('first', expiresAt: _now.add(const Duration(minutes: 10)));
@@ -117,9 +117,11 @@ void main() {
     now = _now.add(const Duration(minutes: 10));
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.byType(JitanQrCode), findsNothing);
-    expect(find.text('EXPIRED'), findsNWidgets(2));
-    expect(find.text('Expired  ·  Single-use  ·  Not stored in MySQL'), findsOneWidget);
+    expect(find.byType(JitanQrCode), findsNothing, reason: 'an expired code is no longer drawn');
+    expect(find.text('Temporary QR expired'), findsOneWidget);
+    expect(find.text('This code is no longer valid. Generate a new one to continue.'), findsOneWidget);
+    expect(find.text('Expired or already used'), findsOneWidget);
+    expect(find.text('No password or account changes were made by this screen.'), findsOneWidget);
 
     await tester.tap(find.text('Generate new QR'));
     await tester.pump();
@@ -127,6 +129,7 @@ void main() {
     await tester.pump();
     expect(employees.qrRequests, hasLength(2));
     expect(tester.widget<JitanQrCode>(find.byType(JitanQrCode)).data, 'second');
+    expect(find.text('Temporary onboarding QR'), findsOneWidget);
   });
 
   testWidgets('recovery: matches Figma 207:111 with Close and Generate new QR', (tester) async {

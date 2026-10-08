@@ -3,49 +3,13 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
-import '../onboarding/qr_scan_screen.dart';
+import '../onboarding/qr_scanner_view.dart';
 import '../widgets/mobile_widgets.dart';
+import '../widgets/qr_camera_frame.dart';
 import 'auth_controller.dart';
 import 'password_rules.dart';
 
 // Spacing measured from the Figma "Auth / …" frames (390 × 844).
-
-/// Logo, title and subtitle at the top of the auth screens.
-class _AuthHeader extends StatelessWidget {
-  const _AuthHeader({required this.title, required this.text});
-
-  final String title;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      JitanWordmark(style: JitanMobileTextStyles.logo.copyWith(fontSize: 24)),
-      const SizedBox(height: 28),
-      Semantics(header: true, child: Text(title, style: JitanMobileTextStyles.formTitle)),
-      const SizedBox(height: 10),
-      Text(text, style: JitanMobileTextStyles.caption),
-    ],
-  );
-}
-
-class _AuthScaffold extends StatelessWidget {
-  const _AuthScaffold({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: JitanColors.warmWhite,
-    body: SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(OnboardingPage.margin, 0, OnboardingPage.margin, 24),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
-      ),
-    ),
-  );
-}
 
 /// Auth / 01 Sign in.
 class SignInScreen extends StatefulWidget {
@@ -74,9 +38,9 @@ class _SignInScreenState extends State<SignInScreen> {
   void _submit() => widget.controller.signIn(_code.text, _password.text);
 
   @override
-  Widget build(BuildContext context) => _AuthScaffold(
+  Widget build(BuildContext context) => BrandedScaffold(
     children: [
-      _AuthHeader(title: context.t(EmployeeTextKeys.signInTitle), text: context.t(EmployeeTextKeys.signInText)),
+      BrandedHeader(title: context.t(EmployeeTextKeys.signInTitle), text: context.t(EmployeeTextKeys.signInText)),
       const SizedBox(height: 70),
       AutofillGroup(
         child: Column(
@@ -185,9 +149,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   void _submit() => widget.controller.submitForgotPassword(_code.text);
 
   @override
-  Widget build(BuildContext context) => _AuthScaffold(
+  Widget build(BuildContext context) => BrandedScaffold(
     children: [
-      _AuthHeader(title: context.t(EmployeeTextKeys.forgotTitle), text: context.t(EmployeeTextKeys.forgotText)),
+      BrandedHeader(title: context.t(EmployeeTextKeys.forgotTitle), text: context.t(EmployeeTextKeys.forgotText)),
       const SizedBox(height: 88),
       LabeledTextField(
         controller: _code,
@@ -234,42 +198,19 @@ class RecoverWithQrScreen extends StatelessWidget {
       RecoveryRefusal.resetRequired => (EmployeeTextKeys.recoverRefusedTitle, EmployeeTextKeys.recoverRefusedText),
       RecoveryRefusal.qrExpiredOrUsed => (EmployeeTextKeys.recoverExpiredNoteTitle, EmployeeTextKeys.recoverExpiredNoteText),
     };
-    return _AuthScaffold(
+    return BrandedScaffold(
       children: [
         // Auth / 06, 06B (refused) and 06C (QR expired or used).
-        _AuthHeader(
+        BrandedHeader(
           title: context.t(expired ? EmployeeTextKeys.recoverExpiredTitle : EmployeeTextKeys.recoverTitle),
           text: context.t(expired ? EmployeeTextKeys.recoverExpiredText : EmployeeTextKeys.recoverText),
         ),
         const SizedBox(height: 56),
-        AspectRatio(
-          aspectRatio: 1,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: JitanColors.ink, borderRadius: BorderRadius.circular(22)),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  const ColoredBox(color: JitanColors.sidebarItemActive),
-                  if (!controller.busy) scannerView(controller.submitRecoveryQr),
-                  const IgnorePointer(child: _ViewfinderCorners()),
-                  IgnorePointer(
-                    child: Center(
-                      child: controller.busy
-                          ? const CircularProgressIndicator(color: JitanColors.surface)
-                          : Text(
-                              context.t(expired ? EmployeeTextKeys.recoverExpiredScanHint : EmployeeTextKeys.recoverScanHint),
-                              textAlign: TextAlign.center,
-                              style: JitanMobileTextStyles.noteTitle.copyWith(fontSize: 12, color: JitanColors.surface),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        QrCameraFrame(
+          scannerView: scannerView,
+          onDetected: controller.submitRecoveryQr,
+          busy: controller.busy,
+          hint: context.t(expired ? EmployeeTextKeys.recoverExpiredScanHint : EmployeeTextKeys.recoverScanHint),
         ),
         if (refusal == RecoveryRefusal.resetRequired)
           Padding(
@@ -305,49 +246,6 @@ class RecoverWithQrScreen extends StatelessWidget {
   }
 }
 
-/// The four white corner brackets of the recovery scanner (4 × 34 px, 12 px
-/// inside the camera preview).
-class _ViewfinderCorners extends StatelessWidget {
-  const _ViewfinderCorners();
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(12),
-    child: Stack(
-      children: [
-        for (final alignment in [Alignment.topLeft, Alignment.topRight, Alignment.bottomLeft, Alignment.bottomRight])
-          Align(
-            alignment: alignment,
-            child: SizedBox.square(
-              dimension: 34,
-              child: CustomPaint(painter: _CornerPainter(alignment)),
-            ),
-          ),
-      ],
-    ),
-  );
-}
-
-class _CornerPainter extends CustomPainter {
-  const _CornerPainter(this.alignment);
-
-  final Alignment alignment;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = JitanColors.surface;
-    const t = 4.0;
-    final left = alignment.x < 0;
-    final top = alignment.y < 0;
-    canvas
-      ..drawRect(Rect.fromLTWH(0, top ? 0 : size.height - t, size.width, t), paint)
-      ..drawRect(Rect.fromLTWH(left ? 0 : size.width - t, 0, t, size.height), paint);
-  }
-
-  @override
-  bool shouldRepaint(_CornerPainter oldDelegate) => oldDelegate.alignment != alignment;
-}
-
 /// Auth / 07 Set new password after reset. "Set password & sign in" stores
 /// the new password (Argon2id on the server) and signs this device in.
 class SetNewPasswordScreen extends StatefulWidget {
@@ -377,9 +275,9 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
     final problem = widget.controller.passwordProblem;
     final showLabel = context.t(EmployeeTextKeys.passwordShow);
     final hideLabel = context.t(EmployeeTextKeys.passwordHide);
-    return _AuthScaffold(
+    return BrandedScaffold(
       children: [
-        _AuthHeader(title: context.t(EmployeeTextKeys.newPasswordTitle), text: context.t(EmployeeTextKeys.newPasswordText)),
+        BrandedHeader(title: context.t(EmployeeTextKeys.newPasswordTitle), text: context.t(EmployeeTextKeys.newPasswordText)),
         const SizedBox(height: 70),
         AutofillGroup(
           child: Column(

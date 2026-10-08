@@ -112,6 +112,12 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
                   AdminTextKeys.employeeResetAccessEffectQr,
                 ])
                   Text(context.t(key), style: effectStyle),
+                const SizedBox(height: 14),
+                // Figma 207:225: the next step after the reset.
+                Text(
+                  context.t(AdminTextKeys.employeeResetAccessNextStep),
+                  style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 10, color: JitanColors.errorStrong),
+                ),
               ],
             ),
           ),

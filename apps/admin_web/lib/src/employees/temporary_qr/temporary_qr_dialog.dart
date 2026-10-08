@@ -21,14 +21,14 @@ Future<void> showTemporaryQrDialog(
   builder: (_) => TemporaryQrDialog(employeesApi: employeesApi, employee: employee, purpose: purpose, clock: clock),
 );
 
-/// Figma "Temporary onboarding QR" (`153:1214`, expired `207:123`) and
-/// "Temporary password recovery QR" (`207:111`). HR and Admin use the same
-/// modal.
+/// Figma "Temporary onboarding QR" (`153:1214`), "Temporary password
+/// recovery QR" (`207:111`) and, once the countdown ends, "Temporary QR
+/// expired" (`207:215`). HR and Admin use the same modal.
 ///
 /// The QR is generated on demand, valid 10 minutes, single use; "Generate
 /// new QR" replaces it (the previous one stops working). It is never stored
-/// in MySQL and never shown as text. When the countdown ends the code is
-/// hidden and the status turns to "EXPIRED".
+/// in MySQL and never shown as text. When the countdown ends the code is no
+/// longer drawn: the modal shows the expired dialog instead.
 class TemporaryQrDialog extends StatefulWidget {
   const TemporaryQrDialog({
     super.key,
@@ -76,12 +76,10 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
       builder: (context, _) {
         final qr = _controller.qr;
         final failure = _controller.failure;
-        final expired = _controller.isExpired;
-        final expiry = expired
-            ? context.t(AdminTextKeys.temporaryQrExpiredShort)
-            : context.t(AdminTextKeys.temporaryQrExpiresIn, args: {'time': _clockText(_controller.remaining)});
+        final expiry = context.t(AdminTextKeys.temporaryQrExpiresIn, args: {'time': _clockText(_controller.remaining)});
         final generateLabel = context.t(AdminTextKeys.temporaryQrGenerateNew);
         final onGenerate = _controller.generating ? null : _controller.generate;
+        if (_controller.isExpired) return _expired(context, generateLabel, onGenerate);
         // Figma: red primary in the recovery dialog, warm grey in the onboarding modal.
         final generateNew = _recovery
             ? JitanPrimaryButton(label: generateLabel, busy: _controller.generating, onPressed: onGenerate)
@@ -98,10 +96,7 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
               (_, final failure?) => _error(context, failure),
               (final qr?, _) => Column(
                 children: [
-                  if (expired)
-                    _ExpiredCode(size: _recovery ? 270 : 320)
-                  else
-                    JitanQrCode(
+                  JitanQrCode(
                       data: qr.qrCode,
                       size: _recovery ? 270 : 320,
                       semanticLabel: context.t(AdminTextKeys.temporaryQrSemantics, args: {'name': fullName}),
@@ -117,13 +112,10 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
                     )
                   else ...[
                     JitanStatusPill(
-                      label: expired
-                          ? context.t(AdminTextKeys.temporaryQrExpiredStatus)
-                          : context.t(
-                              AdminTextKeys.temporaryQrValidStatus,
-                              args: {'minutes': '${(_controller.lifetime ?? Duration.zero).inMinutes.clamp(1, 60)}'},
-                            ),
-                      warning: expired,
+                      label: context.t(
+                        AdminTextKeys.temporaryQrValidStatus,
+                        args: {'minutes': '${(_controller.lifetime ?? Duration.zero).inMinutes.clamp(1, 60)}'},
+                      ),
                     ),
                     const SizedBox(height: 14),
                     Text(
@@ -178,6 +170,37 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
     );
   }
 
+  /// Figma "Temporary QR expired" (`207:215`).
+  Widget _expired(BuildContext context, String generateLabel, VoidCallback? onGenerate) => JitanModal(
+    width: 620,
+    title: context.t(AdminTextKeys.temporaryQrExpiredTitle),
+    subtitle: context.t(AdminTextKeys.temporaryQrExpiredText),
+    body: Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 120),
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+      decoration: BoxDecoration(color: JitanColors.errorSurface, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.t(AdminTextKeys.temporaryQrExpiredStatusTitle),
+            style: JitanTextStyles.stateTitle.copyWith(fontSize: 15, color: JitanColors.errorStrong),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            context.t(AdminTextKeys.temporaryQrExpiredStatusText),
+            style: JitanTextStyles.stateMessage.copyWith(fontSize: 11, color: JitanColors.errorStrong),
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: () => Navigator.of(context).pop()),
+      JitanPrimaryButton(label: generateLabel, busy: _controller.generating, onPressed: onGenerate),
+    ],
+  );
+
   Widget _error(BuildContext context, ApiClientException failure) {
     final keys = failureTextKeysFor(failure);
     return SizedBox(
@@ -190,23 +213,4 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
       ),
     );
   }
-}
-
-/// Where the code was, once it expired: the code itself is no longer drawn.
-class _ExpiredCode extends StatelessWidget {
-  const _ExpiredCode({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(16)),
-    alignment: Alignment.center,
-    child: Text(
-      context.t(AdminTextKeys.temporaryQrExpiredStatus),
-      style: JitanTextStyles.stateTitle.copyWith(fontSize: 16, color: JitanColors.warning),
-    ),
-  );
 }

@@ -4,7 +4,7 @@ import 'package:jitan_core/jitan_core.dart';
 import '../device/device_settings.dart';
 import '../device/permissions_gateway.dart';
 import '../device/session_manager.dart';
-import '../onboarding/qr_scan_screen.dart';
+import '../onboarding/qr_scanner_view.dart';
 
 /// Everything the Employee app talks to; replaced by fakes in tests.
 class EmployeeServices {
@@ -18,7 +18,6 @@ class EmployeeServices {
     required this.session,
     required this.settings,
     required this.permissions,
-    this.scanQr = scanQrWithCamera,
     this.qrScannerView = cameraQrScannerView,
   });
 
@@ -31,8 +30,6 @@ class EmployeeServices {
   final SessionManager session;
   final DeviceSettings settings;
   final PermissionsGateway permissions;
-  final QrScanner scanQr;
-
-  /// Embedded camera for "Recover with QR".
+  /// Embedded camera of "Scan your onboarding QR" and "Recover account".
   final QrScannerView qrScannerView;
 }

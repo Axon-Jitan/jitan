@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../onboarding/qr_scan_screen.dart';
+import '../onboarding/qr_scanner_view.dart';
 import 'auth_controller.dart';
 import 'auth_screens.dart';
 

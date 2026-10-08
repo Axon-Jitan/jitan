@@ -172,6 +172,7 @@ void main() {
         '• clear the current password hash',
         '• allow recovery with a temporary recovery QR',
         '• keep the employee’s Terminal QR unchanged',
+        'After reset: generate a temporary recovery QR for the employee. Do not use the Terminal QR.',
       ]) {
         expect(find.text(effect), findsOneWidget);
       }

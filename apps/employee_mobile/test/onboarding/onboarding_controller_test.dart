@@ -28,9 +28,13 @@ void main() {
 
   /// Scan → confirm → method → permissions → language: at the password step.
   Future<void> toPassword({RegistrationMethod method = RegistrationMethod.automatic}) async {
-    c.getStarted();
+    c
+      ..getStarted()
+      ..openScanner();
     await c.submitQr(testQr);
-    c.confirmAccount();
+    c
+      ..continueToAccount()
+      ..confirmAccount();
     c.chooseMethod(method);
     c.confirmMethod();
     await c.requestPermissions();
@@ -45,10 +49,15 @@ void main() {
 
   group('happy path', () {
     test('ends signed in on this device: no separate sign-in', () async {
-      c.getStarted();
+      c
+        ..getStarted()
+        ..openScanner();
+      expect(c.step, OnboardingStep.scan, reason: '02B: the camera scanner');
       await c.submitQr(testQr);
-      expect(c.step, OnboardingStep.confirm);
+      expect(c.step, OnboardingStep.verified, reason: '03B: QR verified');
       expect(c.account?.firstName, 'Disan');
+      c.continueToAccount();
+      expect(c.step, OnboardingStep.confirm);
 
       c.confirmAccount();
       expect(c.step, OnboardingStep.method);
@@ -102,7 +111,9 @@ void main() {
     test('languages that fail to load leave English available', () async {
       h.server.dropNext.add('/languages');
       await c.submitQr(testQr);
-      c.confirmAccount();
+      c
+        ..continueToAccount()
+        ..confirmAccount();
       c.confirmMethod();
       await c.requestPermissions();
       await pumpEventQueue();
@@ -136,12 +147,21 @@ void main() {
   });
 
   group('scan errors', () {
-    test('unknown QR → "QR not recognised"; retry goes back to scanning', () async {
+    test('unknown QR → "QR not recognised"; retry goes back to the scanner', () async {
       await c.submitQr('not-a-jitan-qr');
       expect((c.step, c.problem), (OnboardingStep.error, OnboardingProblem.invalidQr));
 
       await c.retry();
-      expect(c.step, OnboardingStep.join);
+      expect(c.step, OnboardingStep.scan);
+    });
+
+    test('expired or used QR → "QR expired or used"; recovery QR → "Not an onboarding QR"', () async {
+      h.server.expiredQrs.add(testQr);
+      await c.submitQr(testQr);
+      expect(c.problem, OnboardingProblem.qrExpired);
+
+      await c.submitQr(recoveryQr);
+      expect(c.problem, OnboardingProblem.wrongQr);
     });
 
     test('already onboarded QR → "Account already activated" (never restarts onboarding)', () async {
@@ -162,7 +182,7 @@ void main() {
       expect(c.problem, OnboardingProblem.serverUnavailable);
 
       await c.retry();
-      expect(c.step, OnboardingStep.confirm);
+      expect(c.step, OnboardingStep.verified);
     });
   });
 

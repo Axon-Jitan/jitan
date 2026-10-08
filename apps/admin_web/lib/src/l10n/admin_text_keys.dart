@@ -101,14 +101,12 @@ abstract final class AdminTextKeys {
 
   /// Argument: `{minutes}`.
   static const temporaryQrValidStatus = 'employee.temporaryQr.status.valid';
-  static const temporaryQrExpiredStatus = 'employee.temporaryQr.status.expired';
   static const temporaryQrOnboardingInstruction = 'employee.temporaryQr.onboarding.instruction';
 
   /// Argument: `{time}` (mm:ss).
   static const temporaryQrExpiresIn = 'employee.temporaryQr.expiresIn';
-  static const temporaryQrExpiredShort = 'employee.temporaryQr.expired';
 
-  /// Argument: `{expiry}` ([temporaryQrExpiresIn] or [temporaryQrExpiredShort]).
+  /// Argument: `{expiry}` ([temporaryQrExpiresIn]).
   static const temporaryQrOnboardingFacts = 'employee.temporaryQr.onboarding.facts';
 
   /// Argument: `{expiry}`.
@@ -117,6 +115,10 @@ abstract final class AdminTextKeys {
   static const temporaryQrGenerateNew = 'employee.temporaryQr.generateNew';
   static const temporaryQrReplacementNote = 'employee.temporaryQr.replacementNote';
   static const temporaryQrClose = 'employee.temporaryQr.close';
+  static const temporaryQrExpiredTitle = 'employee.temporaryQr.expired.title';
+  static const temporaryQrExpiredText = 'employee.temporaryQr.expired.text';
+  static const temporaryQrExpiredStatusTitle = 'employee.temporaryQr.expired.status.title';
+  static const temporaryQrExpiredStatusText = 'employee.temporaryQr.expired.status.text';
 
   /// Argument: `{name}`.
   static const temporaryQrSemantics = 'employee.temporaryQr.semantics';
@@ -130,6 +132,7 @@ abstract final class AdminTextKeys {
   static const employeeResetAccessEffectPassword = 'employee.resetAccess.effects.password';
   static const employeeResetAccessEffectRecovery = 'employee.resetAccess.effects.recovery';
   static const employeeResetAccessEffectQr = 'employee.resetAccess.effects.qr';
+  static const employeeResetAccessNextStep = 'employee.resetAccess.nextStep';
   static const employeeResetAccessConfirm = 'employee.resetAccess.confirm';
 
   /// Argument: `{name}`.

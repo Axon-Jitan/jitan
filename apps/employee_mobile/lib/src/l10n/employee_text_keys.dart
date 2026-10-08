@@ -20,6 +20,21 @@ abstract final class EmployeeTextKeys {
 
   static const scanTitle = 'onboarding.scan.title';
   static const scanCameraUnavailable = 'onboarding.scan.cameraUnavailable';
+  static const scanText = 'onboarding.scan.text';
+  static const scanFrameHint = 'onboarding.scan.frameHint';
+  static const scanGuidanceTitle = 'onboarding.scan.guidance.title';
+  static const scanGuidanceText = 'onboarding.scan.guidance.text';
+
+  // 03B QR verified and connected
+  static const verifiedEyebrow = 'onboarding.verified.eyebrow';
+  static const verifiedTitle = 'onboarding.verified.title';
+  static const verifiedText = 'onboarding.verified.text';
+  static const verifiedPanelTitle = 'onboarding.verified.panel.title';
+  static const verifiedPanelText = 'onboarding.verified.panel.text';
+  static const verifiedPanelNext = 'onboarding.verified.panel.next';
+  static const verifiedNoteTitle = 'onboarding.verified.note.title';
+  static const verifiedNoteText = 'onboarding.verified.note.text';
+  static const verifiedAction = 'onboarding.verified.action';
 
   static const confirmTitle = 'onboarding.confirm.title';
   static const confirmAction = 'onboarding.confirm.action';

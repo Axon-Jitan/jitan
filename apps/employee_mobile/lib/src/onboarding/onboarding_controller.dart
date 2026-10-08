@@ -16,7 +16,23 @@ export '../auth/password_rules.dart' show PasswordProblem;
 final _log = Logger('onboarding');
 
 /// The screens of onboarding, in order (Figma `01 — Employee App`).
-enum OnboardingStep { welcome, join, confirm, method, permissions, language, password, ready, error }
+enum OnboardingStep {
+  welcome,
+  join,
+
+  /// 02B: the camera scanner for the temporary onboarding QR.
+  scan,
+
+  /// 03B: "QR verified!" once the server accepted the QR.
+  verified,
+  confirm,
+  method,
+  permissions,
+  language,
+  password,
+  ready,
+  error,
+}
 
 /// Which Figma "Onboarding Error" screen to show.
 enum OnboardingProblem {
@@ -49,7 +65,8 @@ enum OnboardingProblem {
   wrongQr,
 }
 
-/// Drives onboarding: scan → confirm → registration method → permissions →
+/// Drives onboarding: join → scan (02B) → QR verified (03B) → confirm →
+/// registration method → permissions →
 /// language (Figma 06B) → password → ready (the session is created with the
 /// password, so no sign-in follows).
 ///
@@ -119,13 +136,20 @@ class OnboardingController extends ChangeNotifier {
 
   void getStarted() => _go(OnboardingStep.join);
 
+  /// "Scan onboarding QR" on Join: the camera scanner (02B).
+  void openScanner() => _go(OnboardingStep.scan);
+
+  /// "Continue to account" on 03B.
+  void continueToAccount() => _go(OnboardingStep.confirm);
+
   /// The previous screen, or `false` when there is none (leave the app).
   bool back() {
     if (_busy) return true;
     final previous = switch (_step) {
       OnboardingStep.welcome => null,
       OnboardingStep.join => OnboardingStep.welcome,
-      OnboardingStep.confirm => OnboardingStep.join,
+      OnboardingStep.scan => OnboardingStep.join,
+      OnboardingStep.verified || OnboardingStep.confirm => OnboardingStep.join,
       OnboardingStep.method => OnboardingStep.confirm,
       OnboardingStep.permissions => OnboardingStep.method,
       OnboardingStep.language => OnboardingStep.permissions,
@@ -142,12 +166,13 @@ class OnboardingController extends ChangeNotifier {
 
   // ── 02 Join: scan ──────────────────────────────────────────────────────
 
-  /// Checks a scanned QR with the server and shows the account to confirm.
+  /// Checks a scanned QR with the server (the scanner shows the progress) and
+  /// confirms it was verified (03B); the account follows on "Continue".
   Future<void> submitQr(String qrCode) async {
     _qrCode = qrCode;
     await _run(() async {
       _account = await _onboardingApi.start(qrCode);
-      _go(OnboardingStep.confirm);
+      _go(OnboardingStep.verified);
     }, onError: (e) => _show(_problemForStart(e)));
   }
 
@@ -240,10 +265,13 @@ class OnboardingController extends ChangeNotifier {
       case OnboardingProblem.networkFailure || OnboardingProblem.sessionRecovery when _pendingPassword != null:
         await _complete();
       case OnboardingProblem.serverUnavailable when _qrCode != null:
-        await submitQr(_qrCode!);
+        final qr = _qrCode!;
+        _go(OnboardingStep.scan);
+        await submitQr(qr);
       default:
+        // "Try again": scan a (new) QR.
         _forgetAccount();
-        _go(OnboardingStep.join);
+        _go(OnboardingStep.scan);
     }
   }
 

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'onboarding_controller.dart';
 import 'onboarding_error_screen.dart';
+import 'onboarding_qr_screens.dart';
 import 'onboarding_screens.dart';
-import 'qr_scan_screen.dart';
+import 'qr_scanner_view.dart';
 
 /// Shows the screen for the controller's current step. The system back
 /// gesture goes to the previous step; on the first screen it leaves the app.
@@ -11,24 +12,20 @@ class OnboardingFlow extends StatelessWidget {
   const OnboardingFlow({
     super.key,
     required this.controller,
-    required this.scanQr,
+    required this.qrScannerView,
     required this.onFinished,
     required this.onSignIn,
   });
 
   final OnboardingController controller;
-  final QrScanner scanQr;
+  /// The embedded camera of 02B.
+  final QrScannerView qrScannerView;
 
   /// Already activated: open sign-in (Welcome link, error screens 02 and 04).
   final VoidCallback onSignIn;
 
   /// "Start Jitan" on the Ready screen: the device is already signed in.
   final VoidCallback onFinished;
-
-  Future<void> _scan(BuildContext context) async {
-    final value = await scanQr(context);
-    if (value != null) await controller.submitQr(value);
-  }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -46,7 +43,9 @@ class OnboardingFlow extends StatelessWidget {
             key: ValueKey(controller.step),
             child: switch (controller.step) {
               OnboardingStep.welcome => WelcomeScreen(controller: controller, onSignIn: onSignIn),
-              OnboardingStep.join => JoinScreen(controller: controller, onScan: () => _scan(context)),
+              OnboardingStep.join => JoinScreen(controller: controller, onScan: controller.openScanner),
+              OnboardingStep.scan => ScanScreen(controller: controller, scannerView: qrScannerView),
+              OnboardingStep.verified => QrVerifiedScreen(controller: controller),
               OnboardingStep.confirm => ConfirmScreen(controller: controller),
               OnboardingStep.language => LanguageScreen(controller: controller),
               OnboardingStep.method => MethodScreen(controller: controller),

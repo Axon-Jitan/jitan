@@ -293,7 +293,6 @@ class TestHarness {
       session: session,
       settings: DeviceSettings(store),
       permissions: permissions,
-      scanQr: (_) async => scannedValue,
       // The embedded camera of "Recover with QR": a button that "reads"
       // [scannedValue].
       qrScannerView: (onDetected) => Center(

@@ -164,7 +164,7 @@ class _EmployeeAppState extends State<EmployeeApp> {
           _Phase.restoring => const Scaffold(backgroundColor: JitanColors.warmWhite),
           _Phase.onboarding => OnboardingFlow(
             controller: _onboarding!,
-            scanQr: _services.scanQr,
+            qrScannerView: _services.qrScannerView,
             onFinished: _finishOnboarding,
             onSignIn: _startSignIn,
           ),

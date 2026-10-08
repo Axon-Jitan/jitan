@@ -69,7 +69,6 @@ void main() {
       session: session,
       settings: const DeviceSettings(store),
       permissions: _GrantAll(),
-      scanQr: (_) async => scanned,
       qrScannerView: (onDetected) => Center(
         child: TextButton(onPressed: () => onDetected(scanned), child: const Text('camera reads QR')),
       ),
@@ -126,12 +125,15 @@ void main() {
     await tapText(tester, 'Get started');
     scanned = _disanTerminalQr;
     await tapText(tester, 'Scan onboarding QR');
+    await tapText(tester, 'camera reads QR');
     await waitFor(tester, find.text('QR not recognised'));
     await tapText(tester, 'Try again');
 
     // ── Onboarding: Disan, temporary QR to Home, no second sign-in ─────────
     scanned = await temporaryQr(2, 'onboarding');
-    await tapText(tester, 'Scan onboarding QR');
+    await tapText(tester, 'camera reads QR');
+    await waitFor(tester, find.text('QR verified!'));
+    await tapText(tester, 'Continue to account');
     await waitFor(tester, find.text('Disan Ssebowa'));
     await tapText(tester, 'Yes, this is me');
     await tapText(tester, 'Continue'); // registration method (automatic)

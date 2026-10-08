@@ -184,19 +184,25 @@ add one (e.g. reusing the 06B list) so the app can expose it.
 ## DESIGN-CLARIFY-TEMPORARY-QR: Gaps after the temporary-QR decision (2026-10-08)
 Status: `OPEN` · small, does not block
 
-1. **Reset account access** (`196:136`, `207:97`) still says "scan their existing QR" and
-   "allow account recovery with the existing QR". The app says: "The employee will need a
-   temporary recovery QR to set a new password." and "allow recovery with a temporary
-   recovery QR". Please update the frames.
-2. **Temporary QR expired** (HR, `207:123`) shows the same modal as a valid QR. When the
-   countdown ends the app shows the status "EXPIRED" in place of "VALID FOR 10 MIN" and
-   hides the code; "Generate new QR" replaces it.
-3. **Onboarding with an expired, used or wrong-purpose QR** has no frame; the app uses the
-   Onboarding Error layout with copy modelled on Auth / 06C.
-4. **Which QR for an employee who has not set a password:** the database cannot tell a
-   new employee from one whose access was reset. Employee details offers the onboarding
-   QR; the recovery QR is offered right after Reset account access (and can be
-   regenerated there).
+Implemented from Figma: Temporary onboarding QR (`153:1214`), Temporary password recovery
+QR (`207:111`), Temporary QR expired (`207:215`, shown when the countdown ends), the reset
+next-step line (`207:225`), Onboarding / 02B Scan temporary QR (`211:2`, with the
+verification progress in the camera frame), 03B QR verified and connected (`212:2`),
+Onboarding Error / 01 Invalid QR ("This isn't a valid Jitan temporary QR."), Auth / 06,
+06B, 06C, 07.
+
+Still open:
+
+1. **Reset account access** (`196:136`, `207:97`): the subtitle and the third bullet still
+   say "scan their existing QR" / "allow account recovery with the existing QR". Per the
+   decision that recovery never uses the permanent QR, the app says "The employee will need
+   a temporary recovery QR to set a new password." and "allow recovery with a temporary
+   recovery QR" (the frame's own red line already says so). Please update the two texts.
+2. **Onboarding with an expired/used QR or a recovery QR** has no own frame; the app uses
+   the Onboarding Error layout (as "01 Invalid QR") with copy taken from Auth / 06C.
+3. **Which QR for an employee who has not set a password**: see PRODUCT recovery rules in
+   ERD_GAPS (CLARIFY-13): Employee details offers the onboarding QR only to employees who
+   never activated; after Reset account access only the recovery QR is offered.
 
 ## PRODUCT-CLARIFY-LAST-COMPANY: Removing an employee's last company
 Status: `SETTLED BY DESIGN` (2026-10-08)
