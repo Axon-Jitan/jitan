@@ -57,8 +57,8 @@ class EmployeeAssignmentRoutes {
 
   Future<Response> _credentialGroups(Request request, String companyId, String userId) async {
     final id = int.parse(companyId);
-    await _authorizer.require(request, Permission.manageEmployeeAccess, companyId: id);
-    return jsonResponse((await _assignments.credentialGroups(id, int.parse(userId))).toJson());
+    final identity = await _authorizer.require(request, Permission.manageEmployeeAccess, companyId: id);
+    return jsonResponse((await _assignments.credentialGroups(identity.userId, id, int.parse(userId))).toJson());
   }
 
   Future<Response> _addCredentialGroups(Request request, String companyId, String userId) async {

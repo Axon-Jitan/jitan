@@ -125,6 +125,18 @@ Status: `TODO` · waiting for dev database credentials · **does not block devel
 
 ---
 
+## DB-DRIVER-01: mysql_client_plus drops the connection on a SELECT error
+Status: `OPEN` · worked around
+
+mysql_client_plus 0.1.3 cannot parse an error packet sent in answer to a `SELECT` ("Wrong
+first byte 0xff, while decoding getVariableEncInt"): a locking read that MySQL rejects
+(e.g. deadlock victim) kills the connection instead of raising error 1213. Errors on
+`INSERT`/`UPDATE` are parsed fine. Workaround in place: every assignment transaction takes
+the employee's `tblUser` row lock as its **first** statement (a transaction with no locks
+cannot be a deadlock victim) and then uses plain reads; no locking reads with joins. Fix
+or replace the driver before production (also see the transaction-pool leak worked
+around in `Database.transaction`).
+
 ## Employee management
 
 Order agreed 2026-10-07. Employee Onboarding follows immediately after.
@@ -137,7 +149,7 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-04 | Company assignment (`tblUserCompany`): Employee details → Manage assignments → Companies (Figma `201:472`). **One company per employee** (MVP decision 2026-10-08): other companies are not assignable and a second one is refused server-side (`409 employee_company_limit`, rechecked under the user-row lock with a locking read, so concurrent requests cannot bypass it). Existing memberships are kept and shown; transfers wait for CLARIFY-09. Adds are audited (`employee.company.assigned`) and need `manageEmployeeAssignments` in both companies | `DONE` |
 | EMP-05 | Group assignment (`tblUserGroup`): Manage assignments → Groups (Figma `201:572`). Groups are universal (IT, 2026-10-08): all active, non-MFD groups, no company selector. Adds only (CLARIFY-09), duplicates skipped, audited (`employee.group.assigned`); permission `manageEmployeeAssignments` in the employee's company. Groups grant no company access | `DONE` |
 | EMP-06 | Preferred language (`tblUserLanguage`): Manage assignments → Language (Figma `201:673`) and `PUT /me/language` for the employee. One language per user, updated in place under a user-row lock (concurrent changes never leave two rows); generic audit `employee.language.changed` (GAP-12 accepted). Employee app screen awaits design (DESIGN-CLARIFY-PROFILE-LANGUAGE) | `DONE` |
-| EMP-07 | Credential-group assignment (`tblUserCredGroup`): Manage assignments → Access (Figma `201:778`). Names and levels from `tblCredGroup`, no role names in code. Adds only (CLARIFY-09), duplicates skipped, audited (`employee.credential_group.assigned`). Permission `manageEmployeeAccess` (separate from assignments) in **every** company of the employee, because a credential group is user-wide. Who may grant which group is CLARIFY-10 | `DONE` |
+| EMP-07 | Credential-group assignment (`tblUserCredGroup`): Manage assignments → Access (Figma `201:778`). Names and levels from `tblCredGroup`, no role names in code. Adds only (CLARIFY-09), duplicates skipped, audited (`employee.credential_group.assigned`). Permission `manageEmployeeAccess` in **every** company of the employee (a credential group is user-wide). **No privilege escalation**: until IT defines the hierarchy (CLARIFY-10), an actor may grant only credential groups they hold themselves; anything else is 403 and not offered in the picker. This holds even with the dev evaluator, so nobody can raise their own access | `DONE` |
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text | `DONE` |
 | EMP-09 | Bulk import (Figma "Import CSV / Excel", roadmap §8): upload → preview → validate → import | `TODO` |
 

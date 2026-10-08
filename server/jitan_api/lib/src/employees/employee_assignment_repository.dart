@@ -120,17 +120,23 @@ class EmployeeAssignmentRepository {
         credGroupId,
       );
 
+  /// The active, non-MFD credential groups [userId] holds.
+  Future<Set<int>> heldCredentialGroupIds(SqlExecutor executor, int userId) async {
+    final rows = await executor.query(
+      'SELECT cg.credGroupID FROM tblUserCredGroup ucg JOIN tblCredGroup cg ON cg.credGroupID = ucg.credGroupID '
+      'WHERE ucg.userID = :userId AND cg.credGroupActive = 1 AND cg.credGroupMFD = 0',
+      {'userId': userId},
+    );
+    return {for (final row in rows) row.readInt('credGroupID')};
+  }
+
   /// Every non-MFD company [userId] belongs to (active or not): the
   /// employee's current company (one in the MVP), and where a user-wide
   /// credential group takes effect.
-  ///
-  /// With [forUpdate] (inside a transaction) this is a locking read that
-  /// sees the latest committed memberships, not an earlier snapshot.
-  Future<List<int>> memberCompanyIds(SqlExecutor executor, int userId, {bool forUpdate = false}) async {
+  Future<List<int>> memberCompanyIds(SqlExecutor executor, int userId) async {
     final rows = await executor.query(
       'SELECT c.companyID FROM tblUserCompany uc JOIN tblCompany c ON c.companyID = uc.companyID '
-      'WHERE uc.userID = :userId AND c.companyMFD = 0 ORDER BY c.companyID'
-      '${forUpdate ? ' FOR UPDATE' : ''}',
+      'WHERE uc.userID = :userId AND c.companyMFD = 0 ORDER BY c.companyID',
       {'userId': userId},
     );
     return [for (final row in rows) row.readInt('companyID')];

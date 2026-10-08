@@ -335,9 +335,11 @@ Raised by EMP-07 (2026-10-08), for the production evaluator:
 - `tblUserCredGroup` has no company: a credential group applies in **every** company the
   user belongs to. Jitan therefore requires `manageEmployeeAccess` in each of the
   employee's companies before adding one. Is a user-wide role the intended model?
-- May an actor grant a credential group above their own `credGroupLevel` (e.g. HR
-  granting Admin)? Jitan does not decide this by role name; the production evaluator
-  must, once IT confirms the rule.
+- Which credential groups may an actor grant (e.g. may HR grant Admin)? Is
+  `credGroupLevel` a hierarchy, and in which direction? **Interim rule (decision
+  2026-10-08, no hierarchy invented):** an actor may grant only credential groups they
+  hold themselves, so nobody can give more access than they have or raise their own.
+  Every other grant is refused (403) until IT defines the rules.
 
 ## CLARIFY-12: Personal QR value (`tblUser.userQRcode`) · `OPEN` · IT CLARIFICATION, does not block development
 `userQRcode` is unique and is filled when an employee is created (EMP-02). Jitan

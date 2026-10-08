@@ -68,8 +68,8 @@ class EmployeeAssignmentService {
   /// non-MFD company (validation error on `ids` otherwise). Companies the
   /// employee already belongs to are skipped, never duplicated. A new
   /// company is refused (409 `employee_company_limit`) while the employee
-  /// belongs to another: checked first, then again under the user-row lock
-  /// with a locking read, so concurrent requests cannot add a second one.
+  /// belongs to another: checked first, then again after taking the
+  /// user-row lock, so concurrent requests cannot add a second one.
   ///
   /// [mayManage] answers whether the actor may manage employees of a target
   /// company: adding someone to a company needs authority there too, not
@@ -98,9 +98,9 @@ class EmployeeAssignmentService {
     }
 
     await _addTransaction((tx) async {
-      if (!await _employees.lockUser(tx, userId)) throw ApiException.notFound('Employee $userId does not exist.');
+      await _lockEmployee(tx, userId);
       await _requireMember(tx, companyId, userId);
-      _requireNoOtherCompany(toAdd, await _assignments.memberCompanyIds(tx, userId, forUpdate: true));
+      _requireNoOtherCompany(toAdd, await _assignments.memberCompanyIds(tx, userId));
       for (final target in toAdd) {
         final userCompanyId = await _assignments.addCompany(tx, userId, target);
         if (userCompanyId == null) continue; // added meanwhile: nothing to do
@@ -157,6 +157,7 @@ class EmployeeAssignmentService {
       }
     }
     await _addTransaction((tx) async {
+      await _lockEmployee(tx, userId);
       await _requireMember(tx, companyId, userId);
       for (final id in ids.where((id) => !options[id]!.isAssigned)) {
         final userGroupId = await _assignments.addGroup(tx, userId, id);
@@ -202,9 +203,17 @@ class EmployeeAssignmentService {
 
   // ── EMP-07 Access (credential groups) ──────────────────────────────────
 
-  Future<AssignmentOptions> credentialGroups(int companyId, int userId) async {
+  /// Credential groups, each marked assignable only when [actorUserId] may
+  /// grant it (see [addCredentialGroups]).
+  Future<AssignmentOptions> credentialGroups(int actorUserId, int companyId, int userId) async {
     await _requireMember(_executor, companyId, userId);
-    return AssignmentOptions(options: await _assignments.credentialGroupOptions(_executor, userId));
+    final held = await _assignments.heldCredentialGroupIds(_executor, actorUserId);
+    return AssignmentOptions(
+      options: [
+        for (final o in await _assignments.credentialGroupOptions(_executor, userId))
+          held.contains(o.id) ? o : o.withAssignable(false),
+      ],
+    );
   }
 
   /// Adds the active, non-MFD credential groups in [request]; already
@@ -214,6 +223,13 @@ class EmployeeAssignmentService {
   /// it takes effect in every company the employee belongs to. [mayManage]
   /// is therefore asked for each of them, not only the company in the path:
   /// an HR user of one company cannot change someone's access elsewhere.
+  ///
+  /// **No privilege escalation.** IT has not defined a hierarchy between
+  /// credential groups (CLARIFY-10), and Jitan does not invent one (not from
+  /// names, not from `credGroupLevel`). The only grant known to be safe is a
+  /// group the actor holds themselves: the employee then gets nothing the
+  /// actor lacks. Any other grant is refused (403) until IT defines the
+  /// rules. This also stops anyone from raising their own access.
   Future<AssignmentOptions> addCredentialGroups(
     int actorUserId,
     int companyId,
@@ -231,12 +247,15 @@ class EmployeeAssignmentService {
       }
     }
     final toAdd = [for (final id in ids) if (!options[id]!.isAssigned) id];
-    if (toAdd.isEmpty) return credentialGroups(companyId, userId);
+    if (toAdd.isEmpty) return credentialGroups(actorUserId, companyId, userId);
+    _requireHeldByActor(toAdd, await _assignments.heldCredentialGroupIds(_executor, actorUserId));
     for (final member in await _assignments.memberCompanyIds(_executor, userId)) {
       await mayManage(member);
     }
 
     await _addTransaction((tx) async {
+      await _lockEmployee(tx, userId);
+      _requireHeldByActor(toAdd, await _assignments.heldCredentialGroupIds(tx, actorUserId));
       await _requireMember(tx, companyId, userId);
       for (final id in toAdd) {
         final userCredGroupId = await _assignments.addCredentialGroup(tx, userId, id);
@@ -255,10 +274,30 @@ class EmployeeAssignmentService {
         );
       }
     });
-    return credentialGroups(companyId, userId);
+    return credentialGroups(actorUserId, companyId, userId);
+  }
+
+  static void _requireHeldByActor(List<int> toAdd, Set<int> held) {
+    if (!held.containsAll(toAdd)) {
+      throw const ApiException.forbidden(
+        'You can grant only credential groups you hold yourself until the permission rules are defined (CLARIFY-10).',
+      );
+    }
   }
 
   // ── Shared ─────────────────────────────────────────────────────────────
+
+  /// The first statement of every assignment transaction: locks the
+  /// employee's `tblUser` row, so changes to one employee run one after the
+  /// other. Taken first, while the transaction holds no other lock, it cannot
+  /// be part of a deadlock; and the plain reads that follow see the data as
+  /// of after the wait (MySQL REPEATABLE READ takes the snapshot at the
+  /// first plain read). Locking reads with joins are avoided on purpose:
+  /// mysql_client_plus 0.1.3 drops the connection when a SELECT is answered
+  /// with an error such as a deadlock (DB-DRIVER-01).
+  Future<void> _lockEmployee(SqlExecutor tx, int userId) async {
+    if (!await _employees.lockUser(tx, userId)) throw ApiException.notFound('Employee $userId does not exist.');
+  }
 
   /// Runs an add transaction, retrying it when MySQL rolls it back as a
   /// deadlock victim (two concurrent adds of the same pair lock each other's

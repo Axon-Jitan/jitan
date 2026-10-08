@@ -285,9 +285,16 @@ class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
     return userCredentialGroups[(userId, credGroupId)] = _nextId++;
   }
 
+  /// Active credential groups a user holds: their [userCredentialGroups].
+  @override
+  Future<Set<int>> heldCredentialGroupIds(SqlExecutor executor, int userId) async => {
+    for (final (u, g) in userCredentialGroups.keys)
+      if (u == userId && (credentialGroups[g]?.active ?? false)) g,
+  };
+
   /// Companies of a user: the [userCompanies] pairs.
   @override
-  Future<List<int>> memberCompanyIds(SqlExecutor executor, int userId, {bool forUpdate = false}) async =>
+  Future<List<int>> memberCompanyIds(SqlExecutor executor, int userId) async =>
       [for (final (u, c) in userCompanies.keys) if (u == userId) c]..sort();
 
   Map<int, ({String name, bool active})> groups = {};

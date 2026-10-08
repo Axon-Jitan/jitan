@@ -106,6 +106,7 @@ void main() {
     await insertCredGroup('active', active: true);
     await insertCredGroup('inactive', active: false);
     await insertCredGroup('deleted', active: true, mfd: true);
+    await insertCredGroup('foreign', active: true);
     await insertLanguage('one', active: true);
     await insertLanguage('two', active: true);
     await insertLanguage('off', active: false);
@@ -243,6 +244,7 @@ void main() {
     expect(options.containsKey(credGroupIds['deleted']), isFalse);
     expect(await repo.memberCompanyIds(db, userId), contains(home));
 
+    await db.execute('INSERT INTO tblUserCredGroup (userID, credGroupID) VALUES (:u, :g)', {'u': actorId, 'g': active});
     final asked = <int>{};
     final results = await Future.wait([
       for (var i = 0; i < 2; i++)
@@ -302,5 +304,20 @@ void main() {
       {'u': userId},
     );
     expect(after.single.readInt('n'), 2, reason: 'choosing the current language is not a change');
+  });
+
+  test('credential groups: a group the actor does not hold is refused, nothing written', () async {
+    final foreign = credGroupIds['foreign']!;
+
+    final refused = service()
+        .addCredentialGroups(actorId, companyIds['home']!, userId, AddAssignmentsRequest(ids: [foreign]), mayManage: (_) async {});
+
+    await expectLater(refused, throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 403)));
+    expect(
+      await db.query('SELECT 1 FROM tblUserCredGroup WHERE userID = :u AND credGroupID = :g', {'u': userId, 'g': foreign}),
+      isEmpty,
+    );
+    final options = await service().credentialGroups(actorId, companyIds['home']!, userId);
+    expect(options.options.firstWhere((o) => o.id == foreign).isAssignable, isFalse);
   });
 }
