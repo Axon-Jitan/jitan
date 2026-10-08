@@ -13,6 +13,18 @@ Status values: `OPEN` · `RESOLVED (date, decision)` · `WITHDRAWN (reason)`
 
 ---
 
+## IT dependencies from the 2026-10-08 decisions
+
+1. **Column names and types** of the approved Active/MFD fields: Jitan uses
+   `userCompanyActive`, `userCompanyMFD`, `userGroupActive`, `userGroupMFD` (BOOLEAN), the
+   ERD's convention. Please confirm against the updated specification, and **backfill
+   existing rows** with `Active = 1, MFD = 0`: a row with NULL counts as not active.
+2. **Shared temporary-token store** (only if the API runs as more than one instance):
+   Redis or similar, persistence disabled, automatic expiry. Today's single API instance
+   uses the in-memory store; a restart invalidates outstanding temporary QRs (HR/Admin
+   generates new ones).
+3. **`tblEventType` rows** for the new event names (CLARIFY-11).
+
 ## Open questions for IT (priority)
 
 These four block the next roadmap step (the time engine and production authorization).
@@ -137,9 +149,9 @@ Recorded so they aren't raised again.
    to companies, not individual registrations. For an employee in both Almeco and PCA,
    nothing says which company a given `tblTimeReg` row counts for, because the address
    would have told us and it has no company.
-   With one company per employee (MVP decision 2026-10-08), TR-01 scopes an employee's
-   registrations through their membership. An employee who has a historical second
-   membership is shown with all their registrations in each company.
+   Employees can work for several companies (IT, 2026-10-08). Until registrations can be
+   attributed to a company, TR-01 shows HR/Admin of each of the employee's companies all
+   of that employee's registrations (scoped through the active membership).
 4. **Missing:**
    - an address → company relationship
    - which address is a company's *primary* workplace
@@ -147,22 +159,21 @@ Recorded so they aren't raised again.
      should their schedules differ per company? `tblUserSchedule` has no company.
 
 ## GAP-04: Employee onboarding QR
-**RESOLVED for the MVP (2026-10-07)**, including the activation signal
+**RESOLVED (IT decision 2026-10-08): temporary QR codes, not stored in MySQL.** Supersedes
+the 2026-10-07 decision that the permanent `userQRcode` also served for onboarding.
 
-**Decision.** No separate onboarding-token table. `tblUser.userQRcode` serves both as the
-QR an employee scans to onboard and, afterwards, as their permanent personal QR for Jitan
-Terminal. HR creates the employee → `userQRcode` is generated (random, unguessable, not
-derived from `userID` or `userCode`) → the employee scans it to onboard → the same QR
-stays in use for the Terminal. Acceptable while onboarding is manual and per employee; a
-temporary activation-token mechanism can be introduced for mass or self-service
-onboarding later. Implemented in EMP-08.
-
-**Activation signal (decided 2026-10-07): `userPassword IS NOT NULL`.** Setting a
-password is mandatory during onboarding and completes it, so no ERD change is needed.
-`userPassword IS NULL` → onboarding can start; once a password is stored, scanning the
-same QR can never restart onboarding (`409 onboarding_already_completed`). The QR stays
-valid for Terminal check-in/out. The guard is enforced twice: a check before work, and
-`UPDATE … WHERE userPassword IS NULL` under a row lock (ONB-01).
+- **Onboarding and password recovery use temporary QR codes**: short-lived signed tokens
+  (HMAC-SHA256, employee, purpose, expiry 10 minutes, random id) with temporary
+  server-side state for one-time use and revocation. Generated on demand by HR/Admin,
+  single use, a new one invalidates the previous one, never accepted for another purpose.
+  **Nothing is stored in MySQL**: the state lives in a temporary store (in memory for one
+  API instance; a shared cache such as Redis, with persistence off and automatic expiry,
+  if the API ever runs as several instances: see "IT dependencies" below).
+- **`tblUser.userQRcode` stays the permanent Terminal QR** only. It no longer authorizes
+  onboarding or password recovery.
+- **Activation signal unchanged:** `userPassword IS NOT NULL`. Onboarding and recovery
+  both require `userPassword IS NULL` and set it under a row lock
+  (`UPDATE … WHERE userPassword IS NULL`).
 
 ## GAP-05: Web-login QR, sessions, trusted devices, push tokens
 **ERD GAP — requires clarification with IT.** · Status: `OPEN`
@@ -336,20 +347,17 @@ table, Unique Pair"), so a key appears once per language. Integration tests chec
 against whichever database they run on. Jitan still tolerates duplicates (lowest
 `translationID` wins, logged) in case a database does not enforce the pair.
 
-## CLARIFY-09: Junction row removal · `OPEN` · asked to IT (2026-10-08)
+## CLARIFY-09: Junction row removal · `PARTLY RESOLVED` (IT, 2026-10-08)
 
-**Interim (EMP-04–07):** Jitan only **adds** assignments (`tblUserCompany`,
-`tblUserGroup`, `tblUserLanguage`, `tblUserCredGroup`), audited in `tblEventLog`. Existing
-assignments are shown locked; no junction row is deleted until IT answers.
+**Resolved for `tblUserCompany` and `tblUserGroup`:** IT added Active/MFD. Removal sets
+`Active = false, MFD = true` (row kept, audited); re-adding reactivates the row. **Still
+open for `tblUserCredGroup`** (and `tblUserFunction`): no Active/MFD, so credential groups
+are only added, never removed, until IT decides. (`tblUserLanguage` holds one preference
+that is updated, never removed.)
 Junction tables have no Active/MFD. Does removing an assignment (e.g. an employee leaving
 a group) physically delete the junction row, with the change preserved in
 `tblEventLog`? Or should junction rows never be deleted?
 
-**Company transfers** depend on this too. The MVP allows **one company per employee**
-(decision 2026-10-08), so moving an employee means ending one `tblUserCompany`
-relationship and starting another. With no Active/MFD or dates on `tblUserCompany`, how
-should a past membership be kept (history) while it no longer counts as current? Until
-IT confirms, Jitan refuses a second company and removes none.
 
 ## CLARIFY-10: Authorization model · `OPEN` · IT CLARIFICATION, blocks production authorization only
 Does performing a function require **both** module access (via credential group) **and**
@@ -368,6 +376,8 @@ Raised by EMP-07 (2026-10-08), for the production evaluator:
   Every other grant is refused (403) until IT defines the rules.
 
 ## CLARIFY-12: Personal QR value (`tblUser.userQRcode`) · `OPEN` · IT CLARIFICATION, does not block development
+Since 2026-10-08 this is the **Terminal QR only** (onboarding and recovery use temporary
+QRs, GAP-04).
 `userQRcode` is unique and is filled when an employee is created (EMP-02). Jitan
 generates 18 cryptographically random bytes, base64url-encoded to **24 characters**, so
 one employee's QR reveals nothing about another's. Questions for IT: does an existing
@@ -384,12 +394,13 @@ Please share current rows of `tblCredGroup`, `tblAppModules`, `tblFunction`, `tb
 `server/jitan_api/lib/src/audit/audit_event.dart`), e.g. `employee.created`. Until such a
 row exists, the event is stored **without** a type link and a warning is logged. Either
 IT adds rows with these names, or the code adopts IT's names; nothing else changes.
-Names in use: `employee.created`, `employee.personal_qr.generated`,
-`employee.onboarding.completed`, `employee.password.changed`, `employee.access.reset`,
-`employee.company.assigned`, `employee.group.assigned`,
-`employee.credential_group.assigned`, `employee.language.changed`. **These need rows in
+Names in use: `employee.created`, `employee.onboarding.completed`,
+`employee.password.changed`, `employee.access.reset`, `employee.access.recovered`,
+`employee.onboarding_qr.generated`, `employee.recovery_qr.generated`,
+`employee.company.assigned`, `employee.company.removed`, `employee.group.assigned`,
+`employee.group.removed`, `employee.credential_group.assigned`,
+`employee.language.changed`. (`employee.personal_qr.generated` is no longer written: the
+permanent QR is no longer shown to HR/Admin.) **These need rows in
 IT's `tblEventType`.** Jitan looks them up by name and never assumes an ID; the IDs in
 `dev/local-db/seed.sql` exist only in the disposable local database.
-Recovery after a reset uses the onboarding endpoints, so the new password is logged as
-`employee.onboarding.completed` too (the database cannot tell a first setup from a
-recovery; the preceding `employee.access.reset` row shows which it was).
+Recovery after a reset has its own endpoints and event (`employee.access.recovered`).

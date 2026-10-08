@@ -60,7 +60,12 @@ INSERT INTO tblEventType (eventTypeID, eventTypeName) VALUES
   (6, 'employee.company.assigned'),
   (7, 'employee.group.assigned'),
   (8, 'employee.credential_group.assigned'),
-  (9, 'employee.language.changed');
+  (9, 'employee.language.changed'),
+  (10, 'employee.company.removed'),
+  (11, 'employee.group.removed'),
+  (12, 'employee.onboarding_qr.generated'),
+  (13, 'employee.recovery_qr.generated'),
+  (14, 'employee.access.recovered');
 
 -- People. userQRcode values are random (never derived from IDs or codes).
 --  1 Hanne Claes      HR in Almeco + PCA, activated   (local password Hanne-Local-Dev-1)
@@ -90,21 +95,21 @@ VALUES
   (6, 'Thomas', 'Vermeulen', NULL, NULL, 'TVM', '3Vk7txZEtMZtw_7ZkShSAkgpfmmcBDMo', NULL,
    0, NULL, 1, 0);
 
-INSERT INTO tblUserCompany (userID, companyID) VALUES
-  (1, 1), (1, 2),
-  (2, 1),
-  (3, 1),
-  (4, 1),
-  (5, 1),
-  (6, 2);
+INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES
+  (1, 1, 1, 0), (1, 2, 1, 0),
+  (2, 1, 1, 0),
+  (3, 1, 1, 0),
+  (4, 1, 1, 0),
+  (5, 1, 1, 0),
+  (6, 2, 1, 0);
 
-INSERT INTO tblUserGroup (userID, groupID) VALUES
-  (1, 1),
-  (2, 1),
-  (3, 1),
-  (4, 2),
-  (5, 2),
-  (6, 2);
+INSERT INTO tblUserGroup (userID, groupID, userGroupActive, userGroupMFD) VALUES
+  (1, 1, 1, 0),
+  (2, 1, 1, 0),
+  (3, 1, 1, 0),
+  (4, 2, 1, 0),
+  (5, 2, 1, 0),
+  (6, 2, 1, 0);
 
 INSERT INTO tblUserCredGroup (userID, credGroupID) VALUES
   (1, 2),

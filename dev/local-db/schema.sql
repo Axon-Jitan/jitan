@@ -45,10 +45,14 @@ CREATE TABLE tblCompany (
   PRIMARY KEY (companyID)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
+-- Active/MFD approved by IT (2026-10-08). Column names follow the ERD's
+-- <entity>Active / <entity>MFD convention; confirm against IT's updated spec.
 CREATE TABLE tblUserCompany (
-  userCompanyID INT NOT NULL AUTO_INCREMENT,
-  userID        INT NOT NULL,
-  companyID     INT NOT NULL,
+  userCompanyID     INT     NOT NULL AUTO_INCREMENT,
+  userID            INT     NOT NULL,
+  companyID         INT     NOT NULL,
+  userCompanyActive BOOLEAN NULL,
+  userCompanyMFD    BOOLEAN NULL,
   PRIMARY KEY (userCompanyID),
   UNIQUE KEY uk_tblUserCompany_pair (userID, companyID),
   CONSTRAINT fk_tblUserCompany_user FOREIGN KEY (userID) REFERENCES tblUser (userID),
@@ -63,10 +67,13 @@ CREATE TABLE tblGroup (
   PRIMARY KEY (groupID)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
+-- Active/MFD approved by IT (2026-10-08); names as for tblUserCompany.
 CREATE TABLE tblUserGroup (
-  userGroupID INT NOT NULL AUTO_INCREMENT,
-  userID      INT NOT NULL,
-  groupID     INT NOT NULL,
+  userGroupID     INT     NOT NULL AUTO_INCREMENT,
+  userID          INT     NOT NULL,
+  groupID         INT     NOT NULL,
+  userGroupActive BOOLEAN NULL,
+  userGroupMFD    BOOLEAN NULL,
   PRIMARY KEY (userGroupID),
   UNIQUE KEY uk_tblUserGroup_pair (userID, groupID),
   CONSTRAINT fk_tblUserGroup_user FOREIGN KEY (userID) REFERENCES tblUser (userID),

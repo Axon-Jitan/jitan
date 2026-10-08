@@ -50,9 +50,12 @@ Most entities carry `<entity>Active` and `<entity>MFD`.
 - **No physical `DELETE`** on business or master data. "Delete" sets `MFD = true`.
 - Every application read filters `MFD = false`. Lists that offer only selectable values
   also filter `Active = true`.
-- Junction tables have no Active/MFD. Removing an assignment deletes the junction row,
-  which is the one physical delete allowed, and it is recorded in `tblEventLog`.
-  *(To confirm with IT: whether junction rows may be physically deleted.)*
+- **Junction tables.** `tblUserCompany` and `tblUserGroup` have Active/MFD (IT decision
+  2026-10-08). Removing such an assignment sets `Active = false` and `MFD = true`; the row
+  stays and the change is recorded in `tblEventLog`. Adding it again reactivates the same
+  row (the unique pair forbids a second one). No junction row is ever physically deleted.
+  The other junction tables have no Active/MFD; their assignments cannot be removed
+  through Jitan until IT decides (CLARIFY-09).
 - `tblEventLog`, `tblEventType` and `tblEventLogEventType` have no Active/MFD. They are
   append-only.
 
@@ -142,8 +145,14 @@ User ↔ company membership. Unique pair: `userID + companyID`.
 | `userCompanyID` | int | PK |
 | `userID` | int | FK → `tblUser` |
 | `companyID` | int | FK → `tblCompany` |
+| `userCompanyActive` | bool | |
+| `userCompanyMFD` | bool | |
 
-One employee can belong to several companies with a single account:
+`userCompanyActive` / `userCompanyMFD` were approved by IT on 2026-10-08 (names follow
+the ERD convention; to be confirmed against IT's updated specification). A membership
+counts only while `Active = true AND MFD = false`.
+
+One employee can belong to several companies with a single account (IT, 2026-10-08):
 
 ```text
 Disan → Almeco
@@ -187,6 +196,10 @@ User ↔ group. Unique pair: `userID + groupID`.
 | `userGroupID` | int | PK |
 | `userID` | int | FK → `tblUser` |
 | `groupID` | int | FK → `tblGroup` |
+| `userGroupActive` | bool | |
+| `userGroupMFD` | bool | |
+
+`userGroupActive` / `userGroupMFD` approved by IT on 2026-10-08, as for `tblUserCompany`.
 
 ```text
 Kevin  → White collar

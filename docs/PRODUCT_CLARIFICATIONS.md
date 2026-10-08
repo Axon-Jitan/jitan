@@ -173,16 +173,6 @@ Still open:
    out); the other rows and the bottom navigation come with their features. Home opens
    Profile from a profile icon until the navigation bar exists.
 
-## DESIGN-CLARIFY-ONE-COMPANY: Companies tab after the one-company decision
-Status: `OPEN` · small, does not block
-
-Figma `201:472` (Manage assignments → Companies) shows "Multiple selections are allowed"
-and an "Additional company" option. With one company per employee (decision 2026-10-08)
-the app lists only the employee's company and says: "Each employee belongs to one
-company. Moving an employee to another company is not available yet." Please update the
-frame (and design the transfer flow once IT confirms the relationship lifecycle,
-CLARIFY-09).
-
 ## DESIGN-CLARIFY-PROFILE-LANGUAGE: Employee changes their language after onboarding
 Status: `OPEN` · small, does not block
 
@@ -191,3 +181,28 @@ The server endpoint (`PUT /me/language`, audited) and the client
 (`LanguagesApi.setCurrentUserLanguage`) are built. Figma has a language choice only in
 onboarding (06B, `199:47`); the Employee App Profile (`62:2`) has no Language row. Please
 add one (e.g. reusing the 06B list) so the app can expose it.
+
+## DESIGN-CLARIFY-TEMPORARY-QR: Gaps after the temporary-QR decision (2026-10-08)
+Status: `OPEN` · small, does not block
+
+1. **Reset account access** (`196:136`, `207:97`) still says "scan their existing QR" and
+   "allow account recovery with the existing QR". The app says: "The employee will need a
+   temporary recovery QR to set a new password." and "allow recovery with a temporary
+   recovery QR". Please update the frames.
+2. **Temporary QR expired** (HR, `207:123`) shows the same modal as a valid QR. When the
+   countdown ends the app shows the status "EXPIRED" in place of "VALID FOR 10 MIN" and
+   hides the code; "Generate new QR" replaces it.
+3. **Onboarding with an expired, used or wrong-purpose QR** has no frame; the app uses the
+   Onboarding Error layout with copy modelled on Auth / 06C.
+4. **Which QR for an employee who has not set a password:** the database cannot tell a
+   new employee from one whose access was reset. Employee details offers the onboarding
+   QR; the recovery QR is offered right after Reset account access (and can be
+   regenerated there).
+
+## PRODUCT-CLARIFY-LAST-COMPANY: Removing an employee's last company
+Status: `OPEN` · small
+
+Removing an employee's **last** active company would leave them in no company, so no
+HR/Admin could see or manage them. Jitan refuses it (`409 employee_last_company`) until
+the product decides (e.g. disable the employee instead). The current company is not
+offered for removal inside its own context (Figma shows it as "Current company").
