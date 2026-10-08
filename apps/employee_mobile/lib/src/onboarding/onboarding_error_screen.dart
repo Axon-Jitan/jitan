@@ -120,6 +120,7 @@ class OnboardingErrorScreen extends StatelessWidget {
       helpTitle: context.t(helpTitle),
       help: context.t(help),
       actions: actions,
+      inkHelpTitle: problem == OnboardingProblem.accountUnavailable,
     );
   }
 }

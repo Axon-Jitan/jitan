@@ -211,6 +211,8 @@ class NoteBox extends StatelessWidget {
     this.title,
     this.background = JitanColors.inputFill,
     this.foreground,
+    this.titleForeground,
+    this.border,
     this.titleStyle,
     this.textStyle,
     this.radius = 16,
@@ -225,6 +227,12 @@ class NoteBox extends StatelessWidget {
   /// Colour of title and text (error, warning and info notes); `null` keeps
   /// the styles' own colours.
   final Color? foreground;
+
+  /// Colour of the title only, when it differs from [foreground].
+  final Color? titleForeground;
+
+  /// Outline, e.g. Figma 03B "Secure connection confirmed"; none by default.
+  final Color? border;
   final TextStyle? titleStyle;
   final TextStyle? textStyle;
   final double radius;
@@ -233,13 +241,17 @@ class NoteBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleText = (titleStyle ?? JitanMobileTextStyles.noteTitle).copyWith(color: foreground);
+    final titleText = (titleStyle ?? JitanMobileTextStyles.noteTitle).copyWith(color: titleForeground ?? foreground);
     final bodyText = (textStyle ?? JitanMobileTextStyles.noteText).copyWith(color: foreground);
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(minHeight: minHeight),
       padding: padding,
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(radius)),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(radius),
+        border: border == null ? null : Border.all(color: border!),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -390,6 +402,7 @@ class StatusPage extends StatelessWidget {
     this.showLogo = false,
     this.buttonSize = JitanMobileButtonSize.compact,
     this.footer = const [],
+    this.inkHelpTitle = false,
   });
 
   final String title;
@@ -403,6 +416,10 @@ class StatusPage extends StatelessWidget {
 
   /// Shown after the actions, e.g. an instruction that is not an action.
   final List<Widget> footer;
+
+  /// The help title in ink instead of the tone's colour (Figma "Onboarding
+  /// Error / 03", "Auth / 04": "Contact HR/Admin").
+  final bool inkHelpTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -439,6 +456,7 @@ class StatusPage extends StatelessWidget {
                   text: help,
                   background: surface,
                   foreground: strong,
+                  titleForeground: inkHelpTitle ? JitanColors.ink : null,
                   radius: 18,
                   minHeight: showLogo ? 116 : 120,
                 ),

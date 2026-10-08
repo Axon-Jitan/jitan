@@ -74,6 +74,7 @@ class QrVerifiedScreen extends StatelessWidget {
       Text(context.t(EmployeeTextKeys.verifiedText), style: JitanMobileTextStyles.body.copyWith(fontSize: 13)),
       const SizedBox(height: 50),
       Container(
+        width: double.infinity,
         constraints: const BoxConstraints(minHeight: 268),
         decoration: BoxDecoration(color: JitanColors.successSurface, borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsets.fromLTRB(16, 25, 16, 16),
@@ -111,6 +112,7 @@ class QrVerifiedScreen extends StatelessWidget {
         title: context.t(EmployeeTextKeys.verifiedNoteTitle),
         text: context.t(EmployeeTextKeys.verifiedNoteText),
         background: JitanColors.surface,
+        border: JitanColors.inputBorder,
         textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 10),
         radius: 13,
         minHeight: 75,

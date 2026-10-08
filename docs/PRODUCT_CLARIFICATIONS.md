@@ -140,6 +140,10 @@ conflicts with decisions already taken:
    (warning colour) instead of "Required permissions configured" when automatic
    registration was chosen but location was refused. A refusal never blocks onboarding.
 6. **Home** is a placeholder ("Hello, {name}") until the Today screens are built.
+7. **Password hint** on 07 Set password and Auth / 07 reads "At least 8 characters (12+
+   recommended)" where Figma shows "At least 8 characters": the password policy recommends
+   12+ to the employee (PRODUCT-CLARIFY-PASSWORD-POLICY), and these screens have no
+   "Password rules" note to say it (Change password does). Please confirm or adjust.
 
 Resolved by Figma: 06B Language (languages from `tblLanguage`, own name + name in the UI
 language from `language.name.<code>` translations, so new languages need only data),
@@ -203,6 +207,12 @@ Still open:
 3. **Which QR for an employee who has not set a password**: see PRODUCT recovery rules in
    ERD_GAPS (CLARIFY-13): Employee details offers the onboarding QR only to employees who
    never activated; after Reset account access only the recovery QR is offered.
+4. **Auth / 06B Recovery refused** (`199:4`) still has the older subtitle and camera text
+   ("Ask HR/Admin to reset your Jitan access, then scan the QR they show you", "Scan the QR
+   shown by HR/Admin"), while 06 and 06C were updated to the temporary recovery QR. The app
+   keeps the 06 texts on 06B, so the recovery screen doesn't change wording when a QR is
+   refused; 06B's own red line and "Account reset required" note are as in Figma. Please
+   update the frame (found in the emulator visual review, 2026-10-08).
 
 ## PRODUCT-CLARIFY-LAST-COMPANY: Removing an employee's last company
 Status: `SETTLED BY DESIGN` (2026-10-08)

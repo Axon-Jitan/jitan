@@ -365,6 +365,7 @@ class AuthErrorScreen extends StatelessWidget {
         showLogo: true,
         buttonSize: JitanMobileButtonSize.medium,
         tone: StatusTone.warning,
+        inkHelpTitle: true,
         title: context.t(EmployeeTextKeys.errorAccountTitle),
         text: context.t(EmployeeTextKeys.errorAccountText),
         helpTitle: context.t(EmployeeTextKeys.errorAccountHelpTitle),
