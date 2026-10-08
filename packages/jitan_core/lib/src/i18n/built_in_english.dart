@@ -348,7 +348,7 @@ const builtInEnglish = <String, String>{
   'employee.assignments.saved': 'Assignments saved.',
   'employee.assignments.tab.companies': 'Companies',
   'employee.assignments.companies.title': 'Company membership',
-  'employee.assignments.companies.text': 'Choose the companies this employee belongs to. Multiple selections are allowed.',
+  'employee.assignments.companies.text': 'Each employee belongs to one company. Moving an employee to another company is not available yet.',
   'employee.assignments.companies.current': 'Current company',
   'employee.assignments.companies.additional': 'Additional company',
   'employee.assignments.companies.note.title': 'Company-scoped access',

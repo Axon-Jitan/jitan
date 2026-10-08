@@ -111,7 +111,9 @@ hardcode or invent them.
    `userIDTarget` (subject) and the FK of each entity involved. Write the business change
    and its event-log row in **one transaction**.
 7. **Company scoping is mandatory.** Employees belong to companies through
-   `tblUserCompany`, which is many-to-many, so one person can be in several companies. HR
+   `tblUserCompany`, which is many-to-many in the ERD, but **the MVP allows one company
+   per employee** (enforced server-side in `EmployeeAssignmentService`; transfers wait for
+   CLARIFY-09). HR
    works inside a **current company** and sees only that company's data. Company-scoped
    endpoints take the company in the path (`/companies/{id}/…`), query only that company,
    and pass it to `Authorizer.require(…, companyId: id)` so the permission evaluator can

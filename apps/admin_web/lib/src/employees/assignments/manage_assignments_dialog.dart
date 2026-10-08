@@ -173,7 +173,9 @@ class _SectionHeader extends StatelessWidget {
   );
 }
 
-/// EMP-04: company membership (`tblUserCompany`). Several allowed.
+/// EMP-04: company membership (`tblUserCompany`). One company per employee
+/// (MVP): the server marks other companies not assignable, so only the
+/// employee's own company (or companies, from history) is listed.
 class _CompaniesTab extends StatelessWidget {
   const _CompaniesTab({required this.controller, required this.tab, required this.currentCompanyId});
 
@@ -195,7 +197,7 @@ class _CompaniesTab extends StatelessWidget {
         builder: (options) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final option in options) ...[
+            for (final option in options.where((o) => o.isAssigned || o.isAssignable)) ...[
               JitanOptionCard(
                 title: option.name,
                 detail: context.t(switch (option) {

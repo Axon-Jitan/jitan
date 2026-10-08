@@ -319,6 +319,12 @@ Junction tables have no Active/MFD. Does removing an assignment (e.g. an employe
 a group) physically delete the junction row, with the change preserved in
 `tblEventLog`? Or should junction rows never be deleted?
 
+**Company transfers** depend on this too. The MVP allows **one company per employee**
+(decision 2026-10-08), so moving an employee means ending one `tblUserCompany`
+relationship and starting another. With no Active/MFD or dates on `tblUserCompany`, how
+should a past membership be kept (history) while it no longer counts as current? Until
+IT confirms, Jitan refuses a second company and removes none.
+
 ## CLARIFY-10: Authorization model · `OPEN` · IT CLARIFICATION, blocks production authorization only
 Does performing a function require **both** module access (via credential group) **and**
 a `tblUserFunction` grant, or does a function grant work on its own? Is

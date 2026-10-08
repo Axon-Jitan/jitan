@@ -27,6 +27,10 @@ abstract final class ApiErrorCode {
 
   /// Reset account access on an employee who has not set up Jitan yet.
   static const accountNotActivated = 'account_not_activated';
+
+  /// The employee already belongs to a company. One company per employee in
+  /// the MVP; transfers wait for IT (relationship lifecycle).
+  static const employeeCompanyLimit = 'employee_company_limit';
   static const unauthenticated = 'unauthenticated';
   static const forbidden = 'forbidden';
   static const notFound = 'not_found';

@@ -23,7 +23,8 @@ const _disan = EmployeeDetails(
 );
 
 const _almeco = AssignmentOption(id: 1, name: 'Almeco', isActive: true, isAssigned: true);
-const _pca = AssignmentOption(id: 2, name: 'PCA', isActive: true, isAssigned: false);
+/// One company per employee: the server offers PCA as not assignable.
+const _pca = AssignmentOption(id: 2, name: 'PCA', isActive: true, isAssigned: false, isAssignable: false);
 const _akwa = AssignmentOption(id: 3, name: 'Akwa', isActive: false, isAssigned: true);
 
 const _blue = AssignmentOption(id: 2, name: 'Blue collar', isActive: true, isAssigned: false);
@@ -45,18 +46,22 @@ const _hrRole = AssignmentOption(id: 2, name: 'HR', isActive: true, isAssigned: 
 
 void main() {
   group('ManageAssignmentsController', () {
-    test('only active, unassigned options can be ticked; existing ones are locked', () async {
+    test('existing assignments are locked; only what the server allows can be ticked', () async {
       final c = ManageAssignmentsController(api: _api(), companyId: 1, userId: 2);
       await pumpEventQueue();
-      final tab = c.tabs.first;
+      final companies = c.tabs.first;
+      final groups = c.tabs[1];
 
-      c.toggle(tab, _almeco);
-      c.toggle(tab, _akwa);
-      expect(c.hasChanges, isFalse, reason: 'removal waits for IT');
+      c.toggle(companies, _almeco);
+      c.toggle(companies, _akwa);
+      c.toggle(companies, _pca);
+      expect(c.hasChanges, isFalse, reason: 'removal waits for IT; one company per employee');
 
-      c.toggle(tab, _pca);
-      expect(tab.pending, {2});
-      c.toggle(tab, _pca);
+      c.toggle(groups, _white);
+      expect(c.hasChanges, isFalse);
+      c.toggle(groups, _blue);
+      expect(groups.pending, {2});
+      c.toggle(groups, _blue);
       expect(c.hasChanges, isFalse);
     });
 
@@ -64,14 +69,14 @@ void main() {
       final api = _api();
       final c = ManageAssignmentsController(api: api, companyId: 1, userId: 2);
       await pumpEventQueue();
-      c.toggle(c.tabs.first, _pca);
+      c.toggle(c.tabs[1], _blue);
 
       expect(await c.save(), isTrue);
 
       final (companyId, userId, kind, ids) = api.adds.single;
-      expect((companyId, userId, kind), (1, 2, AssignmentKind.companies));
+      expect((companyId, userId, kind), (1, 2, AssignmentKind.groups));
       expect(ids, [2]);
-      expect(c.tabs.first.options!.firstWhere((o) => o.id == 2).isAssigned, isTrue);
+      expect(c.tabs[1].options!.firstWhere((o) => o.id == 2).isAssigned, isTrue);
       expect(c.hasChanges, isFalse);
     });
 
@@ -79,12 +84,12 @@ void main() {
       final api = _api()..addFailure = const ApiClientException.network('offline');
       final c = ManageAssignmentsController(api: api, companyId: 1, userId: 2);
       await pumpEventQueue();
-      c.toggle(c.tabs.first, _pca);
+      c.toggle(c.tabs[1], _blue);
 
       expect(await c.save(), isFalse);
 
       expect(c.saveFailure, isNotNull);
-      expect(c.tabs.first.pending, {2});
+      expect(c.tabs[1].pending, {2});
     });
   });
 
@@ -122,32 +127,27 @@ void main() {
       expect(find.text('Manage employee assignments'), findsOneWidget);
       expect(find.text('Disan Ssebowa  ·  Almeco  ·  Employee code SBW'), findsOneWidget);
       expect(find.text('Company membership'), findsOneWidget);
+      expect(
+        find.text('Each employee belongs to one company. Moving an employee to another company is not available yet.'),
+        findsOneWidget,
+      );
       expect(find.text('Current company'), findsOneWidget);
-      expect(find.text('Additional company'), findsOneWidget);
-      expect(find.text('Inactive'), findsOneWidget, reason: 'an inactive company is listed only because assigned');
+      expect(find.text('Inactive'), findsOneWidget, reason: 'an existing membership stays listed');
+      expect(find.text('PCA'), findsNothing, reason: 'one company per employee: no other company is offered');
       expect(find.text('Company-scoped access'), findsOneWidget);
       expect(find.text('Changes take effect after saving.'), findsOneWidget);
     });
 
-    testWidgets('Save is disabled until something is ticked; ticking PCA and saving adds it', (tester) async {
+    testWidgets('one company per employee: nothing to tick, Save stays disabled', (tester) async {
       final api = await open(tester);
       FilledButton save() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save changes'));
       expect(save().onPressed, isNull);
 
       await tester.tap(find.text('Almeco'));
       await tester.pump();
+
       expect(save().onPressed, isNull, reason: 'an existing membership cannot be unticked');
-
-      await tester.tap(find.text('PCA'));
-      await tester.pump();
-      await tester.tap(find.text('Save changes'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      final (companyId, userId, kind, ids) = api.adds.single;
-      expect((companyId, userId, kind), (1, 2, AssignmentKind.companies));
-      expect(ids, [2]);
-      expect(find.text('Manage employee assignments'), findsNothing, reason: 'closed after saving');
+      expect(api.adds, isEmpty);
     });
 
     testWidgets('a load failure shows a retryable error', (tester) async {
@@ -158,13 +158,15 @@ void main() {
       api.loadFailure = null;
       await tester.tap(find.text('Try again'));
       await tester.pump();
-      expect(find.text('PCA'), findsOneWidget);
+      expect(find.text('Almeco'), findsOneWidget);
     });
 
     testWidgets('a failed save shows an inline error and keeps the modal open', (tester) async {
       final api = await open(tester, api: _api()..addFailure = const ApiClientException.network('offline'));
 
-      await tester.tap(find.text('PCA'));
+      await tester.tap(find.text('Groups'));
+      await tester.pump();
+      await tester.tap(find.text('Blue collar'));
       await tester.pump();
       await tester.tap(find.text('Save changes'));
       await tester.pump();

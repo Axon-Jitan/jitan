@@ -7,6 +7,7 @@ import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
 import 'package:jitan_api/src/employees/employee_assignment_service.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
+import 'package:jitan_api/src/http/api_exception.dart';
 import 'package:jitan_api/src/languages/user_language_repository.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_models/jitan_models.dart';
@@ -178,31 +179,28 @@ void main() {
     await db.execute('DELETE FROM tblUserCompany WHERE userID = :u AND companyID = :c', {'u': userId, 'c': other});
   });
 
-  test('service: adds the membership and its audit row with user, company and userCompanyID', () async {
+  test('service: one company per employee, also for concurrent requests; nothing written', () async {
     final home = companyIds['home']!;
     final other = companyIds['other']!;
+    final before = await db.query('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :u', {'u': userId});
 
-    final result = await service().addCompanies(
-      actorId,
-      home,
-      userId,
-      AddAssignmentsRequest(ids: [home, other]),
-      mayManage: (_) async {},
-    );
+    final results = await Future.wait([
+      for (var i = 0; i < 2; i++)
+        service()
+            .addCompanies(actorId, home, userId, AddAssignmentsRequest(ids: [other]), mayManage: (_) async {})
+            .then<Object?>((_) => null, onError: (Object e) => e),
+    ]);
 
-    expect(result.options.firstWhere((o) => o.id == other).isAssigned, isTrue);
-    final membership = (await db.query(
-      'SELECT userCompanyID FROM tblUserCompany WHERE userID = :u AND companyID = :c',
-      {'u': userId, 'c': other},
-    )).single.readInt('userCompanyID');
-    final logs = await db.query(
-      'SELECT userIDInit, companyID, userCompanyID FROM tblEventLog WHERE userIDTarget = :u',
-      {'u': userId},
+    expect(results, everyElement(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.employeeCompanyLimit)));
+    final after = await db.query('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :u', {'u': userId});
+    expect(after.single.readInt('n'), before.single.readInt('n'));
+    expect(await memberships(other), 0);
+    expect(
+      (await db.query('SELECT COUNT(*) AS n FROM tblEventLog WHERE userIDTarget = :u AND companyID IS NOT NULL', {'u': userId}))
+          .single
+          .readInt('n'),
+      0,
     );
-    expect(logs, hasLength(1), reason: 'home was already assigned: only one change');
-    expect(logs.single.readInt('userIDInit'), actorId);
-    expect(logs.single.readInt('companyID'), other);
-    expect(logs.single.readInt('userCompanyID'), membership);
   });
 
   test('groups: universal options, idempotent concurrent add, one audit row with groupID and userGroupID', () async {

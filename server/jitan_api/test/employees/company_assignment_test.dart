@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:jitan_api/src/audit/audit_event.dart';
 import 'package:jitan_api/src/auth/permission.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
@@ -10,7 +9,7 @@ import '../support/test_app.dart';
 const _path = '/companies/1/employees/2/assignments/companies';
 
 /// HR user 9 manages Almeco (1). Employee 2 belongs to Almeco. PCA (2) is
-/// active, Akwa (3) inactive, Proceq (4) inactive but already assigned.
+/// active, Akwa (3) inactive. One company per employee (MVP).
 TestApp _app() {
   final app = TestApp(devUserId: 9, activeUserIds: {9});
   app.companies.existingIds = {1, 2, 3, 4};
@@ -19,32 +18,36 @@ TestApp _app() {
     1: (name: 'Almeco', active: true),
     2: (name: 'PCA', active: true),
     3: (name: 'Akwa', active: false),
-    4: (name: 'Proceq', active: false),
   };
   app.assignments.userCompanies[(2, 1)] = 11;
-  app.assignments.userCompanies[(2, 4)] = 14;
   return app;
 }
 
 Future<List<(int, String, bool, bool)>> _options(Response response) async => [
   for (final o in (await jsonBody(response))['options']! as List<Object?>)
-    if (o case {'id': final int id, 'name': final String name, 'isActive': final bool a, 'isAssigned': final bool s})
-      (id, name, a, s),
+    if (o case {'id': final int id, 'name': final String name, 'isAssigned': final bool s, 'isAssignable': final bool a})
+      (id, name, s, a),
 ];
 
 String _add(List<int> ids) => jsonEncode({'ids': ids});
 
 void main() {
   group('GET company assignments', () {
-    test('lists active companies and current memberships (inactive only when assigned)', () async {
+    test('the current company is assigned; others are listed but not assignable (one company)', () async {
       final response = await _app().get(_path);
 
       expect(response.statusCode, 200);
-      expect(await _options(response), [
-        (1, 'Almeco', true, true),
-        (2, 'PCA', true, false),
-        (4, 'Proceq', false, true),
-      ]);
+      expect(await _options(response), [(1, 'Almeco', true, false), (2, 'PCA', false, false)]);
+    });
+
+    test('existing (historical) second memberships are still shown, never hidden or removed', () async {
+      final app = _app()
+        ..assignments.companies[4] = (name: 'Proceq', active: false)
+        ..assignments.userCompanies[(2, 4)] = 14;
+
+      final options = await _options(await app.get(_path));
+
+      expect(options.where((o) => o.$3).map((o) => o.$2), ['Almeco', 'Proceq']);
     });
 
     test('company-scoped: needs the permission in that company; another company\'s employee is 404', () async {
@@ -59,50 +62,34 @@ void main() {
     });
   });
 
-  group('POST company assignments (adds only)', () {
-    test('adds the employee to PCA, audited with user, company and membership', () async {
+  group('POST company assignments (one company per employee)', () {
+    test('adding a second company is refused with employee_company_limit; nothing is written', () async {
       final app = _app();
 
       final response = await app.post(_path, _add([2]));
 
-      expect(response.statusCode, 200);
-      expect((await _options(response)).firstWhere((o) => o.$1 == 2).$4, isTrue);
-      final event = app.audit.events.single;
-      expect(event.type, AuditEventType.companyAssigned);
-      expect(event.actorUserId, 9);
-      expect(event.references, {
-        EventLogReference.user: 2,
-        EventLogReference.company: 2,
-        EventLogReference.userCompany: app.assignments.userCompanies[(2, 2)],
-      });
-      expect(app.transactions.outcomes, ['commit']);
-    });
-
-    test('needs the permission in the target company too', () async {
-      final app = _app()..permissions.deniedCompanies = {2};
-
-      final response = await app.post(_path, _add([2]));
-
-      expect(response.statusCode, 403);
-      expect(app.assignments.userCompanies.containsKey((2, 2)), isFalse);
+      expect(response.statusCode, 409);
+      expect((await jsonBody(response))['error'], containsPair('code', 'employee_company_limit'));
+      expect(app.assignments.userCompanies.keys, [(2, 1)]);
       expect(app.audit.events, isEmpty);
+      expect(app.transactions.outcomes, isEmpty);
     });
 
-    test('existing memberships are skipped, never duplicated or removed', () async {
+    test('the current company again is a no-op (never duplicated)', () async {
       final app = _app();
 
-      final response = await app.post(_path, _add([1, 4]));
+      final response = await app.post(_path, _add([1]));
 
       expect(response.statusCode, 200);
-      expect(app.audit.events, isEmpty, reason: 'nothing changed');
-      expect(app.assignments.userCompanies.keys.where((k) => k.$1 == 2), hasLength(2));
+      expect(app.audit.events, isEmpty);
+      expect(app.assignments.userCompanies.keys, [(2, 1)]);
     });
 
-    test('a concurrent add of the same company is not duplicated or audited twice', () async {
-      final app = _app()..assignments.raceOnCompany = 2;
+    test('mixing the current company with a new one is still refused', () async {
+      final app = _app();
 
-      expect((await app.post(_path, _add([2]))).statusCode, 200);
-      expect(app.audit.events, isEmpty);
+      expect((await app.post(_path, _add([1, 2]))).statusCode, 409);
+      expect(app.assignments.userCompanies.keys, [(2, 1)]);
     });
 
     test('inactive, MFD or unknown companies are refused on the ids field', () async {

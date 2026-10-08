@@ -18,6 +18,10 @@ import 'employee_repository.dart';
 /// for IT (ERD.md); the endpoints accept additions and leave existing
 /// assignments untouched. Every addition is audited in the same
 /// transaction.
+///
+/// **One company per employee** (MVP decision 2026-10-08): an employee who
+/// belongs to a company cannot be added to another. Transfers wait for IT's
+/// relationship lifecycle; existing memberships are never removed.
 class EmployeeAssignmentService {
   EmployeeAssignmentService({
     required this._assignments,
@@ -47,14 +51,25 @@ class EmployeeAssignmentService {
 
   // ── EMP-04 Companies ───────────────────────────────────────────────────
 
+  /// Companies, with every company the employee does not belong to marked
+  /// not assignable while they belong to one (one company per employee).
   Future<AssignmentOptions> companies(int companyId, int userId) async {
     await _requireMember(_executor, companyId, userId);
-    return AssignmentOptions(options: await _assignments.companyOptions(_executor, userId));
+    final members = await _assignments.memberCompanyIds(_executor, userId);
+    return AssignmentOptions(
+      options: [
+        for (final o in await _assignments.companyOptions(_executor, userId))
+          o.isAssigned || members.isEmpty ? o : o.withAssignable(false),
+      ],
+    );
   }
 
-  /// Adds [userId] to each company in [request]. Each must be an active,
+  /// Adds [userId] to the company in [request]. It must be an active,
   /// non-MFD company (validation error on `ids` otherwise). Companies the
-  /// employee already belongs to are skipped, never duplicated.
+  /// employee already belongs to are skipped, never duplicated. A new
+  /// company is refused (409 `employee_company_limit`) while the employee
+  /// belongs to another: checked first, then again under the user-row lock
+  /// with a locking read, so concurrent requests cannot add a second one.
   ///
   /// [mayManage] answers whether the actor may manage employees of a target
   /// company: adding someone to a company needs authority there too, not
@@ -76,12 +91,16 @@ class EmployeeAssignmentService {
       }
     }
     final toAdd = [for (final id in ids) if (!options[id]!.isAssigned) id];
+    if (toAdd.isEmpty) return companies(companyId, userId);
+    _requireNoOtherCompany(toAdd, await _assignments.memberCompanyIds(_executor, userId));
     for (final target in toAdd) {
       await mayManage(target);
     }
 
     await _addTransaction((tx) async {
+      if (!await _employees.lockUser(tx, userId)) throw ApiException.notFound('Employee $userId does not exist.');
       await _requireMember(tx, companyId, userId);
+      _requireNoOtherCompany(toAdd, await _assignments.memberCompanyIds(tx, userId, forUpdate: true));
       for (final target in toAdd) {
         final userCompanyId = await _assignments.addCompany(tx, userId, target);
         if (userCompanyId == null) continue; // added meanwhile: nothing to do
@@ -100,6 +119,19 @@ class EmployeeAssignmentService {
       }
     });
     return companies(companyId, userId);
+  }
+
+  /// One company per employee: adding [toAdd] must not give the employee a
+  /// second company besides [members].
+  static void _requireNoOtherCompany(List<int> toAdd, List<int> members) {
+    final companiesAfter = {...members, ...toAdd};
+    if (companiesAfter.length > 1) {
+      throw const ApiException(
+        409,
+        ApiErrorCode.employeeCompanyLimit,
+        'An employee belongs to one company. Moving employees between companies is not available yet.',
+      );
+    }
   }
 
   // ── EMP-05 Groups ──────────────────────────────────────────────────────

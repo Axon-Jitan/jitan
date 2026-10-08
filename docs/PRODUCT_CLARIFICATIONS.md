@@ -173,6 +173,16 @@ Still open:
    out); the other rows and the bottom navigation come with their features. Home opens
    Profile from a profile icon until the navigation bar exists.
 
+## DESIGN-CLARIFY-ONE-COMPANY: Companies tab after the one-company decision
+Status: `OPEN` · small, does not block
+
+Figma `201:472` (Manage assignments → Companies) shows "Multiple selections are allowed"
+and an "Additional company" option. With one company per employee (decision 2026-10-08)
+the app lists only the employee's company and says: "Each employee belongs to one
+company. Moving an employee to another company is not available yet." Please update the
+frame (and design the transfer flow once IT confirms the relationship lifecycle,
+CLARIFY-09).
+
 ## DESIGN-CLARIFY-PROFILE-LANGUAGE: Employee changes their language after onboarding
 Status: `OPEN` · small, does not block
 

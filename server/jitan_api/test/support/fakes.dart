@@ -267,10 +267,6 @@ class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
   final userCompanies = <(int, int), int>{};
   var _nextId = 100;
 
-  /// When set, [addCompany] behaves as if a concurrent request added this
-  /// company first.
-  int? raceOnCompany;
-
   Map<int, ({String name, bool active})> credentialGroups = {};
 
   /// (userId, credGroupId) pairs, with their userCredGroupID.
@@ -291,7 +287,7 @@ class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
 
   /// Companies of a user: the [userCompanies] pairs.
   @override
-  Future<List<int>> memberCompanyIds(SqlExecutor executor, int userId) async =>
+  Future<List<int>> memberCompanyIds(SqlExecutor executor, int userId, {bool forUpdate = false}) async =>
       [for (final (u, c) in userCompanies.keys) if (u == userId) c]..sort();
 
   Map<int, ({String name, bool active})> groups = {};
@@ -328,10 +324,6 @@ class FakeEmployeeAssignmentRepository implements EmployeeAssignmentRepository {
 
   @override
   Future<int?> addCompany(SqlExecutor tx, int userId, int companyId) async {
-    if (raceOnCompany == companyId) {
-      userCompanies[(userId, companyId)] = _nextId++;
-      return null;
-    }
     if (userCompanies.containsKey((userId, companyId))) return null;
     return userCompanies[(userId, companyId)] = _nextId++;
   }
