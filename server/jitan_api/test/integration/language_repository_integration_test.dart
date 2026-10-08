@@ -2,6 +2,7 @@
 library;
 
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/database/database_exception.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
 import 'package:test/test.dart';
@@ -98,5 +99,48 @@ void main() {
     }
 
     expect(await LanguageRepository(db).activeLanguageCodesForUser(userId), [activeCode]);
+  });
+
+  // Runs last: it adds languages after the fixtures the tests above rely on.
+  group('tblTranslation unique pair languageID + translationUIName (ERD.jpg)', () {
+    Future<void> insert(int languageId, String key, String text) => db.query(
+      'INSERT INTO tblTranslation (languageID, translationUIName, translationUIText) VALUES (:id, :key, :text)',
+      {'id': languageId, 'key': key, 'text': text},
+    );
+
+    Future<int> ensureLanguage(String code) async {
+      final rows = await db.query('SELECT languageID FROM tblLanguage WHERE languageCode = :code', {'code': code});
+      return rows.isEmpty ? insertLanguage(code) : rows.single.readInt('languageID');
+    }
+
+    test('the same key cannot appear twice for the same language', () async {
+      final id = await ensureLanguage('dp$stamp');
+      await insert(id, 'pair.same', 'First');
+
+      await expectLater(
+        insert(id, 'pair.same', 'Second'),
+        throwsA(isA<DatabaseQueryException>().having((e) => e.errorCode, 'MySQL error', 1062)),
+      );
+    });
+
+    test('the same key can appear in different languages', () async {
+      final first = await ensureLanguage('dq$stamp');
+      final second = await ensureLanguage('dr$stamp');
+
+      await insert(first, 'pair.shared', 'Eerste');
+      await insert(second, 'pair.shared', 'Premier');
+
+      expect((await TranslationRepository(db).textsForLanguage(first))['pair.shared'], 'Eerste');
+      expect((await TranslationRepository(db).textsForLanguage(second))['pair.shared'], 'Premier');
+    });
+
+    test('different keys can exist within the same language', () async {
+      final id = await ensureLanguage('ds$stamp');
+
+      await insert(id, 'pair.one', 'One');
+      await insert(id, 'pair.two', 'Two');
+
+      expect(await TranslationRepository(db).textsForLanguage(id), {'pair.one': 'One', 'pair.two': 'Two'});
+    });
   });
 }

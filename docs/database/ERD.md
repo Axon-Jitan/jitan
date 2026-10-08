@@ -334,7 +334,8 @@ Holds the user's language preference according to the existing system logic.
 
 ## `tblTranslation`
 
-UI strings per language.
+UI strings per language. Unique pair: `languageID + translationUIName` (yellow in
+ERD.jpg): a key appears at most once per language.
 
 | Column | Type | Key | Jitan meaning |
 |---|---|---|---|

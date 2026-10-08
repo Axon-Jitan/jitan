@@ -65,9 +65,13 @@ Argon2id hashes made with Jitan's own `PasswordHasher`; they exist only here.
 2. **NULL and defaults.** Here every non-key column is NULL-able without a default, so
    Jitan must set what it relies on. If IT's columns are `NOT NULL` without defaults,
    inserts that leave a column out (e.g. `userEmail`, `userPINCode` on create) will fail.
-3. **Unique pair on `tblTranslation` (languageID + translationUIName).** In ERD.jpg and
-   enforced here. If IT's database does not enforce it, Jitan still handles duplicates
-   (lowest `translationID` wins, logged; CLARIFY-08).
+3. **Unique pair on `tblTranslation` (languageID + translationUIName).** Verified in
+   ERD.jpg: both columns are shaded as one yellow block, and the legend defines yellow as
+   "in same table, Unique Pair" (a composite constraint, not two single-column UKs).
+   Enforced here and covered by integration tests (same key twice in one language is
+   refused; same key in other languages and different keys in one language are allowed).
+   Against IT's database those tests show whether it is enforced there too; if not, Jitan
+   still handles duplicates (lowest `translationID` wins, logged; CLARIFY-08).
 4. **Event type rows.** Here they carry Jitan's code names. IT's real names may differ
    (CLARIFY-11): then either IT adds these rows or the code adopts IT's names.
 5. **Credential groups, modules, functions.** Seeded only by name. Authorization still uses
