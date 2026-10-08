@@ -5,7 +5,7 @@ import '../languages/user_language_repository.dart';
 
 final _log = Logger('onboarding');
 
-/// The `tblUser` row a personal QR belongs to, as onboarding needs it.
+/// The `tblUser` row a temporary QR names, as onboarding and recovery need it.
 /// Never carries the password hash itself, only whether one is set.
 typedef OnboardingUser = ({
   int userId,
@@ -22,23 +22,23 @@ typedef OnboardingUser = ({
   bool passwordSet,
 });
 
-/// Data access for onboarding: `tblUser` by `userQRcode`, and the user's
-/// language in `tblUserLanguage`.
+/// Data access for account setup (onboarding, and the account read by
+/// recovery): `tblUser` by ID, and the user's language in `tblUserLanguage`.
 class OnboardingRepository {
   const OnboardingRepository();
 
-  /// The user whose `userQRcode` is exactly [qrCode], or `null`. MFD users
-  /// are returned too (flagged), so onboarding can refuse them explicitly.
+  /// The user [userId] (named by a verified temporary QR), or `null`. MFD
+  /// users are returned too (flagged), so they can be refused explicitly.
   ///
   /// With [lockForUpdate] (inside a transaction) the row stays locked until
-  /// commit, so two devices cannot both complete onboarding.
-  Future<OnboardingUser?> findByQrCode(SqlExecutor executor, String qrCode, {bool lockForUpdate = false}) async {
+  /// commit, so two devices cannot both set the first password.
+  Future<OnboardingUser?> findById(SqlExecutor executor, int userId, {bool lockForUpdate = false}) async {
     final rows = await executor.query(
       'SELECT userID, userName, userSurname, userCode, userActive, userMFD, '
       '(userPassword IS NOT NULL) AS passwordSet '
-      'FROM tblUser WHERE userQRcode = :qrCode'
+      'FROM tblUser WHERE userID = :userId'
       '${lockForUpdate ? ' FOR UPDATE' : ''}',
-      {'qrCode': qrCode},
+      {'userId': userId},
     );
     if (rows.isEmpty) return null;
     final row = rows.first;

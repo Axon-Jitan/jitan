@@ -39,6 +39,11 @@ import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_api/src/languages/translation_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
+import 'package:jitan_api/src/recovery/recovery_routes.dart';
+import 'package:jitan_api/src/recovery/recovery_service.dart';
+import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
 import 'package:jitan_api/src/time_registration/time_registration_service.dart';
@@ -87,6 +92,12 @@ Future<void> main() async {
   if (sessionSecret == null) {
     _log.warning('JITAN_SESSION_SECRET not set: using a random one (development only); sessions end on restart.');
   }
+  // Temporary onboarding/recovery QRs (GAP-04): state in this process's
+  // memory, never MySQL; a restart invalidates outstanding QRs.
+  final temporaryQr = TemporaryQrService(
+    tokens: TemporaryQrTokens.withRandomKey(),
+    store: InMemoryTemporaryTokenStore(),
+  );
   _log.info('Password hashing: ${config.passwordHashing}');
   final hasher = PasswordHasher(parameters: config.passwordHashing);
 
@@ -120,6 +131,7 @@ Future<void> main() async {
         groups: groupRepository,
         audit: const AuditLogRepository(),
         transactions: db,
+        temporaryQr: temporaryQr,
       ),
     ),
     assignments: EmployeeAssignmentRoutes(
@@ -145,6 +157,19 @@ Future<void> main() async {
         transactions: db,
         executor: db,
         sessions: sessions,
+        temporaryQr: temporaryQr,
+        hasher: hasher,
+      ),
+    ),
+    recovery: RecoveryRoutes(
+      RecoveryService(
+        accounts: const OnboardingRepository(),
+        credentials: const CredentialRepository(),
+        audit: const AuditLogRepository(),
+        transactions: db,
+        executor: db,
+        sessions: sessions,
+        temporaryQr: temporaryQr,
         hasher: hasher,
       ),
     ),

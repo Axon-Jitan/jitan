@@ -13,6 +13,7 @@ import 'http/cors_middleware.dart';
 import 'http/error_middleware.dart';
 import 'languages/language_routes.dart';
 import 'onboarding/onboarding_routes.dart';
+import 'recovery/recovery_routes.dart';
 import 'time_registration/time_registration_routes.dart';
 import 'users/me_routes.dart';
 
@@ -21,7 +22,7 @@ final _log = Logger('http.requests');
 /// Assembles the request pipeline:
 ///
 /// ```text
-/// request log → CORS → error mapping → /health*, /languages, /translations, /onboarding/*, /auth/sign-in (public)
+/// request log → CORS → error mapping → /health*, /languages, /translations, /onboarding/*, /recovery/*, /auth/sign-in (public)
 ///                                    → identity → API routes             (authenticated)
 /// ```
 ///
@@ -37,6 +38,7 @@ Handler buildApp({
   required GroupRoutes groups,
   required LanguageRoutes languages,
   required OnboardingRoutes onboarding,
+  required RecoveryRoutes recovery,
   required SignInRoutes signIn,
   required MeRoutes me,
   required TimeRegistrationRoutes timeRegistrations,
@@ -60,6 +62,7 @@ Handler buildApp({
       .add(health.router.call)
       .add(languages.publicRouter.call)
       .add(onboarding.router.call)
+      .add(recovery.router.call)
       .add(signIn.router.call)
       .add(api.addHandler(apiRoutes.call))
       .handler;

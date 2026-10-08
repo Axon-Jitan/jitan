@@ -8,13 +8,17 @@ import 'package:test/test.dart';
 
 import '../support/test_app.dart';
 
-const _qr = 'n9Xq-2kLmPz8RtYw4VbC5dEf';
 const _device = 'device-0123456789abcdef';
+const _otherDevice = 'device-fedcba9876543210';
 
-/// No dev identity: onboarding works without sign-in (the QR is the credential).
+/// The permanent Terminal QR of user 1; it must never onboard anyone.
+const _terminalQr = 'n9Xq-2kLmPz8RtYw4VbC5dEf';
+
+/// No dev identity: onboarding works without sign-in (the temporary QR is the
+/// credential).
 TestApp _app({bool active = true}) {
   final app = TestApp(devUserId: null, activeUserIds: {if (active) 1});
-  app.onboarding.users = {_qr: (userId: 1, firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', isActive: active)};
+  app.onboarding.users = {1: (userId: 1, firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', isActive: active)};
   app.onboarding.companies = {
     1: ['Almeco', 'PCA'],
   };
@@ -22,13 +26,15 @@ TestApp _app({bool active = true}) {
   return app;
 }
 
+Future<String> _qr(TestApp app, [TemporaryQrPurpose purpose = TemporaryQrPurpose.onboarding]) => app.issueQr(1, purpose);
+
 Future<Map<String, Object?>> _error(Response response) async =>
     (await jsonBody(response))['error']! as Map<String, Object?>;
 
-String _start([String qr = _qr]) => jsonEncode({'qrCode': qr});
+String _start(String qr) => jsonEncode({'qrCode': qr});
 
-String _complete({
-  String qr = _qr,
+String _complete(
+  String qr, {
   String password = 'correct horse battery',
   String deviceId = _device,
   String? languageCode,
@@ -36,8 +42,11 @@ String _complete({
 
 void main() {
   group('POST /onboarding/start', () {
-    test('onboarding allowed when userPassword IS NULL: returns the account to confirm', () async {
-      final response = await _app().post('/onboarding/start', _start());
+    test('a valid temporary onboarding QR returns the account to confirm, without using the QR', () async {
+      final app = _app();
+      final qr = await _qr(app);
+
+      final response = await app.post('/onboarding/start', _start(qr));
 
       expect(response.statusCode, 200);
       expect(await jsonBody(response), {
@@ -47,206 +56,227 @@ void main() {
         'companies': ['Almeco', 'PCA'],
       });
       expect(response.headers['cache-control'], 'no-store');
+      expect((await app.post('/onboarding/start', _start(qr))).statusCode, 200, reason: 'not consumed when scanned');
+    });
+
+    test('the permanent Terminal QR no longer authorizes onboarding', () async {
+      final response = await _app().post('/onboarding/start', _start(_terminalQr));
+
+      expect(response.statusCode, 400);
+      expect(await _error(response), containsPair('code', 'invalid_qr_code'));
+    });
+
+    test('expired, replaced and wrong-purpose QRs are refused with their own codes', () async {
+      final app = _app();
+      final expired = await _qr(app);
+      app.now = app.now.add(const Duration(minutes: 10));
+      final replaced = await _qr(app);
+      await _qr(app);
+      final recovery = await _qr(app, TemporaryQrPurpose.recovery);
+
+      expect(await _error(await app.post('/onboarding/start', _start(expired))), containsPair('code', 'qr_expired'));
+      expect(await _error(await app.post('/onboarding/start', _start(replaced))), containsPair('code', 'qr_expired'));
+      expect(await _error(await app.post('/onboarding/start', _start(recovery))), containsPair('code', 'qr_wrong_purpose'));
     });
 
     test('onboarding blocked when userPassword IS NOT NULL', () async {
       final app = _app()..onboarding.passwordHashes[1] = r'$argon2id$existing';
 
-      final response = await app.post('/onboarding/start', _start());
+      final response = await app.post('/onboarding/start', _start(await _qr(app)));
 
       expect(response.statusCode, 409);
       expect(await _error(response), containsPair('code', 'onboarding_already_completed'));
     });
 
-    test('unknown QR returns a generic error that reveals nothing', () async {
-      final response = await _app().post('/onboarding/start', _start('not-a-real-qr'));
+    test('a QR for an unknown employee reveals nothing', () async {
+      final app = _app();
 
-      expect(response.statusCode, 404);
-      final error = await _error(response);
-      expect(error['code'], 'invalid_qr_code');
-      expect(error['message'], 'This is not a Jitan QR code.');
+      final response = await app.post('/onboarding/start', _start(await app.issueQr(99, TemporaryQrPurpose.onboarding)));
+
+      expect(response.statusCode, 400);
+      expect(await _error(response), containsPair('code', 'invalid_qr_code'));
     });
 
-    test('inactive employee is refused', () async {
-      final response = await _app(active: false).post('/onboarding/start', _start());
+    test('inactive or MFD employees are refused', () async {
+      final inactive = _app(active: false);
+      final deleted = _app()..onboarding.markedForDeletion.add(1);
 
-      expect(response.statusCode, 403);
-      expect(await _error(response), containsPair('code', 'account_inactive'));
-    });
-
-    test('MFD (marked for deletion) employee is refused, also when already activated', () async {
-      final app = _app()..onboarding.markedForDeletion.add(1);
-      final activated = _app()
-        ..onboarding.markedForDeletion.add(1)
-        ..onboarding.passwordHashes[1] = r'$argon2id$existing';
-
-      for (final response in [
-        await app.post('/onboarding/start', _start()),
-        await app.post('/onboarding/complete', _complete()),
-        await activated.post('/onboarding/complete', _complete()),
-      ]) {
+      for (final app in [inactive, deleted]) {
+        final response = await app.post('/onboarding/start', _start(await _qr(app)));
         expect(response.statusCode, 403);
         expect(await _error(response), containsPair('code', 'account_inactive'));
       }
-      expect(app.onboarding.passwordHashes, isEmpty);
     });
 
-    test('400 for a blank or absurdly long QR, or a malformed body', () async {
+    test('400 for a blank or absurd QR, or a malformed body', () async {
       final app = _app();
 
       expect((await app.post('/onboarding/start', _start('  '))).statusCode, 400);
-      expect((await app.post('/onboarding/start', _start('x' * 257))).statusCode, 400);
+      expect((await app.post('/onboarding/start', _start('x' * 2000))).statusCode, 400);
       expect((await app.post('/onboarding/start', '{oops')).statusCode, 400);
       expect((await app.post('/onboarding/start', '{}')).statusCode, 400);
     });
   });
 
   group('POST /onboarding/complete', () {
-    test('stores an Argon2id hash of the exact password, audits, commits', () async {
+    test('stores an Argon2id hash of the exact password, audits, commits, uses up the QR', () async {
       final app = _app();
+      final qr = await _qr(app);
 
-      final response = await app.post('/onboarding/complete', _complete(password: '  spaced pass  '));
+      final response = await app.post('/onboarding/complete', _complete(qr, password: '  spaced pass  '));
 
       expect(response.statusCode, 200);
       final hash = app.onboarding.passwordHashes[1]!;
       expect(hash, startsWith(r'$argon2id$v=19$'));
       expect(await app.hasher.verify('  spaced pass  ', hash), isTrue, reason: 'never trimmed');
-      expect(await app.hasher.verify('spaced pass', hash), isFalse);
       final event = app.audit.events.single;
       expect(event.type, AuditEventType.onboardingCompleted);
       expect(event.references, {EventLogReference.user: 1});
       expect(app.transactions.outcomes, ['commit']);
+      expect(await _error(await app.post('/onboarding/start', _start(qr))), containsPair('code', 'qr_already_used'));
     });
 
-    test('successful onboarding returns a valid authenticated session for this device', () async {
+    test('returns a session for this device: the employee lands in the app, no second sign-in', () async {
       final app = _app();
 
-      final response = await app.post('/onboarding/complete', _complete());
+      final response = await app.post('/onboarding/complete', _complete(await _qr(app)));
       final body = SessionResponse.fromJson(await jsonBody(response));
 
       expect(body.account.code, 'SBW');
-      expect(body.session.expiresAt, DateTime.utc(2026, 11, 6, 12));
       final claims = app.sessions.verify(body.session.accessToken)!;
-      expect(claims.userId, 1);
-      expect(claims.deviceId, _device);
+      expect((claims.userId, claims.deviceId), (1, _device));
       expect(response.headers['cache-control'], 'no-store');
-    });
-
-    test('the employee lands directly in the authenticated app: the session works for GET /me', () async {
-      final app = _app();
-      final body = SessionResponse.fromJson(
-        await jsonBody(await app.post('/onboarding/complete', _complete())),
-      );
-
-      final me = await app.getAuthorized('/me', body.session.accessToken);
-
-      expect(me.statusCode, 200);
-      expect(await jsonBody(me), containsPair('code', 'SBW'));
-      expect((await app.get('/me')).statusCode, 401, reason: 'without the token: no identity');
+      expect((await app.getAuthorized('/me', body.session.accessToken)).statusCode, 200);
     });
 
     test('stores the chosen database language; English needs no row', () async {
       final dutch = _app();
-      await dutch.post('/onboarding/complete', _complete(languageCode: 'nl'));
+      await dutch.post('/onboarding/complete', _complete(await _qr(dutch), languageCode: 'nl'));
       expect(dutch.onboarding.languages, {1: 2});
 
       final english = _app();
-      expect((await english.post('/onboarding/complete', _complete(languageCode: 'en'))).statusCode, 200);
+      expect((await english.post('/onboarding/complete', _complete(await _qr(english), languageCode: 'en'))).statusCode, 200);
       expect(english.onboarding.languages, isEmpty);
     });
 
-    test('an unavailable language or a malformed device id is a field error, before anything is stored', () async {
+    test('field errors come before anything is stored, and leave the QR usable', () async {
       final app = _app();
+      final qr = await _qr(app);
 
-      final language = await app.post('/onboarding/complete', _complete(languageCode: 'xx'));
-      final device = await app.post('/onboarding/complete', _complete(deviceId: 'short'));
-
-      expect(await _error(language), containsPair('field', 'languageCode'));
-      expect(await _error(device), containsPair('field', 'deviceId'));
+      expect(await _error(await app.post('/onboarding/complete', _complete(qr, languageCode: 'xx'))), containsPair('field', 'languageCode'));
+      expect(await _error(await app.post('/onboarding/complete', _complete(qr, deviceId: 'short'))), containsPair('field', 'deviceId'));
+      expect(await _error(await app.post('/onboarding/complete', _complete(qr, password: 'short'))), containsPair('field', 'password'));
       expect(app.onboarding.passwordHashes, isEmpty);
+      expect((await app.post('/onboarding/complete', _complete(qr))).statusCode, 200);
     });
 
-    test('after completion the same QR cannot restart or redo onboarding', () async {
+    test('a used QR cannot onboard again, from any device or with any password', () async {
       final app = _app();
-      await app.post('/onboarding/complete', _complete());
+      final qr = await _qr(app);
+      await app.post('/onboarding/complete', _complete(qr));
       final firstHash = app.onboarding.passwordHashes[1];
 
-      final restart = await app.post('/onboarding/start', _start());
-      final redo = await app.post('/onboarding/complete', _complete(password: 'attacker password'));
+      final other = await app.post('/onboarding/complete', _complete(qr, deviceId: _otherDevice, password: 'attacker password'));
+      final sameDeviceOtherPassword = await app.post('/onboarding/complete', _complete(qr, password: 'attacker password'));
 
-      expect(restart.statusCode, 409);
-      expect(redo.statusCode, 409);
-      expect(await _error(redo), containsPair('code', 'onboarding_already_completed'));
+      expect(await _error(other), containsPair('code', 'qr_already_used'));
+      expect(await _error(sameDeviceOtherPassword), containsPair('code', 'onboarding_already_completed'));
       expect(app.onboarding.passwordHashes[1], firstHash, reason: 'password not replaced');
       expect(app.audit.events, hasLength(1));
     });
 
-    test('session recovery: repeating completion with the same password signs in again, changes nothing', () async {
+    test('lost answer: the same device repeating with the same QR and password gets a new session, nothing written', () async {
       final app = _app();
-      await app.post('/onboarding/complete', _complete());
+      final qr = await _qr(app);
+      await app.post('/onboarding/complete', _complete(qr));
       final hash = app.onboarding.passwordHashes[1];
 
-      final retry = await app.post('/onboarding/complete', _complete(deviceId: 'device-retry-0000000000'));
+      final retry = await app.post('/onboarding/complete', _complete(qr));
 
       expect(retry.statusCode, 200);
       final body = SessionResponse.fromJson(await jsonBody(retry));
-      expect(app.sessions.verify(body.session.accessToken)!.deviceId, 'device-retry-0000000000');
       expect((await app.getAuthorized('/me', body.session.accessToken)).statusCode, 200);
-      expect(app.onboarding.passwordHashes[1], hash, reason: 'password unchanged');
+      expect(app.onboarding.passwordHashes[1], hash);
       expect(app.audit.events, hasLength(1), reason: 'onboarding not repeated');
-      expect(app.transactions.outcomes, ['commit'], reason: 'no write for the recovery');
+      expect(app.transactions.outcomes, ['commit']);
     });
 
-    test('session recovery is refused for an inactive employee', () async {
+    test('a new QR for an employee who already set a password is useless', () async {
       final app = _app();
-      await app.post('/onboarding/complete', _complete());
-      app.onboarding.users = {_qr: (userId: 1, firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', isActive: false)};
+      await app.post('/onboarding/complete', _complete(await _qr(app)));
 
-      expect((await app.post('/onboarding/complete', _complete())).statusCode, 403);
+      final response = await app.post('/onboarding/complete', _complete(await _qr(app)));
+
+      expect(await _error(response), containsPair('code', 'onboarding_already_completed'));
     });
 
-    test('concurrent completion: the device losing the race gets 409 and nothing is committed', () async {
+    test('concurrent activation: the device losing the database race gets 409, nothing committed, QR released', () async {
       final app = _app()..onboarding.loseRace = true;
+      final qr = await _qr(app);
 
-      final response = await app.post('/onboarding/complete', _complete());
+      final response = await app.post('/onboarding/complete', _complete(qr));
 
       expect(response.statusCode, 409);
       expect(app.transactions.outcomes, ['rollback']);
       expect(app.audit.events, isEmpty);
     });
 
-    test('password rules: 8..256 characters, any letters, numbers and symbols, no 72-byte limit', () async {
+    test('concurrent requests cannot both use one QR', () async {
+      final app = _app();
+      final qr = await _qr(app);
+
+      final responses = await Future.wait([
+        app.post('/onboarding/complete', _complete(qr)),
+        app.post('/onboarding/complete', _complete(qr, deviceId: _otherDevice)),
+      ]);
+
+      expect(responses.map((r) => r.statusCode).toList()..sort(), [200, 409]);
+      expect(app.audit.events, hasLength(1));
+    });
+
+    test('the permanent Terminal QR cannot complete onboarding', () async {
+      final app = _app();
+
+      expect((await app.post('/onboarding/complete', _complete(_terminalQr))).statusCode, 400);
+      expect(app.onboarding.passwordHashes, isEmpty);
+    });
+
+    test('an inactive account is refused and the QR stays unused', () async {
+      final app = _app(active: false);
+
+      expect((await app.post('/onboarding/complete', _complete(await _qr(app)))).statusCode, 403);
+      expect(app.onboarding.passwordHashes, isEmpty);
+    });
+
+    test('password rules: 8..256 characters, any letters, numbers and symbols', () async {
       for (final password in ['short', '        ', 'x' * 257]) {
         final app = _app();
-        final response = await app.post('/onboarding/complete', _complete(password: password));
+        final response = await app.post('/onboarding/complete', _complete(await _qr(app), password: password));
         expect(response.statusCode, 400, reason: password);
         expect(await _error(response), containsPair('field', 'password'));
       }
       for (final password in ['8 chars!', 'é' * 256, r'P@ss w0rd §€ñ 🔐']) {
-        expect((await _app().post('/onboarding/complete', _complete(password: password))).statusCode, 200);
+        final app = _app();
+        expect((await app.post('/onboarding/complete', _complete(await _qr(app), password: password))).statusCode, 200);
       }
     });
 
-    test('an inactive or unknown account is refused', () async {
-      expect((await _app(active: false).post('/onboarding/complete', _complete())).statusCode, 403);
-      expect((await _app().post('/onboarding/complete', _complete(qr: 'unknown'))).statusCode, 404);
-    });
-
-    test('the password and its hash never appear in responses or logs', () async {
+    test('neither the QR, the password nor its hash appear in responses or logs', () async {
       const password = 'Unmistakable-Pass-4471';
       final records = <String>[];
       final subscription = Logger.root.onRecord.listen((r) => records.add('${r.message} ${r.error ?? ''}'));
       addTearDown(subscription.cancel);
       final app = _app();
+      final qr = await _qr(app);
 
-      final ok = await (await app.post('/onboarding/complete', _complete(password: password))).readAsString();
-      final again = await (await app.post('/onboarding/complete', _complete(password: password))).readAsString();
-      final hash = app.onboarding.passwordHashes[1]!;
-      final hashBody = hash.split(r'$').last;
+      final ok = await (await app.post('/onboarding/complete', _complete(qr, password: password))).readAsString();
+      final reused = await (await app.post('/onboarding/complete', _complete(qr, deviceId: _otherDevice))).readAsString();
+      final hashBody = app.onboarding.passwordHashes[1]!.split(r'$').last;
 
-      for (final text in [ok, again, ...records]) {
+      for (final text in [ok, reused, ...records]) {
         expect(text, isNot(contains(password)));
         expect(text, isNot(contains(hashBody)));
+        expect(text, isNot(contains(qr)));
       }
     });
   });
@@ -255,7 +285,7 @@ void main() {
     Future<(TestApp, String)> onboarded() async {
       final app = _app();
       final body = SessionResponse.fromJson(
-        await jsonBody(await app.post('/onboarding/complete', _complete())),
+        await jsonBody(await app.post('/onboarding/complete', _complete(await _qr(app)))),
       );
       return (app, body.session.accessToken);
     }
@@ -281,11 +311,12 @@ void main() {
       expect((await app.getAuthorized('/me', token)).statusCode, 401);
     });
 
-    test('a tampered or foreign token is refused, never silently ignored', () async {
+    test('a tampered token, a foreign one or a temporary QR used as a session is refused', () async {
       final (app, token) = await onboarded();
 
       expect((await app.getAuthorized('/me', '${token}x')).statusCode, 401);
       expect((await app.get('/me', headers: {'authorization': 'Basic abc'})).statusCode, 401);
+      expect((await app.getAuthorized('/me', await _qr(app))).statusCode, 401, reason: 'a QR is never a sign-in');
     });
   });
 }

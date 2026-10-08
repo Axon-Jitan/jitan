@@ -9,23 +9,25 @@ import '../auth/session_tokens.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
 import '../languages/language_repository.dart';
+import '../temporary_qr/temporary_qr_service.dart';
+import '../temporary_qr/temporary_qr_tokens.dart';
+import 'account_setup_rules.dart';
 import 'onboarding_repository.dart';
 
-/// Employee onboarding with the personal QR (`tblUser.userQRcode`).
+/// Employee onboarding with a **temporary onboarding QR** (IT decision
+/// 2026-10-08): HR/Admin generates it; the employee scans it, confirms who
+/// they are and sets the mandatory password, which signs the device in (no
+/// second sign-in). The permanent Terminal QR never onboards anyone.
 ///
-/// Rules (decisions 2026-10-07):
-/// - `userPassword IS NULL` → onboarding can start.
-/// - Setting a password is mandatory and completes onboarding.
-/// - Once a password is set, the same QR never restarts onboarding; it stays
-///   valid for Jitan Terminal.
-/// - Completing onboarding signs the device in: no second sign-in.
-/// - Session recovery: if the response to a completed onboarding was lost
-///   (network), repeating the request with the **same password** returns a
-///   new session and changes nothing. Any other password gets 409, so this is
-///   never a way to replace a password.
-///
-/// The QR is the credential here (the employee has no password yet): 144
-/// random bits, so it cannot be guessed.
+/// - The QR must be valid, unexpired, the current one, unused, and for
+///   onboarding ([TemporaryQrService]); scanning does not use it up.
+/// - `userPassword IS NULL` is still the "not yet set up" signal; once a
+///   password is set, onboarding is refused (`onboarding_already_completed`).
+/// - Completion stores the Argon2id hash under a row lock (only one device
+///   can complete), audits, then uses up the QR and issues the session.
+/// - If the answer was lost, the **same device** may repeat the completion
+///   with the same QR and the **same password**: it gets a new session and
+///   nothing is written. Any other password, or another device, is refused.
 class OnboardingService {
   OnboardingService({
     required this._onboarding,
@@ -34,6 +36,7 @@ class OnboardingService {
     required this._transactions,
     required this._executor,
     required this._sessions,
+    required this._temporaryQr,
     this._hasher = const PasswordHasher(),
   });
 
@@ -45,42 +48,52 @@ class OnboardingService {
   /// For reads outside a transaction.
   final SqlExecutor _executor;
   final SessionTokens _sessions;
+  final TemporaryQrService _temporaryQr;
   final PasswordHasher _hasher;
-
-  /// Longest QR value accepted, as a cheap sanity bound.
-  static const maxQrCodeLength = 256;
 
   /// Code of the built-in default language; it needs no database row.
   static const _englishCode = 'en';
 
-  /// Checks a scanned QR and returns the account to confirm.
+  /// Checks a scanned onboarding QR and returns the account to confirm.
   Future<EmployeeAccount> start(String qrCode) async {
-    final user = _requireOnboardable(await _onboarding.findByQrCode(_executor, _checkedQr(qrCode)));
+    final claims = await _temporaryQr.check(qrCode, TemporaryQrPurpose.onboarding);
+    final user = _requireOnboardable(await _onboarding.findById(_executor, claims.userId));
     return _account(_executor, user);
   }
 
-  /// Completes onboarding in one transaction and signs the device in:
-  /// row lock → guard re-check → password hash stored (only while none is
-  /// set) → chosen language stored → audit → session for [request.deviceId].
+  /// Completes onboarding and signs the device in. Cheap checks first, then
+  /// the QR is held for this device while the password is stored.
   Future<SessionResponse> complete(OnboardingCompleteRequest request) async {
-    final qr = _checkedQr(request.qrCode);
     PasswordPolicy.check(request.password);
     final deviceId = checkedDeviceId(request.deviceId, field: OnboardingCompleteRequest.fieldDeviceId);
     final languageId = await _languageIdFor(request.languageCode);
+    return _temporaryQr.redeem(
+      request.qrCode,
+      TemporaryQrPurpose.onboarding,
+      deviceId,
+      (claims, {required isRetry}) => _complete(claims, request.password, deviceId, languageId, isRetry: isRetry),
+    );
+  }
 
-    final found = await _onboarding.findByQrCode(_executor, qr);
-    if (found != null && _isUsable(found) && found.passwordSet) {
-      return _recoverSession(found, request.password, deviceId);
+  Future<SessionResponse> _complete(
+    TemporaryQrClaims claims,
+    String password,
+    String deviceId,
+    int? languageId, {
+    required bool isRetry,
+  }) async {
+    final found = await _onboarding.findById(_executor, claims.userId);
+    if (found != null && AccountSetupRules.isUsable(found) && found.passwordSet && isRetry) {
+      return _sessionAgain(found, password, deviceId);
     }
-
     // Refuse before the (slow) hash when onboarding cannot run…
     _requireOnboardable(found);
-    final hash = await _hasher.hash(request.password);
+    final hash = await _hasher.hash(password);
 
     // …and check again under a row lock: only one device can complete.
     final (user, account) = await _transactions.transaction((tx) async {
-      final user = _requireOnboardable(await _onboarding.findByQrCode(tx, qr, lockForUpdate: true));
-      if (!await _onboarding.setPasswordIfNotSet(tx, user.userId, hash)) throw _alreadyCompleted();
+      final user = _requireOnboardable(await _onboarding.findById(tx, claims.userId, lockForUpdate: true));
+      if (!await _onboarding.setPasswordIfNotSet(tx, user.userId, hash)) throw AccountSetupRules.alreadyCompleted();
       if (languageId != null) await _onboarding.setLanguage(tx, user.userId, languageId);
       await _audit.record(
         tx,
@@ -92,33 +105,23 @@ class OnboardingService {
       );
       return (user, await _account(tx, user));
     });
+    return _session(user.userId, deviceId, hash, account);
+  }
 
-    final session = _sessions.issue(userId: user.userId, deviceId: deviceId, passwordHash: hash);
+  /// The same device finishing an interrupted completion: a new session only
+  /// when [password] matches the hash it stored. Nothing is written.
+  Future<SessionResponse> _sessionAgain(OnboardingUser user, String password, String deviceId) async {
+    final hash = await _onboarding.passwordHash(_executor, user.userId);
+    if (hash == null || !await _hasher.verify(password, hash)) throw AccountSetupRules.alreadyCompleted();
+    return _session(user.userId, deviceId, hash, await _account(_executor, user));
+  }
+
+  SessionResponse _session(int userId, String deviceId, String hash, EmployeeAccount account) {
+    final session = _sessions.issue(userId: userId, deviceId: deviceId, passwordHash: hash);
     return SessionResponse(
       account: account,
       session: SessionInfo(accessToken: session.token, expiresAt: session.expiresAt),
     );
-  }
-
-  /// Onboarding already completed: a new session only when [password]
-  /// matches the stored hash (the same employee retrying after a lost
-  /// response, Figma "Session recovery"). Nothing is written.
-  Future<SessionResponse> _recoverSession(OnboardingUser user, String password, String deviceId) async {
-    final hash = await _onboarding.passwordHash(_executor, user.userId);
-    if (hash == null || !await _hasher.verify(password, hash)) throw _alreadyCompleted();
-    final session = _sessions.issue(userId: user.userId, deviceId: deviceId, passwordHash: hash);
-    return SessionResponse(
-      account: await _account(_executor, user),
-      session: SessionInfo(accessToken: session.token, expiresAt: session.expiresAt),
-    );
-  }
-
-  static String _checkedQr(String qrCode) {
-    final qr = qrCode.trim();
-    if (qr.isEmpty || qr.length > maxQrCodeLength) {
-      throw const ApiException(400, ApiErrorCode.invalidQrCode, 'This is not a Jitan QR code.');
-    }
-    return qr;
   }
 
   /// The active `tblLanguage` row for [code]; `null` for no choice or for
@@ -134,28 +137,10 @@ class OnboardingService {
   }
 
   static OnboardingUser _requireOnboardable(OnboardingUser? user) {
-    // Unknown QR: the same answer whatever the reason, so nothing is revealed.
-    if (user == null) throw const ApiException(404, ApiErrorCode.invalidQrCode, 'This is not a Jitan QR code.');
-    // Inactive or marked for deletion (MFD): refused, before anything else.
-    if (!_isUsable(user)) {
-      throw const ApiException(403, ApiErrorCode.accountInactive, 'This account is not active.');
-    }
-    if (user.passwordSet) throw _alreadyCompleted();
-    return user;
+    final usable = AccountSetupRules.requireUsable(user);
+    if (usable.passwordSet) throw AccountSetupRules.alreadyCompleted();
+    return usable;
   }
 
-  static bool _isUsable(OnboardingUser user) => user.isActive && !user.isMarkedForDeletion;
-
-  static ApiException _alreadyCompleted() => const ApiException(
-        409,
-        ApiErrorCode.onboardingAlreadyCompleted,
-        'Onboarding is already completed for this account.',
-      );
-
-  Future<EmployeeAccount> _account(SqlExecutor executor, OnboardingUser user) async => EmployeeAccount(
-        firstName: user.firstName,
-        lastName: user.lastName,
-        code: user.code,
-        companies: await _onboarding.companyNames(executor, user.userId),
-      );
+  Future<EmployeeAccount> _account(SqlExecutor executor, OnboardingUser user) => AccountSetupRules.account(_onboarding, executor, user);
 }

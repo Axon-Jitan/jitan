@@ -7,9 +7,12 @@
 enum AuditEventType {
   employeeCreated('employee.created'),
 
-  /// A personal QR was stored for an employee who had none (e.g. created
-  /// outside Jitan). Showing an existing QR is not audited as a change.
-  personalQrGenerated('employee.personal_qr.generated'),
+  /// HR/Admin generated a temporary onboarding QR (stored nowhere in MySQL;
+  /// only the fact is logged).
+  onboardingQrGenerated('employee.onboarding_qr.generated'),
+
+  /// HR/Admin generated a temporary recovery QR after a reset.
+  recoveryQrGenerated('employee.recovery_qr.generated'),
 
   /// The employee set their first password: onboarding is complete.
   onboardingCompleted('employee.onboarding.completed'),
@@ -18,9 +21,12 @@ enum AuditEventType {
   /// password). Every other session of theirs ends.
   passwordChanged('employee.password.changed'),
 
-  /// HR/Admin "Reset account access": the password was cleared, so the
-  /// employee sets up Jitan again with their existing QR.
+  /// HR/Admin "Reset account access": the password was cleared and every
+  /// session ended; a temporary recovery QR lets the employee set a new one.
   accountAccessReset('employee.access.reset'),
+
+  /// The employee set a new password with a temporary recovery QR.
+  accessRecovered('employee.access.recovered'),
 
   /// HR/Admin added the employee to a company (`tblUserCompany`).
   companyAssigned('employee.company.assigned'),

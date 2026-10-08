@@ -123,8 +123,8 @@ class FakeEmployeeRepository implements EmployeeRepository {
               lastName: null,
               code: 'U$userId',
               groups: const [],
-              isActive: true,
-              isActivated: true,
+              isActive: memberStates[userId]?.isActive ?? true,
+              isActivated: memberStates[userId]?.isActivated ?? activatedLookup?.call(userId) ?? true,
             )
           : null);
 
@@ -141,33 +141,12 @@ class FakeEmployeeRepository implements EmployeeRepository {
   /// (companyId, userId) pairs [findInCompany] finds.
   Set<(int, int)> members = {};
 
-  /// (companyId, userId) → that member's current userQRcode (null = none).
-  /// A pair missing from the map is not a member.
-  Map<(int, int), String?> qrCodes = {};
+  /// userId → state [findInCompany] reports (default: active and activated).
+  Map<int, ({bool isActive, bool isActivated})> memberStates = {};
 
-  /// When true, [setPersonalQrCodeIfMissing] behaves as if another request
-  /// stored [raceWinnerQr] first.
-  bool loseQrRace = false;
-  String raceWinnerQr = 'QR-OTHER';
-
-  @override
-  Future<({bool isMember, String? qrCode})> personalQrCode(SqlExecutor executor, int companyId, int userId) async =>
-      qrCodes.containsKey((companyId, userId))
-      ? (isMember: true, qrCode: qrCodes[(companyId, userId)])
-      : (isMember: false, qrCode: null);
-
-  @override
-  Future<bool> setPersonalQrCodeIfMissing(SqlExecutor tx, int userId, String qrCode) async {
-    final key = qrCodes.keys.firstWhere((k) => k.$2 == userId);
-    if (loseQrRace) {
-      qrCodes[key] = raceWinnerQr;
-      return false;
-    }
-    if (qrCodes[key] != null) return false;
-    writes.add('setQr $userId');
-    qrCodes[key] = qrCode;
-    return true;
-  }
+  /// Whether a user has a password, from the onboarding fake (as the real
+  /// query reads `userPassword IS NOT NULL`); `null` when it does not know.
+  bool? Function(int userId)? activatedLookup;
 
   /// (companyId, userId) → details.
   Map<(int, int), EmployeeDetails> details = {};
@@ -178,8 +157,8 @@ class FakeEmployeeRepository implements EmployeeRepository {
 
 /// In-memory users by QR. [passwordHashes] stands in for `userPassword`.
 class FakeOnboardingRepository implements OnboardingRepository {
-  /// qrCode → user (without the password state).
-  Map<String, ({int userId, String? firstName, String? lastName, String code, bool isActive})> users = {};
+  /// userId → user (without the password state).
+  Map<int, ({int userId, String? firstName, String? lastName, String code, bool isActive})> users = {};
 
   /// Users marked for deletion (`userMFD = 1`).
   final markedForDeletion = <int>{};
@@ -194,8 +173,8 @@ class FakeOnboardingRepository implements OnboardingRepository {
   bool loseRace = false;
 
   @override
-  Future<OnboardingUser?> findByQrCode(SqlExecutor executor, String qrCode, {bool lockForUpdate = false}) async {
-    final u = users[qrCode];
+  Future<OnboardingUser?> findById(SqlExecutor executor, int userId, {bool lockForUpdate = false}) async {
+    final u = users[userId];
     if (u == null) return null;
     return (
       userId: u.userId,
@@ -245,6 +224,15 @@ class FakeCredentialRepository implements CredentialRepository {
           isMarkedForDeletion: onboarding.markedForDeletion.contains(u.userId),
         ),
   ];
+
+  @override
+  Future<bool> setPasswordAfterReset(SqlExecutor tx, int userId, String passwordHash) async {
+    final user = onboarding.users[userId];
+    if (user == null || !user.isActive || onboarding.markedForDeletion.contains(userId)) return false;
+    if (onboarding.loseRace || onboarding.passwordHashes.containsKey(userId)) return false;
+    onboarding.passwordHashes[userId] = passwordHash;
+    return true;
+  }
 
   @override
   Future<bool> replacePassword(SqlExecutor tx, int userId, {required String currentHash, required String newHash}) async {

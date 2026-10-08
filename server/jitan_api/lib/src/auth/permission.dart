@@ -15,9 +15,10 @@ enum Permission {
   /// Create an employee in one company (company-scoped).
   createEmployee,
 
-  /// See an employee's onboarding / personal QR (company-scoped). The QR is
-  /// a credential, so this is separate from [viewEmployees].
-  viewEmployeeQr,
+  /// Generate a temporary onboarding or recovery QR for an employee
+  /// (company-scoped). The QR is a credential, so this is separate from
+  /// [viewEmployees].
+  issueTemporaryQr,
 
   /// See the assignable employee groups (e.g. Blue/White collar).
   viewGroups,

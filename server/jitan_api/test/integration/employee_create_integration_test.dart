@@ -10,6 +10,9 @@ import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
 import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/http/api_exception.dart';
+import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
@@ -36,6 +39,7 @@ void main() {
         groups: GroupRepository(db),
         audit: audit,
         transactions: db,
+        temporaryQr: TemporaryQrService(tokens: TemporaryQrTokens.withRandomKey(), store: InMemoryTemporaryTokenStore()),
       );
 
   CreateEmployeeRequest request(String code, {int? group}) =>
@@ -114,30 +118,23 @@ void main() {
     expect(await scalar('SELECT COUNT(*) AS n FROM tblUser WHERE userCode = :c', {'c': 'DT${stamp}D1'}, 'n'), 1);
   });
 
-  test('onboarding QR: the stored userQRcode is returned unchanged', () async {
+  test('a temporary onboarding QR leaves the Terminal QR as it was and is audited, not stored', () async {
     final created = await service().create(actorId, companyId, request('Q1'));
-    final stored = (await db.query('SELECT userQRcode FROM tblUser WHERE userID = :id', {'id': created.id}))
-        .single
-        .readString('userQRcode');
+    Future<String> terminalQr() async =>
+        (await db.query('SELECT userQRcode FROM tblUser WHERE userID = :id', {'id': created.id})).single.readString('userQRcode');
+    final before = await terminalQr();
 
-    expect(await service().onboardingQr(actorId, companyId, created.id), stored);
-    expect(await service().onboardingQr(actorId, companyId, created.id), stored, reason: 'stable');
-  });
+    final qr = await service().temporaryQr(actorId, companyId, created.id, TemporaryQrPurpose.onboarding);
 
-  test('onboarding QR: a user without one gets one stored once (needs userQRcode to allow NULL; CLARIFY-12)', () async {
-    final userId = (await db.execute(
-      'INSERT INTO tblUser (userName, userSurname, userCode, userActive, userMFD) '
-      "VALUES ('[DEV-TEST]', 'NoQr', :c, 1, 0)",
-      {'c': 'DT${stamp}NQ'},
-    ))
-        .lastInsertId;
-    await db.execute('INSERT INTO tblUserCompany (userID, companyID) VALUES (:u, :c)', {'u': userId, 'c': companyId});
-
-    final first = await service().onboardingQr(actorId, companyId, userId);
-    final second = await service().onboardingQr(actorId, companyId, userId);
-
-    expect(first, hasLength(24));
-    expect(second, first);
+    expect(qr.qrCode, isNot(before));
+    expect(await terminalQr(), before);
+    final generated = await db.query(
+      'SELECT COUNT(*) AS n FROM tblEventLog l JOIN tblEventLogEventType et ON et.eventLogID = l.eventLogID '
+      'JOIN tblEventType t ON t.eventTypeID = et.eventTypeID '
+      'WHERE l.userIDTarget = :id AND t.eventTypeName = :type',
+      {'id': created.id, 'type': 'employee.onboarding_qr.generated'},
+    );
+    expect(generated.single.readInt('n'), 1);
   });
 
   test('a failure after the inserts rolls everything back', () async {

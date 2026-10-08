@@ -11,6 +11,10 @@ import 'package:jitan_api/src/http/api_exception.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
+import 'package:jitan_api/src/recovery/recovery_service.dart';
+import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
@@ -32,6 +36,7 @@ void main() {
   final sessions = SessionTokens(secret: 'integration-session-secret-32-chars-min', lifetime: const Duration(days: 1));
   const hasher = PasswordHasher(parameters: Argon2idParameters(memoryKiB: 8192, iterations: 1));
   const credentials = CredentialRepository();
+  final temporaryQr = TemporaryQrService(tokens: TemporaryQrTokens.withRandomKey(), store: InMemoryTemporaryTokenStore());
 
   OnboardingService onboarding() => OnboardingService(
     onboarding: const OnboardingRepository(),
@@ -40,8 +45,22 @@ void main() {
     transactions: db,
     executor: db,
     sessions: sessions,
+    temporaryQr: temporaryQr,
     hasher: hasher,
   );
+
+  RecoveryService recovery() => RecoveryService(
+    accounts: const OnboardingRepository(),
+    credentials: credentials,
+    audit: const AuditLogRepository(),
+    transactions: db,
+    executor: db,
+    sessions: sessions,
+    temporaryQr: temporaryQr,
+    hasher: hasher,
+  );
+
+  Future<String> qrFor(int userId, TemporaryQrPurpose purpose) async => (await temporaryQr.issue(userId, purpose)).token;
 
   SignInService signIn() =>
       SignInService(credentials: credentials, users: UserRepository(db), executor: db, sessions: sessions, hasher: hasher);
@@ -56,7 +75,11 @@ void main() {
     )).lastInsertId;
     userIds.add(id);
     await onboarding().complete(
-      OnboardingCompleteRequest(qrCode: qr, password: 'first password', deviceId: 'device-AAAAAAAAAAAAAAAA'),
+      OnboardingCompleteRequest(
+        qrCode: await qrFor(id, TemporaryQrPurpose.onboarding),
+        password: 'first password',
+        deviceId: 'device-AAAAAAAAAAAAAAAA',
+      ),
     );
     await db.execute('UPDATE tblUser SET userActive = :a, userMFD = :m WHERE userID = :id', {
       'a': active,
@@ -104,21 +127,54 @@ void main() {
     await expectLater(signIn().signIn(request(deleted, 'first password')), fails('account_inactive'));
   });
 
-  test('reset clears userPassword, keeps userQRcode; the QR then sets up a new password once', () async {
-    final (id, code, qr) = await activatedEmployee('R');
+  test('reset clears userPassword, keeps userQRcode; a temporary recovery QR sets a new password once', () async {
+    final (id, code, terminalQr) = await activatedEmployee('R');
 
     final cleared = await db.transaction((tx) => credentials.clearPassword(tx, id));
     final row = (await db.query('SELECT userPassword, userQRcode FROM tblUser WHERE userID = :id', {'id': id})).single;
 
     expect(cleared, isTrue);
     expect(row.readOptionalString('userPassword'), isNull);
-    expect(row.readString('userQRcode'), qr);
-    expect(await db.transaction((tx) => credentials.clearPassword(tx, id)), isFalse, reason: 'nothing left to clear');
+    expect(row.readString('userQRcode'), terminalQr);
+    expect(await UserRepository(db).activePasswordHash(id), isNull, reason: 'old sessions no longer verify');
 
-    await onboarding().complete(
-      OnboardingCompleteRequest(qrCode: qr, password: 'second password', deviceId: 'device-CCCCCCCCCCCCCCCC'),
+    await expectLater(recovery().start(terminalQr), fails('invalid_qr_code'));
+    final qr = await qrFor(id, TemporaryQrPurpose.recovery);
+    final result = await recovery().complete(
+      RecoveryCompleteRequest(qrCode: qr, password: 'second password', deviceId: 'device-CCCCCCCCCCCCCCCC'),
     );
+
+    expect(sessions.verify(result.session.accessToken)!.userId, id);
     expect((await signIn().signIn(request(code, 'second password'))).account.code, code);
-    await expectLater(onboarding().start(qr), fails('onboarding_already_completed'));
+    expect(
+      (await db.query('SELECT userQRcode FROM tblUser WHERE userID = :id', {'id': id})).single.readString('userQRcode'),
+      terminalQr,
+    );
+    await expectLater(recovery().start(qr), fails('qr_already_used'));
+    await expectLater(recovery().start(await qrFor(id, TemporaryQrPurpose.recovery)), fails('account_not_reset'));
+  });
+
+  test('an interrupted recovery: the same device retrying finishes once; the password is set once', () async {
+    final (id, code, _) = await activatedEmployee('Y');
+    await db.transaction((tx) => credentials.clearPassword(tx, id));
+    final qr = await qrFor(id, TemporaryQrPurpose.recovery);
+    RecoveryCompleteRequest finish(String device) =>
+        RecoveryCompleteRequest(qrCode: qr, password: 'recovered pass', deviceId: device);
+
+    await recovery().complete(finish('device-DDDDDDDDDDDDDDDD'));
+    final hash = await UserRepository(db).activePasswordHash(id);
+    final again = await recovery().complete(finish('device-DDDDDDDDDDDDDDDD'));
+
+    expect(sessions.verify(again.session.accessToken)!.userId, id);
+    expect(await UserRepository(db).activePasswordHash(id), hash);
+    await expectLater(recovery().complete(finish('device-EEEEEEEEEEEEEEEE')), fails('qr_already_used'));
+    final recovered = await db.query(
+      'SELECT COUNT(*) AS n FROM tblEventLog l JOIN tblEventLogEventType et ON et.eventLogID = l.eventLogID '
+      'JOIN tblEventType t ON t.eventTypeID = et.eventTypeID '
+      'WHERE l.userIDTarget = :id AND t.eventTypeName = :type',
+      {'id': id, 'type': 'employee.access.recovered'},
+    );
+    expect(recovered.single.readInt('n'), 1);
+    expect((await signIn().signIn(request(code, 'recovered pass'))).account.code, code);
   });
 }

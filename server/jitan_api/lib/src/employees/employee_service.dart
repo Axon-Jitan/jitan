@@ -9,6 +9,7 @@ import '../database/sql_executor.dart';
 import '../groups/group_repository.dart';
 import '../http/api_exception.dart';
 import 'employee_repository.dart';
+import '../temporary_qr/temporary_qr_service.dart';
 import 'personal_qr_code.dart';
 
 /// Employee use cases. Everything is scoped to one company.
@@ -19,6 +20,7 @@ class EmployeeService {
     required this._groups,
     required this._audit,
     required this._transactions,
+    required this._temporaryQr,
     this._credentials = const CredentialRepository(),
     this._personalQrCode = newPersonalQrCode,
   });
@@ -28,6 +30,7 @@ class EmployeeService {
   final GroupRepository _groups;
   final AuditLogRepository _audit;
   final TransactionRunner _transactions;
+  final TemporaryQrService _temporaryQr;
   final CredentialRepository _credentials;
   final String Function() _personalQrCode;
 
@@ -58,9 +61,10 @@ class EmployeeService {
   ///
   /// Clears `tblUser.userPassword` in one audited transaction. Effects:
   /// every session of the employee ends at once (sessions are bound to the
-  /// password hash, GAP-05); the existing `userQRcode` is unchanged and, with
-  /// no password set, starts account setup again; the employee sets a new
-  /// password, which blocks the QR again. Employees cannot reset themselves.
+  /// password hash, GAP-05); HR/Admin can then generate a temporary recovery
+  /// QR ([temporaryQr]) with which the employee sets a new password. The
+  /// Terminal QR (`userQRcode`) is unchanged. Employees cannot reset
+  /// themselves.
   ///
   /// 404 outside [companyId]; 409 `account_not_activated` when the employee
   /// never set a password (nothing to reset).
@@ -91,38 +95,51 @@ class EmployeeService {
     });
   }
 
-  /// The QR [userId] scans to onboard, which is also their permanent personal
-  /// QR for Jitan Terminal: `tblUser.userQRcode` (IT decision, 2026-10-07).
+  /// A temporary QR for [userId] (IT decision 2026-10-08): onboarding for an
+  /// employee who has not set up Jitan, recovery after "Reset account
+  /// access". Valid 10 minutes, single use; generating one invalidates the
+  /// previous one of the same purpose. Never stored in MySQL; the fact that
+  /// it was generated is audited (before it exists, so none is unaudited).
   ///
-  /// Returns the stored value. If the employee has none (e.g. created outside
-  /// Jitan), a new unguessable one is stored first, once, and audited; it is
-  /// never derived from the userID or employee code, and an existing value is
-  /// never replaced.
-  ///
-  /// 404 when the company does not exist or the user is not its member.
-  Future<String> onboardingQr(int actorUserId, int companyId, int userId) async {
+  /// 404 outside [companyId]; 409 `account_inactive` for a disabled employee;
+  /// 409 `onboarding_already_completed` (onboarding) or `account_not_reset`
+  /// (recovery) while a password is set.
+  Future<TemporaryQrResponse> temporaryQr(int actorUserId, int companyId, int userId, TemporaryQrPurpose purpose) async {
     await _requireCompany(companyId);
-    return _transactions.transaction((tx) async {
-      final current = await _employees.personalQrCode(tx, companyId, userId);
-      if (!current.isMember) throw ApiException.notFound('Employee $userId is not in company $companyId.');
-      if (current.qrCode != null) return current.qrCode!;
-
-      final generated = _personalQrCode();
-      if (await _employees.setPersonalQrCodeIfMissing(tx, userId, generated)) {
-        await _audit.record(
-          tx,
-          AuditEvent(
-            type: AuditEventType.personalQrGenerated,
-            actorUserId: actorUserId,
-            references: {EventLogReference.user: userId, EventLogReference.company: companyId},
-          ),
-        );
-        return generated;
+    await _transactions.transaction((tx) async {
+      final employee = await _employees.findInCompany(tx, companyId, userId) ??
+          (throw ApiException.notFound('Employee $userId is not in company $companyId.'));
+      if (!employee.isActive) {
+        throw const ApiException(409, ApiErrorCode.accountInactive, 'This employee is not active.');
       }
-      // Another request stored one first: use theirs.
-      return (await _employees.personalQrCode(tx, companyId, userId)).qrCode ??
-          (throw StateError('Personal QR for user $userId is still missing after an update.'));
+      if (employee.isActivated) {
+        throw switch (purpose) {
+          TemporaryQrPurpose.onboarding => const ApiException(
+            409,
+            ApiErrorCode.onboardingAlreadyCompleted,
+            'This employee has already set up Jitan.',
+          ),
+          TemporaryQrPurpose.recovery => const ApiException(
+            409,
+            ApiErrorCode.accountNotReset,
+            'Reset account access before generating a recovery QR.',
+          ),
+        };
+      }
+      await _audit.record(
+        tx,
+        AuditEvent(
+          type: switch (purpose) {
+            TemporaryQrPurpose.onboarding => AuditEventType.onboardingQrGenerated,
+            TemporaryQrPurpose.recovery => AuditEventType.recoveryQrGenerated,
+          },
+          actorUserId: actorUserId,
+          references: {EventLogReference.user: userId, EventLogReference.company: companyId},
+        ),
+      );
     });
+    final issued = await _temporaryQr.issue(userId, purpose);
+    return TemporaryQrResponse(qrCode: issued.token, purpose: purpose, expiresAt: issued.claims.expiresAt);
   }
 
   /// Creates an employee in [companyId] on behalf of [actorUserId].

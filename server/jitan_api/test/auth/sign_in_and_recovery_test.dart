@@ -8,7 +8,8 @@ import 'package:test/test.dart';
 
 import '../support/test_app.dart';
 
-const _qr = 'n9Xq-2kLmPz8RtYw4VbC5dEf';
+/// The permanent Terminal QR: it never recovers an account.
+const _terminalQr = 'n9Xq-2kLmPz8RtYw4VbC5dEf';
 const _device = 'device-0123456789abcdef';
 const _password = 'correct horse battery';
 
@@ -16,7 +17,7 @@ const _password = 'correct horse battery';
 /// HR/Admin acting through the development identity.
 Future<TestApp> _app({bool active = true, bool activated = true, int? devUserId = 9}) async {
   final app = TestApp(devUserId: devUserId, activeUserIds: {if (active) 1, 9});
-  app.onboarding.users = {_qr: (userId: 1, firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', isActive: active)};
+  app.onboarding.users = {1: (userId: 1, firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', isActive: active)};
   app.onboarding.companies = {
     1: ['Almeco'],
   };
@@ -160,10 +161,18 @@ void main() {
     });
   });
 
-  group('POST /companies/{id}/employees/{userId}/reset-access (HR/Admin)', () {
+  group('Reset account access + temporary recovery QR (HR/Admin)', () {
     const path = '/companies/7/employees/1/reset-access';
+    const recoveryQrPath = '/companies/7/employees/1/recovery-qr';
+    const otherDevice = 'device-fedcba9876543210';
 
-    test('clears the password, audited, keeps the QR, and signs every device out', () async {
+    String complete(String qr, {String password = 'my new password', String deviceId = _device}) =>
+        jsonEncode({'qrCode': qr, 'password': password, 'deviceId': deviceId});
+
+    Future<String> recoveryQr(TestApp app) async =>
+        TemporaryQrResponse.fromJson(await jsonBody(await app.post(recoveryQrPath, ''))).qrCode;
+
+    test('reset clears the password, audited, and signs every device out', () async {
       final app = await _app();
       final employeeSession = await _tokenOf(await app.post('/auth/sign-in', _signIn()));
 
@@ -171,7 +180,6 @@ void main() {
 
       expect(response.statusCode, 204);
       expect(app.onboarding.passwordHashes.containsKey(1), isFalse, reason: 'userPassword = NULL');
-      expect(app.onboarding.users.keys.single, _qr, reason: 'userQRcode unchanged');
       final event = app.audit.events.single;
       expect(event.type, AuditEventType.accountAccessReset);
       expect(event.actorUserId, 9);
@@ -179,40 +187,117 @@ void main() {
       expect((await app.getAuthorized('/me', employeeSession)).statusCode, 401);
     });
 
-    test('QR recovery before HR/Admin reset is refused and changes nothing', () async {
+    test('recovery before the reset: no recovery QR is generated, and a recovery QR is refused', () async {
       final app = await _app();
       final hash = app.onboarding.passwordHashes[1];
 
-      final start = await app.post('/onboarding/start', jsonEncode({'qrCode': _qr}));
-      final complete = await app.post(
-        '/onboarding/complete',
-        jsonEncode({'qrCode': _qr, 'password': 'attacker password', 'deviceId': _device}),
-      );
+      final generate = await app.post(recoveryQrPath, '');
+      final qr = await app.issueQr(1, TemporaryQrPurpose.recovery);
+      final start = await app.post('/recovery/start', jsonEncode({'qrCode': qr}));
+      final finish = await app.post('/recovery/complete', complete(qr, password: 'attacker password'));
 
-      expect((start.statusCode, (await _error(start))['code']), (409, 'onboarding_already_completed'));
-      expect((complete.statusCode, (await _error(complete))['code']), (409, 'onboarding_already_completed'));
+      expect((generate.statusCode, (await _error(generate))['code']), (409, 'account_not_reset'));
+      expect((start.statusCode, (await _error(start))['code']), (409, 'account_not_reset'));
+      expect((finish.statusCode, (await _error(finish))['code']), (409, 'account_not_reset'));
       expect(app.onboarding.passwordHashes[1], hash);
-      expect(app.audit.events, isEmpty);
     });
 
-    test('full recovery: the existing QR sets up the account again, then is blocked again', () async {
+    test('the permanent Terminal QR cannot authorize recovery', () async {
       final app = await _app();
       await app.post(path, '');
 
-      final start = await app.post('/onboarding/start', jsonEncode({'qrCode': _qr}));
-      final complete = await app.post(
-        '/onboarding/complete',
-        jsonEncode({'qrCode': _qr, 'password': 'my new password', 'deviceId': _device}),
-      );
+      final start = await app.post('/recovery/start', jsonEncode({'qrCode': _terminalQr}));
+      final finish = await app.post('/recovery/complete', complete(_terminalQr));
+
+      expect((start.statusCode, (await _error(start))['code']), (400, 'invalid_qr_code'));
+      expect(finish.statusCode, 400);
+      expect(app.onboarding.passwordHashes.containsKey(1), isFalse);
+    });
+
+    test('full recovery: reset → recovery QR → new password → fresh session; the QR then works no more', () async {
+      final app = await _app();
+      final oldSession = await _tokenOf(await app.post('/auth/sign-in', _signIn()));
+      await app.post(path, '');
+      final qr = await recoveryQr(app);
+
+      final start = await app.post('/recovery/start', jsonEncode({'qrCode': qr}));
+      final finish = await app.post('/recovery/complete', complete(qr));
 
       expect(start.statusCode, 200);
-      expect(complete.statusCode, 200);
+      expect(await jsonBody(start), containsPair('code', 'SBW'));
+      expect(finish.statusCode, 200);
+      expect(finish.headers['cache-control'], 'no-store');
       final hash = app.onboarding.passwordHashes[1]!;
       expect(hash, startsWith(r'$argon2id$v=19$'));
       expect(await app.hasher.verify('my new password', hash), isTrue);
-      expect((await app.getAuthorized('/me', await _tokenOf(complete))).statusCode, 200, reason: 'fresh session');
-      expect((await app.post('/onboarding/start', jsonEncode({'qrCode': _qr}))).statusCode, 409);
+      expect((await app.getAuthorized('/me', await _tokenOf(finish))).statusCode, 200, reason: 'fresh session');
+      expect((await app.getAuthorized('/me', oldSession)).statusCode, 401, reason: 'old sessions stay revoked');
+      expect(app.audit.events.map((e) => e.type), [
+        AuditEventType.accountAccessReset,
+        AuditEventType.recoveryQrGenerated,
+        AuditEventType.accessRecovered,
+      ]);
+      expect(await _error(await app.post('/recovery/start', jsonEncode({'qrCode': qr}))), containsPair('code', 'qr_already_used'));
+      expect((await app.post('/recovery/complete', complete(qr, deviceId: otherDevice))).statusCode, 409);
       expect((await app.post('/auth/sign-in', _signIn(password: 'my new password'))).statusCode, 200);
+    });
+
+    test('an interrupted recovery can be finished safely by the same device, never by another', () async {
+      final app = await _app();
+      await app.post(path, '');
+      final qr = await recoveryQr(app);
+      await app.post('/recovery/complete', complete(qr));
+      final hash = app.onboarding.passwordHashes[1];
+
+      final retry = await app.post('/recovery/complete', complete(qr));
+      final otherPassword = await app.post('/recovery/complete', complete(qr, password: 'a different password'));
+      final otherDevice_ = await app.post('/recovery/complete', complete(qr, deviceId: otherDevice));
+
+      expect(retry.statusCode, 200);
+      expect((await app.getAuthorized('/me', await _tokenOf(retry))).statusCode, 200);
+      expect(await _error(otherPassword), containsPair('code', 'account_not_reset'));
+      expect(await _error(otherDevice_), containsPair('code', 'qr_already_used'));
+      expect(app.onboarding.passwordHashes[1], hash, reason: 'set once');
+      expect(app.audit.events.where((e) => e.type == AuditEventType.accessRecovered), hasLength(1));
+    });
+
+    test('an onboarding QR cannot be used for recovery, nor a recovery QR for onboarding', () async {
+      final app = await _app();
+      await app.post(path, '');
+      final onboardingQr = await app.issueQr(1, TemporaryQrPurpose.onboarding);
+      final qr = await recoveryQr(app);
+
+      expect(await _error(await app.post('/recovery/start', jsonEncode({'qrCode': onboardingQr}))), containsPair('code', 'qr_wrong_purpose'));
+      expect(await _error(await app.post('/onboarding/start', jsonEncode({'qrCode': qr}))), containsPair('code', 'qr_wrong_purpose'));
+    });
+
+    test('a new recovery QR invalidates the previous one', () async {
+      final app = await _app();
+      await app.post(path, '');
+      final first = await recoveryQr(app);
+      final second = await recoveryQr(app);
+
+      expect(await _error(await app.post('/recovery/start', jsonEncode({'qrCode': first}))), containsPair('code', 'qr_expired'));
+      expect((await app.post('/recovery/complete', complete(second))).statusCode, 200);
+    });
+
+    test('an expired recovery QR is refused', () async {
+      final app = await _app();
+      await app.post(path, '');
+      final qr = await recoveryQr(app);
+      app.now = app.now.add(const Duration(minutes: 10));
+
+      expect(await _error(await app.post('/recovery/complete', complete(qr))), containsPair('code', 'qr_expired'));
+      expect(app.onboarding.passwordHashes.containsKey(1), isFalse);
+    });
+
+    test('an employee disabled after the reset cannot recover', () async {
+      final app = await _app();
+      await app.post(path, '');
+      final qr = await recoveryQr(app);
+      app.onboarding.users = {1: (userId: 1, firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', isActive: false)};
+
+      expect(await _error(await app.post('/recovery/complete', complete(qr))), containsPair('code', 'account_inactive'));
     });
 
     test('an employee who never activated has nothing to reset', () async {

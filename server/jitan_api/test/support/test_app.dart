@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_api/src/app.dart';
 import 'package:jitan_api/src/auth/authorizer.dart';
 import 'package:jitan_api/src/auth/development_identity_middleware.dart';
@@ -21,6 +22,11 @@ import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
+import 'package:jitan_api/src/recovery/recovery_routes.dart';
+import 'package:jitan_api/src/recovery/recovery_service.dart';
+import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
 import 'package:jitan_api/src/time_registration/time_registration_service.dart';
 import 'package:jitan_api/src/auth/password_hasher.dart';
@@ -40,6 +46,8 @@ class TestApp {
   }) {
     permissions = FixedPermissionEvaluator(allow: allowPermissions);
     users = FakeUserRepository(activeUserIds, passwordHashes: onboarding.passwordHashes, onboarding: onboarding);
+    employees.activatedLookup =
+        (id) => onboarding.users.containsKey(id) ? onboarding.passwordHashes.containsKey(id) : null;
     handler = buildApp(
       corsOrigins: corsOrigins,
       health: HealthRoutes(databaseHealth),
@@ -53,6 +61,7 @@ class TestApp {
           audit: audit,
           transactions: transactions,
           credentials: credentials,
+          temporaryQr: temporaryQr,
           personalQrCode: () => 'QR-${++_qrCounter}',
         ),
       ),
@@ -79,6 +88,19 @@ class TestApp {
           transactions: transactions,
           executor: unusedExecutor,
           sessions: sessions,
+          temporaryQr: temporaryQr,
+          hasher: hasher,
+        ),
+      ),
+      recovery: RecoveryRoutes(
+        RecoveryService(
+          accounts: onboarding,
+          credentials: credentials,
+          audit: audit,
+          transactions: transactions,
+          executor: unusedExecutor,
+          sessions: sessions,
+          temporaryQr: temporaryQr,
           hasher: hasher,
         ),
       ),
@@ -144,6 +166,16 @@ class TestApp {
 
   /// Cheap Argon2id parameters keep tests fast; production uses
   /// [Argon2idParameters.recommended].
+  /// Temporary onboarding/recovery QRs on the same clock as sessions.
+  late final temporaryQrStore = InMemoryTemporaryTokenStore(clock: () => now);
+  late final temporaryQr = TemporaryQrService(
+    tokens: TemporaryQrTokens(key: List.filled(32, 42), clock: () => now),
+    store: temporaryQrStore,
+  );
+
+  /// A fresh temporary QR value for [userId].
+  Future<String> issueQr(int userId, TemporaryQrPurpose purpose) async => (await temporaryQr.issue(userId, purpose)).token;
+
   final hasher = const PasswordHasher(parameters: Argon2idParameters(memoryKiB: 8192, iterations: 1));
   var _qrCounter = 0;
   final databaseHealth = FakeDatabaseHealthRepository();

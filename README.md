@@ -42,9 +42,12 @@ dart run bin/server.dart
 - `GET /languages`, `GET /translations?language=<code>`: UI text from `tblTranslation`
   (no sign-in needed, so the login screen can be translated)
 - `GET /me/language`: the signed-in user's language from `tblUserLanguage`
-- `POST /onboarding/start`, `POST /onboarding/complete`: employee onboarding with the
-  personal QR (no sign-in; the QR is the credential; refused once a password is set).
-  Completing sets the mandatory password and returns a session token for that device
+- `POST /onboarding/start`, `POST /onboarding/complete`: employee onboarding with a
+  **temporary onboarding QR** (no sign-in; the QR is the credential: signed, 10 minutes,
+  single use, never stored in MySQL; refused once a password is set). Completing sets the
+  mandatory password and returns a session token for that device
+- `POST /recovery/start`, `POST /recovery/complete`: password recovery with a
+  **temporary recovery QR**, after Reset account access; returns a fresh session
 - `GET /me`: the signed-in employee (`Authorization: Bearer <token>`)
 - `POST /auth/sign-in`: employee code + password → session for this device (generic
   `invalid_credentials` on failure)
@@ -52,12 +55,14 @@ dart run bin/server.dart
   verified server-side); returns a new session
   for this device, all other sessions end
 - `POST /companies/{id}/employees/{userId}/reset-access`: HR/Admin "Reset account access"
-  (clears the password, keeps the QR, ends every session; 204)
+  (clears the password, keeps the Terminal QR, ends every session; 204)
 - `GET /companies?search=`: company list (needs an identity, see below)
 - `GET /companies/{id}/employees?search=`: that company's employees
 - `POST /companies/{id}/employees`: create an employee in that company
 - `GET /companies/{id}/employees/{userId}`: one employee's details (404 outside that company)
-- `POST /companies/{id}/employees/{userId}/onboarding-qr`: the employee's onboarding / personal QR value
+- `POST /companies/{id}/employees/{userId}/onboarding-qr` and `…/recovery-qr`: a new
+  temporary QR (`{qrCode, purpose, expiresAt}`, `no-store`); the previous one stops working.
+  The permanent `userQRcode` is the Terminal QR only and is never shown here
 - `GET /groups`: assignable employee groups (the "Employee type")
 
 **Sessions.** `Authorization: Bearer <token>` with a token from onboarding. Set

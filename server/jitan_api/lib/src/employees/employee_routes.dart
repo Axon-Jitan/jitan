@@ -15,10 +15,12 @@ import 'employee_service.dart';
 /// - `GET /companies/{companyId}/employees?search=<text>`
 /// - `POST /companies/{companyId}/employees` with a `CreateEmployeeRequest`
 /// - `GET /companies/{companyId}/employees/{userId}`
-/// - `POST /companies/{companyId}/employees/{userId}/onboarding-qr`: the QR
-///   value (POST because it may store one for an employee who has none)
+/// - `POST /companies/{companyId}/employees/{userId}/onboarding-qr`: a new
+///   temporary onboarding QR (replaces the previous one)
 /// - `POST /companies/{companyId}/employees/{userId}/reset-access`: "Reset
-///   account access" (clears the password; the QR starts setup again)
+///   account access" (clears the password, ends every session)
+/// - `POST /companies/{companyId}/employees/{userId}/recovery-qr`: a new
+///   temporary recovery QR, after a reset
 class EmployeeRoutes {
   const EmployeeRoutes(this._authorizer, this._employees);
 
@@ -32,7 +34,8 @@ class EmployeeRoutes {
     ..get(_path, _list)
     ..post(_path, _create)
     ..get(_employeePath, _details)
-    ..post('$_employeePath/onboarding-qr', _onboardingQr)
+    ..post('$_employeePath/onboarding-qr', (Request r, String c, String u) => _temporaryQr(r, c, u, TemporaryQrPurpose.onboarding))
+    ..post('$_employeePath/recovery-qr', (Request r, String c, String u) => _temporaryQr(r, c, u, TemporaryQrPurpose.recovery))
     ..post('$_employeePath/reset-access', _resetAccess);
 
   Future<Response> _resetAccess(Request request, String companyId, String userId) async {
@@ -42,13 +45,12 @@ class EmployeeRoutes {
     return Response(204);
   }
 
-  Future<Response> _onboardingQr(Request request, String companyId, String userId) async {
+  Future<Response> _temporaryQr(Request request, String companyId, String userId, TemporaryQrPurpose purpose) async {
     final id = _companyId(companyId);
-    final identity = await _authorizer.require(request, Permission.viewEmployeeQr, companyId: id);
-    final qrCode = await _employees.onboardingQr(identity.userId, id, _id(userId));
+    final identity = await _authorizer.require(request, Permission.issueTemporaryQr, companyId: id);
+    final qr = await _employees.temporaryQr(identity.userId, id, _id(userId), purpose);
     // The value is a credential: keep it out of every cache.
-    return jsonResponse(PersonalQrResponse(qrCode: qrCode).toJson())
-        .change(headers: const {'cache-control': 'no-store'});
+    return jsonResponse(qr.toJson()).change(headers: const {'cache-control': 'no-store'});
   }
 
   Future<Response> _details(Request request, String companyId, String userId) async {
