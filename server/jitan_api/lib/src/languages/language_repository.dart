@@ -2,6 +2,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../database/database.dart';
 import '../database/db_row.dart';
+import '../employees/membership_filters.dart';
 
 /// Data access for `tblLanguage` and `tblUserLanguage`.
 class LanguageRepository {
@@ -36,7 +37,7 @@ class LanguageRepository {
     final rows = await _db.query(
       'SELECT l.languageCode FROM tblUserLanguage ul '
       'JOIN tblLanguage l ON l.languageID = ul.languageID '
-      'WHERE ul.userID = :userId AND $_activeLanguageFilter '
+      'WHERE ul.userID = :userId AND ${MembershipFilters.activeLanguage('ul')} AND $_activeLanguageFilter '
       'ORDER BY l.languageCode',
       {'userId': userId},
     );

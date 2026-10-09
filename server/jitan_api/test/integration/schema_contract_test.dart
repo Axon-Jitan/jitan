@@ -31,12 +31,14 @@ const _usedColumns = {
   'tblTimeRegType': ['timeRegTypeID', 'timeRegTypeName', 'timeRegTypeActive', 'timeRegTypeMFD'],
   'tblAddress': ['addressID', 'addressLogicalName'],
   'tblCredGroup': ['credGroupID', 'credGroupName', 'credGroupLevel', 'credGroupActive', 'credGroupMFD'],
-  'tblUserCredGroup': ['userCredGroupID', 'userID', 'credGroupID'],
+  'tblUserCredGroup': ['userCredGroupID', 'userID', 'credGroupID', 'userCredGroupActive', 'userCredGroupMFD'],
   'tblEventType': ['eventTypeID', 'eventTypeName'],
-  'tblEventLogEventType': ['eventLogEventTypeID', 'eventTypeID', 'eventLogID'],
+  'tblEventLogEventType': [
+    'eventLogEventTypeID', 'eventTypeID', 'eventLogID', 'eventLogEventTypeActive', 'eventLogEventTypeMFD',
+  ],
   'tblLanguage': ['languageID', 'languageName', 'languageCode', 'languageActive', 'languageMFD'],
   'tblTranslation': ['translationID', 'languageID', 'translationUIName', 'translationUIText'],
-  'tblUserLanguage': ['userLanguageID', 'userID', 'languageID'],
+  'tblUserLanguage': ['userLanguageID', 'userID', 'languageID', 'userLanguageActive', 'userLanguageMFD'],
 };
 
 /// Every junction table and its soft-delete columns (IT decision 2026-10-08,

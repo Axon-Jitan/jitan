@@ -34,7 +34,8 @@ class AuditLogRepository {
       return;
     }
     await tx.execute(
-      'INSERT INTO tblEventLogEventType (eventTypeID, eventLogID) VALUES (:typeId, :logId)',
+      'INSERT INTO tblEventLogEventType (eventTypeID, eventLogID, eventLogEventTypeActive, eventLogEventTypeMFD) '
+      'VALUES (:typeId, :logId, 1, 0)',
       {'typeId': typeRows.first.readInt('eventTypeID'), 'logId': logId},
     );
   }

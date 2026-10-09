@@ -8,8 +8,10 @@ import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
 import 'package:jitan_api/src/employees/employee_assignment_service.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/http/api_exception.dart';
+import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/user_language_repository.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
+import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
@@ -36,6 +38,8 @@ void main() {
   String languageCode() => 't${languageCodes.length}${stamp % 1000000}';
   late int userId;
   late int actorId;
+  final extraUserIds = <int>[];
+  final eventTypeIds = <int>[];
   const repo = EmployeeAssignmentRepository();
 
   EmployeeAssignmentService service() => EmployeeAssignmentService(
@@ -123,17 +127,24 @@ void main() {
   });
 
   tearDownAll(() async {
-    for (final id in [userId, actorId]) {
+    final users = [userId, actorId, ...extraUserIds];
+    // Every user's events first: a fixture user may be another one's actor.
+    for (final id in users) {
       final logs = await db.query('SELECT eventLogID FROM tblEventLog WHERE userIDTarget = :id', {'id': id});
       for (final log in logs) {
         await db.execute('DELETE FROM tblEventLogEventType WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
         await db.execute('DELETE FROM tblEventLog WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
       }
+    }
+    for (final id in users) {
       await db.execute('DELETE FROM tblUserCompany WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUserGroup WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUserCredGroup WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUserLanguage WHERE userID = :id', {'id': id});
       await db.execute('DELETE FROM tblUser WHERE userID = :id', {'id': id});
+    }
+    for (final id in eventTypeIds) {
+      await db.execute('DELETE FROM tblEventType WHERE eventTypeID = :id', {'id': id});
     }
     for (final id in languageIds.values) {
       await db.execute('DELETE FROM tblLanguage WHERE languageID = :id', {'id': id});
@@ -396,5 +407,136 @@ void main() {
       1,
     );
     expect((await eventTypes('userGroupID', id)).skip(1), ['employee.group.removed', 'employee.group.assigned']);
+  });
+
+  // ── Removed links (Active = 0, MFD = 1) never count ────────────────────
+
+  /// A fresh `[DEV-TEST]` user, member of the home company.
+  Future<int> memberOfHome(String code) async {
+    final id = await insertUser('$code$stamp');
+    extraUserIds.add(id);
+    await db.execute(
+      'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)',
+      {'u': id, 'c': companyIds['home']},
+    );
+    return id;
+  }
+
+  Future<int> linkCredentialGroup(int user, int group, {required bool removed}) async => (await db.execute(
+    'INSERT INTO tblUserCredGroup (userID, credGroupID, userCredGroupActive, userCredGroupMFD) VALUES (:u, :g, :a, :m)',
+    {'u': user, 'g': group, 'a': !removed, 'm': removed},
+  )).lastInsertId;
+
+  test('credential groups: a removed link is not held or shown; adding reactivates that row, audited', () async {
+    final group = credGroupIds['active']!;
+    final target = await memberOfHome('DRT');
+    final actor = await memberOfHome('DRA');
+    await linkCredentialGroup(actor, group, removed: false);
+    final removedId = await linkCredentialGroup(target, group, removed: true);
+
+    expect(await repo.heldCredentialGroupIds(db, target), isNot(contains(group)));
+    final before = {for (final o in await repo.credentialGroupOptions(db, target)) o.id: o};
+    expect(before[group]!.isAssigned, isFalse);
+
+    final result = await service().addCredentialGroups(
+      actor,
+      companyIds['home']!,
+      target,
+      AddAssignmentsRequest(ids: [group]),
+      mayManage: (_) async {},
+    );
+
+    expect(result.options.firstWhere((o) => o.id == group).isAssigned, isTrue);
+    final rows = await db.query(
+      'SELECT userCredGroupID, userCredGroupActive, userCredGroupMFD FROM tblUserCredGroup WHERE userID = :u AND credGroupID = :g',
+      {'u': target, 'g': group},
+    );
+    expect(
+      [for (final r in rows) (r.readInt('userCredGroupID'), r.readBool('userCredGroupActive'), r.readBool('userCredGroupMFD'))],
+      [(removedId, true, false)],
+      reason: 'the removed row is reactivated, never duplicated',
+    );
+    expect(await repo.heldCredentialGroupIds(db, target), contains(group));
+    final logs = await db.query(
+      'SELECT userCredGroupID FROM tblEventLog WHERE userIDTarget = :u AND credGroupID = :g',
+      {'u': target, 'g': group},
+    );
+    expect([for (final l in logs) l.readInt('userCredGroupID')], [removedId]);
+  });
+
+  test('credential groups: an actor whose own link is removed cannot grant that group', () async {
+    final group = credGroupIds['active']!;
+    final target = await memberOfHome('DRU');
+    final actor = await memberOfHome('DRB');
+    await linkCredentialGroup(actor, group, removed: true);
+
+    final refused = service().addCredentialGroups(
+      actor,
+      companyIds['home']!,
+      target,
+      AddAssignmentsRequest(ids: [group]),
+      mayManage: (_) async {},
+    );
+
+    await expectLater(refused, throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 403)));
+    expect(
+      await db.query('SELECT 1 FROM tblUserCredGroup WHERE userID = :u AND credGroupID = :g', {'u': target, 'g': group}),
+      isEmpty,
+    );
+  });
+
+  test('language: a removed row is ignored; choosing its language reactivates it and removes the current one', () async {
+    final one = languageIds['one']!;
+    final two = languageIds['two']!;
+    final target = await memberOfHome('DRL');
+    Future<int> link(int language, {required bool removed}) async => (await db.execute(
+      'INSERT INTO tblUserLanguage (userID, languageID, userLanguageActive, userLanguageMFD) VALUES (:u, :l, :a, :m)',
+      {'u': target, 'l': language, 'a': !removed, 'm': removed},
+    )).lastInsertId;
+    final currentId = await link(one, removed: false);
+    final removedId = await link(two, removed: true);
+
+    expect(await const UserLanguageRepository().assigned(db, target), [(userLanguageId: currentId, languageId: one)]);
+    final options = {for (final o in await const UserLanguageRepository().options(db, target)) o.id: o};
+    expect((options[one]!.isAssigned, options[two]!.isAssigned), (true, false));
+    expect(await LanguageRepository(db).activeLanguageCodesForUser(target), [languageCodes['one']]);
+
+    await service().setLanguage(actorId, companyIds['home']!, target, SetLanguageRequest(languageId: two));
+
+    final rows = await db.query(
+      'SELECT userLanguageID, userLanguageActive, userLanguageMFD FROM tblUserLanguage WHERE userID = :u ORDER BY userLanguageID',
+      {'u': target},
+    );
+    expect(
+      [for (final r in rows) (r.readInt('userLanguageID'), r.readBool('userLanguageActive'), r.readBool('userLanguageMFD'))],
+      [(currentId, false, true), (removedId, true, false)],
+      reason: 'one current row; nothing deleted or duplicated',
+    );
+    expect(await LanguageRepository(db).activeLanguageCodesForUser(target), [languageCodes['two']]);
+  });
+
+  test('account-access events: an event whose type link is removed does not count', () async {
+    final target = await memberOfHome('DRE');
+    final name = '[DEV-TEST] access $stamp';
+    final typeId = (await db.execute('INSERT INTO tblEventType (eventTypeName) VALUES (:n)', {'n': name})).lastInsertId;
+    eventTypeIds.add(typeId);
+    final logId = (await db.execute(
+      'INSERT INTO tblEventLog (eventLogTimestamp, userIDInit, userIDTarget) VALUES (UTC_TIMESTAMP(), :a, :u)',
+      {'a': actorId, 'u': target},
+    )).lastInsertId;
+    await db.execute(
+      'INSERT INTO tblEventLogEventType (eventTypeID, eventLogID, eventLogEventTypeActive, eventLogEventTypeMFD) '
+      'VALUES (:t, :l, 0, 1)',
+      {'t': typeId, 'l': logId},
+    );
+    const onboarding = OnboardingRepository();
+
+    expect(await onboarding.latestAccessEvent(db, target, [name]), isNull);
+
+    await db.execute(
+      'UPDATE tblEventLogEventType SET eventLogEventTypeActive = 1, eventLogEventTypeMFD = 0 WHERE eventLogID = :l',
+      {'l': logId},
+    );
+    expect(await onboarding.latestAccessEvent(db, target, [name]), name);
   });
 }

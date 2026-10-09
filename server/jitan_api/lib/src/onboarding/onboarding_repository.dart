@@ -63,6 +63,7 @@ class OnboardingRepository {
     final rows = await executor.query(
       'SELECT t.eventTypeName FROM tblEventLog l '
       'JOIN tblEventLogEventType et ON et.eventLogID = l.eventLogID '
+      'AND et.eventLogEventTypeActive = 1 AND et.eventLogEventTypeMFD = 0 '
       'JOIN tblEventType t ON t.eventTypeID = et.eventTypeID '
       'WHERE l.userIDTarget = :userId AND t.eventTypeName IN (${[for (var i = 0; i < eventNames.length; i++) ':n$i'].join(', ')}) '
       'ORDER BY l.eventLogID DESC LIMIT 1',

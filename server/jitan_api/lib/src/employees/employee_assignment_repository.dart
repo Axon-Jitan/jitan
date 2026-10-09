@@ -17,15 +17,17 @@ class _SoftLink {
 
 const _companyLink = _SoftLink('tblUserCompany', 'userCompanyID', 'companyID', 'userCompanyActive', 'userCompanyMFD');
 const _groupLink = _SoftLink('tblUserGroup', 'userGroupID', 'groupID', 'userGroupActive', 'userGroupMFD');
+const _credentialGroupLink =
+    _SoftLink('tblUserCredGroup', 'userCredGroupID', 'credGroupID', 'userCredGroupActive', 'userCredGroupMFD');
 
 /// Data access for "Manage employee assignments": the employee's links in
 /// the ERD's junction tables.
 ///
-/// `tblUserCompany` and `tblUserGroup` have Active/MFD (IT decision
-/// 2026-10-08): removing sets `Active = 0, MFD = 1` and keeps the row;
-/// adding again reactivates that row (the unique pair allows one row per
-/// pair). No row is ever deleted. `tblUserCredGroup` has no Active/MFD and
-/// is only added to (CLARIFY-09).
+/// Every link has Active/MFD (IT decision 2026-10-08): removing sets
+/// `Active = 0, MFD = 1` and keeps the row; adding again reactivates that row
+/// (the unique pair allows one row per pair). No row is ever deleted.
+/// Credential groups are only added for now: removing one is not built
+/// (CLARIFY-09), but a removed row (e.g. set by IT) never counts as held.
 class EmployeeAssignmentRepository {
   const EmployeeAssignmentRepository();
 
@@ -112,6 +114,7 @@ class EmployeeAssignmentRepository {
       'SELECT cg.credGroupID, cg.credGroupName, cg.credGroupActive, (ucg.userCredGroupID IS NOT NULL) AS isAssigned '
       'FROM tblCredGroup cg '
       'LEFT JOIN tblUserCredGroup ucg ON ucg.credGroupID = cg.credGroupID AND ucg.userID = :userId '
+      'AND ${MembershipFilters.activeCredentialGroup('ucg')} '
       'WHERE cg.credGroupMFD = 0 AND (cg.credGroupActive = 1 OR ucg.userCredGroupID IS NOT NULL) '
       'ORDER BY cg.credGroupLevel, cg.credGroupName, cg.credGroupID',
       {'userId': userId},
@@ -127,22 +130,18 @@ class EmployeeAssignmentRepository {
     ];
   }
 
-  /// Links [userId] to [credGroupId] in `tblUserCredGroup`; the new
-  /// `userCredGroupID`, or `null` when the pair already exists.
-  Future<int?> addCredentialGroup(SqlExecutor tx, int userId, int credGroupId) => _insertPair(
-        tx,
-        'INSERT INTO tblUserCredGroup (userID, credGroupID) '
-        'SELECT :userId, :otherId FROM DUAL WHERE NOT EXISTS '
-        '(SELECT 1 FROM tblUserCredGroup WHERE userID = :userId AND credGroupID = :otherId)',
-        userId,
-        credGroupId,
-      );
+  /// Links [userId] to [credGroupId] in `tblUserCredGroup` (insert or
+  /// reactivate a removed row); the `userCredGroupID` when something changed,
+  /// `null` when the user already holds it.
+  Future<int?> addCredentialGroup(SqlExecutor tx, int userId, int credGroupId) =>
+      _activate(tx, _credentialGroupLink, userId, credGroupId);
 
   /// The active, non-MFD credential groups [userId] holds.
   Future<Set<int>> heldCredentialGroupIds(SqlExecutor executor, int userId) async {
     final rows = await executor.query(
       'SELECT cg.credGroupID FROM tblUserCredGroup ucg JOIN tblCredGroup cg ON cg.credGroupID = ucg.credGroupID '
-      'WHERE ucg.userID = :userId AND cg.credGroupActive = 1 AND cg.credGroupMFD = 0',
+      'WHERE ucg.userID = :userId AND ${MembershipFilters.activeCredentialGroup('ucg')} '
+      'AND cg.credGroupActive = 1 AND cg.credGroupMFD = 0',
       {'userId': userId},
     );
     return {for (final row in rows) row.readInt('credGroupID')};
@@ -199,17 +198,5 @@ class EmployeeAssignmentRepository {
     final id = rows.single.readInt('id');
     await tx.execute('UPDATE ${link.table} SET ${link.active} = 0, ${link.mfd} = 1 WHERE ${link.id} = :id', {'id': id});
     return id;
-  }
-
-  /// Inserts a junction pair unless it exists; `null` when it did.
-  Future<int?> _insertPair(SqlExecutor tx, String sql, int userId, int otherId) async {
-    try {
-      final result = await tx.execute(sql, {'userId': userId, 'otherId': otherId});
-      return result.affectedRows == 1 ? result.lastInsertId : null;
-    } on DatabaseQueryException catch (e) {
-      // The unique pair caught a concurrent insert of the same pair.
-      if (e.errorCode == _duplicateKey) return null;
-      rethrow;
-    }
   }
 }
