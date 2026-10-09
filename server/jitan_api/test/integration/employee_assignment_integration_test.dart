@@ -30,6 +30,10 @@ void main() {
   final groupIds = <String, int>{};
   final credGroupIds = <String, int>{};
   final languageIds = <String, int>{};
+  final languageCodes = <String, String>{};
+
+  /// A unique code that fits `tblLanguage.languageCode` (VARCHAR(10) in IT's database).
+  String languageCode() => 't${languageCodes.length}${stamp % 1000000}';
   late int userId;
   late int actorId;
   const repo = EmployeeAssignmentRepository();
@@ -78,7 +82,7 @@ void main() {
   Future<int> insertLanguage(String key, {required bool active, bool mfd = false}) async {
     final id = (await db.execute(
       'INSERT INTO tblLanguage (languageName, languageCode, languageActive, languageMFD) VALUES (:name, :code, :active, :mfd)',
-      {'name': '[DEV-TEST] $key $stamp', 'code': 'x$key$stamp', 'active': active, 'mfd': mfd},
+      {'name': '[DEV-TEST] $key $stamp', 'code': languageCodes[key] = languageCode(), 'active': active, 'mfd': mfd},
     )).lastInsertId;
     return languageIds[key] = id;
   }
@@ -323,7 +327,7 @@ void main() {
     final two = languageIds['two']!;
     final options = {for (final o in await const UserLanguageRepository().options(db, userId)) o.id: o};
     expect(options.containsKey(languageIds['off']), isFalse);
-    expect(options[one]!.code, 'xone$stamp');
+    expect(options[one]!.code, languageCodes['one']);
 
     await Future.wait([
       service().setLanguage(actorId, home, userId, SetLanguageRequest(languageId: one)),

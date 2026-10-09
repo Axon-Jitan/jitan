@@ -111,11 +111,11 @@ INSERT INTO tblUserGroup (userID, groupID, userGroupActive, userGroupMFD) VALUES
   (5, 2, 1, 0),
   (6, 2, 1, 0);
 
-INSERT INTO tblUserCredGroup (userID, credGroupID) VALUES
-  (1, 2),
-  (2, 1), (3, 1), (4, 1), (5, 1), (6, 1);
+INSERT INTO tblUserCredGroup (userID, credGroupID, userCredGroupActive, userCredGroupMFD) VALUES
+  (1, 2, 1, 0),
+  (2, 1, 1, 0), (3, 1, 1, 0), (4, 1, 1, 0), (5, 1, 1, 0), (6, 1, 1, 0);
 
 -- Kevin already chose Dutch; Hanne English.
-INSERT INTO tblUserLanguage (userID, languageID) VALUES
-  (1, 1),
-  (3, 2);
+INSERT INTO tblUserLanguage (userID, languageID, userLanguageActive, userLanguageMFD) VALUES
+  (1, 1, 1, 0),
+  (3, 2, 1, 0);

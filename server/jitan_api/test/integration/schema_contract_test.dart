@@ -39,6 +39,23 @@ const _usedColumns = {
   'tblUserLanguage': ['userLanguageID', 'userID', 'languageID'],
 };
 
+/// Every junction table and its soft-delete columns (IT decision 2026-10-08,
+/// confirmed in IT's development database 2026-10-09): a link counts only
+/// while `Active = 1 AND MFD = 0`, and a removed link keeps its row.
+const _junctionSoftDelete = {
+  'tblUserCompany': ('userCompanyActive', 'userCompanyMFD'),
+  'tblUserGroup': ('userGroupActive', 'userGroupMFD'),
+  'tblUserCredGroup': ('userCredGroupActive', 'userCredGroupMFD'),
+  'tblUserFunction': ('userFunctionActive', 'userFunctionMFD'),
+  'tblUserLanguage': ('userLanguageActive', 'userLanguageMFD'),
+  'tblUserSchedule': ('userScheduleActive', 'userScheduleMFD'),
+  'tblAppModulesCredGroup': ('appModulesCredGroupActive', 'appModulesCredGroupMFD'),
+  'tblScheduleRoundingRule': ('scheduleRoundingRuleActive', 'scheduleRoundingRuleMFD'),
+  'tblGeofenceAddress': ('geofenceAddressActive', 'geofenceAddressMFD'),
+  'tblAddressLocationType': ('addressLocationTypeActive', 'addressLocationTypeMFD'),
+  'tblEventLogEventType': ('eventLogEventTypeActive', 'eventLogEventTypeMFD'),
+};
+
 void main() {
   final skip = TestDatabase.skipReason;
   if (skip != null) {
@@ -64,6 +81,18 @@ void main() {
       for (final column in columns) {
         expect(actual, contains(column), reason: '$table.$column missing or spelled differently.');
       }
+    });
+  }
+
+  for (final MapEntry(key: table, value: (active, mfd)) in _junctionSoftDelete.entries) {
+    test('junction $table has $active and $mfd', () async {
+      final rows = await db.query(
+        'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS '
+        'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table',
+        {'table': table},
+      );
+      final actual = rows.map((r) => r.readString('COLUMN_NAME')).toSet();
+      expect(actual, containsAll([active, mfd]), reason: '$table soft-delete columns missing or spelled differently.');
     });
   }
 }

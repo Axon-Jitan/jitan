@@ -6,7 +6,7 @@ that arrives, point the same settings at it and rerun the same tests.
 
 | File | What |
 |---|---|
-| `schema.sql` | Every table, column, key and unique pair of `docs/database/ERD.jpg`. Nothing else |
+| `schema.sql` | IT's development database as exported on 2026-10-09: every table, column, type, length, NULL/default, key and unique pair. Nothing else |
 | `seed.sql` | Fake companies and employees for the current flows (below) |
 | `docker-compose.yml` | MySQL 8.4 on `127.0.0.1` only; loads schema + seed on first start |
 | `.env.example` | Connection settings; copy to `.env` (git-ignored) |
@@ -58,29 +58,21 @@ use them only to check that they never onboard or recover. Onboarding and recove
 temporary QRs generated through the API. Passwords are
 Argon2id hashes made with Jitan's own `PasswordHasher`; they exist only here.
 
-## Differences from the IT development database (to check when it arrives)
+## Differences from the IT development database
 
-1. **Physical types.** The ERD gives logical types only. Here: `INT`, `VARCHAR(255)`,
-   `BOOLEAN` (TINYINT(1)), `DATETIME`, `DOUBLE`, utf8mb4. The real database may differ;
-   Jitan needs `userPassword` ≥ 97 characters (Argon2id) and reads booleans as
-   TINYINT or BIT. `schema_contract_test` checks names, not types.
-2. **NULL and defaults.** Here every non-key column is NULL-able without a default, so
-   Jitan must set what it relies on. If IT's columns are `NOT NULL` without defaults,
-   inserts that leave a column out (e.g. `userEmail`, `userPINCode` on create) will fail.
-3. **Unique pair on `tblTranslation` (languageID + translationUIName).** Verified in
-   ERD.jpg: both columns are shaded as one yellow block, and the legend defines yellow as
-   "in same table, Unique Pair" (a composite constraint, not two single-column UKs).
-   Enforced here and covered by integration tests (same key twice in one language is
-   refused; same key in other languages and different keys in one language are allowed).
-   Against IT's database those tests show whether it is enforced there too; if not, Jitan
-   still handles duplicates (lowest `translationID` wins, logged; CLARIFY-08).
-4. **Event type rows.** Here they carry Jitan's code names. IT's real names may differ
-   (CLARIFY-11): then either IT adds these rows or the code adopts IT's names.
-5. **Credential groups, modules, functions.** Seeded only by name. Authorization still uses
-   the development evaluator (CLARIFY-10/11).
-6. **Foreign keys.** Enforced here for every ERD relation (including all `tblEventLog`
-   references). If IT's database lacks some, nothing in Jitan relies on cascades.
-7. **TLS and accounts.** Here a local user with a self-signed certificate. IT's server will
-   have its own users, privileges (Jitan needs SELECT/INSERT/UPDATE; tests also DELETE their
-   `[DEV-TEST]` fixtures) and certificate.
-8. **Time zone.** The container runs in UTC.
+`schema.sql` was generated from IT's `information_schema` export of 2026-10-09 (the
+exports themselves are never committed). The structure is the same: tables, columns,
+types and lengths, NOT NULL and defaults, primary/unique/foreign keys and constraint
+names, including Active/MFD on all 11 junction tables. What still differs:
+
+1. **Character set and collation.** Not in the export; `utf8mb4_0900_ai_ci` is assumed.
+2. **Data.** Here only the `[DEV]` seed below. IT's lookup rows (credential groups, event
+   types, languages) are not known yet (CLARIFY-11): if IT's event type names differ from
+   the code's (`AuditEventType`), either IT adds these rows or the code adopts IT's names.
+3. **TLS and accounts.** Here a local user with a self-signed certificate. IT's server has
+   its own account, privileges and certificate; Jitan needs SELECT/INSERT/UPDATE (the
+   integration tests also DELETE their `[DEV-TEST]` fixtures, so they never run there).
+4. **Time zone.** The container runs in UTC.
+
+When IT changes its schema, export it again and regenerate `schema.sql`; never add
+anything here that IT's database does not have.

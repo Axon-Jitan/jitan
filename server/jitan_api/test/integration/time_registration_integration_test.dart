@@ -42,7 +42,7 @@ void main() {
     {'code': code, 'qr': 'DEV-TEST-$code'},
   )).lastInsertId;
 
-  Future<void> reg(String key, int user, String at, {bool active = true, bool mfd = false, bool? manual = false}) async {
+  Future<void> reg(String key, int user, String at, {bool active = true, bool mfd = false, bool manual = false}) async {
     ids[key] = (await db.execute(
       'INSERT INTO tblTimeReg (userID, addressID, timeRegTypeID, timeRegTimestamp, timeRegManualEntry, '
       'timeRegActive, timeRegMFD) VALUES (:u, :a, :t, :at, :manual, :active, :mfd)',
@@ -64,13 +64,14 @@ void main() {
       {'n': '[DEV-TEST] type $stamp'},
     )).lastInsertId;
     addressId = (await db.execute(
-      'INSERT INTO tblAddress (addressLogicalName, addressActive, addressMFD) VALUES (:n, 1, 0)',
+      'INSERT INTO tblAddress (addressStreet, addressLogicalName, addressActive, addressMFD) '
+      "VALUES ('[DEV-TEST] street', :n, 1, 0)",
       {'n': '[DEV-TEST] site $stamp'},
     )).lastInsertId;
 
     await reg('before', userId, '2026-09-30 23:59:59');
     await reg('a', userId, '2026-10-06 08:00:00');
-    await reg('b', userId, '2026-10-06 08:00:00', manual: null);
+    await reg('b', userId, '2026-10-06 08:00:00');
     await reg('c', userId, '2026-10-06 16:30:00', manual: true);
     await reg('inactive', userId, '2026-10-06 12:00:00', active: false);
     await reg('deleted', userId, '2026-10-06 12:30:00', mfd: true);
@@ -106,7 +107,8 @@ void main() {
     expect(a.timestamp, DateTime(2026, 10, 6, 8));
     expect(a.typeName, '[DEV-TEST] type $stamp');
     expect(a.addressName, '[DEV-TEST] site $stamp');
-    expect((a.isManualEntry, b.isManualEntry, c.isManualEntry), (false, null, true));
+    // timeRegManualEntry is NOT NULL (default 0) in IT's database.
+    expect((a.isManualEntry, b.isManualEntry, c.isManualEntry), (false, false, true));
   });
 
   test('pages through equal timestamps without skipping or repeating', () async {
