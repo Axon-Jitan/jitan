@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Exports from IT's database (schema dumps, lookups): reference only, never commit
+it_*.txt
+
 # Dart / Flutter
 .dart_tool/
 .packages
