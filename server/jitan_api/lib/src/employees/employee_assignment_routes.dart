@@ -5,6 +5,7 @@ import 'package:shelf_router/shelf_router.dart';
 import '../auth/authorizer.dart';
 import '../auth/permission.dart';
 import '../http/api_exception.dart';
+import '../http/path_id.dart';
 import '../http/json_request.dart';
 import '../http/json_response.dart';
 import 'employee_assignment_service.dart';
@@ -43,13 +44,13 @@ class EmployeeAssignmentRoutes {
     ..post('$_path/credential-groups', _addCredentialGroups);
 
   Future<Response> _languages(Request request, String companyId, String userId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
-    return jsonResponse((await _assignments.languages(id, int.parse(userId))).toJson());
+    return jsonResponse((await _assignments.languages(id, _userId(userId))).toJson());
   }
 
   Future<Response> _setLanguage(Request request, String companyId, String userId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
     final SetLanguageRequest body;
     try {
@@ -57,22 +58,22 @@ class EmployeeAssignmentRoutes {
     } on FormatException catch (e) {
       throw ApiException.badRequest(e.message);
     }
-    return jsonResponse((await _assignments.setLanguage(identity.userId, id, int.parse(userId), body)).toJson());
+    return jsonResponse((await _assignments.setLanguage(identity.userId, id, _userId(userId), body)).toJson());
   }
 
   Future<Response> _credentialGroups(Request request, String companyId, String userId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.manageEmployeeAccess, companyId: id);
-    return jsonResponse((await _assignments.credentialGroups(identity.userId, id, int.parse(userId))).toJson());
+    return jsonResponse((await _assignments.credentialGroups(identity.userId, id, _userId(userId))).toJson());
   }
 
   Future<Response> _addCredentialGroups(Request request, String companyId, String userId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.manageEmployeeAccess, companyId: id);
     final result = await _assignments.addCredentialGroups(
       identity.userId,
       id,
-      int.parse(userId),
+      _userId(userId),
       await _body(request),
       mayManage: (member) => _authorizer.require(request, Permission.manageEmployeeAccess, companyId: member),
     );
@@ -80,52 +81,52 @@ class EmployeeAssignmentRoutes {
   }
 
   Future<Response> _removeCompany(Request request, String companyId, String userId, String targetId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
     final result = await _assignments.removeCompany(
       identity.userId,
       id,
-      int.parse(userId),
-      int.parse(targetId),
+      _userId(userId),
+      pathId(targetId, 'No such company.'),
       mayManage: (target) => _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: target),
     );
     return jsonResponse(result.toJson());
   }
 
   Future<Response> _removeGroup(Request request, String companyId, String userId, String targetId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
-    final result = await _assignments.removeGroup(identity.userId, id, int.parse(userId), int.parse(targetId));
+    final result = await _assignments.removeGroup(identity.userId, id, _userId(userId), pathId(targetId, 'No such group.'));
     return jsonResponse(result.toJson());
   }
 
   Future<Response> _groups(Request request, String companyId, String userId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
-    return jsonResponse((await _assignments.groups(id, int.parse(userId))).toJson());
+    return jsonResponse((await _assignments.groups(id, _userId(userId))).toJson());
   }
 
   Future<Response> _addGroups(Request request, String companyId, String userId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
-    final result = await _assignments.addGroups(identity.userId, id, int.parse(userId), await _body(request));
+    final result = await _assignments.addGroups(identity.userId, id, _userId(userId), await _body(request));
     return jsonResponse(result.toJson());
   }
 
   Future<Response> _companies(Request request, String companyId, String userId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
-    return jsonResponse((await _assignments.companies(id, int.parse(userId))).toJson());
+    return jsonResponse((await _assignments.companies(id, _userId(userId))).toJson());
   }
 
   Future<Response> _addCompanies(Request request, String companyId, String userId) async {
-    final id = int.parse(companyId);
+    final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
     final body = await _body(request);
     final result = await _assignments.addCompanies(
       identity.userId,
       id,
-      int.parse(userId),
+      _userId(userId),
       body,
       mayManage: (target) => _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: target),
     );
@@ -139,4 +140,8 @@ class EmployeeAssignmentRoutes {
       throw ApiException.badRequest(e.message);
     }
   }
+
+  static int _companyId(String raw) => pathId(raw, 'No such company.');
+
+  static int _userId(String raw) => pathId(raw, 'No such employee.');
 }

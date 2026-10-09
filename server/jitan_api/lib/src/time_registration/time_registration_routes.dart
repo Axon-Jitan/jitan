@@ -5,6 +5,7 @@ import '../auth/authorizer.dart';
 import '../auth/permission.dart';
 import '../auth/request_identity.dart';
 import '../http/json_response.dart';
+import '../http/path_id.dart';
 import 'time_registration_service.dart';
 
 /// Read-only time-registration endpoints (staged backend milestone, rule
@@ -25,9 +26,9 @@ class TimeRegistrationRoutes {
     ..get('/me/time-registrations', _mine);
 
   Future<Response> _forEmployee(Request request, String companyId, String userId) async {
-    final id = int.parse(companyId);
+    final id = pathId(companyId, 'No such company.');
     await _authorizer.require(request, Permission.viewTimeRegistrations, companyId: id);
-    final page = await _registrations.forEmployee(id, int.parse(userId), request.url.queryParameters);
+    final page = await _registrations.forEmployee(id, pathId(userId, 'No such employee.'), request.url.queryParameters);
     return jsonResponse(page.toJson());
   }
 

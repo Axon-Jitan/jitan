@@ -5,6 +5,7 @@ import 'package:shelf_router/shelf_router.dart';
 import '../auth/authorizer.dart';
 import '../auth/permission.dart';
 import '../http/api_exception.dart';
+import '../http/path_id.dart';
 import '../http/json_request.dart';
 import '../http/json_response.dart';
 import 'employee_service.dart';
@@ -80,7 +81,7 @@ class EmployeeRoutes {
     return jsonResponse(created.toJson(), statusCode: 201);
   }
 
-  static int _companyId(String raw) => int.tryParse(raw) ?? (throw const ApiException.notFound('No such company.'));
+  static int _companyId(String raw) => pathId(raw, 'No such company.');
 
-  static int _id(String raw) => int.tryParse(raw) ?? (throw const ApiException.notFound('No such employee.'));
+  static int _id(String raw) => pathId(raw, 'No such employee.');
 }
