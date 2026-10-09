@@ -55,6 +55,31 @@ void main() {
     expect(employees.creates, isEmpty);
   });
 
+  test('values longer than the database allows are flagged without calling the server', () async {
+    final result = await controller.submit(
+      _input(
+        firstName: 'x' * (CreateEmployeeRequest.maxFirstNameLength + 1),
+        code: 'x' * CreateEmployeeRequest.maxCodeLength,
+        phone: '1' * (CreateEmployeeRequest.maxPhoneLength + 1),
+      ),
+    );
+
+    expect(result, isNull);
+    expect(controller.fieldErrors, {
+      'firstName': 'employee.field.error.tooLong',
+      'phone': 'employee.field.error.tooLong',
+    });
+    expect(employees.creates, isEmpty);
+  });
+
+  test('a server validation error on a filled-in field is shown as too long', () async {
+    final submit = controller.submit(_input(lastName: 'Ssebowa'));
+    employees.createFails(_server(400, ApiErrorCode.validationFailed, field: 'lastName'));
+    await submit;
+
+    expect(controller.fieldErrors, {'lastName': 'employee.field.error.tooLong'});
+  });
+
   test('sends trimmed values for the current company; empty phone becomes null', () async {
     final submit = controller.submit(_input(firstName: ' Disan ', code: ' SBW ', groupId: 3, phone: '  '));
     expect(controller.submitting, isTrue);

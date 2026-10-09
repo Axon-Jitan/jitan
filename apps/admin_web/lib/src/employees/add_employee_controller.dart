@@ -72,17 +72,17 @@ class AddEmployeeController extends ChangeNotifier {
   Future<EmployeeSummary?> submit(NewEmployeeInput input) async {
     if (_submitting) return null;
 
-    final missing = {
-      if (input.firstName.trim().isEmpty)
-        CreateEmployeeRequest.fieldFirstName: AdminTextKeys.employeeFieldErrorRequired,
-      if (input.lastName.trim().isEmpty) CreateEmployeeRequest.fieldLastName: AdminTextKeys.employeeFieldErrorRequired,
-      if (input.code.trim().isEmpty) CreateEmployeeRequest.fieldCode: AdminTextKeys.employeeFieldErrorRequired,
+    final invalid = {
+      CreateEmployeeRequest.fieldFirstName: ?_check(input.firstName, CreateEmployeeRequest.maxFirstNameLength),
+      CreateEmployeeRequest.fieldLastName: ?_check(input.lastName, CreateEmployeeRequest.maxLastNameLength),
+      CreateEmployeeRequest.fieldCode: ?_check(input.code, CreateEmployeeRequest.maxCodeLength),
+      CreateEmployeeRequest.fieldPhone: ?_check(input.phone, CreateEmployeeRequest.maxPhoneLength, required: false),
     };
     _set(() {
-      _fieldErrors = missing;
+      _fieldErrors = invalid;
       _formFailure = null;
     });
-    if (missing.isNotEmpty) return null;
+    if (invalid.isNotEmpty) return null;
 
     _set(() => _submitting = true);
     try {
@@ -97,7 +97,7 @@ class AddEmployeeController extends ChangeNotifier {
         ),
       );
     } on ApiClientException catch (failure) {
-      final fieldError = _fieldErrorFor(failure);
+      final fieldError = _fieldErrorFor(failure, input);
       _set(() {
         if (fieldError != null) {
           _fieldErrors = {fieldError.$1: fieldError.$2};
@@ -111,8 +111,18 @@ class AddEmployeeController extends ChangeNotifier {
     }
   }
 
-  /// (field, translation key) for a failure that concerns one field.
-  static (String, String)? _fieldErrorFor(ApiClientException failure) {
+  /// The error key for one field, or `null` when it is fine. Lengths count
+  /// characters as the server and MySQL do (code points).
+  static String? _check(String value, int maxLength, {bool required = true}) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return required ? AdminTextKeys.employeeFieldErrorRequired : null;
+    return trimmed.runes.length > maxLength ? AdminTextKeys.employeeFieldErrorTooLong : null;
+  }
+
+  /// (field, translation key) for a failure that concerns one field. The
+  /// server names the field but not the reason: a value that was sent is
+  /// too long, an empty one is missing.
+  static (String, String)? _fieldErrorFor(ApiClientException failure, NewEmployeeInput input) {
     final error = failure.error;
     if (error == null) return null;
     if (error.code == ApiErrorCode.duplicateEmployeeCode) {
@@ -121,9 +131,16 @@ class AddEmployeeController extends ChangeNotifier {
     if (error.code == ApiErrorCode.validationFailed && error.field != null) {
       return (
         error.field!,
-        error.field == CreateEmployeeRequest.fieldGroupId
-            ? AdminTextKeys.employeeFieldErrorInvalidType
-            : AdminTextKeys.employeeFieldErrorRequired,
+        switch (error.field) {
+          CreateEmployeeRequest.fieldGroupId => AdminTextKeys.employeeFieldErrorInvalidType,
+          CreateEmployeeRequest.fieldFirstName when input.firstName.trim().isNotEmpty =>
+            AdminTextKeys.employeeFieldErrorTooLong,
+          CreateEmployeeRequest.fieldLastName when input.lastName.trim().isNotEmpty =>
+            AdminTextKeys.employeeFieldErrorTooLong,
+          CreateEmployeeRequest.fieldCode when input.code.trim().isNotEmpty => AdminTextKeys.employeeFieldErrorTooLong,
+          CreateEmployeeRequest.fieldPhone when input.phone.trim().isNotEmpty => AdminTextKeys.employeeFieldErrorTooLong,
+          _ => AdminTextKeys.employeeFieldErrorRequired,
+        },
       );
     }
     return null;

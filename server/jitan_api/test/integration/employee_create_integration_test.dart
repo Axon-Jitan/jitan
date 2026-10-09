@@ -108,6 +108,31 @@ void main() {
     );
   });
 
+  test('values of the maximum length fit their columns (no MySQL 1406), counted as MySQL counts', () async {
+    final code = 'DT${stamp}M'.padRight(CreateEmployeeRequest.maxCodeLength, 'X');
+    final lastName = '😀' * CreateEmployeeRequest.maxLastNameLength;
+
+    final created = await service().create(
+      actorId,
+      companyId,
+      CreateEmployeeRequest(
+        firstName: 'T' * CreateEmployeeRequest.maxFirstNameLength,
+        lastName: lastName,
+        code: code,
+        phone: '1' * CreateEmployeeRequest.maxPhoneLength,
+      ),
+    );
+
+    final row = (await db.query(
+      'SELECT userSurname, userCode, cellphoneNumber FROM tblUser WHERE userID = :id',
+      {'id': created.id},
+    )).single;
+    expect(
+      (row.readString('userSurname'), row.readString('userCode'), row.readString('cellphoneNumber')),
+      (lastName, code, '1' * CreateEmployeeRequest.maxPhoneLength),
+    );
+  });
+
   test('a duplicate code is refused with 409 and writes nothing', () async {
     await service().create(actorId, companyId, request('D1'));
 

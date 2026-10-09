@@ -97,6 +97,32 @@ void main() {
       });
     }
 
+    for (final (field, max, body) in [
+      ('firstName', CreateEmployeeRequest.maxFirstNameLength, (String v) => _body(firstName: v)),
+      ('lastName', CreateEmployeeRequest.maxLastNameLength, (String v) => _body(lastName: v)),
+      ('code', CreateEmployeeRequest.maxCodeLength, (String v) => _body(code: v)),
+      ('phone', CreateEmployeeRequest.maxPhoneLength, (String v) => _body(phone: v)),
+    ]) {
+      test('"$field": $max characters fit; one more is 400 validation_failed before any write', () async {
+        final tooLong = await _error(_app(), body('x' * (max + 1)));
+        expect(tooLong, containsPair('status', 400));
+        expect(tooLong, containsPair('code', 'validation_failed'));
+        expect(tooLong, containsPair('field', field));
+
+        final app = _app();
+        expect((await app.post(_path, body('x' * max))).statusCode, 201);
+      });
+    }
+
+    test('lengths count characters as MySQL does: an emoji is one, surrounding spaces none', () async {
+      final app = _app();
+      final emojiCode = '😀' * CreateEmployeeRequest.maxCodeLength;
+
+      expect((await app.post(_path, _body(code: '  $emojiCode  '))).statusCode, 201);
+      final tooLong = await _error(_app(), _body(code: '${emojiCode}x'));
+      expect(tooLong, containsPair('field', 'code'));
+    });
+
     test('400 naming groupId for an unknown or inactive group', () async {
       final app = _app();
 

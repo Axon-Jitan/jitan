@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/jitan_colors.dart';
 import '../theme/jitan_text_styles.dart';
@@ -17,6 +18,7 @@ class JitanTextField extends StatelessWidget {
     this.textInputAction = TextInputAction.next,
     this.onSubmitted,
     this.autofocus = false,
+    this.maxLength,
   });
 
   final String label;
@@ -31,6 +33,10 @@ class JitanTextField extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
   final bool autofocus;
 
+  /// Stops input at this many characters (no counter is shown). The server
+  /// still validates: this is only for quick feedback.
+  final int? maxLength;
+
   @override
   Widget build(BuildContext context) => JitanFieldLabel(
         label: label,
@@ -41,6 +47,7 @@ class JitanTextField extends StatelessWidget {
           keyboardType: keyboardType,
           textInputAction: textInputAction,
           onSubmitted: onSubmitted,
+          inputFormatters: [if (maxLength case final max?) LengthLimitingTextInputFormatter(max)],
           style: JitanTextStyles.inputText,
           cursorColor: JitanColors.ink,
           decoration: jitanFieldDecoration(hintText: hintText, errorText: errorText),

@@ -178,15 +178,25 @@ class EmployeeService {
   /// its `tblUserCompany` link, the optional `tblUserGroup` link, and the
   /// `tblEventLog` entry. Any failure rolls all of it back.
   ///
-  /// - 400 `validation_failed` (with `field`) for missing names or code, or an
-  ///   unknown/inactive group
+  /// - 400 `validation_failed` (with `field`) for missing names or code, a
+  ///   value longer than its `tblUser` column, or an unknown/inactive group
   /// - 404 when the company does not exist
   /// - 409 `duplicate_employee_code` when the code is taken
   Future<EmployeeSummary> create(int actorUserId, int companyId, CreateEmployeeRequest request) async {
-    final firstName = _required(request.firstName, CreateEmployeeRequest.fieldFirstName, 'First name');
-    final lastName = _required(request.lastName, CreateEmployeeRequest.fieldLastName, 'Last name');
-    final code = _required(request.code, CreateEmployeeRequest.fieldCode, 'Employee code');
-    final phone = _optional(request.phone);
+    final firstName = _required(
+      request.firstName,
+      CreateEmployeeRequest.fieldFirstName,
+      'First name',
+      CreateEmployeeRequest.maxFirstNameLength,
+    );
+    final lastName = _required(
+      request.lastName,
+      CreateEmployeeRequest.fieldLastName,
+      'Last name',
+      CreateEmployeeRequest.maxLastNameLength,
+    );
+    final code = _required(request.code, CreateEmployeeRequest.fieldCode, 'Employee code', CreateEmployeeRequest.maxCodeLength);
+    final phone = _optional(request.phone, CreateEmployeeRequest.fieldPhone, 'Phone number', CreateEmployeeRequest.maxPhoneLength);
     final groupId = request.groupId;
 
     await _requireCompany(companyId);
@@ -241,15 +251,24 @@ class EmployeeService {
     }
   }
 
-  static String _required(String value, String field, String label) {
+  static String _required(String value, String field, String label, int maxLength) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) throw ApiException.validation(field, '$label is required.');
-    return trimmed;
+    return _fitting(trimmed, field, label, maxLength);
   }
 
-  static String? _optional(String? value) {
+  static String? _optional(String? value, String field, String label, int maxLength) {
     final trimmed = value?.trim() ?? '';
-    return trimmed.isEmpty ? null : trimmed;
+    return trimmed.isEmpty ? null : _fitting(trimmed, field, label, maxLength);
+  }
+
+  /// Rejects a value longer than its column (characters as MySQL counts
+  /// them), so the insert never fails with error 1406.
+  static String _fitting(String value, String field, String label, int maxLength) {
+    if (value.runes.length > maxLength) {
+      throw ApiException.validation(field, '$label must be at most $maxLength characters.');
+    }
+    return value;
   }
 
   static ApiException _duplicateCode(String code) => ApiException(

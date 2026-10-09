@@ -44,6 +44,15 @@ class CreateEmployeeRequest {
   static const fieldGroupId = 'groupId';
   static const fieldPhone = 'phone';
 
+  /// Longest values the database stores, in characters (Unicode code points,
+  /// as MySQL counts them: use `value.runes.length`). From IT's `tblUser`:
+  /// `userName`/`userSurname` VARCHAR(100), `userCode` VARCHAR(50),
+  /// `cellphoneNumber` VARCHAR(30).
+  static const maxFirstNameLength = 100;
+  static const maxLastNameLength = 100;
+  static const maxCodeLength = 50;
+  static const maxPhoneLength = 30;
+
   Map<String, Object?> toJson() => {
         'firstName': firstName,
         'lastName': lastName,
