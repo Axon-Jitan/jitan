@@ -41,7 +41,8 @@ dart run bin/server.dart
 - `GET /health/database`: `SELECT 1` against MySQL (503 when unreachable)
 - `GET /languages`, `GET /translations?language=<code>`: UI text from `tblTranslation`
   (no sign-in needed, so the login screen can be translated)
-- `GET /me/language`: the signed-in user's language from `tblUserLanguage`
+- `GET /me/language`, `PUT /me/language`: the signed-in user's language
+  (`tblUserLanguage`, one current row)
 - `POST /onboarding/start`, `POST /onboarding/complete`: employee onboarding with a
   **temporary onboarding QR** (no sign-in; the QR is the credential: signed, 10 minutes,
   single use, never stored in MySQL; refused once a password is set). Completing sets the
@@ -64,6 +65,14 @@ dart run bin/server.dart
   temporary QR (`{qrCode, purpose, expiresAt}`, `no-store`); the previous one stops working.
   The permanent `userQRcode` is the Terminal QR only and is never shown here
 - `GET /groups`: assignable employee groups (the "Employee type")
+- `…/employees/{userId}/assignments/companies|groups|language|credential-groups`
+  (GET, plus POST to add, `DELETE …/companies/{id}` and `…/groups/{id}` to remove, PUT for
+  the language): HR/Admin "Manage employee assignments". Removal is a soft delete
+- `GET /companies/{id}/employees/{userId}/time-registrations` and
+  `GET /me/time-registrations` (`from`, `to`, `limit`, `cursor`): the read-only
+  `tblTimeReg` stream (staged; no app screen yet)
+
+An id in a path that is not a known row, including one too large for an integer, is 404.
 
 **Sessions.** `Authorization: Bearer <token>` with a token from onboarding. Set
 `JITAN_SESSION_SECRET` (32+ characters, required in production; in development a random
@@ -145,6 +154,7 @@ cd packages/jitan_core       && dart test
 cd server/jitan_api          && dart test
 cd packages/jitan_ui         && flutter test
 cd apps/admin_web            && flutter test
+cd apps/employee_mobile      && flutter test
 ```
 
 Server **integration tests** (`test/integration/`) run against a real dev/test MySQL and are
@@ -152,5 +162,7 @@ skipped until one is configured. The local database runs them all:
 `python ../../dev/local-db/with_local_db.py dart test` in `server/jitan_api`. Set `JITAN_TEST_DB_HOST`, `JITAN_TEST_DB_NAME`,
 `JITAN_TEST_DB_USER`, `JITAN_TEST_DB_PASSWORD` (or put them in a git-ignored
 `server/jitan_api/.env.test`). They verify every column the repositories use exists with
-the exact ERD spelling, then run the real SQL on `[DEV-TEST]` fixtures that they remove
-afterwards. **Never point them at production.**
+the exact ERD spelling (and every junction table's Active/MFD), then run the real SQL on
+`[DEV-TEST]` fixtures that they remove afterwards. **Never point them at production**, and
+not at IT's development database either without IT's agreement: they insert and delete
+rows. The local database's schema mirrors IT's (`dev/local-db/schema.sql`).

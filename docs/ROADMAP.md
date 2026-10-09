@@ -924,6 +924,11 @@ reports/
 events/
 ```
 
+Implementation note (2026-10-09): `policies` is not a module, because there is no policy
+table; its parts live in `schedules`, `geofences` and `employees` (groups). `events` is
+built as `audit/` (the `tblEventLog` writer). The modules that exist today are listed in
+[CLAUDE.md](../CLAUDE.md#server-structure).
+
 Each module contains:
 
 ```text

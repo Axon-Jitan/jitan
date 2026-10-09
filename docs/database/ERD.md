@@ -6,6 +6,13 @@ Authoritative structural reference: [ERD.jpg](ERD.jpg) (ERD version *2026-09-24 
 This document explains what each table **means in Jitan**. If this document and the image
 ever disagree, the image wins. Fix this document.
 
+Physical schema (types, lengths, NULL/NOT NULL, defaults, constraint names): IT's
+development database, inspected on 2026-10-09 and mirrored in
+[dev/local-db/schema.sql](../../dev/local-db/schema.sql). It has the same tables, columns and
+keys as the image, plus the Active/MFD columns on every junction table that IT approved on
+2026-10-08 (not drawn in `ERD.jpg`). Every boolean is `TINYINT(1) NOT NULL`, with
+`Active` defaulting to 1 and `MFD` to 0; Jitan still writes both explicitly.
+
 Open questions where Jitan requirements don't fit the ERD: [ERD_GAPS.md](ERD_GAPS.md).
 
 ---
@@ -50,14 +57,17 @@ Most entities carry `<entity>Active` and `<entity>MFD`.
 - **No physical `DELETE`** on business or master data. "Delete" sets `MFD = true`.
 - Every application read filters `MFD = false`. Lists that offer only selectable values
   also filter `Active = true`.
-- **Junction tables.** `tblUserCompany` and `tblUserGroup` have Active/MFD (IT decision
-  2026-10-08). Removing such an assignment sets `Active = false` and `MFD = true`; the row
-  stays and the change is recorded in `tblEventLog`. Adding it again reactivates the same
-  row (the unique pair forbids a second one). No junction row is ever physically deleted.
-  The other junction tables have no Active/MFD; their assignments cannot be removed
-  through Jitan until IT decides (CLARIFY-09).
-- `tblEventLog`, `tblEventType` and `tblEventLogEventType` have no Active/MFD. They are
-  append-only.
+- **Junction tables.** All eleven junction tables have `<entity>Active` / `<entity>MFD`
+  (IT decision 2026-10-08, confirmed in IT's database 2026-10-09). A link counts only
+  while `Active = true AND MFD = false`; every read of a link filters on both. Removing an
+  assignment sets `Active = false` and `MFD = true`; the row stays and the change is
+  recorded in `tblEventLog`. Adding it again reactivates the same row (the unique pair
+  forbids a second one). No junction row is ever physically deleted. Which assignments
+  Jitan lets HR/Admin remove is a product decision per link (e.g. credential groups:
+  CLARIFY-09).
+- `tblEventLog` and `tblEventType` have no Active/MFD. The event log is append-only; a
+  log's type links (`tblEventLogEventType`) are written active and only count while
+  active.
 
 ### Column names
 
@@ -107,11 +117,11 @@ The central person/identity. Every employee, HR user and admin is a row here.
 | Column | Type | Key | Jitan meaning |
 |---|---|---|---|
 | `userID` | int | PK | |
-| `userName` | String | | **First name**. Not a login username. |
-| `userSurname` | String | | Last name |
+| `userName` | String | | **First name**. Not a login username. At most 100 characters |
+| `userSurname` | String | | Last name. At most 100 characters |
 | `userEmail` | String | | Optional. Jitan does not require email anywhere. |
-| `cellphoneNumber` | String | | Optional phone |
-| `userCode` | String | UK | **Employee code**, the login identity (e.g. `SBW`) |
+| `cellphoneNumber` | String | | Optional phone. At most 30 characters |
+| `userCode` | String | UK | **Employee code**, the login identity (e.g. `SBW`). At most 50 characters |
 | `userQRcode` | String | UK | Value encoded in the employee's **personal QR**, used for Terminal registration only |
 | `userPassword` | String | | Password **hash**. Never plaintext, never returned by the API, never logged, never visible to HR/Admin. |
 | `userKioskMode` | bool | | Kiosk/terminal-style access, where applicable |
@@ -121,6 +131,10 @@ The central person/identity. Every employee, HR user and admin is a row here.
 
 Connected to: companies, groups, credential groups, functions, languages, schedules,
 time registrations, and event log (as actor `userIDInit` or subject `userIDTarget`).
+
+`userName`, `userSurname` and `userCode` are NOT NULL in IT's database. Jitan validates
+lengths (in characters, as MySQL counts them) before inserting; the limits live in
+`CreateEmployeeRequest`.
 
 ## `tblCompany`
 
@@ -148,9 +162,9 @@ User ↔ company membership. Unique pair: `userID + companyID`.
 | `userCompanyActive` | bool | |
 | `userCompanyMFD` | bool | |
 
-`userCompanyActive` / `userCompanyMFD` were approved by IT on 2026-10-08 (names follow
-the ERD convention; to be confirmed against IT's updated specification). A membership
-counts only while `Active = true AND MFD = false`.
+`userCompanyActive` / `userCompanyMFD` were approved by IT on 2026-10-08 and confirmed, with
+these names, in IT's database on 2026-10-09. A membership counts only while
+`Active = true AND MFD = false`.
 
 One employee can belong to several companies with a single account (IT, 2026-10-08):
 
@@ -199,7 +213,7 @@ User ↔ group. Unique pair: `userID + groupID`.
 | `userGroupActive` | bool | |
 | `userGroupMFD` | bool | |
 
-`userGroupActive` / `userGroupMFD` approved by IT on 2026-10-08, as for `tblUserCompany`.
+`userGroupActive` / `userGroupMFD`: as for `tblUserCompany`.
 
 ```text
 Kevin  → White collar
@@ -238,6 +252,8 @@ User ↔ credential group. Unique pair: `userID + credGroupID`.
 | `userCredGroupID` | int | PK |
 | `userID` | int | FK → `tblUser` |
 | `credGroupID` | int | FK → `tblCredGroup` |
+| `userCredGroupActive` | bool | |
+| `userCredGroupMFD` | bool | |
 
 ```text
 Disan → Admin
@@ -267,6 +283,8 @@ Credential group ↔ module. Unique pair: `appModulesID + credGroupID`.
 | `appModulesCredGroupID` | int | PK |
 | `appModulesID` | int | FK → `tblAppModules` |
 | `credGroupID` | int | FK → `tblCredGroup` |
+| `appModulesCredGroupActive` | bool | |
+| `appModulesCredGroupMFD` | bool | |
 
 ```text
 Admin    → Employees, Reports, …
@@ -300,6 +318,8 @@ User ↔ function. Unique pair: `userID + functionID`.
 | `userFunctionID` | int | PK |
 | `userID` | int | FK → `tblUser` |
 | `functionID` | int | FK → `tblFunction` |
+| `userFunctionActive` | bool | |
+| `userFunctionMFD` | bool | |
 
 Grants specific capabilities at user level, independent of role.
 
@@ -347,8 +367,12 @@ User ↔ language. Unique pair: `userID + languageID`.
 | `userLanguageID` | int | PK |
 | `userID` | int | FK → `tblUser` |
 | `languageID` | int | FK → `tblLanguage` |
+| `userLanguageActive` | bool | |
+| `userLanguageMFD` | bool | |
 
-Holds the user's language preference according to the existing system logic.
+Holds the user's language preference: one current row per user (CLARIFY-07). A change
+updates that row; a removed row (`MFD = true`) for the chosen language is reactivated
+instead, and the previous one is soft-removed.
 
 ## `tblTranslation`
 
@@ -425,9 +449,9 @@ Monday · Work  · 08:00 → 16:30
 Monday · Break · 12:00 → 12:30
 ```
 
-Schedules are global and reusable. **No `companyID` on this table.** A full week for one
-employee means several `tblSchedule` rows (one per day per type), all linked through
-`tblUserSchedule`.
+Schedules are global and reusable. **No `companyID` on this table**, confirmed in IT's
+database on 2026-10-09 (CLARIFY-14 resolved). A full week for one employee means several
+`tblSchedule` rows (one per day per type), all linked through `tblUserSchedule`.
 
 ## `tblUserSchedule`
 
@@ -438,10 +462,14 @@ User ↔ schedule. Unique pair: `userID + scheduleID`.
 | `userScheduleID` | int | PK |
 | `userID` | int | FK → `tblUser` |
 | `scheduleID` | int | FK → `tblSchedule` |
+| `userScheduleActive` | bool | |
+| `userScheduleMFD` | bool | |
 
-Decides which global schedules apply to which employee. Not modified for multi-company
-reasons. If company-specific schedule assignment turns out to be needed, that's an
-ERD gap (see [ERD_GAPS.md](ERD_GAPS.md)).
+Decides which global schedules apply to which employee. There is **no `userCompanyID`**
+(confirmed in IT's database on 2026-10-09, CLARIFY-14 resolved): a schedule assignment is
+user-wide and applies in every company the employee works for. If company-specific
+schedule assignment turns out to be needed, that's an ERD gap (see
+[ERD_GAPS.md](ERD_GAPS.md)).
 
 ---
 
@@ -466,6 +494,8 @@ Schedule ↔ rounding rule. Unique pair: `scheduleID + roundingRuleID`.
 | `scheduleRoundingRuleID` | int | PK |
 | `scheduleID` | int | FK → `tblSchedule` |
 | `roundingRuleID` | int | FK → `tblRoundingRule` |
+| `scheduleRoundingRuleActive` | bool | |
+| `scheduleRoundingRuleMFD` | bool | |
 
 Rounding is attached to **schedules**. No company field. The backend applies it when it
 calculates registered time.
@@ -556,6 +586,8 @@ Address ↔ location type. Unique pair: `addressID + locationTypeID`.
 | `addressLocationTypeID` | int | PK |
 | `addressID` | int | FK → `tblAddress` |
 | `locationTypeID` | int | FK → `tblLocationType` |
+| `addressLocationTypeActive` | bool | |
+| `addressLocationTypeMFD` | bool | |
 
 An address can carry one or more location types.
 
@@ -584,6 +616,8 @@ Geofence ↔ address. Unique pair: `geofenceID + addressID`.
 | `geofenceAddressID` | int | PK |
 | `geofenceID` | int | FK → `tblGeofence` |
 | `addressID` | int | FK → `tblAddress` |
+| `geofenceAddressActive` | bool | |
+| `geofenceAddressMFD` | bool | |
 
 Says which addresses are monitored with which geofence configuration. One geofence
 configuration (e.g. "50 m, standard correction") can be reused across many addresses.
@@ -606,13 +640,15 @@ The classification of an audit event.
 
 ## `tblEventLogEventType`
 
-Event log ↔ event type. Unique pair: `eventTypeID + eventLogID`.
+Event log ↔ event type. Unique pair: `eventLogID + eventTypeID`.
 
 | Column | Type | Key |
 |---|---|---|
 | `eventLogEventTypeID` | int | PK |
 | `eventTypeID` | int | FK → `tblEventType` |
 | `eventLogID` | int | FK → `tblEventLog` |
+| `eventLogEventTypeActive` | bool | |
+| `eventLogEventTypeMFD` | bool | |
 
 One log entry can carry several event types.
 

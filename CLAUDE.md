@@ -86,10 +86,21 @@ Easily confused tables:
   similar "policy" settings are schedule rows, not a policy table. **There is no policy
   table.**
 - `tblUser.userName` is the **first name**, not a login name. Login is `userCode`.
+- `tblSchedule` / `tblUserSchedule` have **no company**: schedules are global and a
+  schedule assignment is user-wide (confirmed in IT's database, CLARIFY-14 resolved).
 
 Use column names exactly as spelled in the ERD (`userQRcode`, `tblEventLog.userfunctionID`).
 Read lookup values (roles, modules, functions, types, languages) from the database. Never
 hardcode or invent them.
+
+**Physical schema = IT's development database** (types, lengths, NOT NULL, defaults),
+mirrored in [dev/local-db/schema.sql](dev/local-db/schema.sql), which is regenerated from
+IT's `information_schema` export, never edited by hand to add anything. **Every junction
+table has `<entity>Active` / `<entity>MFD`**: a link counts only while `Active = 1 AND
+MFD = 0` (filters in `employees/membership_filters.dart`); removing sets `Active = 0, MFD
+= 1`; re-adding reactivates the row. Validate string lengths against IT's column sizes
+before inserting (e.g. `CreateEmployeeRequest.max…Length`). Exports from IT's database
+(`it_*.txt`) are git-ignored and never committed.
 
 ## Non-negotiable architecture rules
 
@@ -198,9 +209,13 @@ Details (env vars, dev seed, integration tests): [README.md](README.md).
 `server/jitan_api/lib/src/<module>/` has `<module>_routes.dart` (thin HTTP: authorize,
 parse, respond), `<module>_service.dart` (validation, use cases), `<module>_repository.dart`
 (all SQL). Cross-cutting: `config/`, `database/` (`Database`, `DbRow`), `http/` (errors,
-CORS, JSON), `auth/` (`RequestIdentity`, `Authorizer`, `PermissionEvaluator`). Every
-endpoint calls `Authorizer.require(request, Permission.x)` first. Add the permission to
-`auth/permission.dart`, and add any new column to
+CORS, JSON, `pathId` for path ids), `auth/` (`RequestIdentity`, `Authorizer`,
+`PermissionEvaluator`). Every endpoint that needs a permission calls
+`Authorizer.require(request, Permission.x)` first. Exceptions, each documented in its
+routes file: `/me…` endpoints act only on the signed-in user (identity, no permission),
+and public endpoints need none (`/health`, `/languages`, `/translations`,
+`/auth/sign-in`, `/onboarding/*`, `/recovery/*`, which are authorized by a temporary QR).
+Add the permission to `auth/permission.dart`, and add any new column to
 `test/integration/schema_contract_test.dart`.
 
 **Writes.** A use case that changes data runs in `TransactionRunner.transaction` (the
@@ -223,9 +238,11 @@ named so it can be found:
 | Cleartext `http://` in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`) | HTTPS API; release builds already refuse cleartext | production hosting |
 | `DevCompanySelector` (admin_web, only with `JITAN_DEV_TOOLS=true`) | the production company switcher | switcher design (PRODUCT-CLARIFY-EMPLOYEES-LIST) |
 
-Backend modules (each with controller / service / repository / models / validation):
-`auth companies employees onboarding languages locations geofences schedules
-time_registration work_sessions reports events`
+Backend modules today (routes / service / repository where they have endpoints and data):
+`audit auth companies employees groups health languages onboarding recovery temporary_qr
+time_registration users`. `audit` is the event-log writer (there is no `events` module).
+Planned, not built yet: `schedules` (read-only views first), `locations`, `geofences`,
+`work_sessions`, `reports`.
 
 Modules waiting on ERD gaps, not to be built until resolved: `devices` (GAP-05),
 `terminals` (GAP-09), `visitors` (GAP-10), `exceptions` (GAP-08, detection-only is fine).

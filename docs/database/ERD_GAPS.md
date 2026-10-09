@@ -15,10 +15,10 @@ Status values: `OPEN` · `RESOLVED (date, decision)` · `WITHDRAWN (reason)`
 
 ## IT dependencies from the 2026-10-08 decisions
 
-1. **Column names and types** of the approved Active/MFD fields: Jitan uses
-   `userCompanyActive`, `userCompanyMFD`, `userGroupActive`, `userGroupMFD` (BOOLEAN), the
-   ERD's convention. Please confirm against the updated specification, and **backfill
-   existing rows** with `Active = 1, MFD = 0`: a row with NULL counts as not active.
+1. ~~Column names and types of the approved Active/MFD fields.~~ **Confirmed 2026-10-09**
+   in IT's development database: every junction table has `<entity>Active` /
+   `<entity>MFD`, `TINYINT(1) NOT NULL` with defaults 1 / 0, so no row can be NULL. Jitan
+   uses exactly these names (checked by `schema_contract_test`).
 2. **Shared temporary-token store** (only if the API runs as more than one instance):
    Redis or similar, persistence disabled, automatic expiry. Today's single API instance
    uses the in-memory store; a restart invalidates outstanding temporary QRs (HR/Admin
@@ -61,8 +61,11 @@ answered, and they block only the production cut-over of authentication and auth
 | Authorization (production cut-over only) | CLARIFY-10, CLARIFY-11 |
 | Companies: list | **not blocked**, built. "Locations" column shows "—" (GAP-03) |
 | Companies: Add company (Figma `153:87`) | GAP-02 (country, timezone), GAP-03 (primary workplace), GAP-07 (company registration methods), CLARIFY-11 (audit event type). Only the name is storable, so the slice is held back rather than shipped partially |
-| Employees: list (Figma `153:137`) | **not blocked**. Location (GAP-11) and Onboarding (GAP-04) show "—"; Policy omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY) |
-| Employee onboarding (**Milestone 1**) | **not blocked**: QR = userQRcode, activated = `userPassword IS NOT NULL` (ONB-01 done server-side) |
+| Employees: list (Figma `153:137`) | **not blocked**. Location (GAP-11) shows "—"; Onboarding shows Activated / Not activated (`userPassword IS NOT NULL`); Policy omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY) |
+| Employee onboarding (**Milestone 1**) | **not blocked**, built: temporary onboarding QR (GAP-04 resolved), activated = `userPassword IS NOT NULL` |
+| Schedules, schedule types, rounding rules: read-only views | **not blocked**: schedules are global and user-wide (CLARIFY-14 resolved) |
+| Schedules and rounding rules: create / edit | CLARIFY-03 (meaning of `roundingRuleRoundUp`, `roundingRuleValueInMin`, `scheduleMarginMin`) |
+| Policies (Figma `HR / Policies`), scheduled changes | GAP-13 (effective dating, group → schedule/rule link) |
 | Employee Web QR login, privacy screens | GAP-05 |
 | Core time engine (rounding, sessions, writing registrations) | GAP-01, GAP-02, GAP-13, CLARIFY-02, CLARIFY-03. **Not blocked:** the read-only registration stream (TR-01) and the pure rounding calculation (built) |
 | Geofencing | GAP-06, CLARIFY-04, CLARIFY-05 |
@@ -73,7 +76,7 @@ answered, and they block only the production cut-over of authentication and auth
 | Terminal | GAP-09 |
 | Visitors | GAP-10 |
 
-**Milestone 1 needs GAP-03 (primary workplace) and GAP-04 (onboarding QR) resolved.**
+**Milestone 1 still needs GAP-03 (primary workplace).** GAP-04 (onboarding QR) is resolved.
 CLARIFY-01 (password hashing) is needed before production, not before development.
 Everything else in Milestone 1 maps cleanly.
 
@@ -300,7 +303,8 @@ else changes.
 3. **Why not:** no effective dates on rules, schedule-rule links or user schedules; no
    stored registered time or applied rule (GAP-01), so recomputing after a change silently
    rewrites history; no approval state on `tblTimeReg`; nothing links a group to schedules
-   or rules (only users, via `tblUserSchedule`); no Active/MFD on the two junction tables.
+   or rules (only users, via `tblUserSchedule`). (Both junction tables do have Active/MFD,
+   confirmed 2026-10-09, so links can be removed without deleting rows.)
 4. **Missing:** effective dating (or stored registered time + applied rule), an approval
    state, and a group → schedule/rule relationship. Analysis:
    [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md).
@@ -318,8 +322,9 @@ the development machine (compiled); they are configurable (`JITAN_ARGON2_*`) and
 measured on the production server with `tool/bench_argon2.dart`. The format is
 self-identifying, so if IT requires another algorithm, existing hashes can be recognised
 and re-hashed at the next sign-in. The default format is 97 characters long.
-**Question for IT:** is `userPassword` at least that wide (e.g. `VARCHAR(255)`)?
-Is anything else already writing or reading `tblUser.userPassword` / `userPINCode`? If so,
+**Width: answered** by IT's database (2026-10-09): `userPassword` and `userPINCode` are
+`VARCHAR(255)` NULL, wide enough. **Still open for IT:**
+is anything else already writing or reading `tblUser.userPassword` / `userPINCode`? If so,
 Jitan must use **the same hashing algorithm and parameters**, or existing users can't log
 in. If not, Jitan uses Argon2id as above. Plaintext is not an option either way.
 
@@ -349,8 +354,10 @@ Is it walking time from the geofence edge to the workstation, the short-exit thr
 Exact string format (`"50.7436,3.2165"`? `"lat;lng"`? WKT?), and whether existing rows
 already follow it. Every geofence evaluation parses it.
 
-## CLARIFY-06: `tblTimeReg.addressID` nullability · `OPEN`
-What address does a manual entry, or a QR scan in a van, carry? Is the column nullable?
+## CLARIFY-06: `tblTimeReg.addressID` nullability · `PARTLY RESOLVED` (IT's database, 2026-10-09)
+**Nullable: yes.** In IT's database `tblTimeReg.addressID` is `INT NULL` (while `userID`,
+`timeRegTypeID` and `timeRegTimestamp` are NOT NULL). **Still open:** what address does a
+manual entry, or a QR scan in a van, carry: NULL, or a specific address?
 
 ## CLARIFY-07: User language · `RESOLVED` (product decision 2026-10-08)
 `tblUserLanguage` allows several languages per user. Decision: **one current preferred
@@ -364,17 +371,21 @@ table, Unique Pair"), so a key appears once per language. Integration tests chec
 against whichever database they run on. Jitan still tolerates duplicates (lowest
 `translationID` wins, logged) in case a database does not enforce the pair.
 
-## CLARIFY-09: Junction row removal · `PARTLY RESOLVED` (IT, 2026-10-08)
+## CLARIFY-09: Junction row removal · `RESOLVED` for the schema (IT, 2026-10-08 and 2026-10-09)
 
-**Resolved for `tblUserCompany` and `tblUserGroup`:** IT added Active/MFD. Removal sets
-`Active = false, MFD = true` (row kept, audited); re-adding reactivates the row. **Still
-open for `tblUserCredGroup`** (and `tblUserFunction`): no Active/MFD, so credential groups
-are only added, never removed, until IT decides. (`tblUserLanguage` holds one preference
-that is updated, never removed.)
-Junction tables have no Active/MFD. Does removing an assignment (e.g. an employee leaving
-a group) physically delete the junction row, with the change preserved in
-`tblEventLog`? Or should junction rows never be deleted?
+**Schema:** every junction table has Active/MFD (approved 2026-10-08, confirmed in IT's
+development database 2026-10-09). Removing a link sets `Active = false, MFD = true` (row
+kept, audited); re-adding reactivates the same row. A removed link never counts: every read
+filters on both columns. Built for `tblUserCompany` and `tblUserGroup` (remove and
+re-add), `tblUserCredGroup` (a removed row is not held; granting again reactivates it) and
+`tblUserLanguage` (only the current row counts).
 
+**Still open (product and IT), does not block other work:** may HR/Admin *remove* a
+credential group (`tblUserCredGroup`) or a function (`tblUserFunction`) through Jitan, and
+under which rules (e.g. never the last Admin, never one's own)? Until decided, Jitan only
+adds credential groups. Removal of schedule and rounding-rule links (`tblUserSchedule`,
+`tblScheduleRoundingRule`) follows the same soft-delete pattern when those screens are
+built.
 
 ## CLARIFY-10: Authorization model · `OPEN` · IT CLARIFICATION, blocks production authorization only
 Does performing a function require **both** module access (via credential group) **and**
@@ -392,23 +403,36 @@ Raised by EMP-07 (2026-10-08), for the production evaluator:
   hold themselves, so nobody can give more access than they have or raise their own.
   Every other grant is refused (403) until IT defines the rules.
 
+## CLARIFY-11: Seed data · `OPEN` · IT CLARIFICATION, blocks production authorization only
+Please share current rows of `tblCredGroup`, `tblAppModules`, `tblFunction`, `tblGroup`,
+`tblScheduleType`, `tblTimeRegType`, `tblLocationType`, `tblEventType`, `tblDays`,
+`tblLanguage`. Jitan reads these from the database and must not invent values.
+
+**Audit event types.** Every audited change writes a `tblEventLog` row and links it to the
+`tblEventType` row whose `eventTypeName` equals the code-side name (`AuditEventType` in
+`server/jitan_api/lib/src/audit/audit_event.dart`), e.g. `employee.created`. Until such a
+row exists, the event is stored **without** a type link and a warning is logged. Either
+IT adds rows with these names, or the code adopts IT's names; nothing else changes.
+Names in use: `employee.created`, `employee.onboarding.completed`,
+`employee.password.changed`, `employee.access.reset`, `employee.access.recovered`,
+`employee.onboarding_qr.generated`, `employee.recovery_qr.generated`,
+`employee.company.assigned`, `employee.company.removed`, `employee.group.assigned`,
+`employee.group.removed`, `employee.credential_group.assigned`,
+`employee.language.changed`. (`employee.personal_qr.generated` is no longer written: the
+permanent QR is no longer shown to HR/Admin.) **These need rows in
+IT's `tblEventType`.** Jitan looks them up by name and never assumes an ID; the IDs in
+`dev/local-db/seed.sql` exist only in the disposable local database.
+Recovery after a reset has its own endpoints and event (`employee.access.recovered`).
+
 ## CLARIFY-12: Personal QR value (`tblUser.userQRcode`) · `OPEN` · IT CLARIFICATION, does not block development
 Since 2026-10-08 this is the **Terminal QR only** (onboarding and recovery use temporary
 QRs, GAP-04).
 `userQRcode` is unique and is filled when an employee is created (EMP-02). Jitan
 generates 18 cryptographically random bytes, base64url-encoded to **24 characters**, so
 one employee's QR reveals nothing about another's. Questions for IT: does an existing
-system expect a specific format or length for this column? What is its maximum length?
-If the format must change, codes can be regenerated: no QR has been issued yet.
-
-## CLARIFY-14: Which ERD version is authoritative · `OPEN` · IT CLARIFICATION (2026-10-08)
-
-A newer IT-approved diagram reportedly includes `tblSchedule.companyID` and
-`tblUserSchedule.userCompanyID`. The repository's `ERD.jpg` (2026-10-07) and the older draft
-(`2026-09-24 - ERD-organized.drawio.png`) do not, and neither shows the approved Active/MFD
-on `tblUserCompany`/`tblUserGroup`. Please send the current diagram; it replaces `ERD.jpg`
-and decides whether schedules are company-scoped. Until then no schedule code assumes
-either version.
+system expect a specific format or length for this column? (Maximum length: answered by
+IT's database, `VARCHAR(255)` NULL, unique.) If the format must change, codes can be
+regenerated: no QR has been issued yet.
 
 ## CLARIFY-13: Onboarding vs recovery state · `OPEN` · IT CLARIFICATION (decided interim rule, safe)
 
@@ -433,23 +457,14 @@ CLARIFY-11. Without them no event has a type: recovery is then refused (fails cl
 reset employee looks "never activated". Questions for IT: is reading the audit trail for
 this acceptable, or should a column record the reset state?
 
-## CLARIFY-11: Seed data · `OPEN` · IT CLARIFICATION, blocks production authorization only
-Please share current rows of `tblCredGroup`, `tblAppModules`, `tblFunction`, `tblGroup`,
-`tblScheduleType`, `tblTimeRegType`, `tblLocationType`, `tblEventType`, `tblDays`,
-`tblLanguage`. Jitan reads these from the database and must not invent values.
+## CLARIFY-14: Which ERD version is authoritative · `RESOLVED` (IT's database, 2026-10-09)
 
-**Audit event types.** Every audited change writes a `tblEventLog` row and links it to the
-`tblEventType` row whose `eventTypeName` equals the code-side name (`AuditEventType` in
-`server/jitan_api/lib/src/audit/audit_event.dart`), e.g. `employee.created`. Until such a
-row exists, the event is stored **without** a type link and a warning is logged. Either
-IT adds rows with these names, or the code adopts IT's names; nothing else changes.
-Names in use: `employee.created`, `employee.onboarding.completed`,
-`employee.password.changed`, `employee.access.reset`, `employee.access.recovered`,
-`employee.onboarding_qr.generated`, `employee.recovery_qr.generated`,
-`employee.company.assigned`, `employee.company.removed`, `employee.group.assigned`,
-`employee.group.removed`, `employee.credential_group.assigned`,
-`employee.language.changed`. (`employee.personal_qr.generated` is no longer written: the
-permanent QR is no longer shown to HR/Admin.) **These need rows in
-IT's `tblEventType`.** Jitan looks them up by name and never assumes an ID; the IDs in
-`dev/local-db/seed.sql` exist only in the disposable local database.
-Recovery after a reset has its own endpoints and event (`employee.access.recovered`).
+A newer diagram was reported to add `tblSchedule.companyID` and
+`tblUserSchedule.userCompanyID`. IT's development database (inspected 2026-10-09) has
+**neither**: `tblSchedule` and `tblUserSchedule` match `ERD.jpg`, plus Active/MFD on
+`tblUserSchedule`. **Decision: schedules are global and reusable, and a schedule assignment
+is user-wide** (it applies in every company the employee works for). The schedules module
+is not company-scoped through these tables. If company-specific schedules are needed
+later, that is a schema change for IT to approve (see GAP-03 for registrations).
+`ERD.jpg` stays the logical reference; the physical schema (types, lengths, defaults,
+junction Active/MFD) is IT's database, mirrored in `dev/local-db/schema.sql`.

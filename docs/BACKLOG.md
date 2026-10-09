@@ -108,22 +108,50 @@ tblLanguage → tblTranslation → Dart API → TranslationService → in-memory
 ---
 
 ## DB-VERIFY-01: Verify everything built so far against the real dev database
-Status: `TODO` · waiting for dev database credentials · **does not block development**
+Status: `IN PROGRESS` · access to IT's development database verified 2026-10-09 ·
+**does not block development**
 
-- [ ] Fill `server/jitan_api/.env` and `.env.test` (never committed)
-- [ ] `dart test` in `server/jitan_api` with `JITAN_TEST_DB_*` set: every skipped
-      integration test (schema contract, repositories) must pass
-- [ ] Verify every mapped column against the real schema
+- [x] Access: credentials received (kept outside the repository), MySQL 8.4 over TLS
+- [x] Verify every mapped column against the real schema (2026-10-09, from IT's
+      `information_schema` export, never committed): same 30 tables, columns and keys;
+      every column the code uses exists. Differences found and fixed: Active/MFD on all 11
+      junction tables (now filtered everywhere), NOT NULL columns and lengths (validated
+      before insert), fixtures that IT's schema rejects. `dev/local-db/schema.sql` now
+      mirrors IT's schema, and every integration test passes against it.
+- [ ] Verify the server's TLS certificate before the API or any test connects to IT's
+      database (SEC-01)
+- [ ] Run the read-only `schema_contract_test` against IT's database. The other integration
+      tests insert and delete `[DEV-TEST]` fixtures: they run only on the local database
+      unless IT agrees otherwise
 - [ ] Inspect the actual reference rows of `tblGroup`, `tblCredGroup`, `tblAppModules`,
-      `tblFunction`, `tblScheduleType`, `tblTimeRegType`, `tblLanguage`, `tblTranslation`
-      and report how they compare with the code's assumptions
-- [ ] `dart run tool/dev_seed.dart` if the database lacks useful data (add `--pseudo-language` to
-      see a database language), then run the API and the Admin web app against it and check the list
-      in a browser, in English and in the pseudo language
+      `tblFunction`, `tblScheduleType`, `tblTimeRegType`, `tblEventType`, `tblLanguage`,
+      `tblTranslation` and report how they compare with the code's assumptions (the first
+      lookup export was empty; CLARIFY-11)
+- [ ] With IT's agreement only: `dart run tool/dev_seed.dart` if the database lacks useful
+      data, then run the API and the Admin web app against it
 - [ ] Report any mismatch. **Never change the fixed ERD to make code or tests pass**;
       fix the code, or raise an ERD gap.
 
 ---
+
+## SEC-01: Production security review before deployment
+Status: `TODO` · does not block development · **blocks connecting the API to IT's database
+(TLS) and production**
+
+- [ ] **Database TLS certificate verification.** `Database.connect` passes `secure:` but
+      no certificate check, and mysql_client_plus 0.1.3 accepts any certificate by default
+      (`onBadCertificate ?? (cert) => true`). Verify against IT's CA (`ca.pem`) or a pinned
+      SHA-256 fingerprint before the API or any test connects to IT's database. Asked IT for
+      `ca.pem` or a certificate with `IP:10.1.101.64` in its SAN.
+- [ ] **Production database settings.** `JITAN_DB_SECURE=false` is accepted in production
+      (`app_config.dart`); refuse it there. Least privilege for the API account
+      (SELECT/INSERT/UPDATE; IT's development account also has DELETE/CREATE/DROP/ALTER).
+- [ ] **Sign-in rate limiting / lockout** (`POST /auth/sign-in`, ONB-04 for onboarding and
+      recovery). Failed sign-ins are not audited; decide whether they should be, with no
+      password or code value logged.
+- [ ] **Company-level access.** `GET /companies` returns every non-deleted company and
+      passes no company to the permission evaluator; the production evaluator
+      (CLARIFY-10/11) must limit it to the companies the user may work in.
 
 ## DB-DRIVER-01: mysql_client_plus drops the connection on a SELECT error
 Status: `OPEN` · worked around
@@ -155,14 +183,14 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 
 | Task | Scope | Status |
 |---|---|---|
-| EMP-01 | Employee list for the current company: search, Type from `tblGroup`, all states, responsive, translation keys. Location/Onboarding show "—" (GAP-11/GAP-04), Policy omitted | `DONE` |
+| EMP-01 | Employee list for the current company: search, Type from `tblGroup`, all states, responsive, translation keys. Location shows "—" (GAP-11), Onboarding shows Activated / Not activated since ONB-03a, Policy omitted | `DONE` |
 | EMP-02 | Add employee: first/last name, code, type (`tblGroup`), phone, in the current company; one transaction incl. audit; duplicate-code and validation errors on their fields. Location and Work policy omitted | `DONE` |
 | EMP-03 | Employee details modal from a row click: type, phone, status; Location/Account "—", Work policy omitted | `DONE` |
 | EMP-04 | Company assignment (`tblUserCompany`): Employee details → Manage assignments → Companies (Figma `201:472`, `207:292`). **Several companies per employee** (IT, 2026-10-08). Add (audited `employee.company.assigned`, needs `manageEmployeeAssignments` in both companies) and **remove** with confirmation (Figma `207:329`): soft delete `userCompanyActive = 0, userCompanyMFD = 1`, row kept and hidden, audited `employee.company.removed`; re-adding reactivates the same row. The company in the path is not removable in its own context, so one membership always remains | `DONE` |
 | EMP-05 | Group assignment (`tblUserGroup`): Manage assignments → Groups (Figma `201:572`, `207:406`). Universal groups (IT, 2026-10-08), no company selector. Add (audited `employee.group.assigned`) and **remove** with confirmation (Figma `207:441`): soft delete `userGroupActive = 0, userGroupMFD = 1`, audited `employee.group.removed`; re-adding reactivates the row. Groups grant no company access | `DONE` |
 | EMP-06 | Preferred language (`tblUserLanguage`): Manage assignments → Language (Figma `201:673`) and `PUT /me/language` for the employee. One language per user, updated in place under a user-row lock (concurrent changes never leave two rows); generic audit `employee.language.changed` (GAP-12 accepted). Employee app screen awaits design (DESIGN-CLARIFY-PROFILE-LANGUAGE) | `DONE` |
 | EMP-07 | Credential-group assignment (`tblUserCredGroup`): Manage assignments → Access (Figma `201:778`). Names and levels from `tblCredGroup`, no role names in code. Adds only (CLARIFY-09), duplicates skipped, audited (`employee.credential_group.assigned`). Permission `manageEmployeeAccess` in **every** company of the employee (a credential group is user-wide). **No privilege escalation**: until IT defines the hierarchy (CLARIFY-10), an actor may grant only credential groups they hold themselves; anything else is 403 and not offered in the picker. This holds even with the dev evaluator, so nobody can raise their own access | `DONE` |
-| EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text | `DONE` |
+| EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Bulk import (Figma "Import CSV / Excel", roadmap §8): upload → preview → validate → import | `TODO` |
 
 ## TR-01: Read-only time-registration foundation
@@ -187,18 +215,18 @@ employee's history (staged: their screens come later).
 Not built, on purpose: rounding, work sessions (no derived session is presented as a
 record), and any writing or correcting of registrations.
 
-## Employee onboarding (next)
+## Employee onboarding
 
 | Task | Scope | Status |
 |---|---|---|
-| ONB-01 | Server: `POST /onboarding/start` resolves a scanned `userQRcode`; `POST /onboarding/complete` sets the mandatory password (Argon2id since ONB-05), which completes onboarding; **re-onboarding guard** (`userPassword IS NOT NULL` → 409), row-locked and race-safe; audited; `OnboardingApi` client ready for ONB-02 | `DONE` |
+| ONB-01 | Server: `POST /onboarding/start` resolves a scanned `userQRcode` (**superseded by QR-TEMP:** it now resolves a temporary onboarding QR; `userQRcode` never onboards); `POST /onboarding/complete` sets the mandatory password (Argon2id since ONB-05), which completes onboarding; **re-onboarding guard** (`userPassword IS NOT NULL` → 409), row-locked and race-safe; audited; `OnboardingApi` client ready for ONB-02 | `DONE` |
 | ONB-04 | Rate limiting on the public onboarding **and sign-in** endpoints. Sign-in is the important one: an employee code is not secret, so only Argon2id's cost slows password guessing today. Needs a decision on lockout vs. throttling (no ERD field for failed attempts) | `TODO` |
 | ONB-05 | Argon2id password hashing (off the event loop, PHC format, benchmark tool `tool/bench_argon2.dart`); onboarding completion stores the password and language in one transaction and returns a session token for the device (no second sign-in); bearer-token middleware (active + password-fingerprint check on every request); `GET /me`; `ApiTransport.accessToken`, `MeApi` | `DONE` |
 | ONB-06 | Persisted trusted devices and per-device revocation: blocked on **GAP-05** (no device/session table). Until then the device id lives only in the stateless token | `BLOCKED` |
 | AUTH-01 | Mobile sign-in and recovery (Figma Auth / 01–07): `POST /auth/sign-in`, generic failures; Forgot password → Recover with QR (only after HR/Admin reset, then Set new password → Home); Profile → Password & web login → Change password (`POST /me/password`); Sign out; HR/Admin "Reset account access" in Employee details (`reset-access`, audited); returning devices open sign-in; 06B Recovery refused; Change password with current password; onboarding 06B Language after permissions | `DONE` |
 | AUTH-03 | Employee Web / 07B Change password: **designed and backend-ready** (`POST /me/password`, current password verified, tested). Implementation deferred to the Employee Web roadmap task, built as one coherent app from the approved Figma (Login, QR login when GAP-05 allows, Home, Period, My QR, Profile, Password & web login, Change password, Notifications, Registration method, Privacy, Sign out). No partial Employee Web app before then | `DEFERRED` |
 | AUTH-02 | HR/Admin and Employee Web sign-in screens (Figma "Employee Web / 01 Login") on the same endpoint; then remove the development identity from production paths | `TODO` |
-| ONB-02 | Employee app `apps/employee_mobile` (Android first): welcome → scan → confirm → registration method → permissions → language (06B) → set password → ready → home, signed in by onboarding (token in secure storage, device id per install); all Figma error states incl. session recovery. Widget- and unit-tested against a simulated API. **Not yet built or run on a device: the Android SDK isn't installed on the dev machine** | `DONE` (device run pending) |
+| ONB-02 | Employee app `apps/employee_mobile` (Android first): welcome → scan → confirm → registration method → permissions → language (06B) → set password → ready → home, signed in by onboarding (token in secure storage, device id per install); all Figma error states incl. session recovery. Widget- and unit-tested against a simulated API, and run end to end on the Android emulator (ONB-07) | `DONE` |
 | ONB-07 | End-to-end on the Android emulator against a **local disposable MySQL** with the ERD (`dev/local-db`): all server integration tests (none skipped), `e2e_api_check.py` (44 HTTP + database checks) and `integration_test/onb07_e2e_test.dart` (real app on the emulator: onboarding → Home, sign-in, inactive/MFD refusal, HR reset, QR recovery, repeated recovery refused) pass. Found and fixed: failed transactions leaked pool connections. **Remaining:** rerun against IT's database when available; scan a real QR with the camera (automation injects the value); iOS Podfile permission macros and first iOS build | `DONE` (local DB) |
 | ONB-03a | HR side: Activated / Not activated in the list's Onboarding column, the details Account field and the Onboarding card; activated employees' QR shown as the personal Terminal QR | `DONE` |
 | ONB-03b | HR side: live "Employee activated" confirmation while the QR modal is open (Figma `153:532`); needs polling or push | `TODO` |

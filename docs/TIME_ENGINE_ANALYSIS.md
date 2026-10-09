@@ -5,14 +5,13 @@ requirements, ROADMAP §15–19 and §23, Figma `HR / Policies` (`215:28` Roundi
 options, `216:*` Effective date / Scheduled change), [ERD.jpg](database/ERD.jpg),
 [ERD.md](database/ERD.md) and [ERD_GAPS.md](database/ERD_GAPS.md).
 
-## ERD version check (open)
+## ERD version check (resolved 2026-10-09)
 
-The product team reports a newer IT-approved diagram with **`tblSchedule.companyID`** and
-**`tblUserSchedule.userCompanyID`**. Neither the repository's [ERD.jpg](database/ERD.jpg)
-(2026-10-07) nor the older draft `2026-09-24 - ERD-organized.drawio.png` contains them, and
-the newer diagram has not been received. Until it is, company-scoped schedules are
-**unconfirmed, not unsupported**: nothing here assumes either version, and the local
-database keeps the repository ERD. Requested: the newer diagram, to replace `ERD.jpg`.
+A newer diagram was reported to add `tblSchedule.companyID` and
+`tblUserSchedule.userCompanyID`. IT's development database has **neither** (CLARIFY-14
+resolved): **schedules are global and reusable, and a schedule assignment is user-wide**,
+applying in every company the employee works for. All junction tables, including
+`tblUserSchedule` and `tblScheduleRoundingRule`, have Active/MFD.
 
 ## Product decisions (2026-10-08)
 
@@ -33,11 +32,11 @@ yet: no table, column or persistence behaviour was added or assumed.
 | Table | What it holds | Missing for the engine |
 |---|---|---|
 | `tblScheduleType` | Kind of period (Work, Break, Lunch, Travel), Active/MFD | — |
-| `tblSchedule` | One period on one weekday (`dayID`): type, start/stop hour+minute, `scheduleMarginMin` (= the scheduled-time tolerance, decided), Active/MFD | company (**unconfirmed**: newer diagram); effective dates; date-specific exceptions |
+| `tblSchedule` | One period on one weekday (`dayID`): type, start/stop hour+minute, `scheduleMarginMin` (= the scheduled-time tolerance, decided), Active/MFD. Global: no company (confirmed) | effective dates; date-specific exceptions |
 | `tblDays` | Weekdays | — |
-| `tblUserSchedule` | User ↔ schedule (unique pair) | Active/MFD; effective dates; membership (`userCompanyID`: **unconfirmed**, newer diagram) |
+| `tblUserSchedule` | User ↔ schedule (unique pair), Active/MFD. User-wide: no company (confirmed) | effective dates |
 | `tblRoundingRule` | `roundingRuleValueInMin`, `roundingRuleRoundUp`, Active/MFD | start vs finish; effective dates; company |
-| `tblScheduleRoundingRule` | Schedule ↔ rounding rule (unique pair) | Active/MFD; effective dates |
+| `tblScheduleRoundingRule` | Schedule ↔ rounding rule (unique pair), Active/MFD | effective dates |
 | `tblTimeReg` | One event: user, address, type, **one** timestamp, manual flag, comment, when modified, Active/MFD | registered time; applied rule; approval state; company |
 | `tblTimeRegType` | Configured event types | meaning (CLARIFY-02) |
 | `tblEventLog` | Audit with FKs to all of the above | old/new values |
@@ -54,7 +53,7 @@ yet: no table, column or persistence behaviour was added or assumed.
 | R4 | Scheduled-time tolerance separate from interval rounding | **Decided:** the tolerance is per schedule, `tblSchedule.scheduleMarginMin`, inclusive. The engine takes it as a separate input | **Supported** (IT to confirm the column means minutes either side, CLARIFY-03) |
 | R5 | Same rules for geofencing, QR and manual registration | The rule is chosen from the employee's schedule, not from the source; the engine has no source input, so it is identical by construction. Telling a start from a finish needs the event kind, which `tblTimeRegType` may or may not encode | Rounding **supported**; start/finish detection needs **CLARIFY-02** |
 | R6 | Historical approved registrations never change silently when policies change | No effective dates on rules, schedule links or user schedules; no stored registered time; no "approved" state on `tblTimeReg`. If registered times are computed on read, editing a rule changes history. Figma's "Effective date: Scheduled … 12 Oct 2026" and "Existing approved registrations keep their original applied rules" have nowhere to live | **ERD GAP** (extends GAP-01; new GAP-13 below) |
-| R7 | HR/Admin manage Schedule Types, Schedules and their rounding rules | Tables exist with Active/MFD (`tblScheduleType`, `tblSchedule`, `tblRoundingRule`); audit FKs exist on `tblEventLog` (`scheduleTypeID`, `scheduleID`, `dayID`, `roundingRuleID`, `scheduleRoundingRuleID`, `userScheduleID`) | **Supported** for create / edit / deactivate. Removing a link in `tblScheduleRoundingRule` or `tblUserSchedule` (no Active/MFD) is **IT confirmation** (CLARIFY-09) |
+| R7 | HR/Admin manage Schedule Types, Schedules and their rounding rules | Tables exist with Active/MFD (`tblScheduleType`, `tblSchedule`, `tblRoundingRule`); audit FKs exist on `tblEventLog` (`scheduleTypeID`, `scheduleID`, `dayID`, `roundingRuleID`, `scheduleRoundingRuleID`, `userScheduleID`) | **Supported** for create / edit / deactivate, and for removing a link in `tblScheduleRoundingRule` or `tblUserSchedule` (soft delete, CLARIFY-09). What the values mean still needs CLARIFY-03 |
 
 ## Further findings
 
@@ -66,11 +65,10 @@ yet: no table, column or persistence behaviour was added or assumed.
    to schedules or rules**: `tblUserSchedule` links *users*. "The Office policy applies to
    White collar" cannot be stored; it would have to be copied to each user. **Business
    decision + IT** (in GAP-13).
-2. **Multi-company employees** (IT, 2026-10-08): in the repository ERD, `tblUserSchedule`,
-   `tblSchedule` and `tblTimeReg` have no company. A newer diagram reportedly adds
-   `tblSchedule.companyID` and `tblUserSchedule.userCompanyID`; that would make schedules
-   company-scoped. **Pending the diagram** (see "ERD version check"). `tblTimeReg` still has
-   no company in any version seen (GAP-03).
+2. **Multi-company employees** (IT, 2026-10-08): `tblUserSchedule`, `tblSchedule` and
+   `tblTimeReg` have no company, confirmed in IT's database (CLARIFY-14 resolved). An
+   employee's schedules apply in every company they work for. Attributing a registration
+   to a company remains open (GAP-03).
 3. **Timezone** (GAP-02): schedules are wall-clock times (`scheduleHrStart = 8`), and so
    are the stored timestamps as far as we know. The engine computes on wall-clock fields
    and never converts; comparing correctly needs GAP-02 answered.
@@ -81,14 +79,11 @@ yet: no table, column or persistence behaviour was added or assumed.
    not every event (a workplace change mid-session is not a boundary, roadmap §15).
    Deriving sessions needs the event kinds (CLARIFY-02) and is not built.
 
-## Proposed GAP-13 (for ERD_GAPS.md)
+## GAP-13
 
-**Rounding rules over time and per group.** Requirement: policy changes take effect
-immediately or on a scheduled date, and approved registrations keep the rule that was
-applied; a policy applies to an employee group. Missing: effective dating (from/to) on
-`tblRoundingRule` / `tblScheduleRoundingRule` / `tblUserSchedule`, or stored registered
-times with the applied rule (GAP-01); an approval state for registrations; a group →
-schedule/rule relationship.
+Recorded in [ERD_GAPS.md](database/ERD_GAPS.md#gap-13-rounding-rules-over-time-and-per-employee-group):
+effective dating, stored registered time with the applied rule (GAP-01), an approval state,
+and a group → schedule/rule relationship.
 
 ## What can be built without unresolved decisions
 
@@ -98,7 +93,8 @@ schedule/rule relationship.
   monotonic, tolerance only within range).
 - **Next, still without persistence:** read-only HR/Admin lists of Schedule Types,
   Schedules (with weekday and times) and Rounding Rules over the existing tables, which
-  need no semantic decision. Create/edit of these needs CLARIFY-03 (what `RoundUp` and
+  need no semantic decision. Schedules are global (CLARIFY-14 resolved), so these lists are
+  not company-scoped. Create/edit of these needs CLARIFY-03 (what `RoundUp` and
   `MarginMin` mean) to avoid writing values whose meaning is guessed.
 - **Blocked:** storing or showing registered times (GAP-01, GAP-13), work sessions and
   start/finish detection (CLARIFY-02), comparing with schedules (GAP-02), policy screens

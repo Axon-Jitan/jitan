@@ -73,8 +73,8 @@ Decisions:
    DB-VERIFY-01.
 3. **Policy** → split out as PRODUCT-CLARIFY-EMPLOYEE-POLICY.
 
-Still blocked on this page: **Location** (ERD GAP-11) and **Onboarding** (ERD GAP-04),
-both shown as "—".
+Still blocked on this page: **Location** (ERD GAP-11), shown as "—". **Onboarding** is no
+longer blocked (GAP-04 resolved): it shows Activated / Not activated (ONB-03a).
 
 ---
 
