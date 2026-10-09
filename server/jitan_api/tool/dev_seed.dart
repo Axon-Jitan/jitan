@@ -140,10 +140,13 @@ Future<void> _ensurePseudoLanguage(Database db, int devAdminId) async {
     added++;
   }
 
-  final assigned = await db.query('SELECT languageID FROM tblUserLanguage WHERE userID = :user', {'user': devAdminId});
+  final assigned = await db.query(
+    'SELECT languageID FROM tblUserLanguage WHERE userID = :user AND userLanguageActive = 1 AND userLanguageMFD = 0',
+    {'user': devAdminId},
+  );
   if (assigned.isEmpty) {
     await db.query(
-      'INSERT INTO tblUserLanguage (userID, languageID) VALUES (:user, :language)',
+      'INSERT INTO tblUserLanguage (userID, languageID, userLanguageActive, userLanguageMFD) VALUES (:user, :language, 1, 0)',
       {'user': devAdminId, 'language': languageId},
     );
   } else if (assigned.every((r) => r.readInt('languageID') != languageId)) {
