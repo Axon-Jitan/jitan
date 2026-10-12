@@ -251,6 +251,9 @@ Modules waiting on ERD gaps, not to be built until resolved: `devices` (GAP-05),
 
 ## Conventions
 
+- **Git authorship.** Commits and pull requests are authored by Ssebowa Disan only. Never
+  add a `Co-Authored-By: Claude …` trailer or a "Generated with Claude Code" line to a
+  commit message or PR description.
 - Employee identity for login is **employee code** (`userCode`), not email. No email is
   required anywhere.
 - Shared models live in `jitan_models` and are the single definition used by every client.
