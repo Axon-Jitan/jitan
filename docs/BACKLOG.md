@@ -120,6 +120,10 @@ Status: `IN PROGRESS` · access to IT's development database verified 2026-10-09
       mirrors IT's schema, and every integration test passes against it.
 - [ ] Verify the server's TLS certificate before the API or any test connects to IT's
       database (SEC-01)
+- [ ] The 2026-10-12 `ERD.jpg` adds `tblConfigType`, `tblConfiguration`,
+      `tblUserConfiguration` and three `tblEventLog` FKs that IT's database did not have
+      on 2026-10-09: ask IT when they are created, then export again and regenerate
+      `dev/local-db/schema.sql`
 - [ ] Run the read-only `schema_contract_test` against IT's database. The other integration
       tests insert and delete `[DEV-TEST]` fixtures: they run only on the local database
       unless IT agrees otherwise

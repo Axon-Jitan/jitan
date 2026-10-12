@@ -2,15 +2,19 @@
 
 ![Jitan ERD](ERD.jpg)
 
-Authoritative structural reference: [ERD.jpg](ERD.jpg) (ERD version *2026-09-24 – ERD-organized*).
+Authoritative structural reference: [ERD.jpg](ERD.jpg) (version received 2026-10-12: adds the
+configuration tables and draws Active/MFD on every junction table).
 This document explains what each table **means in Jitan**. If this document and the image
 ever disagree, the image wins. Fix this document.
 
 Physical schema (types, lengths, NULL/NOT NULL, defaults, constraint names): IT's
 development database, inspected on 2026-10-09 and mirrored in
 [dev/local-db/schema.sql](../../dev/local-db/schema.sql). It has the same tables, columns and
-keys as the image, plus the Active/MFD columns on every junction table that IT approved on
-2026-10-08 (not drawn in `ERD.jpg`). Every boolean is `TINYINT(1) NOT NULL`, with
+keys as the image, including the Active/MFD columns on every junction table, **except the
+configuration tables** (`tblConfigType`, `tblConfiguration`, `tblUserConfiguration` and the
+three `tblEventLog` FKs to them), which the 2026-10-12 diagram adds and IT's database did
+not have on 2026-10-09. Jitan does not use them until they exist in IT's database
+(DB-VERIFY-01). Every boolean is `TINYINT(1) NOT NULL`, with
 `Active` defaulting to 1 and `MFD` to 0; Jitan still writes both explicitly.
 
 Open questions where Jitan requirements don't fit the ERD: [ERD_GAPS.md](ERD_GAPS.md).
@@ -627,6 +631,56 @@ configuration (e.g. "50 m, standard correction") can be reused across many addre
 
 ---
 
+# Configuration
+
+Added in the 2026-10-12 diagram. **Not yet in IT's development database** (checked
+2026-10-09): no code reads or writes these tables until IT has created them and the
+schema export confirms their columns.
+
+A generic key/value store: system-wide settings in `tblConfiguration`, grouped by
+`tblConfigType`, and per-user values in `tblUserConfiguration`. What each key means is a
+product/development decision recorded in [ERD_GAPS.md](ERD_GAPS.md) or the feature's
+analysis before it is used; keys are read from the database, never invented in code paths
+that assume a row exists.
+
+## `tblConfigType`
+
+| Column | Type | Key | Jitan meaning |
+|---|---|---|---|
+| `configTypeID` | int | PK | |
+| `configType` | String | | Category of settings (e.g. time registration, geofencing) |
+| `configTypeActive` | bool | | |
+| `configTypeMFD` | bool | | |
+
+## `tblConfiguration`
+
+| Column | Type | Key | Jitan meaning |
+|---|---|---|---|
+| `configurationID` | int | PK | |
+| `configTypeID` | int | FK → `tblConfigType` | |
+| `configurationKey` | String | UK | The setting's unique key |
+| `configurationValue` | text | | The system-wide value (default) |
+| `configurationActive` | bool | | |
+| `configurationMFD` | bool | | |
+
+## `tblUserConfiguration`
+
+User ↔ configuration. Unique pair: `userID + configurationID`.
+
+| Column | Type | Key |
+|---|---|---|
+| `userConfigurationID` | int | PK |
+| `userID` | int | FK → `tblUser` |
+| `configurationID` | int | FK → `tblConfiguration` |
+| `userConfigurationValue` | text | |
+| `userConfigurationActive` | bool | |
+| `userConfigurationMFD` | bool | |
+
+A user's own value for a setting, overriding `configurationValue`. Like every junction
+table, a row counts only while `Active = true AND MFD = false`.
+
+---
+
 # Event logging and auditing
 
 ## `tblEventType`
@@ -686,6 +740,9 @@ that entity is involved.
 | `timeRegTypeID` | int | `tblTimeRegType` |
 | `locationTypeID` | int | `tblLocationType` |
 | `addressLocationTypeID` | int | `tblAddressLocationType` |
+| `userConfigurationID` | int | `tblUserConfiguration` (2026-10-12 diagram; not yet in IT's database) |
+| `configurationID` | int | `tblConfiguration` (idem) |
+| `configTypeID` | int | `tblConfigType` (idem) |
 
 Log every consequential action here, never in a separate logging table:
 
