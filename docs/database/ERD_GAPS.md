@@ -108,7 +108,9 @@ Recorded so they aren't raised again.
 
 1. **Requirement** (§16, §17, §23, §33, §34): every registration keeps the **actual**
    detected time (08:03) and the **registered** time (08:00) after rounding. The actual
-   time is never overwritten. HR corrections preserve original and corrected values.
+   time is never overwritten. HR corrections preserve original and corrected values, need
+   a reason and are audited; approved records never change when a policy changes (product,
+   2026-10-12; [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md), Q1–Q8).
 2. **Considered:** `tblTimeReg.timeRegTimestamp`, `timeRegWhenModified`,
    `timeRegManualEntry`, `timeRegComment`; `tblEventLog.timeRegID`.
 3. **Why not:** `tblTimeReg` has **one** timestamp. `timeRegWhenModified` records *when* a
@@ -118,12 +120,15 @@ Recorded so they aren't raised again.
    stored. Questions for IT:
    - Is `timeRegTimestamp` the **actual** time, with registered time always computed at
      read time from `tblUserSchedule → tblSchedule → tblScheduleRoundingRule`?
-   - If so: `tblUserSchedule` and `tblScheduleRoundingRule` have no effective dates. If a
-     schedule or rule changes, historical registered times and past reports change too.
-     Is that acceptable?
-   - When HR corrects a registration, is the intended pattern to insert a new
-     `tblTimeReg` row (`timeRegManualEntry = true`) and set the original
-     `timeRegActive = false`, keeping both?
+   - If so: `tblUserSchedule` and `tblScheduleRoundingRule` have no effective dates, so a
+     schedule or rule change would change past registered times. **The product has ruled
+     this out** (approved records never change): where is the registered time, or the
+     rule applied, of an approved record stored?
+   - How is an HR correction stored so the original stays, and how are the original and
+     the correction linked? (Jitan assumes no pattern, e.g. not "new manual row + original
+     inactive", until IT confirms.)
+   - Where is the required correction reason stored? `tblEventLog` has no text column, and
+     the intended use of `tblTimeReg.timeRegComment` is not confirmed.
    - In an HR correction, is the value HR enters an *actual* time (still to be rounded)
      or a final *registered* time?
 
@@ -241,6 +246,9 @@ the 2026-10-07 decision that the permanent `userQRcode` also served for onboardi
    pending state that no table holds.
 4. **Missing:** persisted exception state, or confirmation that exceptions are purely
    derived and that "dismiss" / "pending approval" are out of scope for V1.
+5. **Product decision (2026-10-12):** resolving an issue in Time records also resolves the
+   corresponding exception. If exceptions are purely derived, a correction that completes
+   the stream clears the exception by itself; anything else needs this gap answered.
 
 ## GAP-09: Terminals
 **ERD GAP — requires clarification with IT.** · Status: `OPEN`
