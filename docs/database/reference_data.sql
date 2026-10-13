@@ -40,8 +40,9 @@ SELECT t.name, 1, 0 FROM (
 -- Every registration is stored as rows told apart by type (decisions 4, 5,
 -- 7, 8): the actual time with how it was registered, the rounded time, and
 -- HR's corrected time. Manual rows also have timeRegManualEntry = 1 and a
--- required reason in timeRegComment (decision 6). "Leave site" / "Arrive site"
--- mark a drive to an external site, which is not working time (D22).
+-- required reason in timeRegComment (decision 6). Transport is not a type:
+-- it is an activity the employee switches to, like a project (D22); how a
+-- switch is stored comes with IT's projects update.
 
 INSERT INTO tblTimeRegType (timeRegTypeName, timeRegTypeActive, timeRegTypeMFD)
 SELECT t.name, 1, 0 FROM (
@@ -55,8 +56,6 @@ SELECT t.name, 1, 0 FROM (
   UNION ALL SELECT 'Finish – rounded'
   UNION ALL SELECT 'Start – corrected'
   UNION ALL SELECT 'Finish – corrected'
-  UNION ALL SELECT 'Leave site'
-  UNION ALL SELECT 'Arrive site'
 ) t WHERE NOT EXISTS (SELECT 1 FROM tblTimeRegType x WHERE x.timeRegTypeName = t.name);
 
 -- ---------- Employee groups (tblGroup) -------------------------------
