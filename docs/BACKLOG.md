@@ -139,8 +139,9 @@ Status: `IN PROGRESS` · access to IT's development database verified 2026-10-09
 ---
 
 ## SEC-01: Production security review before deployment
-Status: `TODO` · does not block development · **blocks connecting the API to IT's database
-(TLS) and production**
+Status: `TODO` · does not block development (decision 2026-10-13: keep building features;
+this is the pre-production checklist) · **item 1 is due the day the API first connects to
+IT's database**, items 2–3 before production
 
 - [ ] **Database TLS certificate verification.** `Database.connect` passes `secure:` but
       no certificate check, and mysql_client_plus 0.1.3 accepts any certificate by default
@@ -153,9 +154,9 @@ Status: `TODO` · does not block development · **blocks connecting the API to I
 - [ ] **Sign-in rate limiting / lockout** (`POST /auth/sign-in`, ONB-04 for onboarding and
       recovery). Failed sign-ins are not audited; decide whether they should be, with no
       password or code value logged.
-- [ ] **Company-level access.** `GET /companies` returns every non-deleted company and
-      passes no company to the permission evaluator; the production evaluator
-      (CLARIFY-10/11) must limit it to the companies the user may work in.
+- [x] ~~Company-level access.~~ **Not needed for V1** (product decision 2026-10-13): HR has
+      access to all companies, like Admin, so `GET /companies` returning every non-deleted
+      company is correct. Revisit if a role limited to some companies is added later.
 
 ## DB-DRIVER-01: mysql_client_plus drops the connection on a SELECT error
 Status: `OPEN` · worked around

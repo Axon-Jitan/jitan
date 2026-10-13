@@ -396,7 +396,8 @@ Does performing a function require **both** module access (via credential group)
 a `tblUserFunction` grant, or does a function grant work on its own? Is
 `credGroupLevel` used for anything beyond ordering?
 
-**Product decision (2026-10-13):** in V1, **HR and Admin have the same rights**. More
+**Product decision (2026-10-13):** in V1, **HR and Admin have the same rights**, including
+access to **all companies** (not only the ones they are a member of). More
 roles may be added later, as rows in `tblCredGroup` with their modules and functions (data,
 not code). The production evaluator is still to be built on these tables.
 

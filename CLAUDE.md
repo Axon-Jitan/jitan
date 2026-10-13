@@ -129,7 +129,9 @@ before inserting (e.g. `CreateEmployeeRequest.max…Length`). Exports from IT's 
    `tblUserCompany`, which is many-to-many, so one person can work for several companies
    (IT, 2026-10-08). A membership counts only while `userCompanyActive = 1 AND
    userCompanyMFD = 0`; removal is a soft delete. HR works inside a **current company** and
-   sees only that company's data. Company-scoped
+   sees only that company's data. In V1, HR and Admin have the same rights and may open
+   **any** company (decision 2026-10-13); the check stays in the permission evaluator so a
+   narrower role can be added later without changing endpoints. Company-scoped
    endpoints take the company in the path (`/companies/{id}/…`), query only that company,
    and pass it to `Authorizer.require(…, companyId: id)` so the permission evaluator can
    enforce access. Never only in the UI.
