@@ -75,10 +75,11 @@ SELECT r.name, r.level, 1, 0 FROM (
 ) r WHERE NOT EXISTS (SELECT 1 FROM tblCredGroup x WHERE x.credGroupName = r.name);
 
 -- ---------- Languages (tblLanguage) ----------------------------------
--- English is built into the apps; its row only makes it selectable.
--- OPEN: IT's script comment suggests region codes (nl-BE, fr-BE). The apps
--- name languages by code (translation keys language.name.<code>), so the
--- code style must be agreed before IT loads these rows.
+-- English is the default and built into the apps (decision 2026-10-13); it
+-- always works without the database, and its row only makes it selectable.
+-- Other languages: the code style (nl or nl-BE, as IT's comment suggests) is
+-- decided when they are added; the apps name languages by code
+-- (translation keys language.name.<code>).
 
 INSERT INTO tblLanguage (languageName, languageCode, languageActive, languageMFD)
 SELECT l.name, l.code, 1, 0 FROM (

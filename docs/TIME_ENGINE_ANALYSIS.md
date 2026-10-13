@@ -95,8 +95,9 @@ changes.
 
 - Projects and default companies: IT's ERD update (D16, GAP-03). Then: can the employee
   switch company or project during the day?
-- Language codes: `en`/`nl`/`fr` (today) or IT's suggested `nl-BE`/`fr-BE`.
-- What each access role may do (CLARIFY-10/11).
+- Language codes for languages other than English (English is built in): decided when
+  they are added.
+- Access roles: HR and Admin have the same rights in V1; more roles later (CLARIFY-10).
 - The configuration tables in the 2026-10-12 `ERD.jpg` are not in IT's creation script
   (2026-10-13).
 
