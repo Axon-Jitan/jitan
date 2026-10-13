@@ -90,11 +90,15 @@ changes.
 | D14 | Exceptions | Problems (e.g. missing finish) are **calculated** from the registrations and shown in **Time records**, where HR fixes them; a complete day has no problem. **No separate Exceptions screen**, no "dismiss" state. |
 | D15 | Lookup rows | IT writes and runs the default-data script. Jitan keeps its own version, [reference_data.sql](database/reference_data.sql), to advise IT. |
 | D16 | Company and project | When registering, the employee **may** choose a company and project; if not, Jitan uses the employee's **default company and default project**. Waits for IT's ERD update with projects and default companies (GAP-03); nothing is built for it before. |
+| D17 | Two kinds of project | Each company has **client projects** (work for a customer; the employee's default) and **internal projects** (e.g. cleaning the workshop or office). Part of IT's ERD update (D16). |
+| D18 | Two terminals | **Workshop terminal** for Blue collar employees; **front-desk terminal** for White collar employees and visitors. Both work the same: the employee scans their Terminal QR (`userQRcode`) and the default project applies; they can choose another project. Waits for GAP-09 (terminals) and GAP-10 (visitors). |
+| D19 | Switching project during the day | The employee switches project in the **app or at a terminal**, with no rules per group. The working day continues; only the project changes from that moment. One server action serves both. |
 
 **Still open**
 
-- Projects and default companies: IT's ERD update (D16, GAP-03). Then: can the employee
-  switch company or project during the day?
+- Projects (client/internal) and default companies: IT's ERD update (D16, D17, GAP-03).
+  How a project switch (D19) is stored depends on it.
+- Terminals and visitors (D18): GAP-09, GAP-10.
 - Language codes for languages other than English (English is built in): decided when
   they are added.
 - Access roles: HR and Admin have the same rights in V1; more roles later (CLARIFY-10).

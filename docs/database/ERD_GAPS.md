@@ -257,6 +257,11 @@ the 2026-10-07 decision that the permanent `userQRcode` also served for onboardi
    no pairing code, and `tblTimeReg` cannot record which terminal took the scan.
 4. **Missing:** terminal metadata and the terminal → registration link. Question for IT:
    is a terminal intended to be a `tblUser` with `userKioskMode = true`?
+5. **Product decision (2026-10-13, D18/D19 in
+   [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md)):** two terminals, the **workshop**
+   (Blue collar employees) and the **front desk** (White collar employees and visitors).
+   The employee scans their Terminal QR; the default (client) project applies and can be
+   changed, also later in the day, in the app or at a terminal.
 
 ## GAP-10: Visitors
 **ERD GAP — requires clarification with IT.** · Status: `OPEN`
@@ -268,6 +273,8 @@ the 2026-10-07 decision that the permanent `userQRcode` also served for onboardi
    employee lists and give them login fields. Nothing holds a number plate, photo, host or
    visit.
 4. **Missing:** the entire visitor concept.
+5. **Product decision (2026-10-13, D18):** visitors register at the **front-desk**
+   terminal.
 
 ## GAP-11: Employee location
 **ERD GAP — requires clarification with IT.** · Status: `OPEN`
