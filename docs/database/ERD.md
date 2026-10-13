@@ -7,8 +7,9 @@ configuration tables and draws Active/MFD on every junction table).
 This document explains what each table **means in Jitan**. If this document and the image
 ever disagree, the image wins. Fix this document.
 
-Physical schema (types, lengths, NULL/NOT NULL, defaults, constraint names): IT's
-development database, inspected on 2026-10-09 and mirrored in
+Physical schema (types, lengths, NULL/NOT NULL, defaults, constraint names, indexes): IT's
+development database, inspected on 2026-10-09 and confirmed by IT's creation script
+(`jitandev_schema.sql`, 2026-10-13, built from the 2026-09-24 ERD), mirrored in
 [dev/local-db/schema.sql](../../dev/local-db/schema.sql). It has the same tables, columns and
 keys as the image, including the Active/MFD columns on every junction table, **except the
 configuration tables** (`tblConfigType`, `tblConfiguration`, `tblUserConfiguration` and the

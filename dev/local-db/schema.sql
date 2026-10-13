@@ -7,8 +7,9 @@
 -- logical model; this file is its physical form as IT built it.
 --
 -- Regenerate from a fresh export when IT changes the schema; never add
--- anything IT's database does not have. Character set and collation are not
--- in the export: utf8mb4 / utf8mb4_0900_ai_ci (MySQL 8 default) is assumed.
+-- anything IT's database does not have. Character set, collation and the two
+-- non-key indexes come from IT's creation script (jitandev_schema.sql, received
+-- 2026-10-13): utf8mb4 / utf8mb4_0900_ai_ci.
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -315,6 +316,7 @@ CREATE TABLE tblTimeReg (
   timeRegActive       TINYINT(1) NOT NULL DEFAULT 1,
   timeRegMFD          TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (timeRegID),
+  INDEX ix_tblTimeReg_user_timestamp (userID, timeRegTimestamp),
   CONSTRAINT fk_tblTimeReg_addressID FOREIGN KEY (addressID) REFERENCES tblAddress (addressID),
   CONSTRAINT fk_tblTimeReg_timeRegTypeID FOREIGN KEY (timeRegTypeID) REFERENCES tblTimeRegType (timeRegTypeID),
   CONSTRAINT fk_tblTimeReg_userID FOREIGN KEY (userID) REFERENCES tblUser (userID)
@@ -357,6 +359,7 @@ CREATE TABLE tblEventLog (
   locationTypeID         INT NULL,
   addressLocationTypeID  INT NULL,
   PRIMARY KEY (eventLogID),
+  INDEX ix_tblEventLog_timestamp (eventLogTimestamp),
   CONSTRAINT fk_tblEventLog_addressID FOREIGN KEY (addressID) REFERENCES tblAddress (addressID),
   CONSTRAINT fk_tblEventLog_addressLocationTypeID FOREIGN KEY (addressLocationTypeID) REFERENCES tblAddressLocationType (addressLocationTypeID),
   CONSTRAINT fk_tblEventLog_appModulesCredGroupID FOREIGN KEY (appModulesCredGroupID) REFERENCES tblAppModulesCredGroup (appModulesCredGroupID),

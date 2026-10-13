@@ -358,14 +358,14 @@ A worked example from IT for each rule type would settle this.
 Is it walking time from the geofence edge to the workstation, the short-exit threshold
 (GAP-06), a dwell time before arrival counts, or something else?
 
-## CLARIFY-05: `addressCoordinates` format · `OPEN`
-Exact string format (`"50.7436,3.2165"`? `"lat;lng"`? WKT?), and whether existing rows
-already follow it. Every geofence evaluation parses it.
+## CLARIFY-05: `addressCoordinates` format · `RESOLVED` (IT's creation script, 2026-10-13)
+`"latitude,longitude"` in decimal degrees with a dot and one comma, e.g. `"50.7436,3.2167"`
+(IT's comment on the column). Every geofence evaluation parses it in this format.
 
-## CLARIFY-06: `tblTimeReg.addressID` nullability · `PARTLY RESOLVED` (IT's database, 2026-10-09)
-**Nullable: yes.** In IT's database `tblTimeReg.addressID` is `INT NULL` (while `userID`,
-`timeRegTypeID` and `timeRegTimestamp` are NOT NULL). **Still open:** what address does a
-manual entry, or a QR scan in a van, carry: NULL, or a specific address?
+## CLARIFY-06: `tblTimeReg.addressID` nullability · `RESOLVED` (IT, 2026-10-09 and 2026-10-13)
+**Nullable: yes.** `tblTimeReg.addressID` is `INT NULL`; IT's creation script says it is
+NULL for a manual entry without a location. (A QR scan in a van follows the Terminal design,
+GAP-09.)
 
 ## CLARIFY-07: User language · `RESOLVED` (product decision 2026-10-08)
 `tblUserLanguage` allows several languages per user. Decision: **one current preferred
