@@ -795,6 +795,10 @@ when
 
 ## 35. Exceptions
 
+> **Decision 2026-10-13 (D14):** no separate Exceptions screen. Problems such as a missing
+> start or finish are calculated from the registrations and shown in **Time records**,
+> where HR fixes them; a complete day has no problem. No stored states, no dismiss.
+
 Types: missing start · missing end · unfinished workday · conflicting registration · correction request
 
 States: open · pending · resolved

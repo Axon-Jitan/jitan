@@ -27,24 +27,18 @@ Status values: `OPEN` · `RESOLVED (date, decision)` · `WITHDRAWN (reason)`
 
 ## Open questions for IT (priority)
 
-These four block the next roadmap step (the time engine and production authorization).
-Jitan does not assume answers to them; details are in each section below.
+GAP-01, GAP-02, GAP-08, GAP-13, CLARIFY-02 and CLARIFY-03 were decided on 2026-10-12/13
+within the existing ERD (D1–D16 in [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md#decisions-2026-10-1213-storage-and-behaviour)). Still open:
 
-1. **GAP-01: actual vs registered time.** `tblTimeReg` has one timestamp. How should
-   both the actual detected time and the rounded/corrected time be preserved? Is the
-   registered time computed when read, or stored somewhere? How is an HR correction
-   stored without losing the original?
-2. **GAP-02: timezones.** Is `timeRegTimestamp` stored in UTC or in local time? Where
-   does a company's (or workplace's) timezone come from?
-3. **CLARIFY-02: `tblTimeRegType`.** What does a type represent: the kind of event
-   (in / out / break), the source (geofence / QR / manual), or both? Please share the
-   seeded rows.
-4. **CLARIFY-10: credential groups.** Which credential groups may an actor grant? Is
-   `credGroupLevel` a hierarchy, and in which direction? How do credential groups,
-   modules and functions combine into permissions?
-
-Until then Jitan reads `tblTimeReg` as stored (read-only, TR-01), does no rounding and
-writes no registrations, and lets an actor grant only credential groups they hold.
+1. **GAP-03 / D16: projects and default companies.** IT will update the ERD with projects
+   and each employee's default company. Registrations use the employee's choice, or else
+   these defaults.
+2. **CLARIFY-10/11: access roles.** Which credential groups may an actor grant? How do
+   credential groups, modules and functions combine into permissions? Which rows go into
+   the lookup tables (IT writes the default-data script; Jitan's proposal:
+   [reference_data.sql](reference_data.sql))?
+3. **Configuration tables.** The 2026-10-12 `ERD.jpg` has `tblConfigType`,
+   `tblConfiguration`, `tblUserConfiguration`; IT's creation script (2026-10-13) does not.
 
 ---
 
@@ -64,15 +58,15 @@ answered, and they block only the production cut-over of authentication and auth
 | Employees: list (Figma `153:137`) | **not blocked**. Location (GAP-11) shows "—"; Onboarding shows Activated / Not activated (`userPassword IS NOT NULL`); Policy omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY) |
 | Employee onboarding (**Milestone 1**) | **not blocked**, built: temporary onboarding QR (GAP-04 resolved), activated = `userPassword IS NOT NULL` |
 | Schedules, schedule types, rounding rules: read-only views | **not blocked**: schedules are global and user-wide (CLARIFY-14 resolved) |
-| Schedules and rounding rules: create / edit | CLARIFY-03 (meaning of `roundingRuleRoundUp`, `roundingRuleValueInMin`, `scheduleMarginMin`) |
-| Policies (Figma `HR / Policies`), scheduled changes | GAP-13 (effective dating, group → schedule/rule link) |
+| Schedules and rounding rules: create / edit | **not blocked**: meanings decided (D10, D11) |
+| Schedules per group ("policies" in older Figma) | **not blocked**: per group via its members (D2, D3); a change applies immediately (D12; future dates dropped for the MVP) |
 | Employee Web QR login, privacy screens | GAP-05 |
-| Core time engine (rounding, sessions, writing registrations) | GAP-01, GAP-02, GAP-13, CLARIFY-02, CLARIFY-03. **Not blocked:** the read-only registration stream (TR-01) and the pure rounding calculation (built) |
+| Core time engine (rounding, sessions, writing registrations) | **not blocked**: storage decided (D4–D11). Company/project of a registration waits for IT's ERD update (D16, GAP-03) |
 | Geofencing | GAP-06, CLARIFY-04, CLARIFY-05 |
-| Rounding (**Milestone 2**) | GAP-01, CLARIFY-03 |
+| Rounding (**Milestone 2**) | **not blocked** (D4, D10, D11) |
 | Registration method choice | GAP-07 |
 | Time Records / Reports per company | GAP-03 |
-| Exceptions | GAP-08 |
+| Exceptions | **no separate screen**: problems are calculated and shown in Time records (D14) |
 | Terminal | GAP-09 |
 | Visitors | GAP-10 |
 
@@ -104,7 +98,7 @@ Recorded so they aren't raised again.
 # Gaps
 
 ## GAP-01: Actual time vs registered time
-**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+**Status:** `RESOLVED` (2026-10-13, D4–D8 in [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md#decisions-2026-10-1213-storage-and-behaviour)): actual and rounded time are separate `tblTimeReg` rows told apart by type; corrections add rows and deactivate the old rounded row; the reason is in `timeRegComment`.
 
 1. **Requirement** (§16, §17, §23, §33, §34): every registration keeps the **actual**
    detected time (08:03) and the **registered** time (08:00) after rounding. The actual
@@ -133,7 +127,7 @@ Recorded so they aren't raised again.
      or a final *registered* time?
 
 ## GAP-02: Company timezone and country
-**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+**Status:** `RESOLVED` for Belgium (2026-10-13, D9 in [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md#decisions-2026-10-1213-storage-and-behaviour)): `timeRegTimestamp` in UTC; the workplace time zone (Europe/Brussels) is set once in the server configuration. A workplace outside Belgium would reopen it.
 
 1. **Requirement** (§5): a company has a country and a timezone.
 2. **Considered:** `tblCompany`, `tblAddress`.
@@ -146,7 +140,7 @@ Recorded so they aren't raised again.
    `timeRegTimestamp` stored in UTC or in local time?
 
 ## GAP-03: Company ↔ address (workplaces and attribution)
-**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+**Status:** `OPEN`, **IT will update the ERD** (2026-10-13, D16 in [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md#decisions-2026-10-1213-storage-and-behaviour)): projects and each employee's default company. A registration uses the employee's choice, or else these defaults.
 
 1. **Requirement** (§6, §30, §32, §36): a primary workplace is configured during company
    creation. HR manages Locations per company. Time Records and Reports filter and total
@@ -234,7 +228,7 @@ the 2026-10-07 decision that the permanent `userQRcode` also served for onboardi
    can't be read from the ERD. Reinstalling the app loses the choice.
 
 ## GAP-08: Exception state and correction requests
-**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+**Status:** `RESOLVED` (2026-10-13, D14 in [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md#decisions-2026-10-1213-storage-and-behaviour)): problems are calculated from the registrations and shown in Time records; no stored state, no dismiss, no separate Exceptions screen.
 
 1. **Requirement** (§35): exceptions (missing start/end, unfinished day, conflict,
    correction request) with states open / pending / resolved. HR resolves or dismisses.
@@ -300,7 +294,7 @@ previous/new value. If IT later adds the columns, the event gains the references
 else changes.
 
 ## GAP-13: Rounding rules over time and per employee group
-**ERD GAP — requires clarification with IT.** · Status: `OPEN` · raised 2026-10-08
+**Status:** `RESOLVED` for the MVP (2026-10-13, D2–D4 and D12 in [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md#decisions-2026-10-1213-storage-and-behaviour)): stored rounded rows keep history stable; schedules per group via its members; changes apply immediately (no future effective dates in the MVP).
 
 1. **Requirement** (agreed rounding requirements; Figma `HR / Policies` `215:28`, `216:*`):
    a rounding/policy change applies immediately or from a scheduled date; historical
@@ -336,13 +330,15 @@ is anything else already writing or reading `tblUser.userPassword` / `userPINCod
 Jitan must use **the same hashing algorithm and parameters**, or existing users can't log
 in. If not, Jitan uses Argon2id as above. Plaintext is not an option either way.
 
-## CLARIFY-02: What `tblTimeRegType` encodes · `OPEN`
+## CLARIFY-02: What `tblTimeRegType` encodes · `RESOLVED` (2026-10-13, D5b in [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md#decisions-2026-10-1213-storage-and-behaviour))
+Ten types: Start/Finish – actual – Geofence/QR/Manual, Start/Finish – rounded, Start/Finish – corrected ([reference_data.sql](reference_data.sql)). Original question:
 Roadmap §15 wants both an **event kind** (arrival / departure / break) and a **source**
 (geofence / QR / manual). `tblTimeReg` has one type FK plus `timeRegManualEntry`. Do the
 seeded type values encode the kind, the source, or both combined (e.g. `QR-In`,
 `Geofence-Out`)? Please share the seeded rows.
 
-## CLARIFY-03: Rounding semantics · `OPEN`
+## CLARIFY-03: Rounding semantics · `RESOLVED` (2026-10-13, D10–D11 in [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md#decisions-2026-10-1213-storage-and-behaviour))
+Start and finish are separate schedule rows ("Work – start" / "Work – finish"), each with its rule; `roundingRuleValueInMin` = grid (nearest); `roundingRuleRoundUp` = halfway rounds up; `scheduleMarginMin` = tolerance either side, inclusive. Original question:
 - Does `roundingRuleRoundUp` decide whether a rule is a **start** rule
   (`false` → 08:03 rounds down to 08:00) or an **end** rule (`true` → 16:22 rounds up to
   16:30)? Or is it a pure direction flag, with start/end decided elsewhere?

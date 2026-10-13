@@ -670,7 +670,9 @@ Raise the proposed change first.
 
 ## 30. Design implementation must match Figma
 
-The approved Figma flows are the product source of truth for UI/UX.
+The approved Figma flows are the product reference for UI/UX. **The ERD comes first:** when
+a Figma flow needs data the ERD cannot store, the flow is changed in Figma (decided
+2026-10-12), never the database.
 
 Do not simplify a complete flow into a generic screen.
 

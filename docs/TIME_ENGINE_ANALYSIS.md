@@ -1,6 +1,6 @@
 # Time-registration engine: requirements vs the ERD
 
-Analysis of 2026-10-08, updated 2026-10-12, before any engine persistence is built. Sources: the agreed rounding
+Analysis of 2026-10-08, updated 2026-10-13 with the storage decisions (D1–D16). Sources: the agreed rounding
 requirements, ROADMAP §15–19 and §23, Figma `HR / Policies` (`215:28` Rounding interval
 options, `216:*` Effective date / Scheduled change), [ERD.jpg](database/ERD.jpg),
 [ERD.md](database/ERD.md) and [ERD_GAPS.md](database/ERD_GAPS.md).
@@ -25,7 +25,8 @@ These are decided (product, 2026-10-08 and 2026-10-12). They say **what** Jitan 
 2. **Actual registration times are always preserved**; a rounded value never overwrites
    them.
 3. **Historical approved records never change** when rounding policies change.
-4. HR/Admin can **schedule when a new policy becomes effective**.
+4. HR/Admin can **schedule when a new policy becomes effective** (for the MVP, changes apply
+   immediately: D12).
 5. Scheduled-time tolerance is **inclusive** (±15 min around 08:00 includes 07:45 and 08:15)
    and belongs to the **schedule** (`tblSchedule.scheduleMarginMin`, product decision
    2026-10-08; IT still to confirm the column's meaning, CLARIFY-03).
@@ -45,7 +46,8 @@ These are decided (product, 2026-10-08 and 2026-10-12). They say **what** Jitan 
 10. **A reason is required** for every correction.
 11. **The original registration data is preserved.**
 12. **Every correction is audited.**
-13. Resolving an issue in Time records **also resolves the corresponding exception**.
+13. Resolving an issue in Time records **also resolves the corresponding exception** (there is
+    no separate Exceptions screen: D14).
 
 **Database restrictions**
 
@@ -56,104 +58,102 @@ These are decided (product, 2026-10-08 and 2026-10-12). They say **what** Jitan 
 
 **Status:** the pure rounding calculation is built and tested
 (`server/jitan_api/lib/src/time_registration/rounding/`). Nothing is stored or read for it
-yet: no table, column or persistence behaviour was added or assumed. Corrections, breaks
-per group, policy effective dates and exception resolution are **not built** and wait for
-IT (below).
+yet. How everything is stored is now decided (D1–D16 below); corrections, breaks per group
+and registration storage are **not built yet**.
 
-## Database implementation questions for IT
+## Decisions 2026-10-12/13 (storage and behaviour)
 
-Open questions only; Jitan assumes none of the answers. Each requirement number refers to
-the list above.
+Decided by the product owner after talking with IT, question by question. They say how
+the requirements above are stored **in the existing ERD**; nothing here adds a table or
+column. The ERD comes first: where Figma asks for something the ERD can't store, Figma
+changes.
 
-| # | Requirement | What the schema has | Question for IT | Ref |
-|---|---|---|---|---|
-| Q1 | 2: actual time preserved | `tblTimeReg.timeRegTimestamp`, one per row | Is `timeRegTimestamp` the actual time, never to be overwritten? | GAP-01 |
-| Q2 | 3: approved records unchanged | No stored rounded time, applied rule or approval state on `tblTimeReg`; no dates on rules or links | Where is the rounded time (or the rule applied) of an approved record kept, and where is "approved" stored? | GAP-01, GAP-13 |
-| Q3 | 4: scheduled policies | No valid-from/valid-to on `tblRoundingRule`, `tblScheduleRoundingRule`, `tblSchedule`, `tblUserSchedule` | Where does a policy's effective date go? | GAP-13 |
-| Q4 | 1: separate start/finish rounding | A schedule can link several rules (`tblScheduleRoundingRule`); `tblRoundingRule` has `roundingRuleValueInMin` and `roundingRuleRoundUp` | How does the schema say which rule is the start rule and which the finish rule? What do `roundingRuleRoundUp` and `roundingRuleValueInMin` mean? | CLARIFY-03 |
-| Q5 | 7–8: break durations, per group | A break can be a `tblSchedule` row of a Break type: weekday + start/stop clock time. No duration field. Schedules link to **users** (`tblUserSchedule`), not groups | Is a break a fixed time window (a schedule row) or a duration? How does a duration per employee group (45 / 30 min) get stored without a group → schedule link? | GAP-13 |
-| Q6 | 9, 11: corrections keep the original | One timestamp per `tblTimeReg` row; `timeRegManualEntry`, `timeRegActive`/`MFD`, `timeRegWhenModified`, `timeRegComment` exist; nothing links an original row to its correction | How is a correction stored so the original stays, and how are the two linked? How is a *missing* start/finish added? | GAP-01 |
-| Q7 | 10: reason required | `tblEventLog` has no text column; `tblTimeReg.timeRegComment` VARCHAR(500) exists but its intended use is not confirmed | Where is the correction reason stored? | GAP-01 |
-| Q8 | 12: corrections audited | `tblEventLog` references `timeRegID`, actor and target, but has no old/new value | Is the event-log row (with the correction's `timeRegID`) enough, or must the old and new value be recorded somewhere? | GAP-01 |
-| Q9 | 13: resolving resolves the exception | Exception state is not stored anywhere | Are exceptions purely derived from registrations (a correction then clears them by itself), or does "resolved"/"dismissed" need storing? | GAP-08 |
-| Q10 | start/finish detection | `tblTimeReg.timeRegTypeID` → `tblTimeRegType` | Does a type mean the event kind (start/finish/break), the source, or both? | CLARIFY-02 |
-| Q11 | comparing with schedules | Schedules are clock times; no timezone anywhere | Is `timeRegTimestamp` UTC or local, and where does a site's timezone come from? | GAP-02 |
+| # | Topic | Decision |
+|---|---|---|
+| D1 | ERD | The ERD is complete. What it doesn't hold is either not needed or asked of IT. There is no policy table and none is needed: HR creates **schedules** (the word "policy" is dropped). |
+| D2 | Schedules per group | Schedules are set **per employee group**, never per employee. An employee gets their group's schedules as `tblUserSchedule` rows. A group's schedules are the ones its members have who are **only in that group** (D3b). A new member gets them copied from those members. |
+| D2c | Empty group | HR can link a schedule to a group only when the group has at least one member who is only in that group ("Add an employee who is only in Blue collar first"). |
+| D3 | Several groups | An employee may be in several groups, but their schedules come from **one** of them, chosen by HR. |
+| D3b | Finding a group's schedules | Only members who are in that group **alone** count. A group whose members are all also in other groups is treated as empty. |
+| D4 | Actual and rounded time | Every registration is stored as **two `tblTimeReg` rows**, told apart by type: the actual time (never changed) and the rounded time. Approved records therefore keep their rounded time when a rule changes later. |
+| D5 | Registration method | Each employee uses one method (geofence or Terminal QR), and can also register **manually** in the app, with a reason. The method is part of the "actual" type. |
+| D5b | Registration types | `tblTimeRegType` rows: Start/Finish – actual – Geofence/QR/Manual (6), Start/Finish – rounded (2), Start/Finish – corrected (2). Listed in [reference_data.sql](database/reference_data.sql). |
+| D6 | Reason | Every time entered by hand (by the employee or by HR) has `timeRegManualEntry = 1` and a **required** reason in `timeRegComment` (max 500 characters). |
+| D7 | HR corrections are rounded | HR's corrected time is treated as an actual time and rounded with the same rules ("Start – corrected" 08:07 → new "Start – rounded" 08:00). |
+| D8 | After a correction | The old rounded row is set `timeRegActive = 0` with `timeRegWhenModified`; the actual row stays active as history; the newest active rounded row counts. Nothing is deleted. Each change is audited in `tblEventLog` (actor, target, `timeRegID`). |
+| D9 | Time zone | `timeRegTimestamp` is stored in **UTC**. The workplace time zone (Europe/Brussels) is set once in the server configuration; schedules are compared in that local time. |
+| D10 | Start vs finish rule | `tblScheduleType` has **"Work – start"** and **"Work – finish"**. A working day is two `tblSchedule` rows, each with its own rounding rule (`tblScheduleRoundingRule`) and tolerance. `roundingRuleRoundUp` keeps its own meaning: a time exactly halfway rounds **up** (forward) when 1. |
+| D11a | Rounding | To the **nearest** grid time; `roundingRuleValueInMin` is the grid (15, 30 or 60). Example: grid 30, 08:12 → 08:00, 08:17 → 08:30. |
+| D11b | Tolerance | `tblSchedule.scheduleMarginMin` = minutes either side of the scheduled time; the edge counts as inside. Inside it the scheduled time is registered, outside it D11a applies. |
+| D12 | When changes apply | A schedule or rule change applies **immediately** when HR saves it. "Schedule for a later date" is removed from Figma for the MVP (no field for a future date). |
+| D13 | Breaks | Automatic. HR creates a Break schedule per group (e.g. White collar 45 min, Blue collar 30 min, examples only). Its length (stop − start) is deducted from the working day; the employee never registers a break. |
+| D14 | Exceptions | Problems (e.g. missing finish) are **calculated** from the registrations and shown in **Time records**, where HR fixes them; a complete day has no problem. **No separate Exceptions screen**, no "dismiss" state. |
+| D15 | Lookup rows | IT writes and runs the default-data script. Jitan keeps its own version, [reference_data.sql](database/reference_data.sql), to advise IT. |
+| D16 | Company and project | When registering, the employee **may** choose a company and project; if not, Jitan uses the employee's **default company and default project**. Waits for IT's ERD update with projects and default companies (GAP-03); nothing is built for it before. |
+
+**Still open**
+
+- Projects and default companies: IT's ERD update (D16, GAP-03). Then: can the employee
+  switch company or project during the day?
+- Language codes: `en`/`nl`/`fr` (today) or IT's suggested `nl-BE`/`fr-BE`.
+- What each access role may do (CLARIFY-10/11).
+- The configuration tables in the 2026-10-12 `ERD.jpg` are not in IT's creation script
+  (2026-10-13).
+
+**Figma changes these decisions need** (Figma follows the ERD): "Policy" becomes
+"Schedule"; remove "Schedule for a later date" (D12); remove the Exceptions screen and show
+problems in Time records (D14); add a reason field to the employee's manual registration
+(D5, D6); add a company/project choice to registration, defaulted (D16, once IT's ERD
+update exists). The halfway setting stays (D10).
 
 ## The tables involved
 
-| Table | What it holds | Missing for the engine |
-|---|---|---|
-| `tblScheduleType` | Kind of period (Work, Break, Lunch, Travel), Active/MFD | — |
-| `tblSchedule` | One period on one weekday (`dayID`): type, start/stop hour+minute, `scheduleMarginMin` (= the scheduled-time tolerance, decided), Active/MFD. Global: no company (confirmed) | effective dates; date-specific exceptions |
-| `tblDays` | Weekdays | — |
-| `tblUserSchedule` | User ↔ schedule (unique pair), Active/MFD. User-wide: no company (confirmed) | effective dates |
-| `tblRoundingRule` | `roundingRuleValueInMin`, `roundingRuleRoundUp`, Active/MFD | start vs finish; effective dates; company |
-| `tblScheduleRoundingRule` | Schedule ↔ rounding rule (unique pair), Active/MFD | effective dates |
-| `tblTimeReg` | One event: user, address, type, **one** timestamp, manual flag, comment, when modified, Active/MFD | registered time; applied rule; approval state; company |
-| `tblTimeRegType` | Configured event types | meaning (CLARIFY-02) |
-| `tblEventLog` | Audit with FKs to all of the above | old/new values |
+| Table | What it holds |
+|---|---|
+| `tblScheduleType` | Work – start, Work – finish, Break (D10, D13) |
+| `tblSchedule` | One period on one weekday: type, start/stop hour and minute, `scheduleMarginMin` (tolerance, D11b), Active/MFD. Global: no company |
+| `tblDays` | Weekdays |
+| `tblUserSchedule` | Employee ↔ schedule, Active/MFD; filled per group (D2) |
+| `tblRoundingRule` | `roundingRuleValueInMin` (grid, D11a), `roundingRuleRoundUp` (halfway rounds up, D10), Active/MFD |
+| `tblScheduleRoundingRule` | Schedule ↔ rounding rule, Active/MFD |
+| `tblTimeReg` | One row per time: actual, rounded or corrected (D4–D8), user, address (NULL for a manual entry without a location), type, UTC timestamp (D9), manual flag, reason, when modified, Active/MFD |
+| `tblTimeRegType` | The 10 registration types (D5b) |
+| `tblEventLog` | Audit of every change (actor, target, `timeRegID`, `scheduleID`, …) |
 
 ## Requirement by requirement
 
-| # | Requirement | ERD support | Status |
+| # | Requirement | How it is stored | Status |
 |---|---|---|---|
-| R1 | Admin-configurable intervals of 15, 30 or 60 minutes | `tblRoundingRule.roundingRuleValueInMin` holds the minutes; Jitan validates 15/30/60 (`RoundingInterval`) | **Supported directly** |
-| R1b | Separate **start** and **finish** intervals (confirmed requirement 1; Figma "Start interval", "Finish interval") | A schedule can link several rules (`tblScheduleRoundingRule`), but no column is known to say which rule is the start one and which the finish one. Jitan does **not** assume `roundingRuleRoundUp` means this | **IT confirmation** (Q4, CLARIFY-03) |
-| R1c | "Halfway rounding: Round forward" | No column is known to hold it. `roundingRuleRoundUp` is a candidate for R1b **or** R1c, not both; neither is assumed | **IT confirmation** (Q4, CLARIFY-03) |
-| R2 | Actual timestamps preserved | `tblTimeReg.timeRegTimestamp` = the actual time; never overwritten | **Supported directly**, provided registered time is not written into it (GAP-01) |
-| R3 | Registered times calculated automatically | Calculation: built (`RoundingCalculator`). Inputs: `tblUserSchedule` → `tblSchedule` (weekday, start/stop) → `tblScheduleRoundingRule` → `tblRoundingRule`. Whether the registered time is stored or computed on read is open | Calculation **supported**; storage **IT decision** (GAP-01) |
-| R4 | Scheduled-time tolerance separate from interval rounding | **Decided:** the tolerance is per schedule, `tblSchedule.scheduleMarginMin`, inclusive. The engine takes it as a separate input | **Supported** (IT to confirm the column means minutes either side, CLARIFY-03) |
-| R5 | Same rules for geofencing, QR and manual registration | The rule is chosen from the employee's schedule, not from the source; the engine has no source input, so it is identical by construction. Telling a start from a finish needs the event kind, which `tblTimeRegType` may or may not encode | Rounding **supported**; start/finish detection needs **CLARIFY-02** |
-| R6 | Historical approved registrations never change silently when policies change | No effective dates on rules, schedule links or user schedules; no stored registered time; no "approved" state on `tblTimeReg`. If registered times are computed on read, editing a rule changes history. Figma's "Effective date: Scheduled … 12 Oct 2026" and "Existing approved registrations keep their original applied rules" have nowhere to live | **ERD GAP** (extends GAP-01; new GAP-13 below) |
-| R8 | Configurable break durations per employee group (confirmed requirements 7–8) | A Break `tblSchedule` row holds a weekday and a start/stop **clock time**, not a duration; schedules link to users, not groups | **IT confirmation** (Q5, GAP-13) |
-| R9 | HR corrections from Time records, with a required reason, original kept, audited (confirmed requirements 9–12) | One timestamp per row; no link between an original and its correction; no reason column known; no old/new values in `tblEventLog` | **IT confirmation** (Q6–Q8, GAP-01). Not built |
-| R10 | Resolving in Time records resolves the exception (confirmed requirement 13) | Exception state is not stored (GAP-08); derived exceptions clear when the stream is complete | **IT confirmation** (Q9, GAP-08) |
-| R7 | HR/Admin manage Schedule Types, Schedules and their rounding rules | Tables exist with Active/MFD (`tblScheduleType`, `tblSchedule`, `tblRoundingRule`); audit FKs exist on `tblEventLog` (`scheduleTypeID`, `scheduleID`, `dayID`, `roundingRuleID`, `scheduleRoundingRuleID`, `userScheduleID`) | **Supported** for create / edit / deactivate, and for removing a link in `tblScheduleRoundingRule` or `tblUserSchedule` (soft delete, CLARIFY-09). What the values mean still needs CLARIFY-03 |
+| R1 | Rounding grid of 15, 30 or 60 minutes | `roundingRuleValueInMin` (D11a) | **Decided** |
+| R1b | Separate start and finish rounding | "Work – start" / "Work – finish" schedule rows, each with its rule (D10) | **Decided** |
+| R1c | Halfway rounding | `roundingRuleRoundUp` (D10) | **Decided** |
+| R2 | Actual time preserved | "… – actual – …" row, never changed (D4) | **Decided** |
+| R3 | Rounded time calculated automatically | `RoundingCalculator` (built) writes the "… – rounded" row (D4) | **Decided**; calculator built, storage not built |
+| R4 | Tolerance separate from rounding | `scheduleMarginMin`, inclusive (D11b) | **Decided** |
+| R5 | Same rules for geofence, QR and manual | The rule comes from the schedule, not the method (D5, D7) | **Decided** |
+| R6 | Approved records never change | Rounded time is stored, not recalculated (D4) | **Decided** |
+| R7 | HR manages schedule types, schedules, rounding rules | Existing tables, soft delete, audited | **Decided** |
+| R8 | Configurable breaks per group | Break schedule rows per group (D2, D13) | **Decided** |
+| R9 | HR corrections with reason, original kept, audited | D6–D8 | **Decided** |
+| R10 | Fixing a day resolves its problem | Problems are calculated (D14) | **Decided** |
+| R11 | Policy from a future date | Not in the MVP (D12) | **Dropped for the MVP** |
+| R12 | Company and project per registration | Employee's choice or defaults (D16) | **Waits for IT's ERD update** |
 
 ## Further findings
 
-1. **Policies vs schedules.** Figma's Policy ("Office", scope "White collar", break, short
-   exit, start/finish interval, halfway, tolerance, registration methods) has no table, as
-   documented ("There is no policy table"). Its parts map to: scope → `tblGroup`; break →
-   a Break `tblSchedule` row; intervals → `tblRoundingRule`; tolerance →
-   `scheduleMarginMin`?; short exit → GAP-06; methods → GAP-07. **But nothing links a group
-   to schedules or rules**: `tblUserSchedule` links *users*. "The Office policy applies to
-   White collar" cannot be stored; it would have to be copied to each user. **Business
-   decision + IT** (in GAP-13).
-2. **Multi-company employees** (IT, 2026-10-08): `tblUserSchedule`, `tblSchedule` and
-   `tblTimeReg` have no company, confirmed in IT's database (CLARIFY-14 resolved). An
-   employee's schedules apply in every company they work for. Attributing a registration
-   to a company remains open (GAP-03).
-3. **Timezone** (GAP-02): schedules are wall-clock times (`scheduleHrStart = 8`), and so
-   are the stored timestamps as far as we know. The engine computes on wall-clock fields
-   and never converts; comparing correctly needs GAP-02 answered.
-4. **Approved registrations** (R6): `tblTimeReg` has no approval/status column.
-   `timeRegActive`/`timeRegMFD` and `timeRegManualEntry` are not approval. How a correction
-   is stored (for example a new manual row with the original made inactive) is **not
-   assumed**; it is asked in Q6.
-5. **What rounds.** Only the first start and last finish of a work session should round,
-   not every event (a workplace change mid-session is not a boundary, roadmap §15).
-   Deriving sessions needs the event kinds (CLARIFY-02) and is not built.
+1. **What rounds.** Only the first start and last finish of a work session round, not
+   every event (a workplace change mid-session is not a boundary, roadmap §15).
+2. **Multi-company employees:** schedules have no company; an employee's schedules apply
+   in every company. A registration's company comes from D16.
+3. **Time zone:** Belgium only for now (D9). A workplace outside Belgium would need its
+   time zone stored somewhere: a question for IT then.
 
-## GAP-13
+## What can be built now
 
-Recorded in [ERD_GAPS.md](database/ERD_GAPS.md#gap-13-rounding-rules-over-time-and-per-employee-group):
-effective dating, stored registered time with the applied rule (GAP-01), an approval state,
-and a group → schedule/rule relationship.
-
-## What can be built without unresolved decisions
-
-- **Done:** `RoundingCalculator` and `RoundingPolicy`, pure Dart, with worked examples
-  from Figma and the roadmap, every case in the testing priorities that rounding alone can
-  decide, and generated properties (on a mark, within half an interval, idempotent,
-  monotonic, tolerance only within range).
-- **Next, still without persistence:** read-only HR/Admin lists of Schedule Types,
-  Schedules (with weekday and times) and Rounding Rules over the existing tables, which
-  need no semantic decision. Schedules are global (CLARIFY-14 resolved), so these lists are
-  not company-scoped. Create/edit of these needs CLARIFY-03 (what `RoundUp` and
-  `MarginMin` mean) to avoid writing values whose meaning is guessed.
-- **Blocked until IT confirms the storage:** storing or showing registered times (GAP-01,
-  GAP-13), HR corrections and their reasons (Q6–Q8), break durations per group (Q5),
-  exception resolution (Q9, GAP-08), work sessions and start/finish detection
-  (CLARIFY-02), comparing with schedules (GAP-02), policy screens with scope and effective
-  dates (GAP-13, GAP-06, GAP-07).
+- **Done:** `RoundingCalculator` and `RoundingPolicy` (pure, tested).
+- **Next, with no open question:** schedule types, schedules and rounding rules for HR
+  (D2, D10–D13); registrations stored as actual + rounded rows (D4–D9); HR corrections
+  and the employee's manual registration with reason (D5–D8); problems in Time records
+  (D14). Each still goes slice by slice, with its Figma screens updated first.
+- **Waits:** company/project on registrations (D16, IT's ERD update); access-role
+  permissions (CLARIFY-10/11).

@@ -20,7 +20,7 @@ imported here so every session loads them:
 | [docs/PRODUCT_CLARIFICATIONS.md](docs/PRODUCT_CLARIFICATIONS.md) | Before building behaviour the product hasn't defined yet (e.g. offline) |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | Named follow-up tasks (I18N-01 translations, DB-VERIFY-01) |
 | [docs/TIME_ENGINE_ANALYSIS.md](docs/TIME_ENGINE_ANALYSIS.md) | Before any rounding, schedule or registered-time work: requirements vs the ERD |
-| [Figma: Jitan](https://www.figma.com/design/KBsMGoDoYHR9AJq5sAnPb1) | Before building any screen: approved flows are the UI/UX source of truth (rule §30) |
+| [Figma: Jitan](https://www.figma.com/design/KBsMGoDoYHR9AJq5sAnPb1) | Before building any screen: the UI/UX reference (rule §30). The ERD comes first: where Figma needs data the ERD can't store, Figma changes |
 
 ### Figma pages
 
@@ -88,6 +88,8 @@ Easily confused tables:
 - `tblUser.userName` is the **first name**, not a login name. Login is `userCode`.
 - `tblSchedule` / `tblUserSchedule` have **no company**: schedules are global and a
   schedule assignment is user-wide (confirmed in IT's database, CLARIFY-14 resolved).
+- **Say "schedule", not "policy".** HR creates schedules (work start/finish, break) per
+  employee **group**, never per employee; members get them as `tblUserSchedule` rows (D2).
 
 Use column names exactly as spelled in the ERD (`userQRcode`, `tblEventLog.userfunctionID`).
 Read lookup values (roles, modules, functions, types, languages) from the database. Never
@@ -109,10 +111,11 @@ before inserting (e.g. `CreateEmployeeRequest.max…Length`). Exports from IT's 
 2. **The backend is authoritative** for time calculation: rounding, work-session
    boundaries, totals. `jitan_core` may mirror logic for display, but client-side results
    are never persisted or trusted.
-3. **Actual time is never overwritten.** Jitan treats the actual detected time and the
-   registered (rounded/corrected) time as separate concepts. *How* the registered time is
-   persisted with a single `tblTimeReg` timestamp is open as **GAP-01**. Don't write
-   time-engine persistence code until it is resolved.
+3. **Actual time is never overwritten.** Every registration is stored as separate
+   `tblTimeReg` rows told apart by `tblTimeRegType`: the actual time (never changed), the
+   rounded time, and HR's corrected time. A correction deactivates the old rounded row;
+   nothing is deleted. Times are UTC. Full decisions D1–D16:
+   [TIME_ENGINE_ANALYSIS.md](docs/TIME_ENGINE_ANALYSIS.md).
 4. **No physical deletes** of business/master data. Use `Active` + `MFD` (Marked For
    Deletion). `MFD = true` hides a record from the UI; the row stays. Every read filters
    `MFD = false`; selectable lists also filter `Active = true`.
