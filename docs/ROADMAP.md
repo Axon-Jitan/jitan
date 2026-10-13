@@ -1,6 +1,7 @@
 # Jitan — Development Roadmap
 
-> Status: source-of-truth roadmap. No calendar dates — ordered by dependency.
+> Status: source-of-truth roadmap. No calendar dates — ordered by dependency. **Current
+> phase and build order: [section 44](#44-development-phases-build-order).**
 > Platform priority: **Android first**, iOS after Android is stable.
 
 ## Product Description
@@ -549,6 +550,10 @@ These feed planning, rounding, employee calendar and reports.
 
 ## 19. Policies
 
+> **Decision 2026-10-12:** there is no separate policy concept. HR creates **schedules**
+> (work start, work finish, break, with their rounding and tolerance) per employee group;
+> see section 44, phase 2.
+
 Policies combine:
 
 - employee scope
@@ -969,74 +974,49 @@ Nginx handles HTTPS, Flutter Web, and API reverse proxying.
 
 ---
 
-## 44. Recommended Development Order
+## 44. Development phases (build order)
 
-```text
-Foundation
-↓
-Database connectivity
-↓
-Authentication
-↓
-Companies
-↓
-Employees
-↓
-Employee onboarding
-↓
-Android mobile
-↓
-Employee Web authentication
-↓
-Core time engine
-↓
-QR registration
-↓
-Geofencing
-↓
-Schedules
-↓
-Policies
-↓
-Rounding
-↓
-Employee Home
-↓
-Period/calendar
-↓
-HR Time Records
-↓
-Corrections
-↓
-Exceptions
-↓
-Terminal
-↓
-Visitors
-↓
-Reports
-↓
-Dashboard
-↓
-iOS
-↓
-QA
-↓
-Deployment
-```
+Updated 2026-10-13 with the decisions in [TIME_ENGINE_ANALYSIS.md](TIME_ENGINE_ANALYSIS.md).
 
-The **core time engine, rounding and audit trail** receive the most careful testing, even where AI generates much of the implementation.
+**How we move:** one phase at a time, in this order. A phase is **done** when its slices
+work end to end (screen → API → database → audit → tests) and its Figma screens match.
+The next phase starts only after that. The only exception: a phase that is **blocked by
+IT** is skipped and resumed as soon as IT unblocks it; the skip is recorded here.
+
+**Before each phase with screens:** the designer updates the Figma screens for that phase.
+Server work of the phase may start while that happens.
+
+| Phase | What | Needs | Status |
+|---|---|---|---|
+| 1 | **Foundation and people**: API foundation, database, development identity, companies list, employees (add, details, assignments), onboarding with temporary QR, Android app onboarding, sign-in, recovery, translations, read-only registration list | — | **Done** (2026-10-12) |
+| 2 | **Schedules (HR)**: schedule types (Work – start, Work – finish, Break), work hours per weekday with rounding and tolerance for start and finish, automatic breaks, linked to an employee group and given to its members; changes apply immediately; audited. Server first, then the HR screens | Figma: Schedules screens updated | **Next** |
+| 3 | **Registrations**: every start and finish saved as actual time + rounded time (rounded with the employee's schedule), in UTC; the working day as a sequence of activities; Employee app: start and finish, and manual registration with a required reason | Phase 2 | To do |
+| 4 | **Automatic registration (geofencing)**: workplaces with geofences, the app registers start and finish by itself (only for employees who allowed it) | Phase 3; decision on the short-exit threshold | To do |
+| 5 | **Time records (HR)**: day view with actual and rounded times, method (Geofence / QR / Manual), problems such as missing start or finish, corrections with a required reason and full history. No separate Exceptions screen | Phase 3; Figma: Time records screens updated | To do |
+| 6 | **Employee views**: Home with today's status, period / calendar of own registrations | Phase 3 | To do |
+| 7 | **Reports (hours)**: employee monthly report (days, hours, totals), calculated when opened, download as Excel/CSV or PDF for payroll | Phase 5 | To do |
+| 8 | **Projects and transport**: client projects (in-house and on site) and internal projects, default company and project, switching project in the app, transport as an activity (not working time), kilometres calculated from addresses, projects from SAP, project report, kilometres by client agreement | **IT**: projects and default company in the ERD, SAP connection | Waits for IT |
+| 9 | **Terminals and visitors**: workshop, front-desk and van terminals (scan, start, switch project, finish), visitors at the front desk, terminal pairing and management | **IT**: terminals and visitors in the ERD | Waits for IT |
+| 10 | **HR/Admin sign-in and permissions**: sign-in for the HR web app, production permission check over credential groups (HR and Admin have the same rights in V1, access to all companies) | — | To do |
+| 11 | **Dashboard, Employee Web, iOS** | Phases 5–10 | To do |
+| 12 | **Before production**: security checklist (database certificate check, no unencrypted database connection, sign-in attempt limit), verification against IT's database, QA, Linux deployment | IT's database and server | To do |
+
+The **core time engine, rounding and audit trail** receive the most careful testing.
 
 ### Milestones
 
-**Milestone 1**
+**Milestone 1** (phase 1, done)
 
-> HR creates company → adds employee → generates QR → Android employee activates Jitan → sets password → logs into Employee Web.
+> HR adds an employee → generates a temporary QR → the employee activates Jitan on Android
+> → sets a password → is signed in.
 
-**Milestone 2**
+**Milestone 2** (phases 2–5)
 
-> Employee arrives/leaves → Jitan detects it → work session is calculated → rounding is applied correctly.
+> HR creates the schedules of a group → an employee registers start and finish (manually or
+> automatically) → Jitan saves the actual and the rounded time → HR sees the day in Time
+> records and corrects it with a reason.
 
 **MVP (final)**
 
-> Android + Employee Web + HR/Admin + Terminal + Visitors + Reports all work end-to-end.
+> Android + HR/Admin + projects and transport + terminals + visitors + reports all work end
+> to end, verified on IT's database.
