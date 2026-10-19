@@ -1,0 +1,25 @@
+[Unit]
+Description=Jitan network-test server (not the production application)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=jitan
+Group=jitan
+WorkingDirectory=/opt/jitan/current
+Environment=JITAN_CONFIG_FILE=/etc/jitan/app.env
+ExecStart=/opt/jitan/current/bin/jitan-server
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

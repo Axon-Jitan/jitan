@@ -31,6 +31,13 @@ dart analyze           # whole workspace
 
 ## Run the API (development)
 
+For Linux deployment, follow the agreed
+[IT configuration contract](docs/DEPLOYMENT_CONFIGURATION.md): `/etc/jitan/app.env`,
+configurable binding/port and HTTPS certificate paths. This is implemented in the
+network-test executable (`dev/network-smoke/`); full-API integration is pending
+(DEPLOY-01). The development commands below continue to use the backend's existing
+configuration.
+
 ```sh
 cd server/jitan_api
 cp .env.example .env   # fill in the dev database; never commit .env

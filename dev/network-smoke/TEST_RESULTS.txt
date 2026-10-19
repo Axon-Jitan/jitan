@@ -1,0 +1,24 @@
+Jitan network-test 0.1.2 - verified 2026-10-15
+Binary SHA-256: 2705167bca8b42ef200972af6642d83347fd0b2db02c58437af9615cab73db9c
+Build: Dart 3.12.1 cross-compiled for Linux x64. ELF64 verified.
+Config checks and Dart analysis passed.
+Runtime: Ubuntu 26.04 x64 container (ubuntu@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7).
+Non-root UID/GID 65534, read-only filesystem, no Dart/Flutter runtime installed.
+Docker and OpenSSL are local testing tools only.
+
+PASS: Default /etc/jitan/app.env: HTTPS page, health, HEAD, 404/405, config-file traversal denied
+PASS: HTTPS validated with trusted test certificate; untrusted certificate rejected
+PASS: No plaintext HTTP fallback on HTTPS port; invalid connection does not crash listener
+PASS: DB password and query-string test marker absent from logs
+PASS: SIGTERM exits 0, all listeners stop, and HTTPS works after restart
+PASS: Specific private IPv4 plus 127.0.0.1 both listen; environment overrides file without rebuild
+PASS: HOST alias and changed file PORT work without rebuild; HTTP works when TLS is omitted
+PASS: partial TLS: startup refused (78), no listener and no secret values in logs
+PASS: missing TLS file: startup refused (78), no listener and no secret values in logs
+PASS: mismatched TLS key: startup refused (78), no listener and no secret values in logs
+PASS: invalid port: startup refused (78), no listener and no secret values in logs
+PASS: malformed file: startup refused (78), no listener and no secret values in logs
+PASS: missing explicit config: startup refused (78), no listener and no secret values in logs
+
+Not tested: IT VM, IT certificates, systemd boot, real DNS/firewalls.
+DB_* settings are ignored by this network test; no database connection is made.

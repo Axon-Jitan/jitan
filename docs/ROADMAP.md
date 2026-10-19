@@ -952,14 +952,18 @@ validation
 
 ## 43. Deployment
 
-Development does not require Docker. Production can also run without Docker.
+Development does not require Docker. Production uses a standalone Linux executable
+without requiring Docker, Dart or Flutter on the VM. Target: Ubuntu 26.04 x64 on
+Hyper-V. Follow [IT's configuration contract](DEPLOYMENT_CONFIGURATION.md), recorded
+2026-10-16: `/etc/jitan/app.env`, configurable address/port and direct HTTPS using
+IT's certificate/key paths. Settings change on restart, without rebuilding.
 
 ```text
 Hyper-V
 ↓
 Linux VM
 ↓
-Nginx
+HTTPS (executable; optional IT-managed reverse proxy)
 ↓
 Dart backend
 +
@@ -970,7 +974,16 @@ MySQL
 
 The Dart API runs as a Linux `systemd` service.
 
-Nginx handles HTTPS, Flutter Web, and API reverse proxying.
+The target is for the executable to serve the API and embedded compiled web assets,
+preserving IT's executable-only update procedure agreed 2026-10-16. Keep the same
+installed executable path, systemd service and external configuration; stop, replace,
+restart and verify. Separate web assets would require agreement with IT on the update
+procedure. An IT-managed reverse proxy remains optional. This updates
+the earlier assumption that Nginx must serve the frontend and terminate HTTPS.
+
+The network test (`dev/network-smoke/`) implements the listener/configuration contract
+only. Full API configuration integration and web hosting are pending; see DEPLOY-01 in
+[BACKLOG.md](BACKLOG.md). Database credentials and TLS private keys stay server-side.
 
 ---
 
@@ -999,7 +1012,7 @@ Server work of the phase may start while that happens.
 | 9 | **Terminals and visitors**: workshop, front-desk and van terminals (scan, start, switch project, finish), visitors at the front desk, terminal pairing and management | **IT**: terminals and visitors in the ERD | Waits for IT |
 | 10 | **HR/Admin sign-in and permissions**: sign-in for the HR web app, production permission check over credential groups (HR and Admin have the same rights in V1, access to all companies) | — | To do |
 | 11 | **Dashboard, Employee Web, iOS** | Phases 5–10 | To do |
-| 12 | **Before production**: security checklist (database certificate check, no unencrypted database connection, sign-in attempt limit), verification against IT's database, QA, Linux deployment | IT's database and server | To do |
+| 12 | **Before production**: security checklist (database certificate check, no unencrypted database connection, sign-in attempt limit), verification against IT's database, QA, Linux deployment following IT's configuration contract (DEPLOY-01) | IT's database and server | To do. IT's VM already runs the network-test executable (2026-10-16) |
 
 The **core time engine, rounding and audit trail** receive the most careful testing.
 

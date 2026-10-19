@@ -6,6 +6,33 @@ product questions in [PRODUCT_CLARIFICATIONS.md](PRODUCT_CLARIFICATIONS.md).
 
 Status values: `TODO` · `IN PROGRESS` · `DONE (commit)`
 
+## DEPLOY-01: Adopt IT's server configuration contract
+
+Status: `TODO` · agreement recorded 2026-10-16 · roadmap phase 12
+
+Follow [DEPLOYMENT_CONFIGURATION.md](DEPLOYMENT_CONFIGURATION.md) for the full API.
+The network-test 0.1.2 implementation (`dev/network-smoke/`) is a reference, not
+completed API integration. IT runs it on their Ubuntu 26.04 VM (service up, listeners on
+`127.0.0.1:8080` and the VM address, "Hello jitan!!" in a browser). The public domain
+`jitan.axongroup.com` still showed nginx's default page at the last check: its reverse
+proxy is not yet confirmed to forward to Jitan.
+
+- [ ] Load `/etc/jitan/app.env` with an optional `JITAN_CONFIG_FILE` override.
+- [ ] Support `BIND_ADDRESS` / `HOST`, `PORT` and direct HTTPS via `TLS_CERT` / `TLS_KEY`;
+      retain legacy aliases and documented precedence, including localhost binding.
+- [ ] Map IT's `DB_*` names to existing database settings; preserve production guards,
+      session-secret requirements and verified MySQL TLS (separate from HTTPS keys; see
+      SEC-01).
+- [ ] Add fail-closed configuration/TLS tests, graceful systemd shutdown and log redaction.
+- [ ] Preserve IT's executable-only update procedure: same `jitan-server` path/service,
+      external config and certificates; stop, back up, replace, start and verify.
+- [ ] Embed compiled web assets for executable-only replacement; agree any alternative
+      asset update procedure with IT. Verify client HTTPS/API configuration without secrets.
+- [ ] Verify on the target Linux environment, including systemd restart, certificate
+      permissions, staging database connectivity, and client integration.
+
+Packaging work does not resolve the separate authentication/authorization dependencies.
+
 **Commits:** each completed task is its own reviewable commit. History is pushed as-is,
 never squashed.
 

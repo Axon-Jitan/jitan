@@ -14,6 +14,7 @@ imported here so every session loads them:
 |---|---|
 | [docs/ENGINEERING_RULES.md](docs/ENGINEERING_RULES.md) | Always: imported above. Includes the Definition of Done (§34) |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Before starting any feature: product scope and build order |
+| [docs/DEPLOYMENT_CONFIGURATION.md](docs/DEPLOYMENT_CONFIGURATION.md) | Before deployment/configuration work: IT's `/etc/jitan/app.env` contract, HTTPS, binding and database aliases; full-API adoption remains pending (DEPLOY-01) |
 | [docs/database/ERD.md](docs/database/ERD.md) | Before writing any model, query, repository or endpoint: what every table means |
 | [docs/database/ERD.jpg](docs/database/ERD.jpg) | Authoritative structure. Wins over ERD.md if they disagree |
 | [docs/database/ERD_GAPS.md](docs/database/ERD_GAPS.md) | Before building anything the roadmap wants but the ERD may not hold. Also holds IT clarifications. |
