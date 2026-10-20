@@ -31,12 +31,12 @@ dart analyze           # whole workspace
 
 ## Run the API (development)
 
-For Linux deployment, follow the agreed
-[IT configuration contract](docs/DEPLOYMENT_CONFIGURATION.md): `/etc/jitan/app.env`,
-configurable binding/port and HTTPS certificate paths. This is implemented in the
-network-test executable (`dev/network-smoke/`); full-API integration is pending
-(DEPLOY-01). The development commands below continue to use the backend's existing
-configuration.
+Settings come from the environment, then IT's `/etc/jitan/app.env` (or the file named by
+`JITAN_CONFIG_FILE`), then a `.env` in the working directory. For Linux deployment, follow
+the agreed [IT configuration contract](docs/DEPLOYMENT_CONFIGURATION.md): IT's names
+(`BIND_ADDRESS`, `PORT`, `TLS_CERT`/`TLS_KEY`, `DB_*`) and Jitan's older `JITAN_*` names
+both work. In production the database certificate must be verified
+(`JITAN_DB_TLS_FINGERPRINTS` or `JITAN_DB_TLS_CA_FILE`, SEC-01); development only warns.
 
 ```sh
 cd server/jitan_api
@@ -44,8 +44,9 @@ cp .env.example .env   # fill in the dev database; never commit .env
 dart run bin/server.dart
 ```
 
-- `GET /health`: process is up (no database needed)
-- `GET /health/database`: `SELECT 1` against MySQL (503 when unreachable)
+- `GET /health` (also `/health/live`): process is up (no database needed)
+- `GET /health/database` (also `/health/ready`): `SELECT 1` against MySQL (503 when
+  unreachable)
 - `GET /languages`, `GET /translations?language=<code>`: UI text from `tblTranslation`
   (no sign-in needed, so the login screen can be translated)
 - `GET /me/language`, `PUT /me/language`: the signed-in user's language

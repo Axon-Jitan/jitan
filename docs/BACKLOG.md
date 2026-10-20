@@ -34,13 +34,17 @@ completed API integration. IT runs it on their Ubuntu 26.04 VM (service up, list
 `jitan.axongroup.com` still showed nginx's default page at the last check: its reverse
 proxy is not yet confirmed to forward to Jitan.
 
-- [ ] Load `/etc/jitan/app.env` with an optional `JITAN_CONFIG_FILE` override.
-- [ ] Support `BIND_ADDRESS` / `HOST`, `PORT` and direct HTTPS via `TLS_CERT` / `TLS_KEY`;
-      retain legacy aliases and documented precedence, including localhost binding.
-- [ ] Map IT's `DB_*` names to existing database settings; preserve production guards,
+- [x] Load `/etc/jitan/app.env` with an optional `JITAN_CONFIG_FILE` override
+      (2026-10-20, `config/config_sources.dart`; strict parser in `config/env_file.dart`).
+- [x] Support `BIND_ADDRESS` / `HOST`, `PORT` and direct HTTPS via `TLS_CERT` / `TLS_KEY`;
+      retain legacy aliases and documented precedence, including localhost binding
+      (`config/listener_config.dart`, `bin/server.dart`).
+- [x] Map IT's `DB_*` names to existing database settings; preserve production guards,
       session-secret requirements and verified MySQL TLS (separate from HTTPS keys; see
       SEC-01).
-- [ ] Add fail-closed configuration/TLS tests, graceful systemd shutdown and log redaction.
+- [x] Add fail-closed configuration/TLS tests, graceful systemd shutdown (SIGTERM) and log
+      redaction (no setting values in parser errors). `/health/live` and `/health/ready`
+      added as aliases of `/health` and `/health/database`.
 - [ ] Preserve IT's executable-only update procedure: same `jitan-server` path/service,
       external config and certificates; stop, back up, replace, start and verify.
 - [ ] Embed compiled web assets for executable-only replacement; agree any alternative
@@ -187,14 +191,22 @@ Status: `TODO` · does not block development (decision 2026-10-13: keep building
 this is the pre-production checklist) · **item 1 is due the day the API first connects to
 IT's database**, items 2–3 before production
 
-- [ ] **Database TLS certificate verification.** `Database.connect` passes `secure:` but
-      no certificate check, and mysql_client_plus 0.1.3 accepts any certificate by default
-      (`onBadCertificate ?? (cert) => true`). Verify against IT's CA (`ca.pem`) or a pinned
-      SHA-256 fingerprint before the API or any test connects to IT's database. Asked IT for
-      `ca.pem` or a certificate with `IP:10.1.101.64` in its SAN.
-- [ ] **Production database settings.** `JITAN_DB_SECURE=false` is accepted in production
-      (`app_config.dart`); refuse it there. Least privilege for the API account
-      (SELECT/INSERT/UPDATE; IT's development account also has DELETE/CREATE/DROP/ALTER).
+- [x] **Database TLS certificate verification** (2026-10-20, `database/database_tls.dart`).
+      mysql_client_plus 0.1.3 accepts any certificate by default, so the API always passes
+      its own check: `JITAN_DB_TLS_FINGERPRINTS` (SHA-256, comma-separated) or
+      `JITAN_DB_TLS_CA_FILE`. Production refuses to start without one. The TLS layer checks
+      every certificate in the chain it can't verify, so MySQL's auto-generated pair needs
+      **both** fingerprints, the CA's and the server certificate's (verified against the
+      local MySQL: the pair connects; either one alone, or a wrong one, is refused). The CA
+      file only works with a certificate issued for the database's address (MySQL's
+      auto-generated one names no host).
+- [ ] **IT's two fingerprints.** We have the server certificate's (`70:26:23:…`). Get the
+      CA's too, e.g. from IT's `/var/lib/mysql/ca.pem` (`openssl x509 -in ca.pem -noout
+      -fingerprint -sha256`), confirm both with IT, and put both in `/etc/jitan/app.env`.
+      Or IT issues a certificate with the database address in its SAN and gives us its CA.
+- [x] **Production refuses `JITAN_DB_SECURE=false`** (2026-10-20, `app_config.dart`).
+- [ ] **Least privilege** for the API's database account (SELECT/INSERT/UPDATE; IT's
+      development account also has DELETE/CREATE/DROP/ALTER).
 - [ ] **Sign-in rate limiting / lockout** (`POST /auth/sign-in`, ONB-04 for onboarding and
       recovery). Failed sign-ins are not audited; decide whether they should be, with no
       password or code value logged.

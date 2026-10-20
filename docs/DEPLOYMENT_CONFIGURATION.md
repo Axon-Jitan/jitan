@@ -85,8 +85,8 @@ execution. Malformed lines and duplicate keys are rejected.
 
 ## Database mapping for the full application
 
-Adopt IT's names while preserving existing development aliases. These mappings
-are **pending implementation** in the full API:
+IT's names are used, and the existing development names still work (implemented
+2026-10-20):
 
 | IT setting | Existing backend setting |
 |---|---|
@@ -100,18 +100,30 @@ Use environment before file values and IT names before legacy aliases within eac
 source, consistently with listener settings.
 
 `TLS_CERT`/`TLS_KEY` configure inbound HTTPS, not MySQL certificate verification.
-Verified MySQL TLS and IT-approved database CA configuration still need completion.
-Never disable verification. Preserve `JITAN_ENV`, `JITAN_SESSION_SECRET`, production
-development-variable guards and other backend settings. IT's supplied file is not
-yet a complete production configuration for the full application.
+The database connection has its own settings (SEC-01):
 
-## Implementation status as checked 2026-10-16
+| Setting | Meaning |
+|---|---|
+| `JITAN_DB_SECURE` | TLS to MySQL, default `true`. `false` is refused in production. |
+| `JITAN_DB_TLS_FINGERPRINTS` | SHA-256 fingerprints of the certificates MySQL presents, comma-separated, colons allowed. For MySQL's auto-generated certificates: the CA **and** the server certificate. |
+| `JITAN_DB_TLS_CA_FILE` | Or: a PEM file of the CA that issued a certificate for the database's address. |
+
+Production refuses to start without one of the two checks, or with both. Development
+may connect unverified and logs a warning. When IT renews the database certificates,
+the fingerprints change with them and must be updated in `/etc/jitan/app.env`.
+
+The full application also needs `JITAN_SESSION_SECRET` (at least 32 characters) in
+production, and refuses any `JITAN_DEV_*` setting there, from any source. IT's
+supplied file is therefore not yet a complete production configuration: it still
+needs the session secret and the database fingerprints.
+
+## Implementation status as checked 2026-10-20
 
 | Component | Status |
 |---|---|
 | Network-test 0.1.2 | File loading, listener aliases, dual IPv4 binding and HTTPS implemented. `DB_*` ignored; no database connection. |
 | Linux verification | Ubuntu 26.04 x64 container with test certificates; HTTPS, configuration failures and restart tested. IT VM/certificates/systemd boot unverified here. |
-| Full API (`server/jitan_api`) | Still reads working-directory `.env` plus environment with `JITAN_*` names and serves HTTP. Contract adoption pending. |
+| Full API (`server/jitan_api`) | 2026-10-20: reads `/etc/jitan/app.env` (or `JITAN_CONFIG_FILE`), IT's names, direct HTTPS (TLS 1.2+), dual IPv4 binding, SIGTERM shutdown, `/health/live` and `/health/ready`, verified MySQL TLS. Tested on Windows against the local MySQL; not yet on IT's VM. |
 | Client apps | Connect via backend HTTPS URL; never read server config. |
 
 Complete DEPLOY-01 in [BACKLOG.md](BACKLOG.md) before full application delivery,
