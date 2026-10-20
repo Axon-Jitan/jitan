@@ -82,8 +82,8 @@ changes.
 | D7 | HR corrections are rounded | HR's corrected time is treated as an actual time and rounded with the same rules ("Start – corrected" 08:07 → new "Start – rounded" 08:00). |
 | D8 | After a correction | The old rounded row is set `timeRegActive = 0` with `timeRegWhenModified`; the actual row stays active as history; the newest active rounded row counts. Nothing is deleted. Each change is audited in `tblEventLog` (actor, target, `timeRegID`). |
 | D9 | Time zone | `timeRegTimestamp` is stored in **UTC**. The workplace time zone (Europe/Brussels) is set once in the server configuration; schedules are compared in that local time. |
-| D10 | Start vs finish rule | `tblScheduleType` has **"Work – start"** and **"Work – finish"**. A working day is two `tblSchedule` rows, each with its own rounding rule (`tblScheduleRoundingRule`) and tolerance. `roundingRuleRoundUp` keeps its own meaning: a time exactly halfway rounds **up** (forward) when 1. |
-| D11a | Rounding | To the **nearest** grid time; `roundingRuleValueInMin` is the grid (15, 30 or 60). Example: grid 30, 08:12 → 08:00, 08:17 → 08:30. |
+| D10 | Start vs finish rule | `tblScheduleType` has **"Work – start"** and **"Work – finish"**. A working day is two `tblSchedule` rows, each with its own rounding rule (`tblScheduleRoundingRule`) and tolerance. `roundingRuleRoundUp` means what its name says: **1 = round up, 0 = round down** (updated 2026-10-20, see D11a). |
+| D11a | Rounding direction | **HR chooses who the rounding favours** (updated 2026-10-20, replaces rounding to the nearest time and the halfway setting). **Favours the company (default):** start rule rounds up, finish rule rounds down (grid 15: arrive 07:05 → 07:15, leave 16:25 → 16:15). **Favours the employee:** start rounds down, finish rounds up (07:05 → 07:00, 16:25 → 16:30). Stored per rule in `roundingRuleRoundUp`; `roundingRuleValueInMin` is the grid (15, 30 or 60). The tolerance (D11b) applies first. The company's rounding policy is HR's/legal's decision. |
 | D11b | Tolerance | `tblSchedule.scheduleMarginMin` = minutes either side of the scheduled time; the edge counts as inside. Inside it the scheduled time is registered, outside it D11a applies. |
 | D12 | When changes apply | A schedule or rule change applies **immediately** when HR saves it. "Schedule for a later date" is removed from Figma for the MVP (no field for a future date). |
 | D13 | Breaks | Automatic. HR creates a Break schedule per group (e.g. White collar 45 min, Blue collar 30 min, examples only). Its length (stop − start) is deducted from the working day; the employee never registers a break. |
@@ -117,7 +117,7 @@ changes.
 "Schedule"; remove "Schedule for a later date" (D12); remove the Exceptions screen and show
 problems in Time records (D14); add a reason field to the employee's manual registration
 (D5, D6); add a company/project choice to registration, defaulted (D16, once IT's ERD
-update exists). The halfway setting stays (D10).
+update exists). The halfway setting is removed; HR chooses "favours the company" or "favours the employee" instead (D11a).
 
 ## The tables involved
 
@@ -127,7 +127,7 @@ update exists). The halfway setting stays (D10).
 | `tblSchedule` | One period on one weekday: type, start/stop hour and minute, `scheduleMarginMin` (tolerance, D11b), Active/MFD. Global: no company |
 | `tblDays` | Weekdays |
 | `tblUserSchedule` | Employee ↔ schedule, Active/MFD; filled per group (D2) |
-| `tblRoundingRule` | `roundingRuleValueInMin` (grid, D11a), `roundingRuleRoundUp` (halfway rounds up, D10), Active/MFD |
+| `tblRoundingRule` | `roundingRuleValueInMin` (grid, D11a), `roundingRuleRoundUp` (1 = round up, 0 = round down, D11a), Active/MFD |
 | `tblScheduleRoundingRule` | Schedule ↔ rounding rule, Active/MFD |
 | `tblTimeReg` | One row per time: actual, rounded or corrected (D4–D8), user, address (NULL for a manual entry without a location), type, UTC timestamp (D9), manual flag, reason, when modified, Active/MFD |
 | `tblTimeRegType` | The 10 registration types (D5b) |
@@ -139,7 +139,7 @@ update exists). The halfway setting stays (D10).
 |---|---|---|---|
 | R1 | Rounding grid of 15, 30 or 60 minutes | `roundingRuleValueInMin` (D11a) | **Decided** |
 | R1b | Separate start and finish rounding | "Work – start" / "Work – finish" schedule rows, each with its rule (D10) | **Decided** |
-| R1c | Halfway rounding | `roundingRuleRoundUp` (D10) | **Decided** |
+| R1c | Halfway rounding | Dropped: rounding is up or down (D11a) | **Dropped** |
 | R2 | Actual time preserved | "… – actual – …" row, never changed (D4) | **Decided** |
 | R3 | Rounded time calculated automatically | `RoundingCalculator` (built) writes the "… – rounded" row (D4) | **Decided**; calculator built, storage not built |
 | R4 | Tolerance separate from rounding | `scheduleMarginMin`, inclusive (D11b) | **Decided** |
@@ -164,7 +164,7 @@ update exists). The halfway setting stays (D10).
 ## What can be built now
 
 - **Done:** `RoundingCalculator` and `RoundingPolicy` (pure, tested).
-- **Next, with no open question:** schedule types, schedules and rounding rules for HR
+- **Next, with no open question** (the rounding calculator, built for nearest rounding, is changed to up/down rounding with phase 2, D11a): schedule types, schedules and rounding rules for HR
   (D2, D10–D13); registrations stored as actual + rounded rows (D4–D9); HR corrections
   and the employee's manual registration with reason (D5–D8); problems in Time records
   (D14). Each still goes slice by slice, with its Figma screens updated first.
