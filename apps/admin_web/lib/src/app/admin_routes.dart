@@ -4,4 +4,8 @@ abstract final class AdminRoutes {
   static const companies = '/companies';
   static const employees = '/employees';
   static const schedules = '/schedules';
+  static const groups = '/groups';
+
+  /// One group's page.
+  static String group(int id) => '$groups/$id';
 }

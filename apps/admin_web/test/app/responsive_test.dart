@@ -1,4 +1,6 @@
 import 'package:admin_web/src/companies/companies_screen.dart';
+import 'package:admin_web/src/groups/group_page.dart';
+import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:admin_web/src/schedules/schedules_screen.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +10,7 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../support/fake_companies_api.dart';
+import '../support/fake_group_apis.dart';
 import '../support/fake_schedules_api.dart';
 
 /// Every page and dialog works from a phone to a wide screen: nothing
@@ -107,6 +110,40 @@ void main() {
       await tester.pumpAndSettle();
       _fitsTheWindow(tester, width, 'wizard review');
       expect(find.text('Review schedule'), findsOneWidget);
+    });
+
+    testWidgets('Groups page and Create group at $width px', (tester) async {
+      final groups = FakeGroupManagementApi([groupOverview(1, 'Blue collar', employees: 64), groupOverview(2, 'White collar')]);
+      final members = FakeGroupMembersApi()..pool.add(member(11, 'Fabian', 'Peeters', 'FPT', groups: ['White collar']));
+      final schedules = FakeSchedulesApi();
+      await _pump(tester, width, GroupsScreen(groupsApi: groups, membersApi: members, schedulesApi: schedules));
+      await tester.pump();
+      schedules.succeedList([blue, white]);
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Groups');
+
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add group'));
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Create group, step 1');
+      await tester.enterText(find.byType(TextField).last, 'Drivers');
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Create group'));
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Create group, step 2');
+    });
+
+    testWidgets('a group page at $width px', (tester) async {
+      final groups = FakeGroupManagementApi([groupOverview(1, 'Blue collar', employees: 1)]);
+      final members = FakeGroupMembersApi()
+        ..byGroup[1] = [member(11, 'Fabian', 'Peeters', 'FPT', companies: ['Almeco', 'PCA'], groups: ['Blue collar', 'White collar'])];
+      final schedules = FakeSchedulesApi();
+      await _pump(tester, width, GroupPage(groupId: 1, groupsApi: groups, membersApi: members, schedulesApi: schedules));
+      await tester.pump();
+      await tester.pump();
+      schedules.succeedList([blue, white]);
+      await tester.pumpAndSettle();
+
+      _fitsTheWindow(tester, width, 'group page');
+      expect(find.text('Fabian Peeters · FPT'), findsOneWidget);
     });
 
     testWidgets('Manage schedules and Remove at $width px', (tester) async {

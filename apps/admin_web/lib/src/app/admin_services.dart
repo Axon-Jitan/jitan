@@ -9,6 +9,8 @@ class AdminServices {
     required this.groupsApi,
     required this.assignmentsApi,
     required this.schedulesApi,
+    required this.groupManagementApi,
+    required this.groupMembersApi,
     this.devTools = false,
   });
 
@@ -17,6 +19,8 @@ class AdminServices {
   final GroupsApi groupsApi;
   final EmployeeAssignmentsApi assignmentsApi;
   final SchedulesApi schedulesApi;
+  final GroupManagementApi groupManagementApi;
+  final GroupMembersApi groupMembersApi;
 
   /// DEVELOPMENT ONLY tools in the UI (see `AdminWebConfig.devTools`).
   final bool devTools;

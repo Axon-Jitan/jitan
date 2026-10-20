@@ -45,13 +45,16 @@ enum ScheduleStep { group, hours, attendance, review }
 /// value again and is the authority (ENGINEERING_RULES §19).
 class ScheduleFormController extends ChangeNotifier {
   /// With [group], the wizard edits that group's schedule, filled in. With
-  /// [options] already loaded, it is ready at once.
+  /// [groupId] only, it creates a schedule for that group, already chosen
+  /// (e.g. from the group's page). With [options] already loaded, it is
+  /// ready at once.
   ScheduleFormController(
     this._api, {
     required this.groups,
     GroupSchedule? group,
     ScheduleOptions? options,
-  }) : _groupId = group?.group.id,
+    int? groupId,
+  }) : _groupId = group?.group.id ?? groupId,
        _options = options == null ? const ScheduleOptionsLoading() : ScheduleOptionsLoaded(options) {
     if (group != null) editExisting();
   }

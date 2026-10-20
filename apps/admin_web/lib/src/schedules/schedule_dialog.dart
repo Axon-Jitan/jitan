@@ -18,9 +18,10 @@ Future<GroupSchedule?> showScheduleDialog(
   required List<GroupSchedule> groups,
   ScheduleOptions? options,
   GroupSchedule? group,
+  int? groupId,
 }) => showJitanModal<GroupSchedule>(
   context,
-  builder: (_) => ScheduleDialog(api: api, groups: groups, options: options, group: group),
+  builder: (_) => ScheduleDialog(api: api, groups: groups, options: options, group: group, groupId: groupId),
 );
 
 /// The Create / Edit schedule wizard: Group → Working hours & break →
@@ -32,7 +33,7 @@ Future<GroupSchedule?> showScheduleDialog(
 /// 2026-10-20: work hours and break together in one pass. Also agreed: the
 /// "Mon–Fri" shortcut and dark chosen days.
 class ScheduleDialog extends StatefulWidget {
-  const ScheduleDialog({super.key, required this.api, required this.groups, this.options, this.group});
+  const ScheduleDialog({super.key, required this.api, required this.groups, this.options, this.group, this.groupId});
 
   final SchedulesApi api;
   final List<GroupSchedule> groups;
@@ -40,6 +41,9 @@ class ScheduleDialog extends StatefulWidget {
   /// The form's choices when already loaded; otherwise the dialog loads them.
   final ScheduleOptions? options;
   final GroupSchedule? group;
+
+  /// A new schedule for this group, already chosen.
+  final int? groupId;
 
   @override
   State<ScheduleDialog> createState() => _ScheduleDialogState();
@@ -50,6 +54,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     widget.api,
     groups: widget.groups,
     group: widget.group,
+    groupId: widget.groupId,
     options: widget.options,
   );
 
