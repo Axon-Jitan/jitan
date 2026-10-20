@@ -35,7 +35,8 @@ enum ScheduleStep { group, hours, breaks, attendance, review }
 /// State of the Create / Edit schedule wizard: a group's whole schedule in
 /// one pass, Group → Working hours → Break → Attendance rules → Review, and
 /// one save (`PUT /schedules/groups/{groupId}`, hours and break together in
-/// one transaction). Agreed with the product owner on 2026-10-20 instead of
+/// one transaction). Every schedule has a break (product owner,
+/// 2026-10-20): HR sets its usual time and length. Agreed with the product owner on 2026-10-20 instead of
 /// separate Work hours and Break wizards (Figma 1365:…), so a break never
 /// comes before its working hours.
 ///
@@ -85,11 +86,6 @@ class ScheduleFormController extends ChangeNotifier {
 
   final Map<int, ({String? start, String? finish})> _dayHours = {};
 
-  /// `null` until HR chooses "No break" or "Break": nothing is chosen for
-  /// them (ENGINEERING_RULES §20).
-  bool? _hasBreak;
-  bool? get hasBreak => _hasBreak;
-
   String? _breakStart;
   String? get breakStart => _breakStart;
   int? _breakLength;
@@ -122,13 +118,6 @@ class ScheduleFormController extends ChangeNotifier {
   static const fieldLeaving = 'leaving';
   static const fieldForm = 'form';
 
-  /// Times offered in the time pickers: every 5 minutes, the smallest
-  /// rounding interval. A saved time between steps is offered as well.
-  static final timeChoices = [
-    for (var minutes = 0; minutes < 24 * 60; minutes += 5)
-      '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}',
-  ];
-
   GroupSchedule? get group => groups.where((g) => g.group.id == _groupId).firstOrNull;
 
   /// No employee has this as their only group, so nothing can hold the
@@ -148,7 +137,7 @@ class ScheduleFormController extends ChangeNotifier {
       switch (_step) {
         ScheduleStep.group => group != null && !blocked && !conflict && _options is ScheduleOptionsLoaded,
         ScheduleStep.hours => _dayIds.isNotEmpty,
-        ScheduleStep.breaks => _hasBreak != null,
+        ScheduleStep.breaks => true,
         ScheduleStep.attendance => true,
         ScheduleStep.review => false,
       };
@@ -190,8 +179,6 @@ class ScheduleFormController extends ChangeNotifier {
   void setDayStart(int dayId, String? time) => _change(() => _dayHours[dayId] = (start: time, finish: hoursOf(dayId).finish));
 
   void setDayFinish(int dayId, String? time) => _change(() => _dayHours[dayId] = (start: hoursOf(dayId).start, finish: time));
-
-  void setHasBreak(bool hasBreak) => _change(() => _hasBreak = hasBreak);
 
   void setBreakStart(String? time) => _change(() => _breakStart = time);
 
@@ -245,7 +232,6 @@ class ScheduleFormController extends ChangeNotifier {
     _startRounding = first?.start!.rounding;
     _finishRounding = first?.finish!.rounding;
     final breaks = variant?.breaks ?? const <BreakSchedule>[];
-    _hasBreak = breaks.isNotEmpty;
     _breakStart = breaks.firstOrNull?.usualStart;
     _breakLength = breaks.firstOrNull?.lengthMinutes;
     _change(() {});
@@ -262,7 +248,6 @@ class ScheduleFormController extends ChangeNotifier {
     _failure = null;
     for (final step in [ScheduleStep.hours, ScheduleStep.breaks, ScheduleStep.attendance]) {
       _validate(step, loaded.options);
-      if (_hasBreak == null && step == ScheduleStep.breaks) _error(fieldBreak, AdminTextKeys.scheduleErrorChooseBreak);
       if (_fieldErrors.isNotEmpty) {
         _step = step;
         _notify();
@@ -287,9 +272,7 @@ class ScheduleFormController extends ChangeNotifier {
             startRounding: _startRounding,
             finishRounding: _finishRounding,
           ),
-          breaks: _hasBreak!
-              ? [for (final day in days) BreakDay(dayId: day.id, usualStart: _breakStart!, lengthMinutes: _breakLength!)]
-              : const [],
+          breaks: [for (final day in days) BreakDay(dayId: day.id, usualStart: _breakStart!, lengthMinutes: _breakLength!)],
         ),
       );
     } on ApiClientException catch (failure) {
@@ -320,7 +303,6 @@ class ScheduleFormController extends ChangeNotifier {
           }
         }
       case ScheduleStep.breaks:
-        if (_hasBreak != true) return;
         final start = _minutes(_breakStart), length = _breakLength;
         if (start == null || length == null) {
           _error(fieldBreak, AdminTextKeys.scheduleErrorBreakIncomplete);

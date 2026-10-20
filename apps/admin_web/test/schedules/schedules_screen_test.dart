@@ -132,10 +132,8 @@ void main() {
     expect(_button(tester, 'Continue'), isNull, reason: 'no group yet');
     await _toBreakStep(tester);
 
-    // Step 3: a choice must be made.
-    expect(_button(tester, 'Continue'), isNull);
-    await tester.tap(find.text('A break every working day'));
-    await tester.pumpAndSettle();
+    // Step 3: the break is always part of the schedule.
+    expect(find.text('Deducted automatically. Employees don\'t register breaks.'), findsOneWidget);
     tester.widget<ScheduleTimeField>(find.byType(ScheduleTimeField)).onChanged!('12:00');
     tester.widget<JitanSelectField<int>>(find.widgetWithText(JitanSelectField<int>, 'Length')).onChanged!(30);
     await tester.pump();
@@ -163,19 +161,21 @@ void main() {
     expect(find.text('Schedule saved for White collar.'), findsOneWidget);
   });
 
-  testWidgets('"No break" goes straight on; the review says so', (tester) async {
+  testWidgets('times are typed in and tidied: "730" becomes "07:30"', (tester) async {
     final api = await _pump(tester);
     await _loaded(tester, api);
     await _openAdd(tester, api);
-    await _toBreakStep(tester);
-
-    await tester.tap(find.text('No break'));
-    await tester.pumpAndSettle();
-    await _continue(tester);
+    await _choose(tester, 'Employee group *', 'White collar');
     await _continue(tester);
 
-    expect(find.text('Review schedule'), findsOneWidget);
-    expect(find.text('No break'), findsOneWidget);
+    final start = find.descendant(of: find.byType(ScheduleTimeField).first, matching: find.byType(TextField));
+    await tester.enterText(start, '730');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.tap(find.text('Working days'));
+    await tester.pump();
+
+    expect(find.text('07:30'), findsOneWidget);
+    expect(find.byType(MenuItemButton), findsNothing, reason: 'no time drop-down');
   });
 
   testWidgets('Back keeps what was entered; finish before start stops at step 2', (tester) async {
@@ -225,9 +225,11 @@ void main() {
     final first = size();
     await _toBreakStep(tester);
     expect(size(), first, reason: 'break step');
-    await tester.tap(find.text('A break every working day'));
+    await tester.tap(find.widgetWithText(JitanSecondaryButton, 'Back'));
     await tester.pumpAndSettle();
-    expect(size(), first, reason: 'break step with its fields');
+    await tester.tap(find.text('Same hours every working day'));
+    await tester.pumpAndSettle();
+    expect(size(), first, reason: 'hours per day');
   });
 
   testWidgets('a group that has a schedule: "Edit that schedule instead" fills it in', (tester) async {

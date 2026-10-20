@@ -273,51 +273,35 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     ];
   }
 
-  /// Step 3: no break, or a break every working day.
+  /// Step 3: the break, every working day (always part of a schedule).
   List<Widget> _break(BuildContext context, ScheduleOptions options) {
     final c = _controller;
     final busy = c.submitting;
     return [
-      JitanOptionCard(
-        indicator: JitanOptionIndicator.radio,
-        title: context.t(AdminTextKeys.scheduleBreakNone),
-        detail: context.t(AdminTextKeys.scheduleBreakNoneText),
-        selected: c.hasBreak == false,
-        onTap: busy ? null : () => c.setHasBreak(false),
+      ScheduleFieldColumns(
+        children: [
+          ScheduleTimeField(
+            label: context.t(AdminTextKeys.scheduleFormUsualTime),
+            hint: context.t(AdminTextKeys.scheduleFormTimeHint),
+            value: c.breakStart,
+            onChanged: busy ? null : c.setBreakStart,
+          ),
+          JitanSelectField<int>(
+            label: context.t(AdminTextKeys.scheduleFormLength),
+            value: c.breakLength,
+            options: [
+              for (final minutes in options.breakLengthMinutes)
+                JitanSelectOption(
+                  value: minutes,
+                  label: context.t(AdminTextKeys.scheduleFormLengthOption, args: {'minutes': minutes}),
+                ),
+            ],
+            onChanged: busy ? null : c.setBreakLength,
+          ),
+        ],
       ),
-      const SizedBox(height: 10),
-      JitanOptionCard(
-        indicator: JitanOptionIndicator.radio,
-        title: context.t(AdminTextKeys.scheduleBreakEveryDay),
-        detail: context.t(AdminTextKeys.scheduleBreakEveryDayText),
-        selected: c.hasBreak == true,
-        onTap: busy ? null : () => c.setHasBreak(true),
-      ),
-      if (c.hasBreak == true) ...[
-        const SizedBox(height: 20),
-        ScheduleFieldColumns(
-          children: [
-            ScheduleTimeField(
-              label: context.t(AdminTextKeys.scheduleFormUsualTime),
-              hint: context.t(AdminTextKeys.scheduleFormTimeHint),
-              value: c.breakStart,
-              onChanged: busy ? null : c.setBreakStart,
-            ),
-            JitanSelectField<int>(
-              label: context.t(AdminTextKeys.scheduleFormLength),
-              value: c.breakLength,
-              options: [
-                for (final minutes in options.breakLengthMinutes)
-                  JitanSelectOption(
-                    value: minutes,
-                    label: context.t(AdminTextKeys.scheduleFormLengthOption, args: {'minutes': minutes}),
-                  ),
-              ],
-              onChanged: busy ? null : c.setBreakLength,
-            ),
-          ],
-        ),
-      ],
+      const SizedBox(height: 14),
+      Text(context.t(AdminTextKeys.scheduleBreakEveryDayText), style: _note),
       _fieldError(context, ScheduleFormController.fieldBreak),
     ];
   }
@@ -380,9 +364,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
       (AdminTextKeys.scheduleReviewHours, hours),
       (
         AdminTextKeys.scheduleReviewBreak,
-        c.hasBreak == true
-            ? context.t(AdminTextKeys.scheduleReviewBreakValue, args: {'start': c.breakStart ?? '', 'minutes': c.breakLength ?? 0})
-            : context.t(AdminTextKeys.scheduleBreakNone),
+        context.t(AdminTextKeys.scheduleReviewBreakValue, args: {'start': c.breakStart ?? '', 'minutes': c.breakLength ?? 0}),
       ),
       (
         AdminTextKeys.scheduleReviewAttendance,

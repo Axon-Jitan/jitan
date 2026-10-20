@@ -280,11 +280,7 @@ abstract final class AdminTextKeys {
   static const scheduleStepBreak = 'schedule.step.break';
   static const scheduleFormSubtitle = 'schedule.form.subtitle';
   static const scheduleFormConflict = 'schedule.form.conflict';
-  static const scheduleBreakNone = 'schedule.break.none';
-  static const scheduleBreakNoneText = 'schedule.break.none.text';
-  static const scheduleBreakEveryDay = 'schedule.break.everyDay';
   static const scheduleBreakEveryDayText = 'schedule.break.everyDay.text';
-  static const scheduleErrorChooseBreak = 'schedule.error.chooseBreak';
   static const scheduleErrorBreakIncomplete = 'schedule.error.breakIncomplete';
   static const scheduleReviewTitle = 'schedule.review.title';
   static const scheduleReviewGroup = 'schedule.review.group';

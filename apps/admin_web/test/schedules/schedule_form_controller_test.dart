@@ -1,5 +1,6 @@
 import 'package:admin_web/src/l10n/admin_text_keys.dart';
 import 'package:admin_web/src/schedules/schedule_form_controller.dart';
+import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_models/jitan_models.dart';
 
@@ -27,9 +28,9 @@ void main() {
     return c;
   }
 
-  /// A new schedule for "New group", Monday and Friday 07:30–16:00, up to
-  /// the given step.
-  Future<ScheduleFormController> filledIn({bool? hasBreak}) async {
+  /// A new schedule for "New group", Monday and Friday 07:30–16:00, at the
+  /// Break step.
+  Future<ScheduleFormController> filledIn() async {
     final c = await ready();
     c
       ..selectGroup(2)
@@ -39,13 +40,12 @@ void main() {
       ..setStart('07:30')
       ..setFinish('16:00')
       ..next();
-    if (hasBreak != null) c.setHasBreak(hasBreak);
     return c;
   }
 
   setUp(() => api = FakeSchedulesApi());
 
-  test('the steps in order; Continue needs a group, a day, and a break choice', () async {
+  test('the steps in order; Continue needs a group and a day; the break is always asked for', () async {
     final c = await ready();
     expect((c.step, c.canContinue), (ScheduleStep.group, false));
 
@@ -59,10 +59,15 @@ void main() {
       ..setStart('08:00')
       ..setFinish('16:00')
       ..next();
-    expect((c.step, c.hasBreak, c.canContinue), (ScheduleStep.breaks, null, false), reason: 'nothing chosen for HR');
+    expect(c.step, ScheduleStep.breaks);
+
+    c.next();
+    expect(c.step, ScheduleStep.breaks, reason: 'a break is required');
+    expect(c.fieldErrors[ScheduleFormController.fieldBreak]?.key, AdminTextKeys.scheduleErrorBreakIncomplete);
 
     c
-      ..setHasBreak(false)
+      ..setBreakStart('12:00')
+      ..setBreakLength(30)
       ..next();
     expect(c.step, ScheduleStep.attendance);
     c.next();
@@ -73,7 +78,7 @@ void main() {
   });
 
   test('saves the whole schedule in one request: hours, break on every working day, tolerance, rounding', () async {
-    final c = await filledIn(hasBreak: true);
+    final c = await filledIn();
     c
       ..setBreakStart('12:00')
       ..setBreakLength(30)
@@ -94,17 +99,6 @@ void main() {
     expect(request.workHours.finishRounding, isNull);
   });
 
-  test('"No break" sends no breaks', () async {
-    final c = await filledIn(hasBreak: false);
-    c
-      ..next()
-      ..next();
-
-    await c.submit();
-
-    expect((api.writes.single.$3 as SetGroupScheduleRequest).breaks, isEmpty);
-  });
-
   test('per-day hours are sent per day', () async {
     final c = await ready();
     c
@@ -118,7 +112,8 @@ void main() {
       ..setDayStart(15, '08:00')
       ..setDayFinish(15, '12:00')
       ..next()
-      ..setHasBreak(false)
+      ..setBreakStart('10:00')
+      ..setBreakLength(15)
       ..next()
       ..next();
 
@@ -144,7 +139,6 @@ void main() {
       ..setStart('08:00')
       ..setFinish('12:00')
       ..next()
-      ..setHasBreak(true)
       ..next();
     expect(c.fieldErrors[ScheduleFormController.fieldBreak]?.key, AdminTextKeys.scheduleErrorBreakIncomplete);
 
@@ -182,7 +176,7 @@ void main() {
 
     expect(c.dayIds, {11, 12, 13, 14, 15});
     expect((c.sameHours, c.start, c.finish, c.arrivalTolerance), (true, '08:00', '16:30', '10'));
-    expect((c.hasBreak, c.breakStart, c.breakLength), (true, '12:00', 30));
+    expect((c.breakStart, c.breakLength), ('12:00', 30));
     expect(c.startRounding?.roundUp, isTrue);
     expect(c.finishRounding?.roundUp, isFalse);
   });
@@ -223,9 +217,26 @@ void main() {
     expect(c.dayIds, {11, 12, 13, 14, 15});
   });
 
-  test('time choices are every 5 minutes of the day', () {
-    expect(ScheduleFormController.timeChoices.length, 288);
-    expect(ScheduleFormController.timeChoices.first, '00:00');
-    expect(ScheduleFormController.timeChoices.last, '23:55');
+  test('typed times are tidied to HH:mm; anything else is not a time', () {
+    for (final (typed, tidy) in [('0730', '07:30'), ('730', '07:30'), ('7:30', '07:30'), ('7.30', '07:30'), ('16:00', '16:00')]) {
+      expect(tidyTime(typed), tidy, reason: typed);
+    }
+    for (final typed in ['', '7', '24:00', '12:60', '1:2', '12345', '12::30']) {
+      expect(tidyTime(typed), isNull, reason: typed);
+    }
+  });
+
+  test('a time typed wrongly stops at its step', () async {
+    final c = await ready();
+    c
+      ..selectGroup(2)
+      ..next()
+      ..toggleDay(11)
+      ..setStart('8')
+      ..setFinish('16:00')
+      ..next();
+
+    expect(c.step, ScheduleStep.hours);
+    expect(c.fieldErrors[ScheduleFormController.fieldHours]?.key, AdminTextKeys.scheduleErrorDays);
   });
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import 'schedule_form_controller.dart';
 import 'schedule_summary_text.dart';
 
 /// Two fields side by side (Figma), one above the other when narrow.
@@ -277,7 +277,10 @@ class ScheduleCheckRow extends StatelessWidget {
   );
 }
 
-class ScheduleTimeField extends StatelessWidget {
+/// A time HR types in ("0730" or "7:30" becomes "07:30"), in the same
+/// outlined box as the other fields. [onChanged] gets the text as typed;
+/// the form checks it is a valid HH:mm.
+class ScheduleTimeField extends StatefulWidget {
   const ScheduleTimeField({super.key, this.label, required this.value, required this.onChanged, this.hint});
 
   /// `null` in a table row, where the column heading names the field.
@@ -285,23 +288,89 @@ class ScheduleTimeField extends StatelessWidget {
   final String? value;
   final ValueChanged<String?>? onChanged;
 
-  /// Shown, light, while no time is chosen (e.g. "--:--").
+  /// Shown, light, while the field is empty (e.g. "--:--").
   final String? hint;
 
   @override
-  Widget build(BuildContext context) {
-    final current = value;
-    return JitanSelectField<String>(
-      label: label,
-      value: current,
-      hintText: hint,
-      options: [
-        for (final time in {...ScheduleFormController.timeChoices, ?current}.toList()..sort())
-          JitanSelectOption(value: time, label: time),
-      ],
-      onChanged: onChanged,
-    );
+  State<ScheduleTimeField> createState() => _ScheduleTimeFieldState();
+}
+
+class _ScheduleTimeFieldState extends State<ScheduleTimeField> {
+  late final _controller = TextEditingController(text: widget.value ?? '');
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Tidy the time when HR leaves the field: "730" → "07:30".
+    _focus.addListener(() {
+      if (_focus.hasFocus) return;
+      final tidy = tidyTime(_controller.text);
+      if (tidy != null && tidy != _controller.text) {
+        _controller.text = tidy;
+        widget.onChanged?.call(tidy);
+      }
+    });
   }
+
+  @override
+  void didUpdateWidget(ScheduleTimeField old) {
+    super.didUpdateWidget(old);
+    // Filled in from outside (edit, Back): show it, unless HR is typing.
+    if (!_focus.hasFocus && (widget.value ?? '') != _controller.text) _controller.text = widget.value ?? '';
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onChanged != null;
+    final box = Container(
+      height: JitanDimensions.fieldHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      alignment: Alignment.centerLeft,
+      decoration: BoxDecoration(
+        color: enabled ? JitanColors.surface : JitanColors.disabledFill,
+        borderRadius: BorderRadius.circular(JitanDimensions.inputRadius),
+        border: Border.all(color: JitanColors.inputBorder),
+      ),
+      child: TextField(
+        controller: _controller,
+        focusNode: _focus,
+        enabled: enabled,
+        keyboardType: TextInputType.datetime,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9:.]')), LengthLimitingTextInputFormatter(5)],
+        style: JitanTextStyles.inputText,
+        cursorColor: JitanColors.ink,
+        decoration: InputDecoration.collapsed(hintText: widget.hint, hintStyle: JitanTextStyles.inputHint),
+        onChanged: (text) => widget.onChanged?.call(tidyTime(text) ?? text),
+      ),
+    );
+    final label = widget.label;
+    return label == null ? box : JitanFieldLabel(label: label, child: box);
+  }
+}
+
+/// "07:30" for "0730", "730", "7:30", "7.30" or "07:30"; `null` when it is
+/// not a time of day.
+String? tidyTime(String text) {
+  final digits = text.replaceAll(RegExp(r'[:.]'), '');
+  final separated = RegExp(r'^(\d{1,2})[:.](\d{2})$').firstMatch(text);
+  final (hours, minutes) = switch (separated) {
+    final m? => (int.parse(m.group(1)!), int.parse(m.group(2)!)),
+    null when RegExp(r'^\d{3,4}$').hasMatch(digits) && digits == text => (
+      int.parse(digits.substring(0, digits.length - 2)),
+      int.parse(digits.substring(digits.length - 2)),
+    ),
+    _ => (-1, -1),
+  };
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
 }
 
 /// No rounding, or up / down by one of the intervals.
