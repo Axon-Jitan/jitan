@@ -7,16 +7,25 @@ import 'package:test/test.dart';
 const _start = RoundingBoundary.start;
 const _finish = RoundingBoundary.finish;
 
-RoundingPolicy _policy(
+RoundingPolicy _favouring(
+  RoundingFavour favour,
   RoundingInterval interval, {
   RoundingInterval? finish,
-  HalfwayRounding halfway = HalfwayRounding.forward,
-  Duration tolerance = Duration.zero,
-}) => RoundingPolicy(
-  start: RoundingRule(interval: interval, halfway: halfway),
-  finish: RoundingRule(interval: finish ?? interval, halfway: halfway),
-  scheduledTolerance: tolerance,
+  Duration startTolerance = Duration.zero,
+  Duration finishTolerance = Duration.zero,
+}) => RoundingPolicy.favouring(
+  favour,
+  startInterval: interval,
+  finishInterval: finish ?? interval,
+  startTolerance: startTolerance,
+  finishTolerance: finishTolerance,
 );
+
+RoundingPolicy _company(RoundingInterval interval, {RoundingInterval? finish, Duration tolerance = Duration.zero}) =>
+    _favouring(RoundingFavour.company, interval, finish: finish, startTolerance: tolerance, finishTolerance: tolerance);
+
+RoundingPolicy _employee(RoundingInterval interval, {Duration tolerance = Duration.zero}) =>
+    _favouring(RoundingFavour.employee, interval, startTolerance: tolerance, finishTolerance: tolerance);
 
 DateTime _t(int hour, int minute, [int second = 0, int day = 8]) => DateTime.utc(2026, 10, day, hour, minute, second);
 
@@ -28,97 +37,114 @@ DateTime _registered(
 }) => RoundingCalculator.round(actual: actual, boundary: boundary, policy: policy, scheduled: scheduled).registered;
 
 void main() {
-  group('interval rounding (Figma "How rounding works")', () {
-    final thirty = _policy(RoundingInterval.minutes30);
+  group('who the rounding favours (HR, decision 2026-10-20)', () {
+    test('favours the company: start rounds up, finish rounds down (07:05 → 07:15, 16:25 → 16:15)', () {
+      final policy = _company(RoundingInterval.minutes15);
 
-    test('30-minute intervals: 16:10 → 16:00, 16:22 → 16:30, 16:50 → 17:00', () {
-      expect(_registered(_t(16, 10), thirty), _t(16, 0));
-      expect(_registered(_t(16, 22), thirty, boundary: _finish), _t(16, 30));
-      expect(_registered(_t(16, 50), thirty, boundary: _finish), _t(17, 0));
+      expect(_registered(_t(7, 5), policy), _t(7, 15));
+      expect(_registered(_t(16, 25), policy, boundary: _finish), _t(16, 15));
     });
 
-    test('15 and 60 minutes', () {
-      final fifteen = _policy(RoundingInterval.minutes15);
-      final sixty = _policy(RoundingInterval.minutes60);
+    test('favours the employee: start rounds down, finish rounds up (07:05 → 07:00, 16:25 → 16:30)', () {
+      final policy = _employee(RoundingInterval.minutes15);
 
-      expect(_registered(_t(8, 3), fifteen), _t(8, 0));
-      expect(_registered(_t(8, 8), fifteen), _t(8, 15));
-      expect(_registered(_t(8, 29), sixty), _t(8, 0));
-      expect(_registered(_t(8, 31), sixty), _t(9, 0));
+      expect(_registered(_t(7, 5), policy), _t(7, 0));
+      expect(_registered(_t(16, 25), policy, boundary: _finish), _t(16, 30));
     });
 
-    test('an exact halfway point follows the halfway setting', () {
-      expect(_registered(_t(16, 15), thirty), _t(16, 30), reason: 'round forward (Figma default)');
-      expect(_registered(_t(16, 15), _policy(RoundingInterval.minutes30, halfway: HalfwayRounding.backward)), _t(16, 0));
-      expect(_registered(_t(8, 30), _policy(RoundingInterval.minutes60)), _t(9, 0));
-    });
-
-    test('seconds count: just before the halfway point rounds down, just after rounds up', () {
-      expect(_registered(_t(16, 14, 59), thirty), _t(16, 0));
-      expect(_registered(_t(16, 15, 1), _policy(RoundingInterval.minutes30, halfway: HalfwayRounding.backward)), _t(16, 30));
-    });
-
-    test('a time on a mark stays as it is', () {
-      expect(_registered(_t(8, 0), thirty), _t(8, 0));
-      expect(_registered(_t(0, 0), thirty), _t(0, 0));
-    });
-
-    test('late evening can round to midnight of the next day', () {
-      expect(_registered(_t(23, 50), thirty, boundary: _finish), _t(0, 0, 0, 9));
-    });
-
-    test('start and finish use their own interval', () {
-      final policy = _policy(RoundingInterval.minutes15, finish: RoundingInterval.minutes60);
-
-      expect(_registered(_t(16, 20), policy), _t(16, 15));
-      expect(_registered(_t(16, 20), policy, boundary: _finish), _t(16, 0));
+    test('the favour only sets the directions of the two rules', () {
+      expect(RoundingFavour.company.directionFor(_start), RoundingDirection.up);
+      expect(RoundingFavour.company.directionFor(_finish), RoundingDirection.down);
+      expect(RoundingFavour.employee.directionFor(_start), RoundingDirection.down);
+      expect(RoundingFavour.employee.directionFor(_finish), RoundingDirection.up);
     });
   });
 
-  group('scheduled-time tolerance (separate from the interval)', () {
-    final policy = _policy(RoundingInterval.minutes30, tolerance: const Duration(minutes: 15));
+  group('interval rounding', () {
+    test('30 and 60 minutes, both directions', () {
+      final company30 = _company(RoundingInterval.minutes30);
+      final company60 = _company(RoundingInterval.minutes60);
 
-    test('arrival after the scheduled start, within tolerance: the scheduled start (08:03 → 08:00)', () {
-      final result = RoundingCalculator.round(actual: _t(8, 3), boundary: _start, policy: policy, scheduled: _t(8, 0));
+      expect(_registered(_t(8, 23), company30), _t(8, 30));
+      expect(_registered(_t(16, 12), company30, boundary: _finish), _t(16, 0));
+      expect(_registered(_t(8, 1), company60), _t(9, 0));
+      expect(_registered(_t(16, 59), company60, boundary: _finish), _t(16, 0));
+    });
+
+    test('a time on a mark stays as it is, in both directions', () {
+      for (final policy in [_company(RoundingInterval.minutes30), _employee(RoundingInterval.minutes30)]) {
+        expect(_registered(_t(8, 0), policy), _t(8, 0));
+        expect(_registered(_t(16, 30), policy, boundary: _finish), _t(16, 30));
+        expect(_registered(_t(0, 0), policy), _t(0, 0));
+      }
+    });
+
+    test('seconds do not count: 08:00:20 counts as 08:00 and stays, 08:00:59 too', () {
+      final policy = _company(RoundingInterval.minutes15);
+
+      expect(_registered(_t(8, 0, 20), policy), _t(8, 0));
+      expect(_registered(_t(8, 0, 59), policy), _t(8, 0));
+      expect(_registered(_t(8, 1, 0), policy), _t(8, 15));
+      expect(_registered(_t(16, 29, 59), policy, boundary: _finish), _t(16, 15));
+    });
+
+    test('rounding up late in the evening can give midnight of the next day', () {
+      expect(_registered(_t(23, 50), _employee(RoundingInterval.minutes30), boundary: _finish), _t(0, 0, 0, 9));
+    });
+
+    test('start and finish use their own interval', () {
+      final policy = _company(RoundingInterval.minutes15, finish: RoundingInterval.minutes60);
+
+      expect(_registered(_t(8, 20), policy), _t(8, 30));
+      expect(_registered(_t(16, 50), policy, boundary: _finish), _t(16, 0));
+    });
+  });
+
+  group('scheduled-time tolerance (applied first, per boundary)', () {
+    final policy = _company(RoundingInterval.minutes15, tolerance: const Duration(minutes: 10));
+
+    test('within the tolerance the scheduled time is registered, whatever the direction (08:07 → 08:00)', () {
+      final result = RoundingCalculator.round(actual: _t(8, 7), boundary: _start, policy: policy, scheduled: _t(8, 0));
 
       expect(result.registered, _t(8, 0));
       expect(result.reason, RoundingReason.scheduledTolerance);
-      expect(result.actual, _t(8, 3), reason: 'the actual time is kept');
+      expect(result.actual, _t(8, 7), reason: 'the actual time is kept');
+      expect(_registered(_t(7, 52), policy, scheduled: _t(8, 0)), _t(8, 0));
     });
 
-    test('arrival before the scheduled start, within tolerance: the scheduled start', () {
-      expect(_registered(_t(7, 47), policy, scheduled: _t(8, 0)), _t(8, 0));
+    test('the tolerance is inclusive, in whole minutes (08:10:40 is still within ±10)', () {
+      expect(_registered(_t(8, 10), policy, scheduled: _t(8, 0)), _t(8, 0));
+      expect(_registered(_t(8, 10, 40), policy, scheduled: _t(8, 0)), _t(8, 0));
+      expect(_registered(_t(7, 50), policy, scheduled: _t(8, 0)), _t(8, 0));
     });
 
-    test('the tolerance is inclusive at exactly ±15 minutes', () {
-      expect(_registered(_t(8, 15), policy, scheduled: _t(8, 0)), _t(8, 0));
-      expect(_registered(_t(7, 45), policy, scheduled: _t(8, 0)), _t(8, 0));
-    });
+    test('outside the tolerance: interval rounding in the rule direction', () {
+      final result = RoundingCalculator.round(actual: _t(8, 11), boundary: _start, policy: policy, scheduled: _t(8, 0));
 
-    test('outside the tolerance: interval rounding, not the scheduled time', () {
-      final result = RoundingCalculator.round(actual: _t(8, 16), boundary: _start, policy: policy, scheduled: _t(8, 0));
-
-      expect(result.registered, _t(8, 30));
+      expect(result.registered, _t(8, 15));
       expect(result.reason, RoundingReason.interval);
-      expect(_registered(_t(7, 44), policy, scheduled: _t(8, 0)), _t(7, 30));
+      expect(_registered(_t(16, 12), policy, boundary: _finish, scheduled: _t(16, 30)), _t(16, 0));
     });
 
-    test('a scheduled finish works the same way (16:22 with finish 16:30 → 16:30)', () {
-      expect(_registered(_t(16, 22), policy, boundary: _finish, scheduled: _t(16, 30)), _t(16, 30));
-    });
+    test('start and finish have their own tolerance', () {
+      final mixed = _favouring(
+        RoundingFavour.company,
+        RoundingInterval.minutes15,
+        startTolerance: const Duration(minutes: 10),
+      );
 
-    test('a scheduled time that is not on an interval mark is kept as scheduled', () {
-      expect(_registered(_t(8, 50), policy, scheduled: _t(8, 45)), _t(8, 45));
+      expect(_registered(_t(8, 7), mixed, scheduled: _t(8, 0)), _t(8, 0), reason: 'start: ±10');
+      expect(_registered(_t(16, 25), mixed, boundary: _finish, scheduled: _t(16, 30)), _t(16, 15), reason: 'finish: no tolerance');
     });
 
     test('no scheduled time, or no tolerance: interval rounding only', () {
-      expect(_registered(_t(8, 3), policy), _t(8, 0));
+      expect(_registered(_t(8, 7), policy), _t(8, 15));
       expect(
         RoundingCalculator.round(
-          actual: _t(8, 10),
+          actual: _t(8, 7),
           boundary: _start,
-          policy: _policy(RoundingInterval.minutes30),
-          scheduled: _t(8, 30),
+          policy: _company(RoundingInterval.minutes15),
+          scheduled: _t(8, 0),
         ).reason,
         RoundingReason.interval,
       );
@@ -127,31 +153,20 @@ void main() {
 
   group('the result is complete and reproducible', () {
     test('it echoes what was applied, so a stored result can be explained later', () {
-      final policy = _policy(RoundingInterval.minutes15, finish: RoundingInterval.minutes30, tolerance: const Duration(minutes: 10));
+      final policy = _company(RoundingInterval.minutes15, finish: RoundingInterval.minutes30);
 
       final result = RoundingCalculator.round(actual: _t(17, 2), boundary: _finish, policy: policy, scheduled: _t(16, 0));
 
       expect(result.boundary, _finish);
-      expect(result.rule, const RoundingRule(interval: RoundingInterval.minutes30));
+      expect(result.rule, const RoundingRule(interval: RoundingInterval.minutes30, direction: RoundingDirection.down));
       expect(result.scheduled, _t(16, 0));
-      expect(result.scheduledTolerance, const Duration(minutes: 10));
       expect(result.registered, _t(17, 0));
-    });
-
-    test('the same input always gives the same result (no source, clock or database input)', () {
-      final policy = _policy(RoundingInterval.minutes30, tolerance: const Duration(minutes: 15));
-      final results = {
-        for (var i = 0; i < 3; i++)
-          RoundingCalculator.round(actual: _t(8, 7), boundary: _start, policy: policy, scheduled: _t(8, 0)).registered,
-      };
-
-      expect(results, {_t(8, 0)});
     });
 
     test('wall-clock local times stay local and keep their fields', () {
       final local = DateTime(2026, 3, 29, 16, 22);
 
-      final registered = _registered(local, _policy(RoundingInterval.minutes30), boundary: _finish);
+      final registered = _registered(local, _employee(RoundingInterval.minutes30), boundary: _finish);
 
       expect(registered.isUtc, isFalse);
       expect((registered.hour, registered.minute), (16, 30));
@@ -165,22 +180,31 @@ void main() {
     }
   });
 
-  group('generated properties (20 000 random times per interval)', () {
-    final random = Random(20261008);
+  group('generated properties (20 000 random times per interval and direction)', () {
+    final random = Random(20261020);
     DateTime randomTime() => DateTime.utc(2026, 1, 1).add(Duration(seconds: random.nextInt(366 * 24 * 3600)));
+    DateTime minuteOf(DateTime t) => DateTime.utc(t.year, t.month, t.day, t.hour, t.minute);
 
     for (final interval in RoundingInterval.values) {
-      for (final halfway in HalfwayRounding.values) {
-        test('${interval.minutes} min, ${halfway.name}: on a mark, within half an interval, idempotent, monotonic', () {
-          final policy = _policy(interval, halfway: halfway);
+      for (final direction in RoundingDirection.values) {
+        test('${interval.minutes} min, ${direction.name}: on a mark, right side, less than one interval away, '
+            'idempotent, monotonic', () {
+          final rule = RoundingRule(interval: interval, direction: direction);
+          final policy = RoundingPolicy(start: rule, finish: rule);
           final step = interval.duration;
           final times = [for (var i = 0; i < 20000; i++) randomTime()]..sort();
           DateTime? previous;
           for (final actual in times) {
             final registered = _registered(actual, policy);
+            final minute = minuteOf(actual);
             final sinceMidnight = registered.difference(DateTime.utc(registered.year, registered.month, registered.day));
-            expect(sinceMidnight.inMicroseconds % step.inMicroseconds, 0, reason: '$actual → $registered on a mark');
-            expect(registered.difference(actual).abs() <= step ~/ 2, isTrue, reason: '$actual → $registered');
+            expect(sinceMidnight.inMinutes % interval.minutes, 0, reason: '$actual → $registered on a mark');
+            final moved = registered.difference(minute);
+            if (direction == RoundingDirection.up) {
+              expect(moved >= Duration.zero && moved < step, isTrue, reason: '$actual → $registered rounds up');
+            } else {
+              expect(moved <= Duration.zero && -moved < step, isTrue, reason: '$actual → $registered rounds down');
+            }
             expect(_registered(registered, policy), registered, reason: 'rounding twice changes nothing');
             if (previous != null) expect(registered.isBefore(previous), isFalse, reason: 'later actual, never earlier result');
             previous = registered;
@@ -189,13 +213,13 @@ void main() {
       }
     }
 
-    test('with a tolerance, a result is the scheduled time only when within it', () {
-      final policy = _policy(RoundingInterval.minutes30, tolerance: const Duration(minutes: 15));
+    test('with a tolerance, a result is the scheduled time only when within it (whole minutes)', () {
+      final policy = _company(RoundingInterval.minutes30, tolerance: const Duration(minutes: 15));
       for (var i = 0; i < 20000; i++) {
         final scheduled = DateTime.utc(2026, 10, 8, 6 + random.nextInt(12), random.nextInt(4) * 15);
         final actual = scheduled.add(Duration(seconds: random.nextInt(7200) - 3600));
         final result = RoundingCalculator.round(actual: actual, boundary: _start, policy: policy, scheduled: scheduled);
-        final within = actual.difference(scheduled).abs() <= const Duration(minutes: 15);
+        final within = minuteOf(actual).difference(scheduled).abs() <= const Duration(minutes: 15);
         expect(result.reason == RoundingReason.scheduledTolerance, within, reason: '$scheduled / $actual');
         expect(result.actual, actual);
       }
