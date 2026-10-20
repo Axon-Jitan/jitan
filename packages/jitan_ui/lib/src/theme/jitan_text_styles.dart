@@ -39,8 +39,8 @@ abstract final class JitanTextStyles {
   // Tables
   static final tableHeader =
       _base.copyWith(fontSize: 13, fontWeight: _semiBold, color: JitanColors.inkMuted);
-  static final tableCell = _base.copyWith(fontSize: 15, fontWeight: _regular);
-  static final tableCellStrong = _base.copyWith(fontSize: 15, fontWeight: _semiBold);
+  static final tableCell = _base.copyWith(fontSize: 14, fontWeight: _regular);
+  static final tableCellStrong = _base.copyWith(fontSize: 14, fontWeight: _semiBold);
 
   // Modals and forms
   static final modalTitle = _display.copyWith(fontSize: 26, fontWeight: _semiBold, letterSpacing: -0.4);

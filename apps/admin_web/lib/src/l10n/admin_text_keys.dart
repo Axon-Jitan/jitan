@@ -189,7 +189,6 @@ abstract final class AdminTextKeys {
   static const scheduleTitle = 'schedule.title';
   static const scheduleListSubtitle = 'schedule.list.subtitle';
   static const scheduleAddAction = 'schedule.add.action';
-  static const scheduleSearchLabel = 'schedule.search.label';
   static const scheduleSearch = 'schedule.search';
   static const scheduleFilterType = 'schedule.filter.type';
   static const scheduleFilterTypeAll = 'schedule.filter.type.all';

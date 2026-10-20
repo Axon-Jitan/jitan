@@ -29,6 +29,9 @@ abstract final class JitanDimensions {
   static const toolbarPadding = 12.0;
   static const searchFieldWidth = 380.0;
 
+  /// The labelled search of a filter toolbar (Schedules, Companies, …).
+  static const filterSearchWidth = 420.0;
+
   // Modals and forms
   static const modalRadius = 24.0;
   static const modalPadding = 28.0;
@@ -42,8 +45,15 @@ abstract final class JitanDimensions {
   // Tables
   static const tableHorizontalPadding = 20.0;
   static const tableHeaderHeight = 46.0;
-  static const tableRowHeight = 52.0;
+  static const tableRowHeight = 44.0;
   static const tableMinHeight = 520.0;
+
+  /// Height of a table card's loading, empty or error state; a loaded table
+  /// is as tall as its rows instead.
+  static const tableStateHeight = 320.0;
+
+  /// From here a long table scrolls its rows under a fixed header.
+  static const tableMaxHeight = 640.0;
 
   // Vertical rhythm on list pages
   static const headerToToolbar = 44.0;

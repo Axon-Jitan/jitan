@@ -4,17 +4,29 @@ import '../theme/jitan_colors.dart';
 import '../theme/jitan_dimensions.dart';
 import '../theme/jitan_text_styles.dart';
 
+/// How a [JitanTableColumn]'s heading and cells are aligned.
+enum JitanColumnAlign { start, center, end }
+
 /// A column of [JitanDataTable]. [flex] sets its share of the width.
 class JitanTableColumn {
-  const JitanTableColumn({required this.label, required this.flex});
+  const JitanTableColumn({required this.label, required this.flex, this.align = JitanColumnAlign.start});
 
   final String label;
   final int flex;
+
+  /// Names and text: start. Numbers: as the module's design says. Actions:
+  /// end (the rightmost column).
+  final JitanColumnAlign align;
 }
 
-/// The borderless web table: bold muted header row, then evenly spaced rows.
+/// The one table of the HR and Admin web pages (table design specification,
+/// 2026-10-20): a full-width warm-gray header, compact rows with subtle
+/// full-width alternating backgrounds, no grid lines, text vertically
+/// centred and cut with "…" instead of overlapping the next column.
 ///
-/// Below [minWidth] the table scrolls horizontally instead of squashing.
+/// The table is as tall as its rows. With [maxHeight], a long table keeps
+/// its header and scrolls its rows inside that height. Below [minWidth] it
+/// scrolls horizontally instead of squashing its columns.
 ///
 /// With [onRowTap], rows are clickable (hover highlight, keyboard focusable,
 /// announced as buttons).
@@ -24,6 +36,7 @@ class JitanDataTable extends StatelessWidget {
     required this.columns,
     required this.rows,
     this.minWidth = 760,
+    this.maxHeight,
     this.onRowTap,
   });
 
@@ -32,6 +45,7 @@ class JitanDataTable extends StatelessWidget {
   /// One list of cell widgets per row, in column order.
   final List<List<Widget>> rows;
   final double minWidth;
+  final double? maxHeight;
 
   /// Called with the row index.
   final ValueChanged<int>? onRowTap;
@@ -43,25 +57,48 @@ class JitanDataTable extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth < minWidth ? minWidth : constraints.maxWidth;
-        final table = SizedBox(
-          width: width,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Row(
-                height: JitanDimensions.tableHeaderHeight,
-                columns: columns,
-                cells: [
-                  for (final column in columns) Text(column.label, style: JitanTextStyles.tableHeader),
-                ],
-              ),
-              for (var i = 0; i < rows.length; i++)
-                onRowTap == null
+        final body = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < rows.length; i++)
+              ColoredBox(
+                // Rows 2, 4, …: the subtle alternating background, edge to edge.
+                color: i.isOdd ? JitanColors.tableStripe : JitanColors.surface,
+                child: onRowTap == null
                     ? _Row(height: JitanDimensions.tableRowHeight, columns: columns, cells: rows[i])
                     : _TappableRow(
                         onTap: () => onRowTap!(i),
                         child: _Row(height: JitanDimensions.tableRowHeight, columns: columns, cells: rows[i]),
                       ),
+              ),
+          ],
+        );
+        final maxHeight = this.maxHeight;
+        final table = SizedBox(
+          width: width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ColoredBox(
+                color: JitanColors.tableHeader,
+                child: _Row(
+                  height: JitanDimensions.tableHeaderHeight,
+                  columns: columns,
+                  cells: [
+                    for (final column in columns)
+                      Text(column.label, style: JitanTextStyles.tableHeader, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              if (maxHeight == null)
+                body
+              else
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxHeight - JitanDimensions.tableHeaderHeight),
+                  child: SingleChildScrollView(child: body),
+                ),
             ],
           ),
         );
@@ -84,7 +121,7 @@ class _TappableRow extends StatelessWidget {
         button: true,
         child: Material(
           type: MaterialType.transparency,
-          child: InkWell(onTap: onTap, hoverColor: JitanColors.warmWhite, child: child),
+          child: InkWell(onTap: onTap, hoverColor: JitanColors.tableHover, child: child),
         ),
       );
 }
@@ -96,6 +133,12 @@ class _Row extends StatelessWidget {
   final List<JitanTableColumn> columns;
   final List<Widget> cells;
 
+  static Alignment _alignment(JitanColumnAlign align) => switch (align) {
+        JitanColumnAlign.start => Alignment.centerLeft,
+        JitanColumnAlign.center => Alignment.center,
+        JitanColumnAlign.end => Alignment.centerRight,
+      };
+
   @override
   Widget build(BuildContext context) => SizedBox(
         height: height,
@@ -106,7 +149,18 @@ class _Row extends StatelessWidget {
               for (var i = 0; i < columns.length; i++)
                 Expanded(
                   flex: columns[i].flex,
-                  child: Align(alignment: Alignment.centerLeft, child: cells[i]),
+                  child: Padding(
+                    // A little air between columns so text never touches.
+                    padding: EdgeInsets.only(right: i == columns.length - 1 ? 0 : 12),
+                    child: Align(
+                      alignment: _alignment(columns[i].align),
+                      child: DefaultTextStyle.merge(
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        child: cells[i],
+                      ),
+                    ),
+                  ),
                 ),
             ],
           ),

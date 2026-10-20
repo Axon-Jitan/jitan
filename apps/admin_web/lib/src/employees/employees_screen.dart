@@ -46,7 +46,7 @@ class EmployeesScreen extends StatelessWidget {
             JitanSurfaceCard(
               radius: JitanDimensions.tableCardRadius,
               child: SizedBox(
-                height: JitanDimensions.tableMinHeight,
+                height: JitanDimensions.tableStateHeight,
                 child: JitanEmptyState(
                   title: context.t(AdminTextKeys.employeeNoCompanyTitle),
                   message: context.t(AdminTextKeys.employeeNoCompanyMessage),
@@ -115,36 +115,38 @@ class _CompanyEmployeesState extends State<_CompanyEmployees> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      JitanSurfaceCard(
-        radius: JitanDimensions.toolbarCardRadius,
-        padding: const EdgeInsets.all(JitanDimensions.toolbarPadding),
-        child: Row(
-          children: [
-            Flexible(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: JitanDimensions.searchFieldWidth),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: JitanDimensions.filterSearchWidth),
+              child: JitanFieldLabel(
+                label: context.t(CommonTextKeys.searchLabel),
                 child: JitanSearchField(
+                  outlined: true,
                   hintText: context.t(AdminTextKeys.employeeSearch),
                   onChanged: _controller.updateSearch,
                 ),
               ),
             ),
-            const Spacer(),
-            const SizedBox(width: 12),
-            JitanPrimaryButton(
-              label: context.t(AdminTextKeys.employeeAddAction),
-              icon: Icons.add,
-              height: JitanDimensions.controlHeight,
-              onPressed: _addEmployee,
-            ),
-          ],
-        ),
+          ),
+          const Spacer(),
+          const SizedBox(width: 12),
+          JitanPrimaryButton(
+            label: context.t(AdminTextKeys.employeeAddAction),
+            icon: Icons.add,
+            height: JitanDimensions.controlHeight,
+            onPressed: _addEmployee,
+          ),
+        ],
       ),
       const SizedBox(height: JitanDimensions.toolbarToTable),
       JitanSurfaceCard(
         radius: JitanDimensions.tableCardRadius,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: JitanDimensions.tableMinHeight),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 150),
+          alignment: Alignment.topCenter,
           child: ListenableBuilder(
             listenable: _controller,
             builder: (context, _) => _content(context, _controller.state),
@@ -191,5 +193,5 @@ class _CompanyEmployeesState extends State<_CompanyEmployees> {
     );
   }
 
-  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableMinHeight, child: child);
+  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableStateHeight, child: child);
 }

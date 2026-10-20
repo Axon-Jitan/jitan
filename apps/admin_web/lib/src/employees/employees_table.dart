@@ -33,6 +33,7 @@ class EmployeesTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = TranslationScope.of(context);
     return JitanDataTable(
+      maxHeight: JitanDimensions.tableMaxHeight,
       columns: [
         JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnName), flex: _flexName),
         JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnCode), flex: _flexCode),

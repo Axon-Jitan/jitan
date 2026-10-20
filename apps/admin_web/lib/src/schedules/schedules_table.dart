@@ -28,11 +28,12 @@ class SchedulesTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = TranslationScope.of(context);
     return JitanDataTable(
+      maxHeight: JitanDimensions.tableMaxHeight,
       columns: [
         JitanTableColumn(label: t.t(AdminTextKeys.scheduleColumnName), flex: _flexName),
         JitanTableColumn(label: t.t(AdminTextKeys.scheduleColumnDaysHours), flex: _flexDaysHours),
         JitanTableColumn(label: t.t(AdminTextKeys.scheduleColumnStatus), flex: _flexStatus),
-        JitanTableColumn(label: t.t(AdminTextKeys.scheduleColumnActions), flex: _flexActions),
+        JitanTableColumn(label: t.t(AdminTextKeys.scheduleColumnActions), flex: _flexActions, align: JitanColumnAlign.end),
       ],
       rows: [for (final row in rows) _cells(t, row)],
     );
@@ -53,20 +54,13 @@ class SchedulesTable extends StatelessWidget {
       ),
       Tooltip(
         message: daysAndHours,
-        child: Text(daysAndHours, style: JitanTextStyles.tableCell, overflow: TextOverflow.ellipsis, maxLines: 2),
+        child: Text(daysAndHours, style: JitanTextStyles.tableCell, overflow: TextOverflow.ellipsis),
       ),
       JitanStatusLabel(
         label: t.t(row.status == ScheduleRowStatus.active ? CommonTextKeys.statusActive : AdminTextKeys.scheduleStatusDiffer),
         isPositive: row.status == ScheduleRowStatus.active,
       ),
-      Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: IconButton(
-          tooltip: t.t(AdminTextKeys.scheduleActionsMenu),
-          icon: const Icon(Icons.more_horiz, size: 20, color: JitanColors.ink),
-          onPressed: () => onManage(row),
-        ),
-      ),
+      JitanRowActionsButton(tooltip: t.t(AdminTextKeys.scheduleActionsMenu), onPressed: () => onManage(row)),
     ];
   }
 }

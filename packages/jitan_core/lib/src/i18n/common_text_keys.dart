@@ -13,6 +13,9 @@ abstract final class CommonTextKeys {
   static const back = 'common.back';
   static const continueAction = 'common.continue';
   static const cancel = 'common.cancel';
+
+  /// The label above a list page's search field.
+  static const searchLabel = 'common.search.label';
   static const valueUnavailable = 'common.value.unavailable';
 
   static const statusActive = 'common.status.active';

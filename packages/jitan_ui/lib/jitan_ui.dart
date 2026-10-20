@@ -16,6 +16,7 @@ export 'src/components/show_jitan_modal.dart';
 export 'src/components/jitan_page_header.dart';
 export 'src/components/jitan_primary_button.dart';
 export 'src/components/jitan_qr_code.dart';
+export 'src/components/jitan_row_actions_button.dart';
 export 'src/components/jitan_search_field.dart';
 export 'src/components/jitan_secondary_button.dart';
 export 'src/components/jitan_select_field.dart';

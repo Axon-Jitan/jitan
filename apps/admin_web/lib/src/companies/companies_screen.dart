@@ -48,14 +48,14 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
           subtitle: context.t(AdminTextKeys.companyListSubtitle),
         ),
         const SizedBox(height: JitanDimensions.headerToToolbar),
-        JitanSurfaceCard(
-          radius: JitanDimensions.toolbarCardRadius,
-          padding: const EdgeInsets.all(JitanDimensions.toolbarPadding),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: JitanDimensions.searchFieldWidth),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: SizedBox(
+            width: JitanDimensions.filterSearchWidth,
+            child: JitanFieldLabel(
+              label: context.t(CommonTextKeys.searchLabel),
               child: JitanSearchField(
+                outlined: true,
                 hintText: context.t(AdminTextKeys.companySearch),
                 onChanged: _controller.updateSearch,
               ),
@@ -65,8 +65,9 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
         const SizedBox(height: JitanDimensions.toolbarToTable),
         JitanSurfaceCard(
           radius: JitanDimensions.tableCardRadius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: JitanDimensions.tableMinHeight),
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 150),
+            alignment: Alignment.topCenter,
             child: ListenableBuilder(
               listenable: _controller,
               builder: (context, _) => _content(context, _controller.state),
@@ -105,5 +106,5 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
     );
   }
 
-  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableMinHeight, child: child);
+  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableStateHeight, child: child);
 }

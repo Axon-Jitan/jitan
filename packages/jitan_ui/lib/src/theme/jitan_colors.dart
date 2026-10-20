@@ -42,6 +42,16 @@ abstract final class JitanColors {
   /// "Active" status text.
   static const success = Color(0xFF16856B);
 
+  // Tables (table design specification, 2026-10-20)
+  /// Header row background, edge to edge.
+  static const tableHeader = Color(0xFFF7F6F3);
+
+  /// Background of rows 2, 4, … (very subtle).
+  static const tableStripe = Color(0xFFF8F7F5);
+
+  /// Hover on a clickable row.
+  static const tableHover = Color(0xFFF2F0EB);
+
   /// Pending status that needs attention ("Not activated" in Figma).
   static const warning = Color(0xFFB56B16);
 

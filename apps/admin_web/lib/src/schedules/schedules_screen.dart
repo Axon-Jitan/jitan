@@ -115,8 +115,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
           const SizedBox(height: JitanDimensions.toolbarToTable),
           JitanSurfaceCard(
             radius: JitanDimensions.tableCardRadius,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: JitanDimensions.tableMinHeight),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 150),
+              alignment: Alignment.topCenter,
               child: _content(context),
             ),
           ),
@@ -135,9 +136,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       crossAxisAlignment: WrapCrossAlignment.end,
       children: [
         SizedBox(
-          width: 420,
+          width: JitanDimensions.filterSearchWidth,
           child: JitanFieldLabel(
-            label: context.t(AdminTextKeys.scheduleSearchLabel),
+            label: context.t(CommonTextKeys.searchLabel),
             child: JitanSearchField(
               outlined: true,
               hintText: context.t(AdminTextKeys.scheduleSearch),
@@ -228,5 +229,5 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     );
   }
 
-  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableMinHeight, child: child);
+  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableStateHeight, child: child);
 }
