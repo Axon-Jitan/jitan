@@ -30,10 +30,10 @@ class ScheduleOptionsFailed extends ScheduleOptionsState {
 typedef ScheduleFormMessage = ({String key, Map<String, Object> args});
 
 /// The steps of the schedule wizard, in order.
-enum ScheduleStep { group, hours, breaks, attendance, review }
+enum ScheduleStep { group, hours, attendance, review }
 
 /// State of the Create / Edit schedule wizard: a group's whole schedule in
-/// one pass, Group → Working hours → Break → Attendance rules → Review, and
+/// one pass, Group → Working hours & break → Attendance rules → Review, and
 /// one save (`PUT /schedules/groups/{groupId}`, hours and break together in
 /// one transaction). Every schedule has a break; HR only chooses its length
 /// and the server places it in the middle of each working day (product
@@ -136,7 +136,6 @@ class ScheduleFormController extends ChangeNotifier {
       switch (_step) {
         ScheduleStep.group => group != null && !blocked && !conflict && _options is ScheduleOptionsLoaded,
         ScheduleStep.hours => _dayIds.isNotEmpty,
-        ScheduleStep.breaks => true,
         ScheduleStep.attendance => true,
         ScheduleStep.review => false,
       };
@@ -242,7 +241,7 @@ class ScheduleFormController extends ChangeNotifier {
     if (current == null || loaded is! ScheduleOptionsLoaded || _submitting) return null;
     _fieldErrors.clear();
     _failure = null;
-    for (final step in [ScheduleStep.hours, ScheduleStep.breaks, ScheduleStep.attendance]) {
+    for (final step in [ScheduleStep.hours, ScheduleStep.attendance]) {
       _validate(step, loaded.options);
       if (_fieldErrors.isNotEmpty) {
         _step = step;
@@ -298,7 +297,7 @@ class ScheduleFormController extends ChangeNotifier {
             _error(fieldHours, AdminTextKeys.scheduleErrorFinishBeforeStart);
           }
         }
-      case ScheduleStep.breaks:
+        // The break is on the same step as the hours.
         final length = _breakLength;
         if (length == null) {
           _error(fieldBreak, AdminTextKeys.scheduleErrorBreakIncomplete);
@@ -306,7 +305,8 @@ class ScheduleFormController extends ChangeNotifier {
         }
         for (final day in days) {
           final workStart = _minutes(effectiveHoursOf(day.id).start), workFinish = _minutes(effectiveHoursOf(day.id).finish);
-          if (workStart == null || workFinish == null || length >= workFinish - workStart) {
+          // Missing or wrong hours are already reported above.
+          if (workStart != null && workFinish != null && length >= workFinish - workStart) {
             _error(fieldBreak, AdminTextKeys.scheduleErrorBreakOutside);
           }
         }
@@ -329,7 +329,7 @@ class ScheduleFormController extends ChangeNotifier {
         final (step, field) = switch (error!.field) {
           SetWorkHoursRequest.fieldArrivalTolerance => (ScheduleStep.attendance, fieldArrival),
           SetWorkHoursRequest.fieldLeavingTolerance => (ScheduleStep.attendance, fieldLeaving),
-          SetGroupScheduleRequest.fieldBreakMinutes => (ScheduleStep.breaks, fieldBreak),
+          SetGroupScheduleRequest.fieldBreakMinutes => (ScheduleStep.hours, fieldBreak),
           _ => (ScheduleStep.hours, fieldHours),
         };
         _step = step;

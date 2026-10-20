@@ -23,8 +23,9 @@ Future<GroupSchedule?> showScheduleDialog(
   builder: (_) => ScheduleDialog(api: api, groups: groups, options: options, group: group),
 );
 
-/// The Create / Edit schedule wizard: Group → Working hours → Break →
-/// Attendance rules → Review, then one save of the whole schedule.
+/// The Create / Edit schedule wizard: Group → Working hours & break →
+/// Attendance rules → Review, then one save of the whole schedule. Every
+/// field has an ⓘ explaining it with an example.
 ///
 /// Built from the Figma wizard (1365:…, `Daily hours` 1367:2, the blocked,
 /// warning and conflict states 1317:742, 933, 1124) with the flow agreed on
@@ -87,8 +88,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
 
   static const _stepNames = {
     ScheduleStep.group: AdminTextKeys.scheduleStepGroup,
-    ScheduleStep.hours: AdminTextKeys.scheduleStepWorkingHours,
-    ScheduleStep.breaks: AdminTextKeys.scheduleStepBreak,
+    ScheduleStep.hours: AdminTextKeys.scheduleStepHoursBreak,
     ScheduleStep.attendance: AdminTextKeys.scheduleStepAttendance,
     ScheduleStep.review: AdminTextKeys.scheduleStepReview,
   };
@@ -169,7 +169,6 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
       ...switch (_controller.step) {
         ScheduleStep.group => _group(context),
         ScheduleStep.hours => _hours(context, options),
-        ScheduleStep.breaks => _break(context, options),
         ScheduleStep.attendance => _attendance(context, options),
         ScheduleStep.review => _review(context, options),
       },
@@ -203,6 +202,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
         ScheduleFormBanner.warning(context.t(AdminTextKeys.scheduleFormDiffer, args: {'group': group.group.name})),
       JitanSelectField<int>(
         label: context.t(AdminTextKeys.scheduleFormGroup),
+        info: context.t(AdminTextKeys.scheduleInfoGroup),
         hintText: context.t(AdminTextKeys.scheduleFormGroupHint),
         value: c.groupId,
         options: [for (final g in c.groups) JitanSelectOption(value: g.group.id, label: g.group.name)],
@@ -213,7 +213,8 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     ];
   }
 
-  /// Step 2: working days and their hours (Figma 1365:222, `Daily hours`).
+  /// Step 2: working days, their hours and the break (Figma 1365:222,
+  /// `Daily hours` 1367:2).
   List<Widget> _hours(BuildContext context, ScheduleOptions options) {
     final c = _controller;
     final busy = c.submitting;
@@ -236,12 +237,14 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
           children: [
             ScheduleTimeField(
               label: context.t(AdminTextKeys.scheduleFormStart),
+              info: context.t(AdminTextKeys.scheduleInfoStart),
               hint: hint,
               value: c.start,
               onChanged: busy ? null : c.setStart,
             ),
             ScheduleTimeField(
               label: context.t(AdminTextKeys.scheduleFormFinish),
+              info: context.t(AdminTextKeys.scheduleInfoFinish),
               hint: hint,
               value: c.finish,
               onChanged: busy ? null : c.setFinish,
@@ -253,6 +256,8 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
           dayLabel: context.t(AdminTextKeys.scheduleFormDay),
           startLabel: context.t(AdminTextKeys.scheduleFormStart),
           finishLabel: context.t(AdminTextKeys.scheduleFormFinish),
+          startInfo: context.t(AdminTextKeys.scheduleInfoStart),
+          finishInfo: context.t(AdminTextKeys.scheduleInfoFinish),
           timeHint: hint,
           lines: [
             for (final day in options.days)
@@ -270,19 +275,14 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
         Text(context.t(AdminTextKeys.scheduleFormDailyNote), style: _note),
       ],
       _fieldError(context, ScheduleFormController.fieldHours),
-    ];
-  }
-
-  /// Step 3: the break's length (always part of a schedule; the server
-  /// places it in the middle of each working day).
-  List<Widget> _break(BuildContext context, ScheduleOptions options) {
-    final c = _controller;
-    final busy = c.submitting;
-    return [
+      // The break: always part of a schedule; HR only sets its length and
+      // the server places it in the middle of each working day (D28).
+      const SizedBox(height: 24),
       ScheduleFieldColumns(
         children: [
           JitanSelectField<int>(
             label: context.t(AdminTextKeys.scheduleFormLength),
+            info: context.t(AdminTextKeys.scheduleInfoBreak),
             value: c.breakLength,
             options: [
               for (final minutes in options.breakLengthMinutes)
@@ -295,21 +295,23 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
           ),
         ],
       ),
-      const SizedBox(height: 14),
+      const SizedBox(height: 10),
       Text(context.t(AdminTextKeys.scheduleBreakEveryDayText), style: _note),
       _fieldError(context, ScheduleFormController.fieldBreak),
     ];
   }
 
-  /// Step 4: attendance tolerance and rounding (Figma 1365:457).
+  /// Step 3: attendance tolerance and rounding (Figma 1365:457).
   List<Widget> _attendance(BuildContext context, ScheduleOptions options) {
     final c = _controller;
     final busy = c.submitting;
     return [
       ScheduleFieldColumns(
         children: [
-          _toleranceField(context, AdminTextKeys.scheduleFormArrivalTolerance, _arrival, ScheduleFormController.fieldArrival),
-          _toleranceField(context, AdminTextKeys.scheduleFormLeavingTolerance, _leaving, ScheduleFormController.fieldLeaving),
+          _toleranceField(context, AdminTextKeys.scheduleFormArrivalTolerance, AdminTextKeys.scheduleInfoArrival, _arrival,
+              ScheduleFormController.fieldArrival),
+          _toleranceField(context, AdminTextKeys.scheduleFormLeavingTolerance, AdminTextKeys.scheduleInfoLeaving, _leaving,
+              ScheduleFormController.fieldLeaving),
         ],
       ),
       const SizedBox(height: 20),
@@ -317,12 +319,14 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
         children: [
           ScheduleRoundingField(
             label: context.t(AdminTextKeys.scheduleFormStartRounding),
+            info: context.t(AdminTextKeys.scheduleInfoStartRounding),
             value: c.startRounding,
             intervals: options.roundingIntervalMinutes,
             onChanged: busy ? null : c.setStartRounding,
           ),
           ScheduleRoundingField(
             label: context.t(AdminTextKeys.scheduleFormFinishRounding),
+            info: context.t(AdminTextKeys.scheduleInfoFinishRounding),
             value: c.finishRounding,
             intervals: options.roundingIntervalMinutes,
             onChanged: busy ? null : c.setFinishRounding,
@@ -334,7 +338,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     ];
   }
 
-  /// Step 5: everything that will be saved.
+  /// Step 4: everything that will be saved.
   List<Widget> _review(BuildContext context, ScheduleOptions options) {
     final c = _controller;
     final t = TranslationScope.of(context);
@@ -406,7 +410,16 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     return [
       Row(
         children: [
-          Expanded(child: Text(context.t(AdminTextKeys.scheduleFormDays), style: JitanTextStyles.stateTitle)),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: JitanLabelText(
+                label: context.t(AdminTextKeys.scheduleFormDays),
+                info: context.t(AdminTextKeys.scheduleInfoDays),
+                style: JitanTextStyles.stateTitle,
+              ),
+            ),
+          ),
           TextButton(
             onPressed: busy ? null : () => c.selectDays(weekdays),
             child: Text(
@@ -433,9 +446,15 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     ];
   }
 
-  Widget _toleranceField(BuildContext context, String labelKey, TextEditingController controller, String field) =>
-      ScheduleMinutesField(
+  Widget _toleranceField(
+    BuildContext context,
+    String labelKey,
+    String infoKey,
+    TextEditingController controller,
+    String field,
+  ) => ScheduleMinutesField(
         label: context.t(labelKey),
+        info: context.t(infoKey),
         controller: controller,
         unit: context.t(AdminTextKeys.scheduleFormMinutesUnit),
         enabled: !_controller.submitting,
@@ -467,7 +486,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
 
   static final _note = JitanTextStyles.stateMessage.copyWith(fontSize: 13);
 
-  /// Height of every step's content: fits the days, the hours and a
-  /// message; a 7-day hours table scrolls.
-  static const _stepHeight = 360.0;
+  /// Height of every step's content: fits the days, the hours, the break
+  /// and a message; a longer hours table scrolls.
+  static const _stepHeight = 430.0;
 }

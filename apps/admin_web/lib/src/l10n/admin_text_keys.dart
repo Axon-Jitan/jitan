@@ -277,7 +277,6 @@ abstract final class AdminTextKeys {
   static const scheduleManageRemove = 'schedule.manage.remove';
   static const scheduleManageRemoveText = 'schedule.manage.remove.text';
   static const scheduleStepGroup = 'schedule.step.group';
-  static const scheduleStepBreak = 'schedule.step.break';
   static const scheduleFormSubtitle = 'schedule.form.subtitle';
   static const scheduleFormConflict = 'schedule.form.conflict';
   static const scheduleBreakEveryDayText = 'schedule.break.everyDay.text';
@@ -292,4 +291,14 @@ abstract final class AdminTextKeys {
   static const scheduleReviewAttendanceValue = 'schedule.review.attendance.value';
   static const scheduleReviewNote = 'schedule.review.note';
   static const scheduleManageEditWhole = 'schedule.manage.edit.whole';
+  static const scheduleStepHoursBreak = 'schedule.step.hoursBreak';
+  static const scheduleInfoGroup = 'schedule.info.group';
+  static const scheduleInfoDays = 'schedule.info.days';
+  static const scheduleInfoStart = 'schedule.info.start';
+  static const scheduleInfoFinish = 'schedule.info.finish';
+  static const scheduleInfoBreak = 'schedule.info.break';
+  static const scheduleInfoArrival = 'schedule.info.arrival';
+  static const scheduleInfoLeaving = 'schedule.info.leaving';
+  static const scheduleInfoStartRounding = 'schedule.info.startRounding';
+  static const scheduleInfoFinishRounding = 'schedule.info.finishRounding';
 }

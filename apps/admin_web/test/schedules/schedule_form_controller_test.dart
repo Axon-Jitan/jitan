@@ -28,8 +28,8 @@ void main() {
     return c;
   }
 
-  /// A new schedule for "New group", Monday and Friday 07:30–16:00, at the
-  /// Break step.
+  /// A new schedule for "New group", Monday and Friday 07:30–16:00, on the
+  /// Working hours & break step (no break length yet).
   Future<ScheduleFormController> filledIn() async {
     final c = await ready();
     c
@@ -38,14 +38,13 @@ void main() {
       ..toggleDay(11)
       ..toggleDay(15)
       ..setStart('07:30')
-      ..setFinish('16:00')
-      ..next();
+      ..setFinish('16:00');
     return c;
   }
 
   setUp(() => api = FakeSchedulesApi());
 
-  test('the steps in order; Continue needs a group and a day; the break is always asked for', () async {
+  test('the steps in order; Continue needs a group and a day; the break is asked with the hours', () async {
     final c = await ready();
     expect((c.step, c.canContinue), (ScheduleStep.group, false));
 
@@ -59,10 +58,7 @@ void main() {
       ..setStart('08:00')
       ..setFinish('16:00')
       ..next();
-    expect(c.step, ScheduleStep.breaks);
-
-    c.next();
-    expect(c.step, ScheduleStep.breaks, reason: 'a break is required');
+    expect(c.step, ScheduleStep.hours, reason: 'a break is required on the same step');
     expect(c.fieldErrors[ScheduleFormController.fieldBreak]?.key, AdminTextKeys.scheduleErrorBreakIncomplete);
 
     c
@@ -189,7 +185,7 @@ void main() {
 
     api.writeFailure = ApiClientExceptionFor.validation(SetGroupScheduleRequest.fieldBreakMinutes);
     expect(await c.submit(), isNull);
-    expect(c.step, ScheduleStep.breaks);
+    expect(c.step, ScheduleStep.hours, reason: 'the break is on the hours step');
 
     api.writeFailure = ApiClientExceptionFor.validation(SetWorkHoursRequest.fieldDays);
     await c.submit();

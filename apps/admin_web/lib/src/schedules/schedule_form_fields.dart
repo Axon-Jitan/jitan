@@ -88,9 +88,15 @@ class ScheduleHoursTable extends StatelessWidget {
     required this.startLabel,
     required this.finishLabel,
     required this.timeHint,
+    this.startInfo,
+    this.finishInfo,
   });
 
   final List<ScheduleHoursLine> lines;
+
+  /// The ⓘ of the Start and Finish headings.
+  final String? startInfo;
+  final String? finishInfo;
   final String dayLabel;
   final String startLabel;
   final String finishLabel;
@@ -116,8 +122,8 @@ class ScheduleHoursTable extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: row(
             Text(dayLabel, style: JitanTextStyles.fieldLabel),
-            Text(startLabel, style: JitanTextStyles.fieldLabel),
-            Text(finishLabel, style: JitanTextStyles.fieldLabel),
+            JitanLabelText(label: startLabel, info: startInfo),
+            JitanLabelText(label: finishLabel, info: finishInfo),
           ),
         ),
         const SizedBox(height: JitanDimensions.fieldLabelGap),
@@ -195,7 +201,11 @@ class ScheduleMinutesField extends StatelessWidget {
     required this.enabled,
     this.errorText,
     this.width,
+    this.info,
   });
+
+  /// The ⓘ by the label: what the field means, with an example.
+  final String? info;
 
   /// `null` fills the available width.
   final double? width;
@@ -213,6 +223,7 @@ class ScheduleMinutesField extends StatelessWidget {
       width: width,
       child: JitanFieldLabel(
         label: label,
+        info: info,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -281,10 +292,13 @@ class ScheduleCheckRow extends StatelessWidget {
 /// outlined box as the other fields. [onChanged] gets the text as typed;
 /// the form checks it is a valid HH:mm.
 class ScheduleTimeField extends StatefulWidget {
-  const ScheduleTimeField({super.key, this.label, required this.value, required this.onChanged, this.hint});
+  const ScheduleTimeField({super.key, this.label, required this.value, required this.onChanged, this.hint, this.info});
 
   /// `null` in a table row, where the column heading names the field.
   final String? label;
+
+  /// The ⓘ by the label: what the field means, with an example.
+  final String? info;
   final String? value;
   final ValueChanged<String?>? onChanged;
 
@@ -352,7 +366,7 @@ class _ScheduleTimeFieldState extends State<ScheduleTimeField> {
       ),
     );
     final label = widget.label;
-    return label == null ? box : JitanFieldLabel(label: label, child: box);
+    return label == null ? box : JitanFieldLabel(label: label, info: widget.info, child: box);
   }
 }
 
@@ -381,9 +395,13 @@ class ScheduleRoundingField extends StatelessWidget {
     required this.value,
     required this.intervals,
     required this.onChanged,
+    this.info,
   });
 
   final String label;
+
+  /// The ⓘ by the label: what the field means, with an example.
+  final String? info;
   final ScheduleRounding? value;
   final List<int> intervals;
   final ValueChanged<ScheduleRounding?>? onChanged;
@@ -402,6 +420,7 @@ class ScheduleRoundingField extends StatelessWidget {
     };
     return JitanSelectField<String>(
       label: label,
+      info: info,
       value: _keyOf(value),
       options: [
         for (final MapEntry(:key, :value) in choices.entries)
