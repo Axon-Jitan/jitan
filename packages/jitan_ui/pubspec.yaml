@@ -21,14 +21,26 @@ dev_dependencies:
 
 flutter:
   fonts:
-    # Inter v4.1, SIL Open Font License 1.1 (fonts/inter/OFL.txt).
+    # Inter v4.1, SIL Open Font License 1.1 (fonts/inter/OFL.txt): Inter
+    # for text, Inter Display (the same family, drawn for large sizes) for
+    # titles.
     - family: Inter
       fonts:
         - asset: fonts/inter/Inter-Regular.ttf
           weight: 400
+        - asset: fonts/inter/Inter-Medium.ttf
+          weight: 500
         - asset: fonts/inter/Inter-SemiBold.ttf
           weight: 600
         - asset: fonts/inter/Inter-Bold.ttf
+          weight: 700
+    - family: InterDisplay
+      fonts:
+        - asset: fonts/inter/InterDisplay-Medium.ttf
+          weight: 500
+        - asset: fonts/inter/InterDisplay-SemiBold.ttf
+          weight: 600
+        - asset: fonts/inter/InterDisplay-Bold.ttf
           weight: 700
 
   assets:
