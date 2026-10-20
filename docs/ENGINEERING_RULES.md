@@ -689,6 +689,12 @@ Implement:
 
 states shown or implied by the product flow.
 
+**Responsive before the next phase** (product owner, 2026-10-21). Every page and dialog
+must fit well at every width, from a phone (390 px) to a wide screen (2400 px): no
+overflow, no horizontal page scroll, no cramped or stretched layout. Cover each page and
+its dialogs in `test/app/responsive_test.dart`, and check it in the browser. A phase is
+not finished, and the next phase does not start, until its pages pass.
+
 ---
 
 ## 31. No dead screens
@@ -747,7 +753,7 @@ A feature is only "done" when applicable parts of all of these are complete:
 
 - [ ] Matches approved product/Figma behavior
 - [ ] UI implemented
-- [ ] Responsive behavior handled
+- [ ] Responsive behavior handled: fits from 390 px to 2400 px, covered by the responsive test (§30)
 - [ ] State management implemented
 - [ ] API integration implemented
 - [ ] Backend endpoint implemented

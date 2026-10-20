@@ -319,7 +319,7 @@ else changes.
    [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md).
 
 ## GAP-14: Schedule name
-**Status:** `OPEN` · ERD GAP — requires clarification with IT · asked by the product owner 2026-10-20
+**Status:** `DEFERRED` · not needed for V1 (product owner, 2026-10-21) · ERD GAP to raise with IT only if a later version wants schedule names · asked by the product owner 2026-10-20
 
 1. **Requirement:** HR gives a group's schedule a name when creating it (e.g. "Office
    hours", "Summer schedule"), shown in the Schedules list.
