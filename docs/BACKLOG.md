@@ -6,6 +6,23 @@ product questions in [PRODUCT_CLARIFICATIONS.md](PRODUCT_CLARIFICATIONS.md).
 
 Status values: `TODO` · `IN PROGRESS` · `DONE (commit)`
 
+## GRP-01: Employee groups managed by HR/Admin
+
+Status: `TODO` · decided 2026-10-20 · roadmap phase 2, server right after writing schedules
+
+Today groups (`tblGroup`) exist only as database rows (seed, IT's script); HR can pick them
+but not create them. Schedules are set per group, so HR needs to manage groups.
+
+- [ ] List groups (active and inactive) with their number of employees.
+- [ ] Add a group: name required, at most 100 characters (`groupName`), unique ignoring
+      case (the ERD has no unique key, so Jitan checks).
+- [ ] Rename a group: same checks; employees and schedules stay attached.
+- [ ] Deactivate a group only when no current employee is in it ("Move the 12 employees in
+      Drivers to another group first"); soft delete, the row stays. Reactivate allowed.
+- [ ] Every change audited in `tblEventLog` (`groupID`), event types added to
+      `reference_data.sql`.
+- [ ] HR/Admin screen from the designer's frame, next to Schedules.
+
 ## DEPLOY-01: Adopt IT's server configuration contract
 
 Status: `TODO` · agreement recorded 2026-10-16 · roadmap phase 12
