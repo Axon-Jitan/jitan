@@ -119,18 +119,14 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
               ],
             ),
             const SizedBox(height: 28),
-            // Each step has its own height: animate between them.
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topCenter,
+            // The same size on every step; a long step (7 days of hours)
+            // scrolls inside it.
+            SizedBox(
+              height: _stepHeight,
               child: switch (c.options) {
-                ScheduleOptionsLoading() => SizedBox(
-                  height: 160,
-                  child: JitanLoadingState(label: context.t(AdminTextKeys.scheduleFormOptionsLoading)),
-                ),
-                ScheduleOptionsFailed(:final failure) => SizedBox(height: 220, child: _optionsError(context, failure)),
-                ScheduleOptionsLoaded(:final options) => _step(context, options),
+                ScheduleOptionsLoading() => JitanLoadingState(label: context.t(AdminTextKeys.scheduleFormOptionsLoading)),
+                ScheduleOptionsFailed(:final failure) => _optionsError(context, failure),
+                ScheduleOptionsLoaded(:final options) => SingleChildScrollView(child: _step(context, options)),
               },
             ),
           ],
@@ -208,6 +204,8 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
           action: context.t(AdminTextKeys.scheduleFormConflictAction),
           onAction: _editExisting,
         )
+      else if (group != null && c.breaksNeedHours)
+        ScheduleFormBanner.error(context.t(AdminTextKeys.scheduleErrorBreaksNeedHours, args: {'group': group.group.name}))
       else if (group != null && c.employeesDiffer)
         ScheduleFormBanner.warning(context.t(AdminTextKeys.scheduleFormDiffer, args: {'group': group.group.name})),
       ScheduleFieldColumns(
@@ -455,4 +453,8 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
   }
 
   static final _note = JitanTextStyles.stateMessage.copyWith(fontSize: 13);
+
+  /// Height of every step's content: fits the days, the hours and a
+  /// message; a 7-day hours table scrolls.
+  static const _stepHeight = 360.0;
 }

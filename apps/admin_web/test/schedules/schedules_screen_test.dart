@@ -246,6 +246,38 @@ void main() {
     expect(chosen, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
   });
 
+  testWidgets('a break for a group without work hours is stopped on step 1', (tester) async {
+    final api = await _pump(tester);
+    await _loaded(tester, api);
+    await _openAdd(tester, api);
+    await _choose(tester, 'Employee group *', 'White collar');
+    await tester.tap(find.widgetWithText(JitanSelectField<ScheduleKind>, 'Schedule type *'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Break').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Set the work hours of White collar before its breaks.'), findsOneWidget);
+    expect(_button(tester, 'Continue'), isNull);
+  });
+
+  testWidgets('the wizard keeps the same size on every step', (tester) async {
+    final api = await _pump(tester);
+    await _loaded(tester, api);
+    await _openAdd(tester, api);
+    Size size() => tester.getSize(find.byType(Dialog));
+
+    final first = size();
+    await _choose(tester, 'Employee group *', 'White collar');
+    await _continue(tester);
+    expect(size(), first, reason: 'step 2');
+
+    await tester.tap(find.text('Mon–Fri'));
+    await tester.pump();
+    await tester.tap(find.text('Same hours every working day'));
+    await tester.pumpAndSettle();
+    expect(size(), first, reason: 'step 2 with five days of hours');
+  });
+
   testWidgets('a group nobody is only in is blocked', (tester) async {
     final api = await _pump(tester);
     await _loaded(tester, api);

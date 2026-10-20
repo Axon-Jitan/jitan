@@ -136,6 +136,15 @@ class ScheduleFormController extends ChangeNotifier {
   /// The group's employees have different schedules (Figma "warning" 1317:933).
   bool get employeesDiffer => group?.status == GroupScheduleStatus.employeesDiffer;
 
+  /// A break for a group without work hours: a break must fall within the
+  /// working day, so the work hours come first (server: "The break must fall
+  /// within the working hours").
+  bool get breaksNeedHours {
+    final current = group;
+    if (current == null || _kind != ScheduleKind.breaks || blocked) return false;
+    return current.status != GroupScheduleStatus.configured || current.variants.single.workDays.isEmpty;
+  }
+
   /// Creating what the group already has (Figma "conflict" 1317:1124).
   bool get conflict => !_editing && group != null && hasSchedule(group!, _kind);
 
@@ -144,7 +153,7 @@ class ScheduleFormController extends ChangeNotifier {
 
   /// Whether "Continue" may be pressed on the current step.
   bool get canContinue => switch (_step) {
-    0 => group != null && !blocked && !conflict && _options is ScheduleOptionsLoaded,
+    0 => group != null && !blocked && !conflict && !breaksNeedHours && _options is ScheduleOptionsLoaded,
     1 => _dayIds.isNotEmpty,
     _ => false,
   } && !_submitting;

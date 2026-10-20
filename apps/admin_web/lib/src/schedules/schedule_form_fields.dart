@@ -51,7 +51,8 @@ class ScheduleDayToggle extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         onTap: onPressed,
         child: SizedBox(
-          width: 80,
+          // Seven chips and their gaps fit the wizard's 584 px content width.
+          width: 76,
           height: 40,
           child: Center(
             child: Text(
