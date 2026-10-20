@@ -318,6 +318,23 @@ else changes.
    state, and a group → schedule/rule relationship. Analysis:
    [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md).
 
+## GAP-14: Schedule name
+**Status:** `OPEN` · ERD GAP — requires clarification with IT · asked by the product owner 2026-10-20
+
+1. **Requirement:** HR gives a group's schedule a name when creating it (e.g. "Office
+   hours", "Summer schedule"), shown in the Schedules list.
+2. **Considered:** `tblSchedule`, `tblScheduleType`, `tblUserSchedule`, `tblGroup`,
+   `tblConfiguration` (2026-10-12 ERD.jpg, not yet in IT's database).
+3. **Why not:** `tblSchedule` has no name or description column (type, day, start/stop,
+   margin, Active/MFD). `tblScheduleType.scheduleTypeName` names the *kind* of period
+   ("Work – start", "Break"), shared by every group; using it for one group's schedule
+   would repurpose it. A group's schedule is many `tblSchedule` rows (two per working day
+   plus breaks) with nothing grouping them except the employees' `tblUserSchedule` links.
+4. **Missing:** a place for a schedule's name, e.g. a schedule (set) table that the
+   `tblSchedule` rows of one group's schedule belong to, or a name column on such a table.
+   Until then the list names a schedule by its group and kind ("Blue collar · Work hours").
+   Nothing is stored as a workaround.
+
 ---
 
 # Clarifications
