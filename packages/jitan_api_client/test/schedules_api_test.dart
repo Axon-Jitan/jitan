@@ -95,18 +95,35 @@ void main() {
       ),
     );
     await client.removeWorkHours(2);
+    await client.setSchedule(
+      2,
+      const SetGroupScheduleRequest(
+        workHours: SetWorkHoursRequest(
+          days: [WorkHoursDay(dayId: 1, start: '08:00', finish: '16:30')],
+          arrivalToleranceMinutes: 0,
+          leavingToleranceMinutes: 0,
+        ),
+        breaks: [BreakDay(dayId: 1, usualStart: '12:00', lengthMinutes: 30)],
+      ),
+    );
     await client.setBreaks(2, const SetBreaksRequest(days: [BreakDay(dayId: 1, usualStart: '12:00', lengthMinutes: 30)]));
     final removed = await client.removeBreaks(2);
 
     expect([for (final r in requests) '${r.method} ${r.url.path}'], [
       'PUT /schedules/groups/2/work-hours',
       'DELETE /schedules/groups/2/work-hours',
+      'PUT /schedules/groups/2',
       'PUT /schedules/groups/2/breaks',
       'DELETE /schedules/groups/2/breaks',
     ]);
     final sent = jsonDecode(requests.first.body) as Map;
     expect(sent['startRounding'], {'intervalMinutes': 15, 'roundUp': true});
     expect(sent['finishRounding'], isNull);
+    final whole = jsonDecode(requests[2].body) as Map;
+    expect((whole['workHours'] as Map)['days'], hasLength(1));
+    expect(whole['breaks'], [
+      {'dayId': 1, 'usualStart': '12:00', 'lengthMinutes': 30},
+    ]);
     expect(removed.status, GroupScheduleStatus.noSchedule);
   });
 

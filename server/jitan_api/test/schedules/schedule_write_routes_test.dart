@@ -78,6 +78,42 @@ void main() {
     });
   });
 
+  group('PUT a whole schedule: rejected before any write', () {
+    test('a break outside the new work hours → 400 naming "breaks"', () async {
+      final error = await _error(_app(), _path, {
+        'workHours': _workHours(),
+        'breaks': [
+          {'dayId': 1, 'usualStart': '16:15', 'lengthMinutes': 30},
+        ],
+      });
+
+      expect(error, containsPair('status', 400));
+      expect(error, containsPair('code', 'validation_failed'));
+      expect(error, containsPair('field', 'breaks'));
+    });
+
+    test('a break on a day without work hours → 400 naming "breaks"', () async {
+      final error = await _error(_app(), _path, {
+        'workHours': _workHours(),
+        'breaks': [
+          {'dayId': 2, 'usualStart': '12:00', 'lengthMinutes': 30},
+        ],
+      });
+
+      expect(error, containsPair('field', 'breaks'));
+    });
+
+    test('invalid work hours are named as in PUT work-hours', () async {
+      final error = await _error(_app(), _path, {'workHours': _workHours(days: const []), 'breaks': []});
+
+      expect(error, containsPair('field', 'days'));
+    });
+
+    test('a missing workHours is a bad request', () async {
+      expect((await _app().put(_path, jsonEncode({'breaks': []}))).statusCode, 400);
+    });
+  });
+
   group('PUT breaks: rejected before any write', () {
     for (final (name, day) in [
       ('a length not in the list', {'dayId': 1, 'usualStart': '12:00', 'lengthMinutes': 40}),

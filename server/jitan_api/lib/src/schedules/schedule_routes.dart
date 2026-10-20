@@ -19,6 +19,9 @@ import 'schedule_service.dart';
 /// - `GET /schedules`: every active group with its schedules
 /// - `GET /schedules/options`: the form's days, intervals, tolerances and
 ///   break lengths
+/// - `PUT /schedules/groups/{groupId}` (`SetGroupScheduleRequest`): set a
+///   group's work hours and breaks together, in one transaction (the
+///   Create / Edit schedule wizard)
 /// - `PUT /schedules/groups/{groupId}/work-hours` (`SetWorkHoursRequest`),
 ///   `DELETE …/work-hours`: set or remove a group's work hours
 /// - `PUT /schedules/groups/{groupId}/breaks` (`SetBreaksRequest`),
@@ -37,6 +40,7 @@ class ScheduleRoutes {
   Router get router => Router()
     ..get('/schedules', _list)
     ..get('/schedules/options', _options)
+    ..put(_group, _setSchedule)
     ..put('$_group/work-hours', _setWorkHours)
     ..delete('$_group/work-hours', _removeWorkHours)
     ..put('$_group/breaks', _setBreaks)
@@ -50,6 +54,13 @@ class ScheduleRoutes {
   Future<Response> _options(Request request) async {
     await _authorizer.require(request, Permission.viewSchedules);
     return jsonResponse((await _schedules.options()).toJson());
+  }
+
+  Future<Response> _setSchedule(Request request, String groupId) async {
+    final id = _groupId(groupId);
+    final identity = await _authorizer.require(request, Permission.manageSchedules);
+    final body = await _body(request, SetGroupScheduleRequest.fromJson);
+    return jsonResponse((await _editing.setSchedule(identity.userId, id, body)).toJson());
   }
 
   Future<Response> _setWorkHours(Request request, String groupId) async {

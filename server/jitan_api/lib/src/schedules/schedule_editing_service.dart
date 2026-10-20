@@ -53,6 +53,31 @@ class ScheduleEditingService {
   /// a finish, the arrival and leaving tolerance (attendance only), and the
   /// start and finish rounding (up or down by an interval, or none).
   Future<GroupSchedule> setWorkHours(int actorUserId, int groupId, SetWorkHoursRequest request) async {
+    final rows = await _workRows(request);
+    await _transactions.transaction((tx) => _replace(tx, actorUserId, groupId, _workTypes, rows));
+    return _result(groupId);
+  }
+
+  /// Sets [groupId]'s whole schedule, its work hours and its breaks (none:
+  /// no break), in one transaction: when anything is refused, nothing is
+  /// saved. Each break must lie within the new work hours of its day.
+  Future<GroupSchedule> setSchedule(int actorUserId, int groupId, SetGroupScheduleRequest request) async {
+    final workRows = await _workRows(request.workHours);
+    final breakRows = request.breaks.isEmpty
+        ? const <_NewRow>[]
+        : await _breakRows(request.breaks, SetGroupScheduleRequest.fieldBreaks);
+    final hours = {for (final row in workRows) row.dayId: (start: row.startMinutes, finish: row.stopMinutes)};
+    _breaksWithin(breakRows, hours, SetGroupScheduleRequest.fieldBreaks);
+    await _transactions.transaction((tx) async {
+      if (!await _writes.lockGroup(tx, groupId)) throw ApiException.notFound('Group $groupId does not exist.');
+      await _replace(tx, actorUserId, groupId, _workTypes, workRows, locked: true);
+      await _replace(tx, actorUserId, groupId, _breakTypes, breakRows, locked: true);
+    });
+    return _result(groupId);
+  }
+
+  /// The schedule rows for [request]'s work hours, after checking it.
+  Future<List<_NewRow>> _workRows(SetWorkHoursRequest request) async {
     await _validDayIds(request.days.map((d) => d.dayId), SetWorkHoursRequest.fieldDays);
     _tolerance(request.arrivalToleranceMinutes, SetWorkHoursRequest.fieldArrivalTolerance);
     _tolerance(request.leavingToleranceMinutes, SetWorkHoursRequest.fieldLeavingTolerance);
@@ -84,8 +109,7 @@ class ScheduleEditingService {
         ));
       }
     }
-    await _transactions.transaction((tx) => _replace(tx, actorUserId, groupId, _workTypes, rows));
-    return _result(groupId);
+    return rows;
   }
 
   /// Removes [groupId]'s work hours (and nothing else).
@@ -97,33 +121,46 @@ class ScheduleEditingService {
   /// Sets [groupId]'s breaks, replacing any it had. Each break must lie
   /// within the group's work hours of that day.
   Future<GroupSchedule> setBreaks(int actorUserId, int groupId, SetBreaksRequest request) async {
-    await _validDayIds(request.days.map((d) => d.dayId), SetBreaksRequest.fieldDays);
-    final rows = <_NewRow>[];
-    for (final day in request.days) {
-      final start = _minutes(day.usualStart, SetBreaksRequest.fieldDays);
-      _choice(day.lengthMinutes, ScheduleChoices.breakLengthMinutes, SetBreaksRequest.fieldDays);
-      rows.add((
-        typeName: ScheduleTypeNames.breakTime,
-        dayId: day.dayId,
-        startMinutes: start,
-        stopMinutes: start + day.lengthMinutes,
-        marginMinutes: 0,
-        intervalMinutes: null,
-        roundUp: null,
-      ));
-    }
+    final rows = await _breakRows(request.days, SetBreaksRequest.fieldDays);
     await _transactions.transaction((tx) async {
       if (!await _writes.lockGroup(tx, groupId)) throw ApiException.notFound('Group $groupId does not exist.');
-      final workHours = await _currentWorkHours(tx, groupId);
-      for (final row in rows) {
-        final hours = workHours[row.dayId];
-        if (hours == null || row.startMinutes < hours.start || row.stopMinutes > hours.finish) {
-          throw const ApiException.validation(SetBreaksRequest.fieldDays, 'The break must fall within the working hours.');
-        }
-      }
+      _breaksWithin(rows, await _currentWorkHours(tx, groupId), SetBreaksRequest.fieldDays);
       await _replace(tx, actorUserId, groupId, _breakTypes, rows, locked: true);
     });
     return _result(groupId);
+  }
+
+  /// The schedule rows for [days]' breaks, after checking them; errors name
+  /// [field].
+  Future<List<_NewRow>> _breakRows(List<BreakDay> days, String field) async {
+    await _validDayIds(days.map((d) => d.dayId), field);
+    return [
+      for (final day in days)
+        (
+          typeName: ScheduleTypeNames.breakTime,
+          dayId: day.dayId,
+          startMinutes: _minutes(day.usualStart, field),
+          stopMinutes: _minutes(day.usualStart, field) + _breakLength(day.lengthMinutes, field),
+          marginMinutes: 0,
+          intervalMinutes: null,
+          roundUp: null,
+        ),
+    ];
+  }
+
+  static int _breakLength(int minutes, String field) {
+    _choice(minutes, ScheduleChoices.breakLengthMinutes, field);
+    return minutes;
+  }
+
+  /// 400 unless every break lies within [hours] of its day.
+  static void _breaksWithin(List<_NewRow> breaks, Map<int, ({int start, int finish})> hours, String field) {
+    for (final row in breaks) {
+      final day = hours[row.dayId];
+      if (day == null || row.startMinutes < day.start || row.stopMinutes > day.finish) {
+        throw ApiException.validation(field, 'The break must fall within the working hours.');
+      }
+    }
   }
 
   /// Removes [groupId]'s breaks.

@@ -20,6 +20,11 @@ class SchedulesApi {
     }
   }
 
+  /// Sets a group's whole schedule, work hours and breaks (none: no break),
+  /// in one transaction; the group's schedule as it is afterwards.
+  Future<GroupSchedule> setSchedule(int groupId, SetGroupScheduleRequest request) async =>
+      _group(await _transport.putJson('schedules/groups/$groupId', request.toJson()));
+
   /// Sets a group's work hours, replacing any it had; the group's schedule
   /// as it is afterwards.
   Future<GroupSchedule> setWorkHours(int groupId, SetWorkHoursRequest request) async =>

@@ -112,6 +112,31 @@ class SetBreaksRequest {
       };
 }
 
+/// Body of `PUT /schedules/groups/{groupId}`: a group's whole schedule, its
+/// work hours and its breaks ([breaks] empty: no break), saved together in
+/// one transaction. Each break lies within these work hours of its day.
+class SetGroupScheduleRequest {
+  const SetGroupScheduleRequest({required this.workHours, this.breaks = const []});
+
+  factory SetGroupScheduleRequest.fromJson(Map<String, Object?> json) => SetGroupScheduleRequest(
+        workHours: SetWorkHoursRequest.fromJson(json.readObject(fieldWorkHours)),
+        breaks: json.readObjectList(fieldBreaks).map(BreakDay.fromJson).toList(),
+      );
+
+  final SetWorkHoursRequest workHours;
+  final List<BreakDay> breaks;
+
+  /// Field names, for [ApiError.field]. Errors in the work hours use
+  /// [SetWorkHoursRequest]'s field names.
+  static const fieldWorkHours = 'workHours';
+  static const fieldBreaks = 'breaks';
+
+  Map<String, Object?> toJson() => {
+        fieldWorkHours: workHours.toJson(),
+        fieldBreaks: [for (final day in breaks) day.toJson()],
+      };
+}
+
 /// Response body of `GET …/employees/{userId}/assignments/schedule-source`:
 /// the employee's groups and the one their schedule comes from.
 class ScheduleSourceResponse {
