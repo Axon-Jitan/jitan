@@ -204,8 +204,6 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
           action: context.t(AdminTextKeys.scheduleFormConflictAction),
           onAction: _editExisting,
         )
-      else if (group != null && c.breaksNeedHours)
-        ScheduleFormBanner.error(context.t(AdminTextKeys.scheduleErrorBreaksNeedHours, args: {'group': group.group.name}))
       else if (group != null && c.employeesDiffer)
         ScheduleFormBanner.warning(context.t(AdminTextKeys.scheduleFormDiffer, args: {'group': group.group.name})),
       ScheduleFieldColumns(
@@ -225,6 +223,10 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
               JitanSelectOption(value: ScheduleKind.breaks, label: context.t(AdminTextKeys.scheduleKindBreaks)),
             ],
             onChanged: busy || c.editing ? null : (kind) => c.selectKind(kind!),
+            // The rule "work hours before breaks", where the type is chosen.
+            errorText: group != null && c.breaksNeedHours
+                ? context.t(AdminTextKeys.scheduleErrorBreaksNeedHours, args: {'group': group.group.name})
+                : null,
           ),
         ],
       ),
