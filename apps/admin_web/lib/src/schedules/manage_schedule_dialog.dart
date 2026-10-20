@@ -30,9 +30,7 @@ class ManageScheduleDialog extends StatelessWidget {
         children: [
           _Choice(
             title: context.t(AdminTextKeys.scheduleManageEdit),
-            text: context.t(
-              row.kind == ScheduleKind.workHours ? AdminTextKeys.scheduleManageEditWorkHours : AdminTextKeys.scheduleManageEditBreaks,
-            ),
+            text: context.t(AdminTextKeys.scheduleManageEditWhole),
             onTap: () => Navigator.of(context).pop(ScheduleRowAction.edit),
           ),
           const Divider(height: 1, color: JitanColors.inputBorder),

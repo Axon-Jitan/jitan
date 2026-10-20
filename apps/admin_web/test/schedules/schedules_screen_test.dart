@@ -1,5 +1,4 @@
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
-import 'package:admin_web/src/schedules/schedule_rows.dart';
 import 'package:admin_web/src/schedules/schedules_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -68,6 +67,19 @@ Future<void> _continue(WidgetTester tester) async {
 VoidCallback? _button(WidgetTester tester, String label) =>
     tester.widget<JitanPrimaryButton>(find.widgetWithText(JitanPrimaryButton, label)).onPressed;
 
+/// Step 1 → 2 for White collar, Monday 08:00–16:30, then on to the Break step.
+Future<void> _toBreakStep(WidgetTester tester) async {
+  await _choose(tester, 'Employee group *', 'White collar');
+  await _continue(tester);
+  await tester.tap(find.text('Mon'));
+  await tester.pump();
+  // The time menus hold 288 entries; pick through the field itself.
+  _pickTime(tester, 'Start', '08:00');
+  _pickTime(tester, 'Finish', '16:30');
+  await tester.pump();
+  await _continue(tester);
+}
+
 void main() {
   testWidgets('loading, then one row per group and kind with its days and hours', (tester) async {
     final api = await _pump(tester);
@@ -108,44 +120,62 @@ void main() {
     expect(find.text('No matching schedules'), findsOneWidget);
   });
 
-  testWidgets('Add schedule, 3 steps: group & type, working hours, attendance rules; saved, then the list reloads', (tester) async {
+  testWidgets('Add schedule, 5 steps: group, hours, break, attendance, review; one save, then the list reloads', (tester) async {
     final api = await _pump(tester);
     await _loaded(tester, api);
     await _openAdd(tester, api);
 
-    // Step 1
     expect(find.text('Create schedule'), findsOneWidget);
-    expect(find.text('1 Group & type'), findsOneWidget);
-    expect(find.text('Applies to all employees in this group.'), findsOneWidget);
+    for (final step in ['1 Group', '2 Working hours', '3 Break', '4 Attendance rules', '5 Review']) {
+      expect(find.text(step), findsOneWidget, reason: step);
+    }
     expect(_button(tester, 'Continue'), isNull, reason: 'no group yet');
-    await _choose(tester, 'Employee group *', 'White collar');
-    await _continue(tester);
+    await _toBreakStep(tester);
 
-    // Step 2
-    expect(_button(tester, 'Continue'), isNull, reason: 'no day yet');
-    await tester.tap(find.text('Mon'));
-    await tester.pump();
-    // The time menus hold 288 entries; pick through the field itself.
-    _pickTime(tester, 'Start', '08:00');
-    _pickTime(tester, 'Finish', '16:30');
+    // Step 3: a choice must be made.
+    expect(_button(tester, 'Continue'), isNull);
+    await tester.tap(find.text('A break every working day'));
+    await tester.pumpAndSettle();
+    tester.widget<ScheduleTimeField>(find.byType(ScheduleTimeField)).onChanged!('12:00');
+    tester.widget<JitanSelectField<int>>(find.widgetWithText(JitanSelectField<int>, 'Length')).onChanged!(30);
     await tester.pump();
     await _continue(tester);
 
-    // Step 3
+    // Step 4, then the review.
     expect(find.text('Actual registrations remain unchanged; tolerance affects attendance status.'), findsOneWidget);
-    api.writeResult = groupSchedule(2, 'White collar', work: workDays([1], '08:00', '16:30'));
+    await _continue(tester);
+    expect(find.text('Review schedule'), findsOneWidget);
+    expect(find.text('Mon 08:00–16:30'), findsOneWidget);
+    expect(find.text('12:00 · 30 min every working day'), findsOneWidget);
+
+    api.writeResult = groupSchedule(2, 'White collar', work: workDays([1], '08:00', '16:30'), breakDays: breaks([1], '12:00', 30));
     await tester.tap(find.text('Save schedule'));
     await tester.pump();
     await tester.pump();
     await _loaded(tester, api, [_blue, api.writeResult!, _mixed]);
     await tester.pumpAndSettle();
 
-    final (method, groupId, request as SetWorkHoursRequest) = api.writes.single;
-    expect((method, groupId), ('setWorkHours', 2));
-    expect([for (final d in request.days) (d.dayId, d.start, d.finish)], [(11, '08:00', '16:30')]);
+    final (method, groupId, request as SetGroupScheduleRequest) = api.writes.single;
+    expect((method, groupId), ('setSchedule', 2));
+    expect([for (final d in request.workHours.days) (d.dayId, d.start, d.finish)], [(11, '08:00', '16:30')]);
+    expect([for (final b in request.breaks) (b.dayId, b.usualStart)], [(11, '12:00')]);
     expect(find.text('Create schedule'), findsNothing);
     expect(find.text('Schedule saved for White collar.'), findsOneWidget);
-    expect(api.listCalls, 2, reason: 'reloaded after the save');
+  });
+
+  testWidgets('"No break" goes straight on; the review says so', (tester) async {
+    final api = await _pump(tester);
+    await _loaded(tester, api);
+    await _openAdd(tester, api);
+    await _toBreakStep(tester);
+
+    await tester.tap(find.text('No break'));
+    await tester.pumpAndSettle();
+    await _continue(tester);
+    await _continue(tester);
+
+    expect(find.text('Review schedule'), findsOneWidget);
+    expect(find.text('No break'), findsOneWidget);
   });
 
   testWidgets('Back keeps what was entered; finish before start stops at step 2', (tester) async {
@@ -162,7 +192,6 @@ void main() {
     await tester.pump();
     await _continue(tester);
     expect(find.text('Finish must be after start.'), findsOneWidget);
-    expect(find.text('2 Working hours'), findsOneWidget);
 
     await tester.tap(find.text('Back'));
     await tester.pumpAndSettle();
@@ -185,40 +214,29 @@ void main() {
 
     expect(find.text('Day'), findsOneWidget);
     expect(find.byType(ScheduleTimeField), findsNWidgets(10), reason: 'start and finish for five days');
-    expect(find.text('Only selected working days have time fields. Unselected days are excluded.'), findsOneWidget);
   });
 
-  testWidgets('a break: details, then a review of what will be saved', (tester) async {
+  testWidgets('the wizard keeps the same size on every step', (tester) async {
     final api = await _pump(tester);
-    // A group with work hours and no break yet.
-    await _loaded(tester, api, [groupSchedule(4, 'Green', work: workDays([1, 2, 3, 4, 5], '08:00', '16:30'))]);
+    await _loaded(tester, api);
     await _openAdd(tester, api);
-    await _choose(tester, 'Employee group *', 'Green');
-    await tester.tap(find.widgetWithText(JitanSelectField<ScheduleKind>, 'Schedule type *'), warnIfMissed: false);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Break').last);
-    await tester.pumpAndSettle();
-    expect(find.text('2 Break details'), findsOneWidget);
-    await _continue(tester);
+    Size size() => tester.getSize(find.byType(Dialog));
 
-    await tester.tap(find.text('Mon–Fri'));
-    await tester.pump();
-    tester.widget<ScheduleTimeField>(find.byType(ScheduleTimeField)).onChanged!('12:00');
-    tester.widget<JitanSelectField<int>>(find.widgetWithText(JitanSelectField<int>, 'Length')).onChanged!(30);
-    await tester.pump();
-    await _continue(tester);
-
-    expect(find.text('Review break'), findsOneWidget);
-    expect(find.text('Green · Mon–Fri · 12:00 · 30 minutes'), findsOneWidget);
+    final first = size();
+    await _toBreakStep(tester);
+    expect(size(), first, reason: 'break step');
+    await tester.tap(find.text('A break every working day'));
+    await tester.pumpAndSettle();
+    expect(size(), first, reason: 'break step with its fields');
   });
 
-  testWidgets('a group that has work hours already: "Edit that schedule instead" fills them in', (tester) async {
+  testWidgets('a group that has a schedule: "Edit that schedule instead" fills it in', (tester) async {
     final api = await _pump(tester);
     await _loaded(tester, api);
     await _openAdd(tester, api);
 
     await _choose(tester, 'Employee group *', 'Blue collar');
-    expect(find.text('Blue collar already has work hours.'), findsOneWidget);
+    expect(find.text('Blue collar already has a schedule.'), findsOneWidget);
     expect(_button(tester, 'Continue'), isNull);
 
     await tester.tap(find.text('Edit that schedule instead →'));
@@ -246,38 +264,6 @@ void main() {
     expect(chosen, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
   });
 
-  testWidgets('a break for a group without work hours is stopped on step 1', (tester) async {
-    final api = await _pump(tester);
-    await _loaded(tester, api);
-    await _openAdd(tester, api);
-    await _choose(tester, 'Employee group *', 'White collar');
-    await tester.tap(find.widgetWithText(JitanSelectField<ScheduleKind>, 'Schedule type *'), warnIfMissed: false);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Break').last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Set the work hours of White collar before its breaks.'), findsOneWidget);
-    expect(_button(tester, 'Continue'), isNull);
-  });
-
-  testWidgets('the wizard keeps the same size on every step', (tester) async {
-    final api = await _pump(tester);
-    await _loaded(tester, api);
-    await _openAdd(tester, api);
-    Size size() => tester.getSize(find.byType(Dialog));
-
-    final first = size();
-    await _choose(tester, 'Employee group *', 'White collar');
-    await _continue(tester);
-    expect(size(), first, reason: 'step 2');
-
-    await tester.tap(find.text('Mon–Fri'));
-    await tester.pump();
-    await tester.tap(find.text('Same hours every working day'));
-    await tester.pumpAndSettle();
-    expect(size(), first, reason: 'step 2 with five days of hours');
-  });
-
   testWidgets('a group nobody is only in is blocked', (tester) async {
     final api = await _pump(tester);
     await _loaded(tester, api);
@@ -296,7 +282,6 @@ void main() {
     await tester.tap(find.byTooltip('Schedule actions').at(1));
     await tester.pumpAndSettle();
     expect(find.text('Manage schedules'), findsOneWidget);
-    expect(find.text('Blue collar · Break'), findsNWidgets(2), reason: 'the row and the dialog subtitle');
     await tester.tap(find.text('Remove schedule'));
     await tester.pumpAndSettle();
     expect(find.text('Remove schedule?'), findsOneWidget);
@@ -324,6 +309,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Edit schedule'), findsOneWidget);
-    expect(find.text('1 Group & type'), findsOneWidget);
+    expect(find.text('1 Group'), findsOneWidget);
   });
 }

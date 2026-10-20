@@ -45,14 +45,13 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     _ => const [],
   };
 
-  Future<void> _open({GroupSchedule? group, ScheduleKind? kind}) async {
+  Future<void> _open({GroupSchedule? group}) async {
     final saved = await showScheduleDialog(
       context,
       api: widget.api,
       groups: _groups,
       options: _controller.options,
       group: group,
-      kind: kind,
     );
     if (saved == null || !mounted) return;
     await _controller.load();
@@ -68,7 +67,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     if (action == null || !mounted) return;
     switch (action) {
       case ScheduleRowAction.edit:
-        await _open(group: row.schedule, kind: row.kind);
+        await _open(group: row.schedule);
       case ScheduleRowAction.deactivate:
         final done = await showDeactivateScheduleDialog(context, controller: _controller, row: row);
         if (!done || !mounted) return;

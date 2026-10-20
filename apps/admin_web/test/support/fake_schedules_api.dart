@@ -52,6 +52,9 @@ class FakeSchedulesApi implements SchedulesApi {
   }
 
   @override
+  Future<GroupSchedule> setSchedule(int groupId, SetGroupScheduleRequest request) => _write('setSchedule', groupId, request);
+
+  @override
   Future<GroupSchedule> setWorkHours(int groupId, SetWorkHoursRequest request) => _write('setWorkHours', groupId, request);
 
   @override
@@ -114,3 +117,9 @@ GroupSchedule groupSchedule(
           ? [ScheduleVariant(employeeCount: 3, workDays: work, breaks: breakDays)]
           : const []),
 );
+
+/// A 400 validation_failed naming [field], as the server sends it.
+abstract final class ApiClientExceptionFor {
+  static ApiClientException validation(String field) =>
+      ApiClientException.server(400, ApiError(code: ApiErrorCode.validationFailed, message: 'detail', field: field));
+}
