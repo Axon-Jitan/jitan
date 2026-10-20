@@ -40,7 +40,8 @@ void main() {
     final item = tester.getRect(find.widgetWithText(MenuItemButton, 'Work hours'));
     expect(item.top, greaterThan(field.bottom), reason: 'below the field');
     expect(item.top, greaterThan(label.bottom), reason: 'below the label');
-    expect(tester.getSize(find.widgetWithText(MenuItemButton, 'Break')).width, 200);
+    // The menu is as wide as the field; its items sit 6 px inside it.
+    expect(tester.getSize(find.widgetWithText(MenuItemButton, 'Break')).width, 200 - 2 * 6);
 
     await tester.tap(find.widgetWithText(MenuItemButton, 'Break'));
     await tester.pumpAndSettle();

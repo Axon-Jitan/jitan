@@ -23,7 +23,7 @@ class JitanInlineError extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: JitanTextStyles.stateTitle.copyWith(fontSize: 11, color: JitanColors.error)),
+                Text(title, style: JitanTextStyles.stateTitle.copyWith(fontSize: 13, color: JitanColors.error)),
                 const SizedBox(height: 2),
                 Text(message, style: JitanTextStyles.stateMessage),
               ],

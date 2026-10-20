@@ -22,41 +22,41 @@ abstract final class JitanTextStyles {
   // Page
   static final pageTitle = _base.copyWith(fontSize: 30, fontWeight: _semiBold);
   static final pageSubtitle =
-      _base.copyWith(fontSize: 13, fontWeight: _regular, color: JitanColors.inkMuted);
+      _base.copyWith(fontSize: 14, fontWeight: _regular, color: JitanColors.inkMuted);
 
   // Tables
   static final tableHeader =
-      _base.copyWith(fontSize: 10, fontWeight: _bold, color: JitanColors.inkMuted);
-  static final tableCell = _base.copyWith(fontSize: 11, fontWeight: _regular);
-  static final tableCellStrong = _base.copyWith(fontSize: 11, fontWeight: _semiBold);
+      _base.copyWith(fontSize: 12, fontWeight: _bold, color: JitanColors.inkMuted);
+  static final tableCell = _base.copyWith(fontSize: 13, fontWeight: _regular);
+  static final tableCellStrong = _base.copyWith(fontSize: 13, fontWeight: _semiBold);
 
   // Modals and forms
-  static final modalTitle = _base.copyWith(fontSize: 24, fontWeight: _semiBold);
+  static final modalTitle = _base.copyWith(fontSize: 25, fontWeight: _semiBold);
   static final modalSubtitle =
-      _base.copyWith(fontSize: 11, fontWeight: _regular, color: JitanColors.inkMuted);
+      _base.copyWith(fontSize: 13, fontWeight: _regular, color: JitanColors.inkMuted);
   static final fieldLabel =
-      _base.copyWith(fontSize: 10, fontWeight: _bold, color: JitanColors.inkMuted);
+      _base.copyWith(fontSize: 12, fontWeight: _bold, color: JitanColors.inkMuted);
   static final fieldError =
-      _base.copyWith(fontSize: 10, fontWeight: _regular, color: JitanColors.error);
+      _base.copyWith(fontSize: 12, fontWeight: _regular, color: JitanColors.error);
 
   // Inputs and buttons
-  static final inputText = _base.copyWith(fontSize: 11, fontWeight: _regular);
+  static final inputText = _base.copyWith(fontSize: 13, fontWeight: _regular);
   static final inputHint =
-      _base.copyWith(fontSize: 11, fontWeight: _regular, color: JitanColors.inkMuted);
+      _base.copyWith(fontSize: 13, fontWeight: _regular, color: JitanColors.inkMuted);
   static final buttonLabel =
-      _base.copyWith(fontSize: 11, fontWeight: _semiBold, color: JitanColors.surface);
+      _base.copyWith(fontSize: 13, fontWeight: _semiBold, color: JitanColors.surface);
 
   // Web sidebar
   static final logo = _base.copyWith(fontSize: 26, fontWeight: _bold, color: JitanColors.vermilion);
   static final sidebarCaption =
-      _base.copyWith(fontSize: 10, fontWeight: _bold, color: JitanColors.sidebarCaption);
+      _base.copyWith(fontSize: 11, fontWeight: _bold, color: JitanColors.sidebarCaption);
   static final navItem =
-      _base.copyWith(fontSize: 12, fontWeight: _regular, color: JitanColors.sidebarText);
+      _base.copyWith(fontSize: 14, fontWeight: _regular, color: JitanColors.sidebarText);
   static final navItemActive =
-      _base.copyWith(fontSize: 12, fontWeight: _semiBold, color: JitanColors.sidebarTextActive);
+      _base.copyWith(fontSize: 14, fontWeight: _semiBold, color: JitanColors.sidebarTextActive);
 
   // State views (loading / empty / error)
-  static final stateTitle = _base.copyWith(fontSize: 13, fontWeight: _semiBold);
+  static final stateTitle = _base.copyWith(fontSize: 15, fontWeight: _semiBold);
   static final stateMessage =
-      _base.copyWith(fontSize: 11, fontWeight: _regular, color: JitanColors.inkMuted);
+      _base.copyWith(fontSize: 13, fontWeight: _regular, color: JitanColors.inkMuted);
 }

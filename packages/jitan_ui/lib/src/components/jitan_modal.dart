@@ -84,7 +84,7 @@ class JitanModal extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       if (footerNote != null)
-                        Expanded(child: Text(footerNote!, style: JitanTextStyles.modalSubtitle.copyWith(fontSize: 10))),
+                        Expanded(child: Text(footerNote!, style: JitanTextStyles.modalSubtitle.copyWith(fontSize: 12))),
                       for (var i = 0; i < actions.length; i++) ...[
                         if (i > 0) const SizedBox(width: 12),
                         actions[i],

@@ -46,9 +46,11 @@ class JitanSelectField<T> extends StatefulWidget {
 class _JitanSelectFieldState<T> extends State<JitanSelectField<T>> {
   final _menu = MenuController();
 
-  static const _menuGap = 4.0;
+  static const _menuGap = 6.0;
   static const _menuMaxHeight = 320.0;
+  static const _menuInset = 6.0;
   static const _itemHeight = 40.0;
+  static const _itemRadius = 10.0;
 
   bool get _enabled => widget.onChanged != null;
 
@@ -57,59 +59,102 @@ class _JitanSelectFieldState<T> extends State<JitanSelectField<T>> {
   @override
   Widget build(BuildContext context) {
     final field = LayoutBuilder(
-      builder: (context, constraints) => MenuAnchor(
-        controller: _menu,
-        alignmentOffset: const Offset(0, _menuGap),
-        onOpen: () => setState(() {}),
-        onClose: () => setState(() {}),
-        style: MenuStyle(
-          backgroundColor: const WidgetStatePropertyAll(JitanColors.surface),
-          surfaceTintColor: const WidgetStatePropertyAll(JitanColors.surface),
-          elevation: const WidgetStatePropertyAll(6),
-          padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 6)),
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(JitanDimensions.inputRadius)),
-          ),
-          minimumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, 0)),
-          maximumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, _menuMaxHeight)),
-        ),
-        menuChildren: [
-          for (final option in widget.options)
-            MenuItemButton(
-              autofocus: option.value == widget.value,
-              onPressed: () => widget.onChanged?.call(option.value),
-              style: ButtonStyle(
-                minimumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, _itemHeight)),
-                padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 14)),
-                backgroundColor: WidgetStatePropertyAll(
-                  option.value == widget.value ? JitanColors.inputFill : null,
-                ),
-              ),
-              child: Text(
-                option.label,
-                overflow: TextOverflow.ellipsis,
-                style: option.value == widget.value
-                    ? JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w600)
-                    : JitanTextStyles.inputText,
+      builder: (context, constraints) {
+        final itemWidth = constraints.maxWidth - _menuInset * 2;
+        return MenuAnchor(
+          controller: _menu,
+          alignmentOffset: const Offset(0, _menuGap),
+          onOpen: () => setState(() {}),
+          onClose: () => setState(() {}),
+          style: MenuStyle(
+            backgroundColor: const WidgetStatePropertyAll(JitanColors.surface),
+            surfaceTintColor: const WidgetStatePropertyAll(JitanColors.surface),
+            shadowColor: WidgetStatePropertyAll(JitanColors.ink.withValues(alpha: 0.35)),
+            elevation: const WidgetStatePropertyAll(10),
+            padding: const WidgetStatePropertyAll(EdgeInsets.all(_menuInset)),
+            shape: const WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+                side: BorderSide(color: JitanColors.cardBorder),
               ),
             ),
-        ],
-        builder: (context, menu, _) => _Field(
-          text: _selectedLabel,
-          isHint: _selectedLabel == null,
-          hintText: widget.hintText,
-          open: menu.isOpen,
-          enabled: _enabled,
-          errorText: widget.errorText,
-          onTap: _enabled ? _toggle : null,
-        ),
-      ),
+            minimumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, 0)),
+            maximumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, _menuMaxHeight)),
+          ),
+          menuChildren: [
+            for (final option in widget.options)
+              _MenuItem(
+                label: option.label,
+                selected: option.value == widget.value,
+                width: itemWidth,
+                height: _itemHeight,
+                radius: _itemRadius,
+                onPressed: () => widget.onChanged?.call(option.value),
+              ),
+          ],
+          builder: (context, menu, _) => _Field(
+            text: _selectedLabel,
+            isHint: _selectedLabel == null,
+            hintText: widget.hintText,
+            open: menu.isOpen,
+            enabled: _enabled,
+            errorText: widget.errorText,
+            onTap: _enabled ? _toggle : null,
+          ),
+        );
+      },
     );
     final label = widget.label;
     return label == null ? field : JitanFieldLabel(label: label, child: field);
   }
 
   String? get _selectedLabel => widget.options.where((o) => o.value == widget.value).firstOrNull?.label;
+}
+
+/// One choice in the open menu: a rounded row with a soft hover; the
+/// current choice is bold with a check mark.
+class _MenuItem extends StatelessWidget {
+  const _MenuItem({
+    required this.label,
+    required this.selected,
+    required this.width,
+    required this.height,
+    required this.radius,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool selected;
+  final double width;
+  final double height;
+  final double radius;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => MenuItemButton(
+    autofocus: selected,
+    onPressed: onPressed,
+    trailingIcon: selected ? const Icon(Icons.check_rounded, size: 18, color: JitanColors.vermilion) : null,
+    style: ButtonStyle(
+      minimumSize: WidgetStatePropertyAll(Size(width, height)),
+      maximumSize: WidgetStatePropertyAll(Size(width, height)),
+      padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius))),
+      backgroundColor: WidgetStatePropertyAll(selected ? JitanColors.warmWhite : null),
+      overlayColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.pressed)
+            ? JitanColors.inputBorder
+            : states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)
+            ? JitanColors.inputFill
+            : null,
+      ),
+    ),
+    child: Text(
+      label,
+      overflow: TextOverflow.ellipsis,
+      style: selected ? JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w600) : JitanTextStyles.inputText,
+    ),
+  );
 }
 
 /// The closed field: current choice (or hint) and a chevron, outlined like
@@ -136,11 +181,8 @@ class _Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final error = errorText;
-    final borderColor = error != null
-        ? JitanColors.error
-        : open
-        ? JitanColors.inkMuted
-        : JitanColors.inputBorder;
+    // The border stays the same while the menu is open; only an error colours it.
+    final borderColor = error != null ? JitanColors.error : JitanColors.inputBorder;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -161,7 +203,7 @@ class _Field extends StatelessWidget {
               child: SizedBox(
                 height: JitanDimensions.fieldHeight,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 11, right: 8),
+                  padding: const EdgeInsets.only(left: 14, right: 10),
                   child: Row(
                     children: [
                       Expanded(

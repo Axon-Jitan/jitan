@@ -57,10 +57,22 @@ class _DevCompanySelectorState extends State<DevCompanySelector> {
         ),
         child: Row(
           children: [
-            Text(context.t(AdminTextKeys.devCompanySelectorLabel), style: JitanTextStyles.tableHeader),
+            Flexible(
+              child: Text(
+                context.t(AdminTextKeys.devCompanySelectorLabel),
+                style: JitanTextStyles.tableHeader,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const SizedBox(width: 12),
             if (_failed) ...[
-              Text(context.t(AdminTextKeys.devCompanySelectorLoadFailed), style: JitanTextStyles.stateMessage),
+              Flexible(
+                child: Text(
+                  context.t(AdminTextKeys.devCompanySelectorLoadFailed),
+                  style: JitanTextStyles.stateMessage,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               TextButton(onPressed: _load, child: Text(context.t(CommonTextKeys.retry))),
             ] else if (companies == null)
               const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))

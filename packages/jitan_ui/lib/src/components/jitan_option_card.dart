@@ -67,7 +67,7 @@ class JitanOptionCard extends StatelessWidget {
                       Text(title, style: JitanTextStyles.stateTitle.copyWith(fontSize: height < 64 ? 12 : 13)),
                       if (detail != null) ...[
                         const SizedBox(height: 8),
-                        Text(detail!, style: JitanTextStyles.stateMessage.copyWith(fontSize: 10)),
+                        Text(detail!, style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
                       ],
                     ],
                   ),

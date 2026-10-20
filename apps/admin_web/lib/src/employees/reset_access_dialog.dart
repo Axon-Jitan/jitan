@@ -62,7 +62,7 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
     final employee = widget.employee;
     final name = [employee.firstName, employee.lastName].whereType<String>().join(' ');
     final failure = _failure;
-    final effectStyle = JitanTextStyles.stateMessage.copyWith(fontSize: 10, color: JitanColors.errorStrong);
+    final effectStyle = JitanTextStyles.stateMessage.copyWith(fontSize: 12, color: JitanColors.errorStrong);
     return JitanModal(
       title: context.t(AdminTextKeys.employeeResetAccessTitle),
       subtitle: context.t(AdminTextKeys.employeeResetAccessSubtitle),
@@ -86,7 +86,7 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
                     AdminTextKeys.employeeDetailsSubtitle,
                     args: {'company': employee.companyName, 'code': employee.code},
                   ),
-                  style: JitanTextStyles.stateMessage.copyWith(fontSize: 10),
+                  style: JitanTextStyles.stateMessage.copyWith(fontSize: 12),
                 ),
               ],
             ),
@@ -102,7 +102,7 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
               children: [
                 Text(
                   context.t(AdminTextKeys.employeeResetAccessEffectsTitle),
-                  style: JitanTextStyles.stateTitle.copyWith(fontSize: 11, color: JitanColors.errorStrong),
+                  style: JitanTextStyles.stateTitle.copyWith(fontSize: 13, color: JitanColors.errorStrong),
                 ),
                 const SizedBox(height: 10),
                 for (final key in const [
@@ -116,7 +116,7 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
                 // Figma 207:225: the next step after the reset.
                 Text(
                   context.t(AdminTextKeys.employeeResetAccessNextStep),
-                  style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 10, color: JitanColors.errorStrong),
+                  style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 12, color: JitanColors.errorStrong),
                 ),
               ],
             ),

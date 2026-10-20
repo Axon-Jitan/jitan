@@ -168,12 +168,12 @@ class ScheduleFormBanner extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: 6,
         children: [
-          Text(text, style: JitanTextStyles.stateTitle.copyWith(fontSize: 12, color: foreground)),
+          Text(text, style: JitanTextStyles.stateTitle.copyWith(fontSize: 14, color: foreground)),
           if (action != null)
             TextButton(
               onPressed: onAction,
               style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24)),
-              child: Text('$action →', style: JitanTextStyles.stateTitle.copyWith(fontSize: 12, color: JitanColors.vermilion)),
+              child: Text('$action →', style: JitanTextStyles.stateTitle.copyWith(fontSize: 14, color: JitanColors.vermilion)),
             ),
         ],
       ),
