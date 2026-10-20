@@ -130,72 +130,88 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     final filter = _controller.filter;
     void update(ScheduleFilter next) => _controller.updateFilter(next);
     final groups = {for (final g in _groups) g.group.id: g.group.name};
-    return Wrap(
-      spacing: 14,
-      runSpacing: 14,
-      crossAxisAlignment: WrapCrossAlignment.end,
-      children: [
-        SizedBox(
-          width: JitanDimensions.filterSearchWidth,
-          child: JitanFieldLabel(
-            label: context.t(CommonTextKeys.searchLabel),
-            child: JitanSearchField(
-              outlined: true,
-              hintText: context.t(AdminTextKeys.scheduleSearch),
-              onChanged: (text) => update(
-                ScheduleFilter(search: text.trim(), kind: filter.kind, groupId: filter.groupId, status: filter.status),
-              ),
-            ),
-          ),
+    final search = JitanFieldLabel(
+      label: context.t(CommonTextKeys.searchLabel),
+      child: JitanSearchField(
+        outlined: true,
+        hintText: context.t(AdminTextKeys.scheduleSearch),
+        onChanged: (text) => update(
+          ScheduleFilter(search: text.trim(), kind: filter.kind, groupId: filter.groupId, status: filter.status),
         ),
-        SizedBox(
-          width: 150,
-          child: JitanSelectField<ScheduleKind?>(
-            label: context.t(AdminTextKeys.scheduleFilterType),
-            value: filter.kind,
-            options: [
-              JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterTypeAll)),
-              JitanSelectOption(value: ScheduleKind.workHours, label: context.t(AdminTextKeys.scheduleKindWorkHours)),
-              JitanSelectOption(value: ScheduleKind.breaks, label: context.t(AdminTextKeys.scheduleKindBreaks)),
-            ],
-            onChanged: (kind) => update(
-              ScheduleFilter(search: filter.search, kind: kind, groupId: filter.groupId, status: filter.status),
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 150,
-          child: JitanSelectField<int?>(
-            label: context.t(AdminTextKeys.scheduleFilterGroup),
-            value: filter.groupId,
-            options: [
-              JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterGroupAll)),
-              for (final MapEntry(:key, :value) in groups.entries) JitanSelectOption(value: key, label: value),
-            ],
-            onChanged: (id) => update(
-              ScheduleFilter(search: filter.search, kind: filter.kind, groupId: id, status: filter.status),
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 250,
-          child: JitanSelectField<ScheduleRowStatus?>(
-            label: context.t(AdminTextKeys.scheduleFilterStatus),
-            value: filter.status,
-            options: [
-              JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterStatusAll)),
-              JitanSelectOption(value: ScheduleRowStatus.active, label: context.t(CommonTextKeys.statusActive)),
-              JitanSelectOption(
-                value: ScheduleRowStatus.employeesDiffer,
-                label: context.t(AdminTextKeys.scheduleStatusDiffer),
-              ),
-            ],
-            onChanged: (status) => update(
-              ScheduleFilter(search: filter.search, kind: filter.kind, groupId: filter.groupId, status: status),
-            ),
-          ),
+      ),
+    );
+    final type = JitanSelectField<ScheduleKind?>(
+      label: context.t(AdminTextKeys.scheduleFilterType),
+      value: filter.kind,
+      options: [
+        JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterTypeAll)),
+        JitanSelectOption(value: ScheduleKind.workHours, label: context.t(AdminTextKeys.scheduleKindWorkHours)),
+        JitanSelectOption(value: ScheduleKind.breaks, label: context.t(AdminTextKeys.scheduleKindBreaks)),
+      ],
+      onChanged: (kind) => update(
+        ScheduleFilter(search: filter.search, kind: kind, groupId: filter.groupId, status: filter.status),
+      ),
+    );
+    final group = JitanSelectField<int?>(
+      label: context.t(AdminTextKeys.scheduleFilterGroup),
+      value: filter.groupId,
+      options: [
+        JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterGroupAll)),
+        for (final MapEntry(:key, :value) in groups.entries) JitanSelectOption(value: key, label: value),
+      ],
+      onChanged: (id) => update(
+        ScheduleFilter(search: filter.search, kind: filter.kind, groupId: id, status: filter.status),
+      ),
+    );
+    final status = JitanSelectField<ScheduleRowStatus?>(
+      label: context.t(AdminTextKeys.scheduleFilterStatus),
+      value: filter.status,
+      options: [
+        JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterStatusAll)),
+        JitanSelectOption(value: ScheduleRowStatus.active, label: context.t(CommonTextKeys.statusActive)),
+        JitanSelectOption(
+          value: ScheduleRowStatus.employeesDiffer,
+          label: context.t(AdminTextKeys.scheduleStatusDiffer),
         ),
       ],
+      onChanged: (status) => update(
+        ScheduleFilter(search: filter.search, kind: filter.kind, groupId: filter.groupId, status: status),
+      ),
+    );
+    // Wide enough: the fields share the full width (Figma's 420 : 150 : 150 :
+    // 250), so the last one ends exactly under "Add schedule". Narrower: they
+    // keep those widths and wrap.
+    const widths = (search: JitanDimensions.filterSearchWidth, type: 150.0, group: 150.0, status: 250.0);
+    const gap = 16.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final total = widths.search + widths.type + widths.group + widths.status + 3 * gap;
+        if (constraints.maxWidth < total) {
+          return Wrap(
+            spacing: 14,
+            runSpacing: 14,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
+              SizedBox(width: widths.search, child: search),
+              SizedBox(width: widths.type, child: type),
+              SizedBox(width: widths.group, child: group),
+              SizedBox(width: widths.status, child: status),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(flex: widths.search.round(), child: search),
+            const SizedBox(width: gap),
+            Expanded(flex: widths.type.round(), child: type),
+            const SizedBox(width: gap),
+            Expanded(flex: widths.group.round(), child: group),
+            const SizedBox(width: gap),
+            Expanded(flex: widths.status.round(), child: status),
+          ],
+        );
+      },
     );
   }
 
