@@ -8,6 +8,7 @@ class AdminServices {
     required this.employeesApi,
     required this.groupsApi,
     required this.assignmentsApi,
+    required this.schedulesApi,
     this.devTools = false,
   });
 
@@ -15,6 +16,7 @@ class AdminServices {
   final EmployeesApi employeesApi;
   final GroupsApi groupsApi;
   final EmployeeAssignmentsApi assignmentsApi;
+  final SchedulesApi schedulesApi;
 
   /// DEVELOPMENT ONLY tools in the UI (see `AdminWebConfig.devTools`).
   final bool devTools;

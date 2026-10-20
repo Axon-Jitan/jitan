@@ -27,7 +27,7 @@ void main() {
 
     expect(find.text('jitan.'), findsOneWidget);
     final items = tester.widgetList<JitanNavItem>(find.byType(JitanNavItem)).toList();
-    expect(items.map((i) => (i.label, i.selected)), [('Companies', true), ('Employees', false)]);
+    expect(items.map((i) => (i.label, i.selected)), [('Companies', true), ('Employees', false), ('Schedules', false)]);
     expect(fakes.companies.calls, [''], reason: 'the page loads companies on open');
   });
 
@@ -37,10 +37,24 @@ void main() {
     await tester.pumpWidget(app(TestServices()));
     await tester.pump();
 
-    expect(find.byType(JitanNavItem), findsNWidgets(2));
-    for (final unbuilt in ['Dashboard', 'Terminals', 'Time records', 'Exceptions', 'Reports']) {
+    expect(find.byType(JitanNavItem), findsNWidgets(3));
+    for (final unbuilt in ['Dashboard', 'Terminals', 'Groups', 'Time records', 'Exceptions', 'Reports']) {
       expect(find.text(unbuilt), findsNothing, reason: unbuilt);
     }
+  });
+
+  testWidgets('navigates to Schedules from the sidebar', (tester) async {
+    useDesktopSize(tester);
+
+    final services = TestServices();
+    await tester.pumpWidget(app(services));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(JitanNavItem, 'Schedules'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Manage time registration, breaks and rounding.'), findsOneWidget);
+    expect(services.schedules.listCalls, 1);
   });
 
   testWidgets('navigates to Employees from the sidebar', (tester) async {
@@ -86,6 +100,6 @@ void main() {
     await tester.tap(find.byTooltip('Open navigation menu'));
     // Not pumpAndSettle: the page's loading spinner animates indefinitely.
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(JitanNavItem), findsNWidgets(2));
+    expect(find.byType(JitanNavItem), findsNWidgets(3));
   });
 }

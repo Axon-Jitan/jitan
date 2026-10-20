@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../companies/companies_screen.dart';
 import '../employees/employees_screen.dart';
+import '../schedules/schedules_screen.dart';
 import 'admin_routes.dart';
 import 'admin_services.dart';
 import 'admin_shell.dart';
@@ -33,6 +34,10 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
                 assignmentsApi: services.assignmentsApi,
               ),
             ),
+          ),
+          GoRoute(
+            path: AdminRoutes.schedules,
+            pageBuilder: (context, state) => NoTransitionPage(child: SchedulesScreen(api: services.schedulesApi)),
           ),
         ],
       ),

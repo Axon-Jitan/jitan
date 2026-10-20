@@ -3,4 +3,5 @@
 abstract final class AdminRoutes {
   static const companies = '/companies';
   static const employees = '/employees';
+  static const schedules = '/schedules';
 }
