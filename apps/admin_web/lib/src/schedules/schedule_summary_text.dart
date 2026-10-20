@@ -24,6 +24,17 @@ String roundingText(Translations t, ScheduleRounding? rounding) => switch (round
   ScheduleRounding(:final intervalMinutes) => t.t(AdminTextKeys.scheduleRoundingDown, args: {'minutes': intervalMinutes}),
 };
 
+/// "Mon–Fri 08:00–16:30" (the list's "Days & hours", Figma 1359:2). Days
+/// with the same hours are joined; consecutive days become a range.
+String workHoursDaysSummary(Translations t, ScheduleVariant variant) {
+  final days = variant.workDays.where((d) => d.start != null && d.finish != null).toList();
+  if (days.isEmpty) return t.t(CommonTextKeys.valueUnavailable);
+  return [
+    for (final (weekdays, (start, finish)) in _runs(t, [for (final d in days) (d.day.weekday, (d.start!.time, d.finish!.time))]))
+      t.t(AdminTextKeys.scheduleSummaryHours, args: {'days': weekdays, 'start': start, 'finish': finish}),
+  ].join(', ');
+}
+
 /// "Mon–Fri 08:00–16:30 · ±5 min · start Up · 15 min, finish Down · 15 min".
 /// Days with the same hours are joined; consecutive days become a range.
 String workHoursSummary(Translations t, ScheduleVariant variant) {
@@ -62,10 +73,11 @@ List<(String, V)> _runs<V>(Translations t, List<(int, V)> days) {
   for (final (weekday, value) in [...days]..sort((a, b) => a.$1.compareTo(b.$1))) {
     (byValue[value] ??= []).add(weekday);
   }
-  return [for (final MapEntry(key: value, value: weekdays) in byValue.entries) (_dayList(t, weekdays), value)];
+  return [for (final MapEntry(key: value, value: weekdays) in byValue.entries) (dayListText(t, weekdays), value)];
 }
 
-String _dayList(Translations t, List<int> weekdays) {
+/// "Mon–Fri", "Mon, Wed" …: consecutive weekdays become a range.
+String dayListText(Translations t, List<int> weekdays) {
   final parts = <String>[];
   var start = 0;
   for (var i = 1; i <= weekdays.length; i++) {

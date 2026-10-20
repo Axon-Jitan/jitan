@@ -68,80 +68,120 @@ class ScheduleDayToggle extends StatelessWidget {
   );
 }
 
-/// One line of a [ScheduleHoursTable]: a day (or none), start and finish.
+/// One line of a [ScheduleHoursTable]: a day, its start and its finish.
 typedef ScheduleHoursLine = ({
-  String? day,
+  String day,
   String? start,
   String? finish,
   ValueChanged<String?>? onStart,
   ValueChanged<String?>? onFinish,
 });
 
-/// Hours as a small table: "Start" and "Finish" as column headings once,
-/// then one "[--:--] – [--:--]" line per day. [afterFirst] (the "Same hours
-/// every working day" switch) sits right under the first line.
+/// Hours per working day (Figma `Daily hours` 1367:2): "Day", "Start" and
+/// "Finish" as column headings once, then one shaded-or-plain line per day.
 class ScheduleHoursTable extends StatelessWidget {
   const ScheduleHoursTable({
     super.key,
     required this.lines,
+    required this.dayLabel,
     required this.startLabel,
     required this.finishLabel,
     required this.timeHint,
-    this.afterFirst,
   });
 
   final List<ScheduleHoursLine> lines;
+  final String dayLabel;
   final String startLabel;
   final String finishLabel;
   final String timeHint;
-  final Widget? afterFirst;
 
-  static const timeWidth = 130.0;
-  static const dashWidth = 28.0;
-  static const dayWidth = 56.0;
+  static const _dayWidth = 92.0;
+  static const _gap = 12.0;
 
   @override
   Widget build(BuildContext context) {
-    final withDays = lines.any((l) => l.day != null);
-    Widget cells(Widget? day, Widget start, Widget finish) => Row(
-      mainAxisSize: MainAxisSize.min,
+    Widget row(Widget day, Widget start, Widget finish) => Row(
       children: [
-        if (withDays) SizedBox(width: dayWidth, child: day),
-        SizedBox(width: timeWidth, child: start),
-        SizedBox(
-          width: dashWidth,
-          child: finish is Text
-              ? null
-              : Center(
-                  child: Text('–', style: JitanTextStyles.inputText.copyWith(color: JitanColors.inkMuted)),
-                ),
-        ),
-        SizedBox(width: timeWidth, child: finish),
+        SizedBox(width: _dayWidth, child: day),
+        Expanded(child: start),
+        const SizedBox(width: _gap),
+        Expanded(child: finish),
       ],
     );
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        cells(
-          null,
-          Text(startLabel, style: JitanTextStyles.fieldLabel),
-          Text(finishLabel, style: JitanTextStyles.fieldLabel),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: row(
+            Text(dayLabel, style: JitanTextStyles.fieldLabel),
+            Text(startLabel, style: JitanTextStyles.fieldLabel),
+            Text(finishLabel, style: JitanTextStyles.fieldLabel),
+          ),
         ),
         const SizedBox(height: JitanDimensions.fieldLabelGap),
-        for (final (index, line) in lines.indexed) ...[
-          if (index > 0) const SizedBox(height: 10),
-          cells(
-            line.day == null
-                ? null
-                : Text(line.day!, style: JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w600)),
-            ScheduleTimeField(hint: timeHint, value: line.start, onChanged: line.onStart),
-            ScheduleTimeField(hint: timeHint, value: line.finish, onChanged: line.onFinish),
+        for (final (index, line) in lines.indexed)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: index.isOdd ? JitanColors.warmWhite : null,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: row(
+                Text(line.day, style: JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w500)),
+                ScheduleTimeField(hint: timeHint, value: line.start, onChanged: line.onStart),
+                ScheduleTimeField(hint: timeHint, value: line.finish, onChanged: line.onFinish),
+              ),
+            ),
           ),
-          if (index == 0 && afterFirst != null) ...[const SizedBox(height: 10), afterFirst!],
-        ],
       ],
     );
   }
+}
+
+/// The wizard's progress: one bar per step, filled up to the current one,
+/// with the step's name under it (the current one bold).
+class ScheduleStepper extends StatelessWidget {
+  const ScheduleStepper({super.key, required this.labels, required this.current});
+
+  final List<String> labels;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      for (final (index, label) in labels.indexed) ...[
+        if (index > 0) const SizedBox(width: 14),
+        Expanded(
+          child: Semantics(
+            selected: index == current,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: index <= current ? JitanColors.vermilion : JitanColors.inputBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  label,
+                  style: index == current
+                      ? JitanTextStyles.fieldLabel.copyWith(color: JitanColors.ink, fontWeight: FontWeight.w600)
+                      : JitanTextStyles.fieldLabel,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ],
+  );
 }
 
 /// A whole number of minutes with "min" inside the box (tolerances).
@@ -153,10 +193,11 @@ class ScheduleMinutesField extends StatelessWidget {
     required this.unit,
     required this.enabled,
     this.errorText,
-    this.width = 130,
+    this.width,
   });
 
-  final double width;
+  /// `null` fills the available width.
+  final double? width;
   final String label;
   final TextEditingController controller;
   final String unit;

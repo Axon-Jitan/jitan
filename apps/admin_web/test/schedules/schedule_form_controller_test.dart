@@ -164,6 +164,45 @@ void main() {
     expect(c.dayIds, {11, 12, 13, 14, 15});
   });
 
+  test('wizard: Continue needs a group (step 1) and a day (step 2); each step checks its own fields', () async {
+    final c = await ready();
+    expect((c.step, c.canContinue), (0, false));
+    c.next();
+    expect(c.step, 0, reason: 'no group yet');
+
+    c.selectGroup(2);
+    c.next();
+    expect((c.step, c.canContinue), (1, false), reason: 'no day yet');
+
+    c
+      ..toggleDay(11)
+      ..setStart('16:00')
+      ..setFinish('08:00');
+    c.next();
+    expect(c.step, 1);
+    expect(c.fieldErrors[ScheduleFormController.fieldHours]?.key, AdminTextKeys.scheduleErrorFinishBeforeStart);
+
+    c.setFinish('17:00');
+    c.next();
+    expect((c.step, c.onLastStep), (2, true));
+
+    c.back();
+    expect(c.step, 1);
+    expect(c.start, '16:00', reason: 'going back keeps the answers');
+  });
+
+  test('a server refusal of the hours goes back to step 2', () async {
+    final c = await ready(group: blue, kind: ScheduleKind.workHours);
+    c
+      ..next()
+      ..next();
+    expect(c.step, 2);
+
+    api.writeFailure = serverError(400, ApiErrorCode.validationFailed);
+    await c.submit();
+    expect(c.step, 1);
+  });
+
   test('time choices are every 5 minutes of the day', () {
     expect(ScheduleFormController.timeChoices.length, 288);
     expect(ScheduleFormController.timeChoices.first, '00:00');

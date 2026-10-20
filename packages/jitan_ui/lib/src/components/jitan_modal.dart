@@ -19,6 +19,8 @@ class JitanModal extends StatelessWidget {
     this.width,
     this.onClose,
     this.footerNote,
+    this.leadingActions = const [],
+    this.bandFooter = false,
   });
 
   final String title;
@@ -37,6 +39,13 @@ class JitanModal extends StatelessWidget {
   /// (e.g. "Changes take effect after saving.").
   final String? footerNote;
 
+  /// Buttons at the left of the footer (e.g. "Back" in a wizard).
+  final List<Widget> leadingActions;
+
+  /// The footer as a full-width shaded band under the body (Figma wizard
+  /// dialogs) instead of a row inside the padding.
+  final bool bandFooter;
+
   @override
   Widget build(BuildContext context) => Dialog(
         backgroundColor: JitanColors.surface,
@@ -47,54 +56,103 @@ class JitanModal extends StatelessWidget {
           constraints: width == null
               ? const BoxConstraints(maxWidth: JitanDimensions.modalWidth)
               : BoxConstraints.tightFor(width: width),
-          child: Padding(
-            padding: const EdgeInsets.all(JitanDimensions.modalPadding),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: Semantics(header: true, child: Text(title, style: JitanTextStyles.modalTitle))),
-                    if (onClose != null)
-                      IconButton(
-                        tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-                        onPressed: onClose,
-                        icon: const Icon(Icons.close, size: 20, color: JitanColors.inkMuted),
-                      ),
-                  ],
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 8),
-                  Text(subtitle!, style: JitanTextStyles.modalSubtitle),
-                ],
-                const SizedBox(height: 32),
-                Flexible(child: SingleChildScrollView(child: body)),
-                if (actions.isNotEmpty) ...[
-                  SizedBox(height: footerNote == null ? 32 : 24),
-                  if (footerNote != null) ...[
-                    const Divider(height: 1, color: JitanColors.inputBorder),
-                    const SizedBox(height: 14),
-                  ],
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Flexible(
+                child: Padding(
+                  padding: bandFooter
+                      ? const EdgeInsets.fromLTRB(
+                          JitanDimensions.modalPadding,
+                          JitanDimensions.modalPadding,
+                          JitanDimensions.modalPadding,
+                          24,
+                        )
+                      : const EdgeInsets.all(JitanDimensions.modalPadding),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (footerNote != null)
-                        Expanded(child: Text(footerNote!, style: JitanTextStyles.modalSubtitle.copyWith(fontSize: 14))),
-                      for (var i = 0; i < actions.length; i++) ...[
-                        if (i > 0) const SizedBox(width: 12),
-                        actions[i],
+                      _header(context),
+                      const SizedBox(height: 32),
+                      Flexible(child: SingleChildScrollView(child: body)),
+                      if (!bandFooter && _hasFooter) ...[
+                        SizedBox(height: footerNote == null ? 32 : 24),
+                        if (footerNote != null) ...[
+                          const Divider(height: 1, color: JitanColors.inputBorder),
+                          const SizedBox(height: 14),
+                        ],
+                        _footerRow(),
                       ],
                     ],
                   ),
-                ],
-              ],
-            ),
+                ),
+              ),
+              if (bandFooter && _hasFooter)
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(JitanDimensions.modalRadius)),
+                  child: ColoredBox(
+                    color: JitanColors.warmWhite,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: JitanDimensions.modalPadding, vertical: 14),
+                      child: _footerRow(),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
+      );
+
+  bool get _hasFooter => actions.isNotEmpty || leadingActions.isNotEmpty;
+
+  Widget _header(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: Semantics(header: true, child: Text(title, style: JitanTextStyles.modalTitle))),
+              if (onClose != null)
+                IconButton(
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                  onPressed: onClose,
+                  icon: const Icon(Icons.close, size: 20, color: JitanColors.inkMuted),
+                ),
+            ],
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 8),
+            Text(subtitle!, style: JitanTextStyles.modalSubtitle),
+          ],
+        ],
+      );
+
+  Widget _footerRow() => Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          for (var i = 0; i < leadingActions.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            leadingActions[i],
+          ],
+          if (footerNote != null)
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(left: leadingActions.isEmpty ? 0 : 16, right: 16),
+                child: Text(footerNote!, style: JitanTextStyles.modalSubtitle.copyWith(fontSize: 14)),
+              ),
+            )
+          else
+            const Spacer(),
+          for (var i = 0; i < actions.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            actions[i],
+          ],
+        ],
       );
 }

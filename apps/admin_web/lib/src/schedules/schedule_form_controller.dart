@@ -29,8 +29,10 @@ class ScheduleOptionsFailed extends ScheduleOptionsState {
 /// A text key and its arguments, shown under the form.
 typedef ScheduleFormMessage = ({String key, Map<String, Object> args});
 
-/// State of the Create / Edit schedule dialog (Figma `HR / Schedules —
-/// Create Work hours` 1317:2, `Create Break` 1317:191 and their states).
+/// State of the Create / Edit schedule wizard (Figma `HR / Schedules —
+/// Create Work hours — Wizard step 1–3` 1365:2–457, `Create Break — Wizard
+/// step 1–3` 1365:683–1137, `Daily hours` 1367:2): group and type, then the
+/// hours (or break details), then attendance rules (or the break review).
 ///
 /// The checks here only give HR quick feedback; the server validates every
 /// value again and is the authority (ENGINEERING_RULES §19).
@@ -91,6 +93,13 @@ class ScheduleFormController extends ChangeNotifier {
   int? _breakLength;
   int? get breakLength => _breakLength;
 
+  /// The wizard step: 0 group & type, 1 hours or break details, 2 attendance
+  /// rules or review.
+  int _step = 0;
+  int get step => _step;
+  static const lastStep = 2;
+  bool get onLastStep => _step == lastStep;
+
   bool _submitting = false;
   bool get submitting => _submitting;
 
@@ -130,8 +139,15 @@ class ScheduleFormController extends ChangeNotifier {
   /// Creating what the group already has (Figma "conflict" 1317:1124).
   bool get conflict => !_editing && group != null && hasSchedule(group!, _kind);
 
-  /// A group and at least one day are still missing; the footer says so.
+  /// A group and at least one day are still missing.
   bool get missingRequired => group == null || _dayIds.isEmpty;
+
+  /// Whether "Continue" may be pressed on the current step.
+  bool get canContinue => switch (_step) {
+    0 => group != null && !blocked && !conflict && _options is ScheduleOptionsLoaded,
+    1 => _dayIds.isNotEmpty,
+    _ => false,
+  } && !_submitting;
 
   bool get canSave =>
       !missingRequired && !blocked && !conflict && !_submitting && _options is ScheduleOptionsLoaded;
@@ -178,6 +194,31 @@ class ScheduleFormController extends ChangeNotifier {
 
   void setBreakLength(int? minutes) => _change(() => _breakLength = minutes);
 
+  /// Goes to the next step when the current one is complete; otherwise
+  /// [fieldErrors] say what is missing.
+  void next() {
+    final current = group;
+    final loaded = _options;
+    if (!canContinue || current == null || loaded is! ScheduleOptionsLoaded) return;
+    _fieldErrors.clear();
+    _failure = null;
+    _validateStep(_step, current, loaded.options, _selectedDays(loaded.options));
+    if (_fieldErrors.isEmpty) _step++;
+    _notify();
+  }
+
+  void back() {
+    if (_step == 0 || _submitting) return;
+    _step--;
+    _fieldErrors.clear();
+    _failure = null;
+    _notify();
+  }
+
+  List<ScheduleDay> _selectedDays(ScheduleOptions options) => [
+    for (final day in options.days) if (_dayIds.contains(day.id)) day,
+  ];
+
   /// Switches to editing what the selected group has of [kind], filled in
   /// with it. When the employees differ, the set most of them have.
   void editExisting() {
@@ -219,11 +260,14 @@ class ScheduleFormController extends ChangeNotifier {
     if (current == null || loaded is! ScheduleOptionsLoaded || !canSave) return null;
     _fieldErrors.clear();
     _failure = null;
-    final days = [for (final day in loaded.options.days) if (_dayIds.contains(day.id)) day];
-    _validate(current, loaded.options, days);
-    if (_fieldErrors.isNotEmpty) {
-      _notify();
-      return null;
+    final days = _selectedDays(loaded.options);
+    for (final step in [1, 2]) {
+      _validateStep(step, current, loaded.options, days);
+      if (_fieldErrors.isNotEmpty) {
+        _step = step;
+        _notify();
+        return null;
+      }
     }
 
     _submitting = true;
@@ -261,10 +305,11 @@ class ScheduleFormController extends ChangeNotifier {
   String? _startOf(int dayId) => _sameHours ? _start : hoursOf(dayId).start;
   String? _finishOf(int dayId) => _sameHours ? _finish : hoursOf(dayId).finish;
 
-  void _validate(GroupSchedule current, ScheduleOptions options, List<ScheduleDay> days) {
-    if (days.isEmpty) _error(fieldDays, AdminTextKeys.scheduleErrorNoDays);
-    switch (_kind) {
-      case ScheduleKind.workHours:
+  /// The checks of one wizard step (step 0 has none: its choices are menus).
+  void _validateStep(int step, GroupSchedule current, ScheduleOptions options, List<ScheduleDay> days) {
+    if (step == 1 && days.isEmpty) _error(fieldDays, AdminTextKeys.scheduleErrorNoDays);
+    switch ((_kind, step)) {
+      case (ScheduleKind.workHours, 1):
         for (final day in days) {
           final start = _minutes(_startOf(day.id)), finish = _minutes(_finishOf(day.id));
           if (start == null || finish == null) {
@@ -273,13 +318,14 @@ class ScheduleFormController extends ChangeNotifier {
             _error(fieldHours, AdminTextKeys.scheduleErrorFinishBeforeStart);
           }
         }
+      case (ScheduleKind.workHours, 2):
         for (final (field, text) in [(fieldArrival, arrivalTolerance), (fieldLeaving, leavingTolerance)]) {
           final minutes = int.tryParse(text.trim());
           if (minutes == null || minutes < 0 || minutes > options.maxToleranceMinutes) {
             _error(field, AdminTextKeys.scheduleErrorTolerance, {'max': options.maxToleranceMinutes});
           }
         }
-      case ScheduleKind.breaks:
+      case (ScheduleKind.breaks, 1):
         final start = _minutes(_breakStart), length = _breakLength;
         if (start == null || length == null) {
           _error(fieldBreak, AdminTextKeys.scheduleErrorDays);
@@ -297,11 +343,19 @@ class ScheduleFormController extends ChangeNotifier {
             _error(fieldBreak, AdminTextKeys.scheduleErrorBreakOutside);
           }
         }
+      default:
     }
   }
 
+  /// Shows a refusal from the server on the step whose field it concerns.
   void _serverFailure(GroupSchedule current, ApiClientException failure) {
     final error = failure.error;
+    if (error?.code == ApiErrorCode.validationFailed) {
+      _step = switch (error!.field) {
+        SetWorkHoursRequest.fieldArrivalTolerance || SetWorkHoursRequest.fieldLeavingTolerance => 2,
+        _ => 1,
+      };
+    }
     switch (error?.code) {
       case ApiErrorCode.validationFailed:
         _error(switch (error!.field) {

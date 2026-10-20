@@ -7,6 +7,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'deactivate_schedule_dialog.dart';
+import 'manage_schedule_dialog.dart';
 import 'schedule_dialog.dart';
 import 'schedule_rows.dart';
 import 'schedules_controller.dart';
@@ -61,7 +62,10 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     );
   }
 
-  Future<void> _onAction(ScheduleRow row, ScheduleRowAction action) async {
+  /// "···": Manage schedules (Figma 1359:2), then Edit or Remove.
+  Future<void> _manage(ScheduleRow row) async {
+    final action = await showManageScheduleDialog(context, row: row);
+    if (action == null || !mounted) return;
     switch (action) {
       case ScheduleRowAction.edit:
         await _open(group: row.schedule, kind: row.kind);
@@ -211,7 +215,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
           message: context.t(AdminTextKeys.scheduleNoMatchMessage),
         ),
       ),
-      final rows => SchedulesTable(rows: rows, onAction: _onAction),
+      final rows => SchedulesTable(rows: rows, onManage: _manage),
     },
   };
 
