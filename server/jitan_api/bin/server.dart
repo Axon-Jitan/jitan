@@ -30,6 +30,8 @@ import 'package:jitan_api/src/employees/employee_routes.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
 import 'package:jitan_api/src/groups/group_management_repository.dart';
 import 'package:jitan_api/src/groups/group_management_service.dart';
+import 'package:jitan_api/src/groups/group_member_repository.dart';
+import 'package:jitan_api/src/groups/group_member_service.dart';
 import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/groups/group_routes.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
@@ -175,6 +177,14 @@ Future<void> main() async {
         audit: const AuditLogRepository(),
         transactions: db,
         executor: db,
+      ),
+      GroupMemberService(
+        members: GroupMemberRepository(db),
+        assignments: const EmployeeAssignmentRepository(),
+        employees: EmployeeRepository(db),
+        audit: const AuditLogRepository(),
+        scheduleSync: const EmployeeScheduleSync(),
+        transactions: db,
       ),
     ),
     languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db), languageChanges)),

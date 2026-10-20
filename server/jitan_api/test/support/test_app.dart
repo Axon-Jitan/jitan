@@ -18,6 +18,8 @@ import 'package:jitan_api/src/employees/employee_assignment_service.dart';
 import 'package:jitan_api/src/employees/employee_routes.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
 import 'package:jitan_api/src/groups/group_management_service.dart';
+import 'package:jitan_api/src/groups/group_member_repository.dart';
+import 'package:jitan_api/src/groups/group_member_service.dart';
 import 'package:jitan_api/src/groups/group_routes.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
@@ -94,6 +96,14 @@ class TestApp {
           audit: audit,
           transactions: transactions,
           executor: unusedExecutor,
+        ),
+        GroupMemberService(
+          members: groupMembers,
+          assignments: assignments,
+          employees: employees,
+          audit: audit,
+          scheduleSync: scheduleSync,
+          transactions: transactions,
         ),
       ),
       languages: LanguageRoutes(LanguageService(languages, translations, languageChanges)),
@@ -184,6 +194,9 @@ class TestApp {
   final onboarding = FakeOnboardingRepository();
   late final credentials = FakeCredentialRepository(onboarding);
   final unusedExecutor = UnusedExecutor();
+
+  /// Group-page reads; replace with a fake to test them.
+  late GroupMemberRepository groupMembers = GroupMemberRepository(unusedExecutor);
   late final FakeUserRepository users;
 
   /// Fixed secret and clock so tokens are reproducible.

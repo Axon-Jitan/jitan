@@ -21,4 +21,10 @@ class Authorizer {
     }
     return identity;
   }
+
+  /// Whether the acting user holds [permission] (for [companyId]), without
+  /// failing: for lists that show only what the user may see (e.g. a
+  /// group's members from several companies). 401 without an identity.
+  Future<bool> may(Request request, Permission permission, {int? companyId}) =>
+      _evaluator.isAllowed(request.identity, permission, companyId: companyId);
 }

@@ -8,6 +8,7 @@ export 'src/create_employee_request.dart';
 export 'src/employee_assignments.dart';
 export 'src/employee_details.dart';
 export 'src/employee_summary.dart';
+export 'src/group_member.dart';
 export 'src/group_summary.dart';
 export 'src/json_reading.dart';
 export 'src/language.dart';
