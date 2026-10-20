@@ -279,4 +279,8 @@ abstract final class AdminTextKeys {
   static const scheduleDeactivateBreaks = 'schedule.deactivate.breaks';
   static const scheduleDeactivateKeep = 'schedule.deactivate.keep';
   static const scheduleDeactivateConfirm = 'schedule.deactivate.confirm';
+  static const scheduleFormWeekdays = 'schedule.form.weekdays';
+  static const scheduleFormTimeHint = 'schedule.form.timeHint';
+  static const scheduleFormMinutesUnit = 'schedule.form.minutesUnit';
+  static const scheduleFormSaveHint = 'schedule.form.saveHint';
 }

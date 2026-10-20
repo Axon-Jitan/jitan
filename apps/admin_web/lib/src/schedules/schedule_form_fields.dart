@@ -28,7 +28,8 @@ class ScheduleFieldColumns extends StatelessWidget {
   );
 }
 
-/// A weekday chip of "Working days".
+/// A weekday chip of "Working days": chosen days are filled dark, the
+/// others plain, so the choice reads at a glance.
 class ScheduleDayToggle extends StatelessWidget {
   const ScheduleDayToggle({super.key, required this.label, required this.selected, required this.onPressed});
 
@@ -36,36 +37,154 @@ class ScheduleDayToggle extends StatelessWidget {
   final bool selected;
   final VoidCallback? onPressed;
 
-  static const _selectedFill = Color(0xFFEFF2F0);
-  static const _selectedBorder = Color(0xFFBFCCC4);
-  static const _idleFill = Color(0xFFF6F6F5);
-
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
     selected: selected,
     child: Material(
-      color: selected ? _selectedFill : _idleFill,
+      color: selected ? JitanColors.ink : JitanColors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(9),
-        side: selected ? const BorderSide(color: _selectedBorder) : BorderSide.none,
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: selected ? JitanColors.ink : JitanColors.inputBorder),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(10),
         onTap: onPressed,
         child: SizedBox(
-          width: 89,
-          height: 36,
+          width: 80,
+          height: 40,
           child: Center(
             child: Text(
               label,
-              style: JitanTextStyles.stateTitle.copyWith(color: selected ? JitanColors.ink : JitanColors.inkMuted),
+              style: JitanTextStyles.inputText.copyWith(
+                fontWeight: FontWeight.w600,
+                color: selected ? JitanColors.surface : JitanColors.ink,
+              ),
             ),
           ),
         ),
       ),
     ),
   );
+}
+
+/// Start and finish on one line: "[08:00] – [16:30]", with an optional
+/// day name in front (hours per day).
+class ScheduleHoursRow extends StatelessWidget {
+  const ScheduleHoursRow({
+    super.key,
+    this.day,
+    required this.startLabel,
+    required this.finishLabel,
+    required this.timeHint,
+    required this.start,
+    required this.finish,
+    required this.onStart,
+    required this.onFinish,
+  });
+
+  final String? day;
+  final String startLabel;
+  final String finishLabel;
+  final String timeHint;
+  final String? start;
+  final String? finish;
+  final ValueChanged<String?>? onStart;
+  final ValueChanged<String?>? onFinish;
+
+  static const _timeWidth = 150.0;
+  static const _dayWidth = 56.0;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      if (day case final day?)
+        SizedBox(
+          width: _dayWidth,
+          height: JitanDimensions.fieldHeight,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(day, style: JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w600)),
+          ),
+        ),
+      SizedBox(
+        width: _timeWidth,
+        child: ScheduleTimeField(label: startLabel, hint: timeHint, value: start, onChanged: onStart),
+      ),
+      SizedBox(
+        width: 32,
+        height: JitanDimensions.fieldHeight,
+        child: Center(child: Text('–', style: JitanTextStyles.inputText.copyWith(color: JitanColors.inkMuted))),
+      ),
+      SizedBox(
+        width: _timeWidth,
+        child: ScheduleTimeField(label: finishLabel, hint: timeHint, value: finish, onChanged: onFinish),
+      ),
+    ],
+  );
+}
+
+/// A whole number of minutes with "min" inside the box (tolerances).
+class ScheduleMinutesField extends StatelessWidget {
+  const ScheduleMinutesField({
+    super.key,
+    required this.label,
+    required this.controller,
+    required this.unit,
+    required this.enabled,
+    this.errorText,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final String unit;
+  final bool enabled;
+  final String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    final error = errorText;
+    return JitanFieldLabel(
+      label: label,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 150,
+            height: JitanDimensions.fieldHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: enabled ? JitanColors.surface : JitanColors.disabledFill,
+              borderRadius: BorderRadius.circular(JitanDimensions.inputRadius),
+              border: Border.all(color: error == null ? JitanColors.inputBorder : JitanColors.error),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    enabled: enabled,
+                    keyboardType: TextInputType.number,
+                    maxLength: 2,
+                    style: JitanTextStyles.inputText,
+                    cursorColor: JitanColors.ink,
+                    decoration: const InputDecoration.collapsed(hintText: null).copyWith(counterText: ''),
+                  ),
+                ),
+                Text(unit, style: JitanTextStyles.inputHint),
+              ],
+            ),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 6),
+            Text(error, style: JitanTextStyles.fieldError),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class ScheduleCheckRow extends StatelessWidget {
@@ -81,19 +200,28 @@ class ScheduleCheckRow extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Checkbox(value: value, onChanged: onChanged == null ? null : (v) => onChanged!(v ?? false)),
-        Text(label, style: JitanTextStyles.inputText.copyWith(fontSize: 15)),
+        Checkbox(
+          value: value,
+          onChanged: onChanged == null ? null : (v) => onChanged!(v ?? false),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: JitanTextStyles.inputText),
       ],
     ),
   );
 }
 
 class ScheduleTimeField extends StatelessWidget {
-  const ScheduleTimeField({super.key, required this.label, required this.value, required this.onChanged});
+  const ScheduleTimeField({super.key, required this.label, required this.value, required this.onChanged, this.hint});
 
   final String label;
   final String? value;
   final ValueChanged<String?>? onChanged;
+
+  /// Shown, light, while no time is chosen (e.g. "--:--").
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +229,7 @@ class ScheduleTimeField extends StatelessWidget {
     return JitanSelectField<String>(
       label: label,
       value: current,
+      hintText: hint,
       options: [
         for (final time in {...ScheduleFormController.timeChoices, ?current}.toList()..sort())
           JitanSelectOption(value: time, label: time),

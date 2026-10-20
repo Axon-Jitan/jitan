@@ -513,4 +513,8 @@ const builtInEnglish = <String, String>{
   'schedule.deactivate.breaks': 'Employees in {group} will no longer get these breaks.',
   'schedule.deactivate.keep': 'Records already registered keep their times.',
   'schedule.deactivate.confirm': 'Deactivate',
+  'schedule.form.weekdays': 'Mon–Fri',
+  'schedule.form.timeHint': '--:--',
+  'schedule.form.minutesUnit': 'min',
+  'schedule.form.saveHint': 'Choose a group and at least one day to save.',
 };

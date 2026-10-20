@@ -70,20 +70,25 @@ void main() {
     expect([for (final d in request.days) (d.dayId, d.finish)], [(11, '16:30'), (15, '12:00')]);
   });
 
-  test('client checks: no days, finish before start, tolerance out of range; nothing is sent', () async {
+  test('Save waits for a group and a day; then tolerance out of range and finish before start are caught', () async {
     final c = await ready();
+    expect((c.missingRequired, c.canSave), (true, false));
+    c.selectGroup(2);
+    expect((c.missingRequired, c.canSave), (true, false), reason: 'no day yet');
+    expect(await c.submit(), isNull);
+
     c
-      ..selectGroup(2)
+      ..toggleDay(11)
+      ..setStart('08:00')
+      ..setFinish('16:00')
       ..arrivalTolerance = '61'
       ..leavingTolerance = 'x';
-
+    expect(c.canSave, isTrue);
     expect(await c.submit(), isNull);
-    expect(c.fieldErrors[ScheduleFormController.fieldDays]?.key, AdminTextKeys.scheduleErrorNoDays);
     expect(c.fieldErrors[ScheduleFormController.fieldArrival]?.key, AdminTextKeys.scheduleErrorTolerance);
     expect(c.fieldErrors[ScheduleFormController.fieldLeaving]?.key, AdminTextKeys.scheduleErrorTolerance);
 
     c
-      ..toggleDay(11)
       ..setStart('16:00')
       ..setFinish('08:00')
       ..arrivalTolerance = '0'
@@ -149,6 +154,14 @@ void main() {
     await c.submit();
     expect(c.failure?.error?.code, ApiErrorCode.databaseUnavailable);
     expect(c.submitting, isFalse);
+  });
+
+  test('"Mon–Fri" selects exactly the given days', () async {
+    final c = await ready();
+    c
+      ..toggleDay(17)
+      ..selectDays([11, 12, 13, 14, 15]);
+    expect(c.dayIds, {11, 12, 13, 14, 15});
   });
 
   test('time choices are every 5 minutes of the day', () {

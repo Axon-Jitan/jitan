@@ -37,8 +37,10 @@ class JitanPrimaryButton extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: color,
             foregroundColor: JitanColors.surface,
-            disabledBackgroundColor: color.withValues(alpha: busy ? 1 : 0.4),
-            disabledForegroundColor: JitanColors.surface,
+            // Saving keeps the colour; unavailable is clearly grey, not a pale
+            // version of the colour that looks like an error.
+            disabledBackgroundColor: busy ? color : JitanColors.disabledFill,
+            disabledForegroundColor: busy ? JitanColors.surface : JitanColors.disabledText,
             textStyle: JitanTextStyles.buttonLabel,
             padding: const EdgeInsets.symmetric(horizontal: 28),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(JitanDimensions.inputRadius)),

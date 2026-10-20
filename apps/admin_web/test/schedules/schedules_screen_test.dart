@@ -1,3 +1,4 @@
+import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:admin_web/src/schedules/schedules_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -101,10 +102,12 @@ void main() {
     await _openAdd(tester, api);
 
     expect(find.text('Create schedule'), findsOneWidget);
-    expect(find.text('Applies from now. Records already registered keep their times.'), findsOneWidget);
+    expect(find.text('Choose a group and at least one day to save.'), findsOneWidget);
+    expect(tester.widget<JitanPrimaryButton>(find.widgetWithText(JitanPrimaryButton, 'Save schedule')).onPressed, isNull);
     await _choose(tester, 'Employee group *', 'White collar');
     await tester.tap(find.text('Mon'));
     await tester.pump();
+    expect(find.text('Applies from now. Records already registered keep their times.'), findsOneWidget);
     // The time menus hold 288 entries; pick through the field itself.
     _pickTime(tester, 'Start', '08:00');
     _pickTime(tester, 'Finish', '16:30');
@@ -139,6 +142,21 @@ void main() {
     expect(find.text('Edit schedule'), findsOneWidget);
     expect(find.text('08:00'), findsOneWidget);
     expect(find.text('16:30'), findsOneWidget);
+  });
+
+  testWidgets('"Mon–Fri" chooses the five weekdays', (tester) async {
+    final api = await _pump(tester);
+    await _loaded(tester, api);
+    await _openAdd(tester, api);
+
+    await tester.tap(find.text('Mon–Fri'));
+    await tester.pump();
+
+    final chosen = [
+      for (final toggle in tester.widgetList<ScheduleDayToggle>(find.byType(ScheduleDayToggle)))
+        if (toggle.selected) toggle.label,
+    ];
+    expect(chosen, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
   });
 
   testWidgets('a group nobody is only in is blocked', (tester) async {

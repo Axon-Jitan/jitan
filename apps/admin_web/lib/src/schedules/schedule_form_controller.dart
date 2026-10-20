@@ -130,8 +130,11 @@ class ScheduleFormController extends ChangeNotifier {
   /// Creating what the group already has (Figma "conflict" 1317:1124).
   bool get conflict => !_editing && group != null && hasSchedule(group!, _kind);
 
+  /// A group and at least one day are still missing; the footer says so.
+  bool get missingRequired => group == null || _dayIds.isEmpty;
+
   bool get canSave =>
-      group != null && !blocked && !conflict && !_submitting && _options is ScheduleOptionsLoaded;
+      !missingRequired && !blocked && !conflict && !_submitting && _options is ScheduleOptionsLoaded;
 
   ({String? start, String? finish}) hoursOf(int dayId) => _dayHours[dayId] ?? (start: null, finish: null);
 
@@ -151,6 +154,11 @@ class ScheduleFormController extends ChangeNotifier {
   void selectKind(ScheduleKind kind) => _change(() => _kind = kind);
 
   void toggleDay(int dayId) => _change(() => _dayIds.contains(dayId) ? _dayIds.remove(dayId) : _dayIds.add(dayId));
+
+  /// Selects exactly [dayIds] (the "Mon–Fri" shortcut).
+  void selectDays(Iterable<int> dayIds) => _change(() => _dayIds
+    ..clear()
+    ..addAll(dayIds));
 
   void setSameHours(bool same) => _change(() => _sameHours = same);
 

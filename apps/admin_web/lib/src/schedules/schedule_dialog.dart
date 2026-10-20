@@ -98,7 +98,12 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
         title: context.t(c.editing ? AdminTextKeys.scheduleFormEditTitle : AdminTextKeys.scheduleFormCreateTitle),
         subtitle: context.t(workHours ? AdminTextKeys.scheduleFormWorkHoursSubtitle : AdminTextKeys.scheduleFormBreaksSubtitle),
         onClose: c.submitting ? null : () => Navigator.of(context).pop(),
-        footerNote: context.t(AdminTextKeys.scheduleFormFooter),
+        // Until a group and a day are chosen, the footer says why Save is off.
+        footerNote: context.t(
+          c.missingRequired && c.options is ScheduleOptionsLoaded
+              ? AdminTextKeys.scheduleFormSaveHint
+              : AdminTextKeys.scheduleFormFooter,
+        ),
         // Switching type or per-day hours changes the height: animate it.
         body: AnimatedSize(
           duration: const Duration(milliseconds: 200),
@@ -128,6 +133,8 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     final c = _controller;
     final busy = c.submitting;
     final group = c.group;
+    final t = TranslationScope.of(context);
+    final weekdays = [for (final day in options.days) if (day.weekday <= DateTime.friday) day.id];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -166,16 +173,23 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        JitanFieldLabel(
-          label: context.t(AdminTextKeys.scheduleFormDays),
+        _sectionGap,
+        _Section(
+          title: context.t(AdminTextKeys.scheduleFormDays),
+          trailing: TextButton(
+            onPressed: busy ? null : () => c.selectDays(weekdays),
+            child: Text(
+              context.t(AdminTextKeys.scheduleFormWeekdays),
+              style: JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w600, color: JitanColors.vermilion),
+            ),
+          ),
           child: Wrap(
-            spacing: 9,
-            runSpacing: 9,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               for (final day in options.days)
                 ScheduleDayToggle(
-                  label: dayShortName(TranslationScope.of(context), day.weekday),
+                  label: dayShortName(t, day.weekday),
                   selected: c.dayIds.contains(day.id),
                   onPressed: busy ? null : () => c.toggleDay(day.id),
                 ),
@@ -183,7 +197,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
           ),
         ),
         _fieldError(context, ScheduleFormController.fieldDays),
-        const SizedBox(height: 24),
+        _sectionGap,
         if (c.kind == ScheduleKind.workHours) ..._workHours(context, options) else ..._breaks(context, options),
         _fieldError(context, ScheduleFormController.fieldForm),
         if (c.failure case final failure?) ...[
@@ -202,72 +216,83 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
   List<Widget> _workHours(BuildContext context, ScheduleOptions options) {
     final c = _controller;
     final busy = c.submitting;
+    final t = TranslationScope.of(context);
     final selectedDays = [for (final day in options.days) if (c.dayIds.contains(day.id)) day];
+    final startLabel = context.t(AdminTextKeys.scheduleFormStart);
+    final finishLabel = context.t(AdminTextKeys.scheduleFormFinish);
+    final hint = context.t(AdminTextKeys.scheduleFormTimeHint);
     return [
-      Text(
-        context.t(c.sameHours ? AdminTextKeys.scheduleFormHours : AdminTextKeys.scheduleFormHoursByDay),
-        style: _sectionTitle,
-      ),
-      const SizedBox(height: 8),
-      ScheduleCheckRow(
-        label: context.t(AdminTextKeys.scheduleFormSameHours),
-        value: c.sameHours,
-        onChanged: busy ? null : c.setSameHours,
-      ),
-      const SizedBox(height: 16),
-      if (c.sameHours)
-        ScheduleFieldColumns(
-          children: [
-            ScheduleTimeField(label: context.t(AdminTextKeys.scheduleFormStart), value: c.start, onChanged: busy ? null : c.setStart),
-            ScheduleTimeField(label: context.t(AdminTextKeys.scheduleFormFinish), value: c.finish, onChanged: busy ? null : c.setFinish),
-          ],
-        )
-      else
-        for (final day in selectedDays) ...[
-          ScheduleFieldColumns(
-            children: [
-              ScheduleTimeField(
-                label: '${dayShortName(TranslationScope.of(context), day.weekday)} · ${context.t(AdminTextKeys.scheduleFormStart)}',
-                value: c.hoursOf(day.id).start,
-                onChanged: busy ? null : (time) => c.setDayStart(day.id, time),
+      _Section(
+        title: context.t(c.sameHours ? AdminTextKeys.scheduleFormHours : AdminTextKeys.scheduleFormHoursByDay),
+        trailing: ScheduleCheckRow(
+          label: context.t(AdminTextKeys.scheduleFormSameHours),
+          value: c.sameHours,
+          onChanged: busy ? null : c.setSameHours,
+        ),
+        child: c.sameHours
+            ? Align(
+                alignment: Alignment.centerLeft,
+                child: ScheduleHoursRow(
+                  startLabel: startLabel,
+                  finishLabel: finishLabel,
+                  timeHint: hint,
+                  start: c.start,
+                  finish: c.finish,
+                  onStart: busy ? null : c.setStart,
+                  onFinish: busy ? null : c.setFinish,
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final (index, day) in selectedDays.indexed) ...[
+                    if (index > 0) const SizedBox(height: 10),
+                    ScheduleHoursRow(
+                      day: dayShortName(t, day.weekday),
+                      startLabel: startLabel,
+                      finishLabel: finishLabel,
+                      timeHint: hint,
+                      start: c.hoursOf(day.id).start,
+                      finish: c.hoursOf(day.id).finish,
+                      onStart: busy ? null : (time) => c.setDayStart(day.id, time),
+                      onFinish: busy ? null : (time) => c.setDayFinish(day.id, time),
+                    ),
+                  ],
+                ],
               ),
-              ScheduleTimeField(
-                label: '${dayShortName(TranslationScope.of(context), day.weekday)} · ${context.t(AdminTextKeys.scheduleFormFinish)}',
-                value: c.hoursOf(day.id).finish,
-                onChanged: busy ? null : (time) => c.setDayFinish(day.id, time),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-        ],
+      ),
       _fieldError(context, ScheduleFormController.fieldHours),
-      const SizedBox(height: 24),
-      Text(context.t(AdminTextKeys.scheduleFormTolerance), style: _sectionTitle),
-      const SizedBox(height: 12),
-      ScheduleFieldColumns(
-        children: [
-          _toleranceField(context, AdminTextKeys.scheduleFormArrivalTolerance, _arrival, ScheduleFormController.fieldArrival, options),
-          _toleranceField(context, AdminTextKeys.scheduleFormLeavingTolerance, _leaving, ScheduleFormController.fieldLeaving, options),
-        ],
+      _sectionGap,
+      _Section(
+        title: context.t(AdminTextKeys.scheduleFormTolerance),
+        child: Wrap(
+          spacing: 30,
+          runSpacing: 16,
+          children: [
+            _toleranceField(context, AdminTextKeys.scheduleFormArrivalTolerance, _arrival, ScheduleFormController.fieldArrival),
+            _toleranceField(context, AdminTextKeys.scheduleFormLeavingTolerance, _leaving, ScheduleFormController.fieldLeaving),
+          ],
+        ),
       ),
-      const SizedBox(height: 24),
-      Text(context.t(AdminTextKeys.scheduleFormRounding), style: _sectionTitle),
-      const SizedBox(height: 12),
-      ScheduleFieldColumns(
-        children: [
-          ScheduleRoundingField(
-            label: context.t(AdminTextKeys.scheduleFormStartRounding),
-            value: c.startRounding,
-            intervals: options.roundingIntervalMinutes,
-            onChanged: busy ? null : c.setStartRounding,
-          ),
-          ScheduleRoundingField(
-            label: context.t(AdminTextKeys.scheduleFormFinishRounding),
-            value: c.finishRounding,
-            intervals: options.roundingIntervalMinutes,
-            onChanged: busy ? null : c.setFinishRounding,
-          ),
-        ],
+      _sectionGap,
+      _Section(
+        title: context.t(AdminTextKeys.scheduleFormRounding),
+        child: ScheduleFieldColumns(
+          children: [
+            ScheduleRoundingField(
+              label: context.t(AdminTextKeys.scheduleFormStartRounding),
+              value: c.startRounding,
+              intervals: options.roundingIntervalMinutes,
+              onChanged: busy ? null : c.setStartRounding,
+            ),
+            ScheduleRoundingField(
+              label: context.t(AdminTextKeys.scheduleFormFinishRounding),
+              value: c.finishRounding,
+              intervals: options.roundingIntervalMinutes,
+              onChanged: busy ? null : c.setFinishRounding,
+            ),
+          ],
+        ),
       ),
     ];
   }
@@ -276,26 +301,38 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     final c = _controller;
     final busy = c.submitting;
     return [
-      ScheduleFieldColumns(
-        children: [
-          ScheduleTimeField(
-            label: context.t(AdminTextKeys.scheduleFormUsualTime),
-            value: c.breakStart,
-            onChanged: busy ? null : c.setBreakStart,
-          ),
-          JitanSelectField<int>(
-            label: context.t(AdminTextKeys.scheduleFormLength),
-            value: c.breakLength,
-            options: [
-              for (final minutes in options.breakLengthMinutes)
-                JitanSelectOption(
-                  value: minutes,
-                  label: context.t(AdminTextKeys.scheduleFormLengthOption, args: {'minutes': minutes}),
-                ),
-            ],
-            onChanged: busy ? null : c.setBreakLength,
-          ),
-        ],
+      _Section(
+        title: context.t(AdminTextKeys.scheduleKindBreaks),
+        child: Wrap(
+          spacing: 30,
+          runSpacing: 16,
+          children: [
+            SizedBox(
+              width: 150,
+              child: ScheduleTimeField(
+                label: context.t(AdminTextKeys.scheduleFormUsualTime),
+                hint: context.t(AdminTextKeys.scheduleFormTimeHint),
+                value: c.breakStart,
+                onChanged: busy ? null : c.setBreakStart,
+              ),
+            ),
+            SizedBox(
+              width: 150,
+              child: JitanSelectField<int>(
+                label: context.t(AdminTextKeys.scheduleFormLength),
+                value: c.breakLength,
+                options: [
+                  for (final minutes in options.breakLengthMinutes)
+                    JitanSelectOption(
+                      value: minutes,
+                      label: context.t(AdminTextKeys.scheduleFormLengthOption, args: {'minutes': minutes}),
+                    ),
+                ],
+                onChanged: busy ? null : c.setBreakLength,
+              ),
+            ),
+          ],
+        ),
       ),
       _fieldError(context, ScheduleFormController.fieldBreak),
       const SizedBox(height: 20),
@@ -305,15 +342,15 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.info_outline, size: 16, color: JitanColors.ink),
+            const Icon(Icons.info_outline, size: 18, color: JitanColors.ink),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.t(AdminTextKeys.scheduleFormBreakNoteTitle), style: JitanTextStyles.stateTitle.copyWith(fontSize: 16)),
-                  const SizedBox(height: 6),
-                  Text(context.t(AdminTextKeys.scheduleFormBreakNoteText), style: JitanTextStyles.stateMessage.copyWith(fontSize: 15)),
+                  Text(context.t(AdminTextKeys.scheduleFormBreakNoteTitle), style: JitanTextStyles.stateTitle.copyWith(fontSize: 15)),
+                  const SizedBox(height: 4),
+                  Text(context.t(AdminTextKeys.scheduleFormBreakNoteText), style: JitanTextStyles.stateMessage),
                 ],
               ),
             ),
@@ -323,21 +360,17 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     ];
   }
 
-  Widget _toleranceField(
-    BuildContext context,
-    String labelKey,
-    TextEditingController controller,
-    String field,
-    ScheduleOptions options,
-  ) => JitanTextField(
-    label: context.t(labelKey),
-    controller: controller,
-    enabled: !_controller.submitting,
-    keyboardType: TextInputType.number,
-    hintText: context.t(AdminTextKeys.scheduleFormToleranceHint, args: {'max': options.maxToleranceMinutes}),
-    errorText: _errorText(context, field),
-    maxLength: 2,
-  );
+  Widget _toleranceField(BuildContext context, String labelKey, TextEditingController controller, String field) =>
+      ScheduleMinutesField(
+        label: context.t(labelKey),
+        controller: controller,
+        unit: context.t(AdminTextKeys.scheduleFormMinutesUnit),
+        enabled: !_controller.submitting,
+        errorText: _errorText(context, field),
+      );
+
+  /// Space between the form's sections; fields within a section sit closer.
+  static const _sectionGap = SizedBox(height: 32);
 
   String? _errorText(BuildContext context, String field) => switch (_controller.fieldErrors[field]) {
     null => null,
@@ -362,5 +395,32 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     );
   }
 
-  static final _sectionTitle = JitanTextStyles.stateTitle.copyWith(fontSize: 16);
+}
+
+/// A titled block of the form, with an optional control on the right of
+/// the title (e.g. "Mon–Fri", "Same hours every working day").
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.child, this.trailing});
+
+  final String title;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      SizedBox(
+        height: 32,
+        child: Row(
+          children: [
+            Expanded(child: Text(title, style: JitanTextStyles.stateTitle)),
+            ?trailing,
+          ],
+        ),
+      ),
+      const SizedBox(height: 10),
+      child,
+    ],
+  );
 }
