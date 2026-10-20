@@ -49,6 +49,18 @@ enum AuditEventType {
   /// `tblEventLog` cannot say which language (GAP-12, accepted for V1).
   languageChanged('employee.language.changed'),
 
+  /// HR/Admin added an employee group (`tblGroup`).
+  groupCreated('group.created'),
+
+  /// HR/Admin renamed an employee group.
+  groupRenamed('group.renamed'),
+
+  /// HR/Admin deactivated an employee group nobody is in any more.
+  groupDeactivated('group.deactivated'),
+
+  /// HR/Admin reactivated an employee group.
+  groupReactivated('group.reactivated'),
+
   /// HR/Admin saved a group's work hours or breaks: one event per new
   /// `tblSchedule` row (with its type, day, group and rounding rule).
   scheduleCreated('schedule.created'),

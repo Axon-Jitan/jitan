@@ -27,6 +27,8 @@ import 'package:jitan_api/src/employees/employee_assignment_service.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/employees/employee_routes.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
+import 'package:jitan_api/src/groups/group_management_repository.dart';
+import 'package:jitan_api/src/groups/group_management_service.dart';
 import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/groups/group_routes.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
@@ -153,7 +155,16 @@ Future<void> main() async {
         languageChanges: languageChanges,
       ),
     ),
-    groups: GroupRoutes(authorizer, groupRepository),
+    groups: GroupRoutes(
+      authorizer,
+      groupRepository,
+      GroupManagementService(
+        groups: const GroupManagementRepository(),
+        audit: const AuditLogRepository(),
+        transactions: db,
+        executor: db,
+      ),
+    ),
     languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db), languageChanges)),
     onboarding: OnboardingRoutes(
       OnboardingService(

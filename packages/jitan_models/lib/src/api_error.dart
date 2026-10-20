@@ -44,6 +44,13 @@ abstract final class ApiErrorCode {
   /// Reset account access on an employee who has not set up Jitan yet.
   static const accountNotActivated = 'account_not_activated';
 
+  /// Another employee group (active or inactive) already has this name,
+  /// ignoring upper/lower case.
+  static const duplicateGroupName = 'duplicate_group_name';
+
+  /// The employee group still has employees, so it can't be deactivated.
+  static const groupInUse = 'group_in_use';
+
   /// A schedule for an employee group that has no employee who is only in
   /// that group: nobody would get it ("Add an employee who is only in Blue
   /// collar first").

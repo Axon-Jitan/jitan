@@ -71,7 +71,9 @@ dart run bin/server.dart
 - `POST /companies/{id}/employees/{userId}/onboarding-qr` and `…/recovery-qr`: a new
   temporary QR (`{qrCode, purpose, expiresAt}`, `no-store`); the previous one stops working.
   The permanent `userQRcode` is the Terminal QR only and is never shown here
-- `GET /groups`: assignable employee groups (the "Employee type")
+- `GET /groups`: assignable employee groups (the "Employee type"). `GET /groups/overview`,
+  `POST /groups`, `PUT /groups/{id}`, `POST /groups/{id}/deactivate|reactivate`: HR/Admin
+  manage groups (unique names ignoring case; deactivate only when empty; audited)
 - `…/employees/{userId}/assignments/companies|groups|language|credential-groups`
   (GET, plus POST to add, `DELETE …/companies/{id}` and `…/groups/{id}` to remove, PUT for
   the language): HR/Admin "Manage employee assignments". Removal is a soft delete

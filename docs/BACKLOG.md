@@ -8,18 +8,18 @@ Status values: `TODO` · `IN PROGRESS` · `DONE (commit)`
 
 ## GRP-01: Employee groups managed by HR/Admin
 
-Status: `TODO` · decided 2026-10-20 · roadmap phase 2, server right after writing schedules
+Status: `IN PROGRESS` · decided 2026-10-20 · roadmap phase 2 · **server done** (`GET /groups/overview`, `POST /groups`, `PUT /groups/{id}`, `POST /groups/{id}/deactivate|reactivate`, `GroupManagementApi`); screen waits for the Figma frame
 
 Today groups (`tblGroup`) exist only as database rows (seed, IT's script); HR can pick them
 but not create them. Schedules are set per group, so HR needs to manage groups.
 
-- [ ] List groups (active and inactive) with their number of employees.
-- [ ] Add a group: name required, at most 100 characters (`groupName`), unique ignoring
+- [x] List groups (active and inactive) with their number of employees.
+- [x] Add a group: name required, at most 100 characters (`groupName`), unique ignoring
       case (the ERD has no unique key, so Jitan checks).
-- [ ] Rename a group: same checks; employees and schedules stay attached.
-- [ ] Deactivate a group only when no current employee is in it ("Move the 12 employees in
+- [x] Rename a group: same checks; employees and schedules stay attached.
+- [x] Deactivate a group only when no current employee is in it ("Move the 12 employees in
       Drivers to another group first"); soft delete, the row stays. Reactivate allowed.
-- [ ] Every change audited in `tblEventLog` (`groupID`), event types added to
+- [x] Every change audited in `tblEventLog` (`groupID`), event types added to
       `reference_data.sql`.
 - [ ] HR/Admin screen from the designer's frame, next to Schedules.
 

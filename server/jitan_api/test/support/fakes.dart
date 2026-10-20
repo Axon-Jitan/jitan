@@ -18,6 +18,7 @@ import 'package:jitan_api/src/languages/user_language_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
+import 'package:jitan_api/src/groups/group_management_repository.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
 import 'package:jitan_api/src/schedules/schedule_write_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
@@ -411,6 +412,17 @@ class UnusedScheduleWriteRepository implements ScheduleWriteRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw StateError('Schedule writes are tested against MySQL, not with fakes.');
+}
+
+/// Group management is exercised against MySQL
+/// (`group_management_integration_test.dart`); route tests only reach
+/// validation and permissions, so any call here is a test bug.
+class UnusedGroupManagementRepository implements GroupManagementRepository {
+  const UnusedGroupManagementRepository();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw StateError('Group management is tested against MySQL, not with fakes.');
 }
 
 class FakeAuditLog implements AuditLogRepository {

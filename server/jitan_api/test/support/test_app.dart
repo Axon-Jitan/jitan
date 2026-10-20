@@ -17,6 +17,7 @@ import 'package:jitan_api/src/employees/employee_assignment_routes.dart';
 import 'package:jitan_api/src/employees/employee_assignment_service.dart';
 import 'package:jitan_api/src/employees/employee_routes.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
+import 'package:jitan_api/src/groups/group_management_service.dart';
 import 'package:jitan_api/src/groups/group_routes.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
@@ -83,7 +84,16 @@ class TestApp {
           languageChanges: languageChanges,
         ),
       ),
-      groups: GroupRoutes(Authorizer(permissions), groups),
+      groups: GroupRoutes(
+        Authorizer(permissions),
+        groups,
+        GroupManagementService(
+          groups: const UnusedGroupManagementRepository(),
+          audit: audit,
+          transactions: transactions,
+          executor: unusedExecutor,
+        ),
+      ),
       languages: LanguageRoutes(LanguageService(languages, translations, languageChanges)),
       onboarding: OnboardingRoutes(
         OnboardingService(

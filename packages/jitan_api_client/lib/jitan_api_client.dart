@@ -7,6 +7,7 @@ export 'src/auth_api.dart';
 export 'src/companies_api.dart';
 export 'src/employee_assignments_api.dart';
 export 'src/employees_api.dart';
+export 'src/group_management_api.dart';
 export 'src/groups_api.dart';
 export 'src/languages_api.dart';
 export 'src/me_api.dart';

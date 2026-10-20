@@ -42,6 +42,10 @@ enum Permission {
   /// (company-scoped, through the employee's membership).
   viewTimeRegistrations,
 
+  /// Add, rename, deactivate and reactivate employee groups (`tblGroup`).
+  /// Groups are universal across companies, so not company-scoped.
+  manageGroups,
+
   /// See the schedules of the employee groups and the schedule form's
   /// choices. Schedules are global, so not company-scoped.
   viewSchedules,

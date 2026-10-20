@@ -112,6 +112,10 @@ SELECT e.name FROM (
   UNION ALL SELECT 'employee.group.removed'
   UNION ALL SELECT 'employee.credential_group.assigned'
   UNION ALL SELECT 'employee.language.changed'
+  UNION ALL SELECT 'group.created'
+  UNION ALL SELECT 'group.renamed'
+  UNION ALL SELECT 'group.deactivated'
+  UNION ALL SELECT 'group.reactivated'
   UNION ALL SELECT 'schedule.created'
   UNION ALL SELECT 'schedule.deactivated'
 ) e WHERE NOT EXISTS (SELECT 1 FROM tblEventType x WHERE x.eventTypeName = e.name);
