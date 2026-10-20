@@ -25,52 +25,53 @@ class WorkHoursDay {
 class SetWorkHoursRequest {
   const SetWorkHoursRequest({
     required this.days,
-    required this.startToleranceMinutes,
-    required this.finishToleranceMinutes,
-    required this.startIntervalMinutes,
-    required this.finishIntervalMinutes,
-    required this.favour,
+    required this.arrivalToleranceMinutes,
+    required this.leavingToleranceMinutes,
+    this.startRounding,
+    this.finishRounding,
   });
 
   factory SetWorkHoursRequest.fromJson(Map<String, Object?> json) => SetWorkHoursRequest(
         days: json.readObjectList(fieldDays).map(WorkHoursDay.fromJson).toList(),
-        startToleranceMinutes: json.readInt(fieldStartTolerance),
-        finishToleranceMinutes: json.readInt(fieldFinishTolerance),
-        startIntervalMinutes: json.readInt(fieldStartInterval),
-        finishIntervalMinutes: json.readInt(fieldFinishInterval),
-        favour: _favour(json.readString(fieldFavour)),
+        arrivalToleranceMinutes: json.readInt(fieldArrivalTolerance),
+        leavingToleranceMinutes: json.readInt(fieldLeavingTolerance),
+        startRounding: _rounding(json[fieldStartRounding], fieldStartRounding),
+        finishRounding: _rounding(json[fieldFinishRounding], fieldFinishRounding),
       );
 
   final List<WorkHoursDay> days;
-  final int startToleranceMinutes;
-  final int finishToleranceMinutes;
-  final int startIntervalMinutes;
-  final int finishIntervalMinutes;
 
-  /// [ScheduleRoundingFavour.company] or [ScheduleRoundingFavour.employee].
-  final ScheduleRoundingFavour favour;
+  /// Minutes after the start an arrival still counts as on time.
+  final int arrivalToleranceMinutes;
+
+  /// Minutes before the finish a departure is within tolerance.
+  final int leavingToleranceMinutes;
+
+  /// `null`: the start is not rounded.
+  final ScheduleRounding? startRounding;
+
+  /// `null`: the finish is not rounded.
+  final ScheduleRounding? finishRounding;
 
   /// Field names, for [ApiError.field].
   static const fieldDays = 'days';
-  static const fieldStartTolerance = 'startToleranceMinutes';
-  static const fieldFinishTolerance = 'finishToleranceMinutes';
-  static const fieldStartInterval = 'startIntervalMinutes';
-  static const fieldFinishInterval = 'finishIntervalMinutes';
-  static const fieldFavour = 'favour';
+  static const fieldArrivalTolerance = 'arrivalToleranceMinutes';
+  static const fieldLeavingTolerance = 'leavingToleranceMinutes';
+  static const fieldStartRounding = 'startRounding';
+  static const fieldFinishRounding = 'finishRounding';
 
   Map<String, Object?> toJson() => {
         fieldDays: [for (final day in days) day.toJson()],
-        fieldStartTolerance: startToleranceMinutes,
-        fieldFinishTolerance: finishToleranceMinutes,
-        fieldStartInterval: startIntervalMinutes,
-        fieldFinishInterval: finishIntervalMinutes,
-        fieldFavour: favour.name,
+        fieldArrivalTolerance: arrivalToleranceMinutes,
+        fieldLeavingTolerance: leavingToleranceMinutes,
+        fieldStartRounding: startRounding?.toJson(),
+        fieldFinishRounding: finishRounding?.toJson(),
       };
 
-  static ScheduleRoundingFavour _favour(String name) => switch (name) {
-        'company' => ScheduleRoundingFavour.company,
-        'employee' => ScheduleRoundingFavour.employee,
-        _ => throw FormatException('"$fieldFavour" must be "company" or "employee".'),
+  static ScheduleRounding? _rounding(Object? value, String field) => switch (value) {
+        null => null,
+        final Map<String, Object?> rounding => ScheduleRounding.fromJson(rounding),
+        _ => throw FormatException('"$field" must be an object or null.'),
       };
 }
 

@@ -28,8 +28,8 @@ UserScheduleRow _row(int userId, int scheduleId, String type, int dayId, String 
   );
 }
 
-/// Blue collar (2): employees 10 and 11 share Monday 08:00–16:30 (±10, 15 min,
-/// favours the company) and a 30-minute break. White collar (1): nobody is
+/// Blue collar (2): employees 10 and 11 share Monday 08:00–16:30 (tolerance 10,
+/// start up and finish down every 15 min) and a 30-minute break. White collar (1): nobody is
 /// only in it.
 TestApp _app() {
   final app = TestApp();
@@ -73,8 +73,8 @@ void main() {
       expect(response.statusCode, 200);
       final options = ScheduleOptions.fromJson(await jsonBody(response));
       expect([for (final d in options.days) (d.id, d.name, d.weekday)], [(1, 'Monday', 1), (2, 'Tuesday', 2), (7, 'Sunday', 7)]);
-      expect(options.roundingIntervalMinutes, [15, 30, 60]);
-      expect(options.toleranceMinutes, [0, 5, 10, 15]);
+      expect(options.roundingIntervalMinutes, [5, 10, 15, 30, 60]);
+      expect(options.maxToleranceMinutes, 60);
       expect(options.breakLengthMinutes, [15, 30, 45, 60]);
       expect(app.permissions.checked.last, (1, Permission.viewSchedules, null));
     });
@@ -100,7 +100,6 @@ void main() {
       expect(blue.singleGroupEmployeeCount, 2);
       final variant = blue.variants.single;
       expect(variant.employeeCount, 2);
-      expect(variant.favour, ScheduleRoundingFavour.company);
       final monday = variant.workDays.single;
       expect(monday.day.name, 'Monday');
       expect((monday.start!.time, monday.start!.toleranceMinutes), ('08:00', 10));
@@ -155,20 +154,17 @@ void main() {
       expect(blue.variants.last.workDays, isEmpty);
     });
 
-    test('rounding favouring the employee, and mixed rules, are reported as such', () async {
-      final employee = _app()
+    test('each start and finish shows its own rule: direction and interval', () async {
+      final app = _app()
         ..schedules.rules = const [
           (scheduleId: 100, intervalMinutes: 30, roundUp: false),
-          (scheduleId: 101, intervalMinutes: 30, roundUp: true),
-        ];
-      final mixed = _app()
-        ..schedules.rules = const [
-          (scheduleId: 100, intervalMinutes: 15, roundUp: true),
-          (scheduleId: 101, intervalMinutes: 15, roundUp: true),
+          (scheduleId: 101, intervalMinutes: 5, roundUp: true),
         ];
 
-      expect((await _groups(employee))[2]!.variants.single.favour, ScheduleRoundingFavour.employee);
-      expect((await _groups(mixed))[2]!.variants.single.favour, ScheduleRoundingFavour.mixed);
+      final monday = (await _groups(app))[2]!.variants.single.workDays.single;
+
+      expect((monday.start!.rounding!.intervalMinutes, monday.start!.rounding!.roundUp), (30, false));
+      expect((monday.finish!.rounding!.intervalMinutes, monday.finish!.rounding!.roundUp), (5, true));
     });
 
     test('a start or finish with no rule, or with two, has no rounding (shown as missing)', () async {

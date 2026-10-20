@@ -12,7 +12,6 @@ void main() {
       variants: [
         ScheduleVariant(
           employeeCount: 2,
-          favour: ScheduleRoundingFavour.employee,
           workDays: [
             WorkDaySchedule(
               day: monday,
@@ -29,18 +28,17 @@ void main() {
 
     expect((back.group.name, back.status, back.singleGroupEmployeeCount), ('Blue collar', GroupScheduleStatus.employeesDiffer, 3));
     final first = back.variants.first;
-    expect(first.favour, ScheduleRoundingFavour.employee);
     expect(first.workDays.single.start!.rounding!.intervalMinutes, 30);
     expect(first.workDays.single.finish, isNull);
     expect(first.breaks.single.usualStart, '12:00');
-    expect(back.variants.last.favour, isNull);
+    expect(back.variants.last.workDays, isEmpty);
   });
 
   test('options round-trip', () {
     const options = ScheduleOptions(
       days: [monday],
       roundingIntervalMinutes: [15, 30, 60],
-      toleranceMinutes: [0, 5, 10, 15],
+      maxToleranceMinutes: 60,
       breakLengthMinutes: [15, 30, 45, 60],
     );
 

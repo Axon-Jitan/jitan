@@ -197,6 +197,6 @@ void main() {
     expect(one.singleGroupEmployeeCount, 2);
     final withStart = one.variants.firstWhere((v) => v.workDays.isNotEmpty);
     expect(withStart.workDays.single.start!.time, '08:00');
-    expect(withStart.favour, ScheduleRoundingFavour.company);
+    expect(withStart.workDays.single.start!.rounding!.roundUp, isTrue);
   });
 }

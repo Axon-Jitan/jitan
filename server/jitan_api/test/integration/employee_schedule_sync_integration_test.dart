@@ -75,11 +75,10 @@ void main() {
     groups[group]!,
     SetWorkHoursRequest(
       days: [WorkHoursDay(dayId: monday, start: start, finish: '16:00')],
-      startToleranceMinutes: 0,
-      finishToleranceMinutes: 0,
-      startIntervalMinutes: 15,
-      finishIntervalMinutes: 15,
-      favour: ScheduleRoundingFavour.company,
+      arrivalToleranceMinutes: 0,
+      leavingToleranceMinutes: 0,
+      startRounding: const ScheduleRounding(intervalMinutes: 15, roundUp: true),
+      finishRounding: const ScheduleRounding(intervalMinutes: 15, roundUp: false),
     ),
   );
 

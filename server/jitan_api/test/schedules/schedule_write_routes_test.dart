@@ -18,18 +18,16 @@ Map<String, Object?> _workHours({
   List<Map<String, Object?>> days = const [
     {'dayId': 1, 'start': '08:00', 'finish': '16:30'},
   ],
-  int startTolerance = 10,
-  int finishTolerance = 10,
-  int startInterval = 15,
-  int finishInterval = 15,
-  String favour = 'company',
+  int arrivalTolerance = 1,
+  int leavingTolerance = 5,
+  Object? startRounding = const {'intervalMinutes': 15, 'roundUp': true},
+  Object? finishRounding,
 }) => {
   'days': days,
-  'startToleranceMinutes': startTolerance,
-  'finishToleranceMinutes': finishTolerance,
-  'startIntervalMinutes': startInterval,
-  'finishIntervalMinutes': finishInterval,
-  'favour': favour,
+  'arrivalToleranceMinutes': arrivalTolerance,
+  'leavingToleranceMinutes': leavingTolerance,
+  'startRounding': startRounding,
+  'finishRounding': finishRounding,
 };
 
 Future<Map<String, Object?>> _error(TestApp app, String path, Object body) async {
@@ -53,10 +51,10 @@ void main() {
       ('a time that is not HH:mm', _workHours(days: const [{'dayId': 1, 'start': '8:00', 'finish': '16:30'}]), 'days'),
       ('24:00', _workHours(days: const [{'dayId': 1, 'start': '08:00', 'finish': '24:00'}]), 'days'),
       ('finish not after start', _workHours(days: const [{'dayId': 1, 'start': '16:30', 'finish': '16:30'}]), 'days'),
-      ('a tolerance not in the list', _workHours(startTolerance: 7), 'startToleranceMinutes'),
-      ('a finish tolerance not in the list', _workHours(finishTolerance: 20), 'finishToleranceMinutes'),
-      ('an interval not in the list', _workHours(startInterval: 20), 'startIntervalMinutes'),
-      ('a finish interval not in the list', _workHours(finishInterval: 45), 'finishIntervalMinutes'),
+      ('a negative arrival tolerance', _workHours(arrivalTolerance: -1), 'arrivalToleranceMinutes'),
+      ('a leaving tolerance over 60', _workHours(leavingTolerance: 61), 'leavingToleranceMinutes'),
+      ('a start interval not in the list', _workHours(startRounding: {'intervalMinutes': 7, 'roundUp': true}), 'startRounding'),
+      ('a finish interval not in the list', _workHours(finishRounding: {'intervalMinutes': 45, 'roundUp': false}), 'finishRounding'),
     ]) {
       test('$name → 400 naming "$field"', () async {
         final error = await _error(_app(), '$_path/work-hours', body);
@@ -67,11 +65,10 @@ void main() {
       });
     }
 
-    test('a favour other than company or employee is a bad request', () async {
-      for (final favour in ['mixed', 'nobody']) {
-        final error = await _error(_app(), '$_path/work-hours', _workHours(favour: favour));
-        expect(error, containsPair('status', 400), reason: favour);
-      }
+    test('a rounding that is not an object (or null) is a bad request', () async {
+      final error = await _error(_app(), '$_path/work-hours', _workHours(startRounding: 'up'));
+
+      expect(error, containsPair('status', 400));
     });
 
     test('malformed JSON or a missing field is a bad request', () async {
@@ -116,8 +113,8 @@ void main() {
   });
 
   test('request bodies round-trip through the shared models', () {
-    final work = SetWorkHoursRequest.fromJson(_workHours(favour: 'employee'));
-    expect(work.favour, ScheduleRoundingFavour.employee);
+    final work = SetWorkHoursRequest.fromJson(_workHours(finishRounding: {'intervalMinutes': 30, 'roundUp': false}));
+    expect((work.startRounding!.roundUp, work.finishRounding!.intervalMinutes, work.arrivalToleranceMinutes), (true, 30, 1));
     expect(SetWorkHoursRequest.fromJson(work.toJson()).days.single.finish, '16:30');
 
     final breaks = SetBreaksRequest.fromJson({

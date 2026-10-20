@@ -32,7 +32,6 @@ void main() {
         variants: [
           ScheduleVariant(
             employeeCount: 3,
-            favour: ScheduleRoundingFavour.company,
             workDays: [
               WorkDaySchedule(
                 day: monday,
@@ -59,7 +58,7 @@ void main() {
     final (client, urls) = api(const ScheduleOptions(
       days: [monday],
       roundingIntervalMinutes: [15, 30, 60],
-      toleranceMinutes: [0, 5, 10, 15],
+      maxToleranceMinutes: 60,
       breakLengthMinutes: [15, 30, 45, 60],
     ).toJson());
 
@@ -67,7 +66,7 @@ void main() {
 
     expect(urls.single.path, '/schedules/options');
     expect(options.days.single.weekday, 1);
-    expect(options.toleranceMinutes, [0, 5, 10, 15]);
+    expect(options.maxToleranceMinutes, 60);
   });
 
   test('saves and removes work hours and breaks of a group', () async {
@@ -90,11 +89,9 @@ void main() {
       2,
       const SetWorkHoursRequest(
         days: [WorkHoursDay(dayId: 1, start: '08:00', finish: '16:30')],
-        startToleranceMinutes: 10,
-        finishToleranceMinutes: 10,
-        startIntervalMinutes: 15,
-        finishIntervalMinutes: 15,
-        favour: ScheduleRoundingFavour.company,
+        arrivalToleranceMinutes: 1,
+        leavingToleranceMinutes: 5,
+        startRounding: ScheduleRounding(intervalMinutes: 15, roundUp: true),
       ),
     );
     await client.removeWorkHours(2);
@@ -107,7 +104,9 @@ void main() {
       'PUT /schedules/groups/2/breaks',
       'DELETE /schedules/groups/2/breaks',
     ]);
-    expect((jsonDecode(requests.first.body) as Map)['favour'], 'company');
+    final sent = jsonDecode(requests.first.body) as Map;
+    expect(sent['startRounding'], {'intervalMinutes': 15, 'roundUp': true});
+    expect(sent['finishRounding'], isNull);
     expect(removed.status, GroupScheduleStatus.noSchedule);
   });
 

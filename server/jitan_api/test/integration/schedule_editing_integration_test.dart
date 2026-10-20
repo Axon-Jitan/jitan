@@ -48,11 +48,10 @@ void main() {
   SetWorkHoursRequest hours(String start, String finish, {List<String> days = const ['Monday', 'Tuesday']}) =>
       SetWorkHoursRequest(
         days: [for (final d in days) WorkHoursDay(dayId: dayIds[d]!, start: start, finish: finish)],
-        startToleranceMinutes: 10,
-        finishToleranceMinutes: 5,
-        startIntervalMinutes: 15,
-        finishIntervalMinutes: 30,
-        favour: ScheduleRoundingFavour.company,
+        arrivalToleranceMinutes: 10,
+        leavingToleranceMinutes: 5,
+        startRounding: const ScheduleRounding(intervalMinutes: 15, roundUp: true),
+        finishRounding: const ScheduleRounding(intervalMinutes: 30, roundUp: false),
       );
 
   /// (scheduleID, active) of the user's work or break links, current or not.
@@ -194,7 +193,6 @@ void main() {
     expect(result.status, GroupScheduleStatus.configured);
     final variant = result.variants.single;
     expect(variant.employeeCount, 2, reason: 'A and B; C is also in White');
-    expect(variant.favour, ScheduleRoundingFavour.company);
     final monday = variant.workDays.firstWhere((d) => d.day.name == 'Monday');
     expect((monday.start!.time, monday.start!.toleranceMinutes, monday.start!.rounding!.intervalMinutes), ('08:00', 10, 15));
     expect((monday.start!.rounding!.roundUp, monday.finish!.rounding!.roundUp), (true, false));
@@ -301,6 +299,24 @@ void main() {
     expect(result.status, GroupScheduleStatus.noSchedule);
     expect(await links('A'), isEmpty);
     expect(await links('C'), isEmpty);
+  });
+
+  test('no rounding for the finish: no rule is stored for it; the start keeps its own', () async {
+    final result = await editing.setWorkHours(
+      users['actor']!,
+      groups['blue']!,
+      SetWorkHoursRequest(
+        days: [WorkHoursDay(dayId: dayIds['Monday']!, start: '08:00', finish: '16:30')],
+        arrivalToleranceMinutes: 1,
+        leavingToleranceMinutes: 5,
+        startRounding: const ScheduleRounding(intervalMinutes: 5, roundUp: true),
+      ),
+    );
+
+    final monday = result.variants.single.workDays.single;
+    expect((monday.start!.rounding!.intervalMinutes, monday.start!.rounding!.roundUp), (5, true));
+    expect(monday.finish!.rounding, isNull);
+    expect((monday.start!.toleranceMinutes, monday.finish!.toleranceMinutes), (1, 5));
   });
 
   test('an unknown group is 404', () async {

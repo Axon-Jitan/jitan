@@ -19,44 +19,49 @@ class ScheduleDay {
 }
 
 /// Response body of `GET /schedules/options`: the fixed choices of the
-/// HR/Admin schedule form. The server validates against the same lists.
+/// HR/Admin schedule form. The server validates against the same values.
 class ScheduleOptions {
   const ScheduleOptions({
     required this.days,
     required this.roundingIntervalMinutes,
-    required this.toleranceMinutes,
+    required this.maxToleranceMinutes,
     required this.breakLengthMinutes,
   });
 
   factory ScheduleOptions.fromJson(Map<String, Object?> json) => ScheduleOptions(
         days: json.readObjectList('days').map(ScheduleDay.fromJson).toList(),
         roundingIntervalMinutes: json.readIntList('roundingIntervalMinutes'),
-        toleranceMinutes: json.readIntList('toleranceMinutes'),
+        maxToleranceMinutes: json.readInt('maxToleranceMinutes'),
         breakLengthMinutes: json.readIntList('breakLengthMinutes'),
       );
 
   /// Monday first.
   final List<ScheduleDay> days;
+
+  /// The rounding intervals HR picks from (5, 10, 15, 30, 60).
   final List<int> roundingIntervalMinutes;
-  final List<int> toleranceMinutes;
+
+  /// Arrival and leaving tolerance: any whole number of minutes from 0 to this.
+  final int maxToleranceMinutes;
   final List<int> breakLengthMinutes;
 
   Map<String, Object?> toJson() => {
         'days': [for (final day in days) day.toJson()],
         'roundingIntervalMinutes': roundingIntervalMinutes,
-        'toleranceMinutes': toleranceMinutes,
+        'maxToleranceMinutes': maxToleranceMinutes,
         'breakLengthMinutes': breakLengthMinutes,
       };
 }
 
-/// A rounding rule (`tblRoundingRule`) of a work start or finish.
+/// The rounding of a work start or finish (`tblRoundingRule`): up or down to
+/// the next or previous mark of the interval. No rule means no rounding.
 class ScheduleRounding {
   const ScheduleRounding({required this.intervalMinutes, required this.roundUp});
 
   factory ScheduleRounding.fromJson(Map<String, Object?> json) =>
       ScheduleRounding(intervalMinutes: json.readInt('intervalMinutes'), roundUp: json.readBool('roundUp'));
 
-  /// `roundingRuleValueInMin`: 15, 30 or 60.
+  /// `roundingRuleValueInMin`: 5, 10, 15, 30 or 60.
   final int intervalMinutes;
 
   /// `roundingRuleRoundUp`: up to the next mark, or down to the previous one.
@@ -81,10 +86,12 @@ class WorkBoundary {
   /// Wall-clock `HH:mm`.
   final String time;
 
-  /// `scheduleMarginMin`: minutes either side of [time].
+  /// `scheduleMarginMin`: the arrival tolerance (minutes after a start) or
+  /// the leaving tolerance (minutes before a finish). It decides the
+  /// attendance status only and never changes a time.
   final int toleranceMinutes;
 
-  /// `null` when no active rounding rule is linked (a data problem HR sees).
+  /// `null` when the start or finish is not rounded.
   final ScheduleRounding? rounding;
 
   Map<String, Object?> toJson() => {'time': time, 'toleranceMinutes': toleranceMinutes, 'rounding': rounding?.toJson()};
@@ -133,30 +140,14 @@ class BreakSchedule {
   Map<String, Object?> toJson() => {'day': day.toJson(), 'usualStart': usualStart, 'lengthMinutes': lengthMinutes};
 }
 
-/// Who the rounding of a schedule favours, as HR chose it.
-enum ScheduleRoundingFavour {
-  /// Starts round up, finishes round down.
-  company,
-
-  /// Starts round down, finishes round up.
-  employee,
-
-  /// The rules match neither (e.g. changed outside Jitan): HR sees them as they are.
-  mixed,
-}
-
 /// One set of schedules that some of a group's employees have.
 class ScheduleVariant {
-  const ScheduleVariant({required this.employeeCount, required this.workDays, required this.breaks, this.favour});
+  const ScheduleVariant({required this.employeeCount, required this.workDays, required this.breaks});
 
   factory ScheduleVariant.fromJson(Map<String, Object?> json) => ScheduleVariant(
         employeeCount: json.readInt('employeeCount'),
         workDays: json.readObjectList('workDays').map(WorkDaySchedule.fromJson).toList(),
         breaks: json.readObjectList('breaks').map(BreakSchedule.fromJson).toList(),
-        favour: switch (json.readOptionalString('favour')) {
-          final String name => ScheduleRoundingFavour.values.byName(name),
-          null => null,
-        },
       );
 
   final int employeeCount;
@@ -165,14 +156,10 @@ class ScheduleVariant {
   final List<WorkDaySchedule> workDays;
   final List<BreakSchedule> breaks;
 
-  /// `null` when there are no work hours (so no rounding).
-  final ScheduleRoundingFavour? favour;
-
   Map<String, Object?> toJson() => {
         'employeeCount': employeeCount,
         'workDays': [for (final day in workDays) day.toJson()],
         'breaks': [for (final b in breaks) b.toJson()],
-        'favour': favour?.name,
       };
 }
 

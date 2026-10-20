@@ -4,7 +4,6 @@ import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
-import '../time_registration/rounding/rounding_policy.dart';
 import 'schedule_choices.dart';
 import 'schedule_names.dart';
 import 'schedule_service.dart';
@@ -50,21 +49,19 @@ class ScheduleEditingService {
   static const _breakTypes = [ScheduleTypeNames.breakTime];
   static final _time = RegExp(r'^([01]\d|2[0-3]):[0-5]\d$');
 
-  /// Sets [groupId]'s work hours, replacing any it had.
+  /// Sets [groupId]'s work hours, replacing any it had: per day a start and
+  /// a finish, the arrival and leaving tolerance (attendance only), and the
+  /// start and finish rounding (up or down by an interval, or none).
   Future<GroupSchedule> setWorkHours(int actorUserId, int groupId, SetWorkHoursRequest request) async {
     await _validDayIds(request.days.map((d) => d.dayId), SetWorkHoursRequest.fieldDays);
-    _choice(request.startToleranceMinutes, ScheduleChoices.toleranceMinutes, SetWorkHoursRequest.fieldStartTolerance);
-    _choice(request.finishToleranceMinutes, ScheduleChoices.toleranceMinutes, SetWorkHoursRequest.fieldFinishTolerance);
-    _choice(request.startIntervalMinutes, ScheduleChoices.roundingIntervalMinutes, SetWorkHoursRequest.fieldStartInterval);
-    _choice(request.finishIntervalMinutes, ScheduleChoices.roundingIntervalMinutes, SetWorkHoursRequest.fieldFinishInterval);
-    final favour = switch (request.favour) {
-      ScheduleRoundingFavour.company => RoundingFavour.company,
-      ScheduleRoundingFavour.employee => RoundingFavour.employee,
-      ScheduleRoundingFavour.mixed => throw const ApiException.validation(
-          SetWorkHoursRequest.fieldFavour,
-          'Choose who the rounding favours: the company or the employee.',
-        ),
-    };
+    _tolerance(request.arrivalToleranceMinutes, SetWorkHoursRequest.fieldArrivalTolerance);
+    _tolerance(request.leavingToleranceMinutes, SetWorkHoursRequest.fieldLeavingTolerance);
+    for (final (rounding, field) in [
+      (request.startRounding, SetWorkHoursRequest.fieldStartRounding),
+      (request.finishRounding, SetWorkHoursRequest.fieldFinishRounding),
+    ]) {
+      if (rounding != null) _choice(rounding.intervalMinutes, ScheduleChoices.roundingIntervalMinutes, field);
+    }
     final rows = <_NewRow>[];
     for (final day in request.days) {
       final start = _minutes(day.start, SetWorkHoursRequest.fieldDays);
@@ -72,9 +69,9 @@ class ScheduleEditingService {
       if (finish <= start) {
         throw const ApiException.validation(SetWorkHoursRequest.fieldDays, 'Finish must be after start.');
       }
-      for (final (type, boundary, margin, interval) in [
-        (ScheduleTypeNames.workStart, RoundingBoundary.start, request.startToleranceMinutes, request.startIntervalMinutes),
-        (ScheduleTypeNames.workFinish, RoundingBoundary.finish, request.finishToleranceMinutes, request.finishIntervalMinutes),
+      for (final (type, margin, rounding) in [
+        (ScheduleTypeNames.workStart, request.arrivalToleranceMinutes, request.startRounding),
+        (ScheduleTypeNames.workFinish, request.leavingToleranceMinutes, request.finishRounding),
       ]) {
         rows.add((
           typeName: type,
@@ -82,8 +79,8 @@ class ScheduleEditingService {
           startMinutes: start,
           stopMinutes: finish,
           marginMinutes: margin,
-          intervalMinutes: interval,
-          roundUp: favour.directionFor(boundary) == RoundingDirection.up,
+          intervalMinutes: rounding?.intervalMinutes,
+          roundUp: rounding?.roundUp,
         ));
       }
     }
@@ -313,6 +310,12 @@ class ScheduleEditingService {
     final known = await _schedules.activeDays();
     if (ids.any((id) => !known.containsKey(id))) throw ApiException.validation(field, 'Choose days from the list.');
     if (ids.toSet().length != ids.length) throw ApiException.validation(field, 'Each day can be chosen once.');
+  }
+
+  static void _tolerance(int minutes, String field) {
+    if (minutes < 0 || minutes > ScheduleChoices.maxToleranceMinutes) {
+      throw ApiException.validation(field, 'Enter 0 to ${ScheduleChoices.maxToleranceMinutes} minutes.');
+    }
   }
 
   static void _choice(int value, List<int> allowed, String field) {

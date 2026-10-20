@@ -22,7 +22,7 @@ class ScheduleService {
   Future<ScheduleOptions> options() async => ScheduleOptions(
         days: (await activeDays()).values.toList()..sort((a, b) => a.weekday.compareTo(b.weekday)),
         roundingIntervalMinutes: ScheduleChoices.roundingIntervalMinutes,
-        toleranceMinutes: ScheduleChoices.toleranceMinutes,
+        maxToleranceMinutes: ScheduleChoices.maxToleranceMinutes,
         breakLengthMinutes: ScheduleChoices.breakLengthMinutes,
       );
 
@@ -140,19 +140,18 @@ class ScheduleService {
     }
 
     final workDayIds = {...starts.keys, ...finishes.keys}.toList()..sort((a, b) => days[a]!.weekday.compareTo(days[b]!.weekday));
-    final workDays = [
-      for (final id in workDayIds) WorkDaySchedule(day: days[id]!, start: starts[id], finish: finishes[id]),
-    ];
     return ScheduleVariant(
       employeeCount: employeeCount,
-      workDays: workDays,
+      workDays: [
+        for (final id in workDayIds) WorkDaySchedule(day: days[id]!, start: starts[id], finish: finishes[id]),
+      ],
       breaks: breaks.values.toList()..sort((a, b) => a.day.weekday.compareTo(b.day.weekday)),
-      favour: _favour(workDays),
     );
   }
 
-  /// A start or finish with its tolerance and its one rounding rule (none
-  /// when zero or several are linked: HR sees it missing and fixes it).
+  /// A start or finish with its tolerance and its rounding rule: none when no
+  /// rule is linked (not rounded), or when several are (a data problem: HR
+  /// sees no rounding and saves it again).
   static WorkBoundary _boundary(String time, UserScheduleRow row, Map<int, List<ScheduleRuleRow>> rulesOf) {
     final rules = rulesOf[row.scheduleId] ?? const [];
     return WorkBoundary(
@@ -162,17 +161,6 @@ class ScheduleService {
           ? ScheduleRounding(intervalMinutes: rules.single.intervalMinutes, roundUp: rules.single.roundUp)
           : null,
     );
-  }
-
-  /// Company: every start rounds up and every finish down; employee: the
-  /// opposite; mixed: anything else. `null` without any rounding rule.
-  static ScheduleRoundingFavour? _favour(List<WorkDaySchedule> workDays) {
-    final startsUp = [for (final d in workDays) ?d.start?.rounding?.roundUp];
-    final finishesUp = [for (final d in workDays) ?d.finish?.rounding?.roundUp];
-    if (startsUp.isEmpty && finishesUp.isEmpty) return null;
-    if (startsUp.every((up) => up) && finishesUp.every((up) => !up)) return ScheduleRoundingFavour.company;
-    if (startsUp.every((up) => !up) && finishesUp.every((up) => up)) return ScheduleRoundingFavour.employee;
-    return ScheduleRoundingFavour.mixed;
   }
 
   /// One active group with its schedules; `null` when it is not active.
