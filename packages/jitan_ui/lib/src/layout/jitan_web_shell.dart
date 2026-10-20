@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/jitan_colors.dart';
@@ -22,11 +24,17 @@ class JitanWebShell extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < JitanDimensions.compactLayoutBreakpoint;
-          final page = Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: JitanDimensions.pageMaxWidth),
-              child: child,
+          // Exactly the window's width beside the sidebar, at most
+          // pageMaxWidth: a tight width, so a wide table inside scrolls
+          // instead of making the page wider than the window.
+          final page = LayoutBuilder(
+            builder: (context, area) => Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: math.min(area.maxWidth, JitanDimensions.pageMaxWidth),
+                height: area.maxHeight,
+                child: child,
+              ),
             ),
           );
           if (!compact) {

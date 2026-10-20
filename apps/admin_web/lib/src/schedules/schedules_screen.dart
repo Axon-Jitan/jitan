@@ -79,34 +79,21 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsetsDirectional.fromSTEB(
-      JitanDimensions.pagePaddingStart,
-      JitanDimensions.pagePaddingVertical,
-      JitanDimensions.pagePaddingEnd,
-      JitanDimensions.pagePaddingVertical,
-    ),
+    padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
     child: ListenableBuilder(
       listenable: _controller,
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: JitanPageHeader(
-                  title: context.t(AdminTextKeys.scheduleTitle),
-                  subtitle: context.t(AdminTextKeys.scheduleListSubtitle),
-                ),
-              ),
-              const SizedBox(width: 16),
-              JitanPrimaryButton(
-                label: context.t(AdminTextKeys.scheduleAddAction),
-                icon: Icons.add,
-                height: JitanDimensions.controlHeight,
-                onPressed: _controller.state is SchedulesLoaded ? _open : null,
-              ),
-            ],
+          JitanPageHeader(
+            title: context.t(AdminTextKeys.scheduleTitle),
+            subtitle: context.t(AdminTextKeys.scheduleListSubtitle),
+            action: JitanPrimaryButton(
+              label: context.t(AdminTextKeys.scheduleAddAction),
+              icon: Icons.add,
+              height: JitanDimensions.controlHeight,
+              onPressed: _controller.state is SchedulesLoaded ? _open : null,
+            ),
           ),
           const SizedBox(height: JitanDimensions.headerToToolbar),
           _toolbar(context),
@@ -187,15 +174,16 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       builder: (context, constraints) {
         final total = widths.search + widths.type + widths.group + widths.status + 3 * gap;
         if (constraints.maxWidth < total) {
+          final half = (constraints.maxWidth - 14) / 2;
           return Wrap(
             spacing: 14,
             runSpacing: 14,
             crossAxisAlignment: WrapCrossAlignment.end,
             children: [
-              SizedBox(width: widths.search, child: search),
-              SizedBox(width: widths.type, child: type),
-              SizedBox(width: widths.group, child: group),
-              SizedBox(width: widths.status, child: status),
+              SizedBox(width: constraints.maxWidth, child: search),
+              SizedBox(width: half, child: type),
+              SizedBox(width: half, child: group),
+              SizedBox(width: constraints.maxWidth, child: status),
             ],
           );
         }

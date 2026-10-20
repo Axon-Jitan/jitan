@@ -133,7 +133,23 @@ class JitanModal extends StatelessWidget {
         ],
       );
 
-  Widget _footerRow() => Row(
+  Widget _footerRow() {
+    // Without a note: the buttons sit left and right when they fit, and
+    // stack (main action on top) on a narrow screen instead of overflowing.
+    if (footerNote == null) {
+      return OverflowBar(
+        alignment: leadingActions.isEmpty ? MainAxisAlignment.end : MainAxisAlignment.spaceBetween,
+        overflowAlignment: OverflowBarAlignment.end,
+        overflowDirection: VerticalDirection.up,
+        spacing: 12,
+        overflowSpacing: 10,
+        children: [...leadingActions, ...actions],
+      );
+    }
+    return _footerRowWithNote();
+  }
+
+  Widget _footerRowWithNote() => Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           for (var i = 0; i < leadingActions.length; i++) ...[

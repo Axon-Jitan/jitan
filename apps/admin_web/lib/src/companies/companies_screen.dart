@@ -34,12 +34,7 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsetsDirectional.fromSTEB(
-      JitanDimensions.pagePaddingStart,
-      JitanDimensions.pagePaddingVertical,
-      JitanDimensions.pagePaddingEnd,
-      JitanDimensions.pagePaddingVertical,
-    ),
+    padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -50,8 +45,8 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
         const SizedBox(height: JitanDimensions.headerToToolbar),
         Align(
           alignment: Alignment.centerLeft,
-          child: SizedBox(
-            width: JitanDimensions.filterSearchWidth,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: JitanDimensions.filterSearchWidth),
             child: JitanFieldLabel(
               label: context.t(CommonTextKeys.searchLabel),
               child: JitanSearchField(

@@ -28,12 +28,7 @@ class EmployeesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final company = CurrentCompanyScope.of(context).company;
     return SingleChildScrollView(
-      padding: const EdgeInsetsDirectional.fromSTEB(
-        JitanDimensions.pagePaddingStart,
-        JitanDimensions.pagePaddingVertical,
-        JitanDimensions.pagePaddingEnd,
-        JitanDimensions.pagePaddingVertical,
-      ),
+      padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 /// Spacing, radii and sizes measured from the Figma web screens
 /// (1440 × 1024 frames).
 abstract final class JitanDimensions {
@@ -9,6 +11,18 @@ abstract final class JitanDimensions {
   static const pagePaddingStart = 32.0;
   static const pagePaddingEnd = 48.0;
   static const pagePaddingVertical = 32.0;
+
+  /// Page side margins on a phone-sized window (below [phoneBreakpoint]).
+  static const pagePaddingCompact = 16.0;
+
+  /// Below this width a page uses phone margins and stacks its header.
+  static const phoneBreakpoint = 600.0;
+
+  /// The padding of a page's scroll view for a window [width] wide: Figma's
+  /// 32 / 48 px margins, 16 px on a phone.
+  static EdgeInsetsDirectional pagePadding(double width) => width < phoneBreakpoint
+      ? const EdgeInsetsDirectional.fromSTEB(pagePaddingCompact, 20, pagePaddingCompact, 24)
+      : const EdgeInsetsDirectional.fromSTEB(pagePaddingStart, pagePaddingVertical, pagePaddingEnd, pagePaddingVertical);
 
   /// Below this width the sidebar collapses into a drawer.
   static const compactLayoutBreakpoint = 900.0;
