@@ -15,8 +15,8 @@ Future<bool> showDeactivateScheduleDialog(
   required SchedulesController controller,
   required ScheduleRow row,
 }) async =>
-    await showDialog<bool>(
-      context: context,
+    await showJitanModal<bool>(
+      context,
       builder: (_) => DeactivateScheduleDialog(controller: controller, row: row),
     ) ??
     false;

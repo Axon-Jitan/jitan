@@ -17,8 +17,8 @@ Future<void> showEmployeeDetailsDialog(
   required EmployeeAssignmentsApi assignmentsApi,
   required int companyId,
   required int userId,
-}) => showDialog<void>(
-  context: context,
+}) => showJitanModal<void>(
+      context,
   builder: (_) => EmployeeDetailsDialog(
     employeesApi: employeesApi,
     assignmentsApi: assignmentsApi,

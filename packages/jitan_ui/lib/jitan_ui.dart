@@ -12,6 +12,7 @@ export 'src/components/jitan_loading_state.dart';
 export 'src/components/jitan_mobile_button.dart';
 export 'src/components/jitan_option_card.dart';
 export 'src/components/jitan_modal.dart';
+export 'src/components/show_jitan_modal.dart';
 export 'src/components/jitan_page_header.dart';
 export 'src/components/jitan_primary_button.dart';
 export 'src/components/jitan_qr_code.dart';

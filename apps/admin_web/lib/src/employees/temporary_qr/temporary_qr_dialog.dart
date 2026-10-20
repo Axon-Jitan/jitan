@@ -16,8 +16,8 @@ Future<void> showTemporaryQrDialog(
   required EmployeeDetails employee,
   required TemporaryQrPurpose purpose,
   DateTime Function()? clock,
-}) => showDialog<void>(
-  context: context,
+}) => showJitanModal<void>(
+      context,
   builder: (_) => TemporaryQrDialog(employeesApi: employeesApi, employee: employee, purpose: purpose, clock: clock),
 );
 

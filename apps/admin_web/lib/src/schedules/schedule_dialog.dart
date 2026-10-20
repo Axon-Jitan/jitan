@@ -20,8 +20,8 @@ Future<GroupSchedule?> showScheduleDialog(
   ScheduleOptions? options,
   GroupSchedule? group,
   ScheduleKind? kind,
-}) => showDialog<GroupSchedule>(
-  context: context,
+}) => showJitanModal<GroupSchedule>(
+      context,
   builder: (_) => ScheduleDialog(api: api, groups: groups, options: options, group: group, kind: kind),
 );
 

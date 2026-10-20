@@ -14,8 +14,8 @@ Future<bool> showResetAccessDialog(
   required EmployeesApi employeesApi,
   required EmployeeDetails employee,
 }) async =>
-    await showDialog<bool>(
-      context: context,
+    await showJitanModal<bool>(
+      context,
       builder: (_) => ResetAccessDialog(employeesApi: employeesApi, employee: employee),
     ) ??
     false;

@@ -16,8 +16,8 @@ Future<bool> showManageAssignmentsDialog(
   required EmployeeAssignmentsApi api,
   required EmployeeDetails employee,
 }) async =>
-    await showDialog<bool>(
-      context: context,
+    await showJitanModal<bool>(
+      context,
       builder: (_) => ManageAssignmentsDialog(api: api, employee: employee),
     ) ??
     false;

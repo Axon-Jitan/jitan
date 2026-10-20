@@ -15,8 +15,8 @@ Future<EmployeeSummary?> showAddEmployeeDialog(
   required EmployeesApi employeesApi,
   required GroupsApi groupsApi,
   required int companyId,
-}) => showDialog<EmployeeSummary>(
-  context: context,
+}) => showJitanModal<EmployeeSummary>(
+      context,
   builder: (_) => AddEmployeeDialog(employeesApi: employeesApi, groupsApi: groupsApi, companyId: companyId),
 );
 

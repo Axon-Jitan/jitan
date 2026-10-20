@@ -16,8 +16,8 @@ Future<bool> showRemoveAssignmentDialog(
   required AssignmentTab tab,
   required AssignmentOption option,
 }) async =>
-    await showDialog<bool>(
-      context: context,
+    await showJitanModal<bool>(
+      context,
       builder: (_) => RemoveAssignmentDialog(controller: controller, tab: tab, option: option),
     ) ??
     false;
