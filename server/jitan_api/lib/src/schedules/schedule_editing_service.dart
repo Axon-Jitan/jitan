@@ -58,16 +58,38 @@ class ScheduleEditingService {
     return _result(groupId);
   }
 
-  /// Sets [groupId]'s whole schedule, its work hours and its breaks (none:
-  /// no break), in one transaction: when anything is refused, nothing is
-  /// saved. Each break must lie within the new work hours of its day.
+  /// Sets [groupId]'s whole schedule, its work hours and its break, in one
+  /// transaction: when anything is refused, nothing is saved.
+  ///
+  /// HR only chooses the break's length. It is placed in the middle of each
+  /// working day (decision D28): `start = (dayStart + dayFinish - length) / 2`,
+  /// whole minutes, e.g. 08:00–16:30 with 30 minutes → 12:00–12:30. Only the
+  /// length counts (breaks are deducted automatically); the stored time
+  /// exists because a schedule row is a time from–to.
   Future<GroupSchedule> setSchedule(int actorUserId, int groupId, SetGroupScheduleRequest request) async {
     final workRows = await _workRows(request.workHours);
-    final breakRows = request.breaks.isEmpty
-        ? const <_NewRow>[]
-        : await _breakRows(request.breaks, SetGroupScheduleRequest.fieldBreaks);
-    final hours = {for (final row in workRows) row.dayId: (start: row.startMinutes, finish: row.stopMinutes)};
-    _breaksWithin(breakRows, hours, SetGroupScheduleRequest.fieldBreaks);
+    final length = request.breakMinutes;
+    _choice(length, ScheduleChoices.breakLengthMinutes, SetGroupScheduleRequest.fieldBreakMinutes);
+    final days = {for (final row in workRows) row.dayId: (start: row.startMinutes, finish: row.stopMinutes)};
+    final breakRows = <_NewRow>[];
+    for (final MapEntry(key: dayId, value: (:start, :finish)) in days.entries) {
+      if (length >= finish - start) {
+        throw const ApiException.validation(
+          SetGroupScheduleRequest.fieldBreakMinutes,
+          'The break must be shorter than the working day.',
+        );
+      }
+      final breakStart = (start + finish - length) ~/ 2;
+      breakRows.add((
+        typeName: ScheduleTypeNames.breakTime,
+        dayId: dayId,
+        startMinutes: breakStart,
+        stopMinutes: breakStart + length,
+        marginMinutes: 0,
+        intervalMinutes: null,
+        roundUp: null,
+      ));
+    }
     await _transactions.transaction((tx) async {
       if (!await _writes.lockGroup(tx, groupId)) throw ApiException.notFound('Group $groupId does not exist.');
       await _replace(tx, actorUserId, groupId, _workTypes, workRows, locked: true);

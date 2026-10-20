@@ -103,7 +103,7 @@ void main() {
           arrivalToleranceMinutes: 0,
           leavingToleranceMinutes: 0,
         ),
-        breaks: [BreakDay(dayId: 1, usualStart: '12:00', lengthMinutes: 30)],
+        breakMinutes: 30,
       ),
     );
     await client.setBreaks(2, const SetBreaksRequest(days: [BreakDay(dayId: 1, usualStart: '12:00', lengthMinutes: 30)]));
@@ -121,9 +121,7 @@ void main() {
     expect(sent['finishRounding'], isNull);
     final whole = jsonDecode(requests[2].body) as Map;
     expect((whole['workHours'] as Map)['days'], hasLength(1));
-    expect(whole['breaks'], [
-      {'dayId': 1, 'usualStart': '12:00', 'lengthMinutes': 30},
-    ]);
+    expect(whole['breakMinutes'], 30);
     expect(removed.status, GroupScheduleStatus.noSchedule);
   });
 

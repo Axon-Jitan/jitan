@@ -20,8 +20,9 @@ import 'schedule_service.dart';
 /// - `GET /schedules/options`: the form's days, intervals, tolerances and
 ///   break lengths
 /// - `PUT /schedules/groups/{groupId}` (`SetGroupScheduleRequest`): set a
-///   group's work hours and breaks together, in one transaction (the
-///   Create / Edit schedule wizard)
+///   group's work hours and break length together, in one transaction (the
+///   Create / Edit schedule wizard); the break is placed in the middle of
+///   each working day
 /// - `PUT /schedules/groups/{groupId}/work-hours` (`SetWorkHoursRequest`),
 ///   `DELETE …/work-hours`: set or remove a group's work hours
 /// - `PUT /schedules/groups/{groupId}/breaks` (`SetBreaksRequest`),

@@ -113,27 +113,31 @@ class SetBreaksRequest {
 }
 
 /// Body of `PUT /schedules/groups/{groupId}`: a group's whole schedule, its
-/// work hours and its breaks ([breaks] empty: no break), saved together in
-/// one transaction. Each break lies within these work hours of its day.
+/// work hours and the length of its break, saved together in one
+/// transaction. Every schedule has a break; HR only chooses its length, and
+/// the server places it in the middle of each working day (decision D28 in
+/// docs/TIME_ENGINE_ANALYSIS.md).
 class SetGroupScheduleRequest {
-  const SetGroupScheduleRequest({required this.workHours, this.breaks = const []});
+  const SetGroupScheduleRequest({required this.workHours, required this.breakMinutes});
 
   factory SetGroupScheduleRequest.fromJson(Map<String, Object?> json) => SetGroupScheduleRequest(
         workHours: SetWorkHoursRequest.fromJson(json.readObject(fieldWorkHours)),
-        breaks: json.readObjectList(fieldBreaks).map(BreakDay.fromJson).toList(),
+        breakMinutes: json.readInt(fieldBreakMinutes),
       );
 
   final SetWorkHoursRequest workHours;
-  final List<BreakDay> breaks;
+
+  /// One of `ScheduleOptions.breakLengthMinutes`.
+  final int breakMinutes;
 
   /// Field names, for [ApiError.field]. Errors in the work hours use
   /// [SetWorkHoursRequest]'s field names.
   static const fieldWorkHours = 'workHours';
-  static const fieldBreaks = 'breaks';
+  static const fieldBreakMinutes = 'breakMinutes';
 
   Map<String, Object?> toJson() => {
         fieldWorkHours: workHours.toJson(),
-        fieldBreaks: [for (final day in breaks) day.toJson()],
+        fieldBreakMinutes: breakMinutes,
       };
 }
 

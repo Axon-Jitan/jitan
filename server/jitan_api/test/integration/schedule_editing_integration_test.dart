@@ -326,19 +326,18 @@ void main() {
     );
   });
 
-  test('the whole schedule at once: hours and break together; a break that does not fit saves nothing', () async {
+  test('the whole schedule at once: hours and a mid-day break; a break that does not fit saves nothing', () async {
     final monday = dayIds['Monday']!;
     final saved = await editing.setSchedule(
       users['actor']!,
       groups['blue']!,
-      SetGroupScheduleRequest(
-        workHours: hours('09:00', '17:00'),
-        breaks: [BreakDay(dayId: monday, usualStart: '12:00', lengthMinutes: 30)],
-      ),
+      SetGroupScheduleRequest(workHours: hours('08:00', '16:30'), breakMinutes: 30),
     );
     final variant = saved.variants.single;
-    expect(variant.workDays.firstWhere((d) => d.day.id == monday).start!.time, '09:00');
-    expect(variant.breaks.single.usualStart, '12:00');
+    expect(variant.workDays.firstWhere((d) => d.day.id == monday).start!.time, '08:00');
+    expect([for (final b in variant.breaks) (b.day.id, b.usualStart, b.lengthMinutes)], [
+      for (final d in variant.workDays) (d.day.id, '12:00', 30),
+    ], reason: 'the middle of 08:00–16:30, on every working day');
 
     final logs = await eventLogRows();
     final before = await links('A');
@@ -346,22 +345,11 @@ void main() {
       editing.setSchedule(
         users['actor']!,
         groups['blue']!,
-        SetGroupScheduleRequest(
-          workHours: hours('07:00', '15:00'),
-          breaks: [BreakDay(dayId: monday, usualStart: '15:30', lengthMinutes: 30)],
-        ),
+        SetGroupScheduleRequest(workHours: hours('08:00', '08:30'), breakMinutes: 30),
       ),
-      throwsA(isA<ApiException>().having((e) => e.field, 'field', SetGroupScheduleRequest.fieldBreaks)),
+      throwsA(isA<ApiException>().having((e) => e.field, 'field', SetGroupScheduleRequest.fieldBreakMinutes)),
     );
     expect(await links('A'), before, reason: 'the new hours were not saved either');
     expect(await eventLogRows(), logs, reason: 'nothing audited');
-
-    final noBreak = await editing.setSchedule(
-      users['actor']!,
-      groups['blue']!,
-      SetGroupScheduleRequest(workHours: hours('09:00', '17:00')),
-    );
-    expect(noBreak.variants.single.breaks, isEmpty, reason: '"No break" removes the break');
-    expect(noBreak.variants.single.workDays, hasLength(2), reason: 'the hours stay');
   });
 }

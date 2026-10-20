@@ -79,38 +79,32 @@ void main() {
   });
 
   group('PUT a whole schedule: rejected before any write', () {
-    test('a break outside the new work hours → 400 naming "breaks"', () async {
-      final error = await _error(_app(), _path, {
-        'workHours': _workHours(),
-        'breaks': [
-          {'dayId': 1, 'usualStart': '16:15', 'lengthMinutes': 30},
-        ],
-      });
+    test('a break length not in the list → 400 naming "breakMinutes"', () async {
+      final error = await _error(_app(), _path, {'workHours': _workHours(), 'breakMinutes': 40});
 
       expect(error, containsPair('status', 400));
       expect(error, containsPair('code', 'validation_failed'));
-      expect(error, containsPair('field', 'breaks'));
+      expect(error, containsPair('field', 'breakMinutes'));
     });
 
-    test('a break on a day without work hours → 400 naming "breaks"', () async {
+    test('a break as long as the working day → 400 naming "breakMinutes"', () async {
       final error = await _error(_app(), _path, {
-        'workHours': _workHours(),
-        'breaks': [
-          {'dayId': 2, 'usualStart': '12:00', 'lengthMinutes': 30},
-        ],
+        'workHours': _workHours(days: const [{'dayId': 1, 'start': '08:00', 'finish': '08:30'}]),
+        'breakMinutes': 30,
       });
 
-      expect(error, containsPair('field', 'breaks'));
+      expect(error, containsPair('field', 'breakMinutes'));
     });
 
     test('invalid work hours are named as in PUT work-hours', () async {
-      final error = await _error(_app(), _path, {'workHours': _workHours(days: const []), 'breaks': []});
+      final error = await _error(_app(), _path, {'workHours': _workHours(days: const []), 'breakMinutes': 30});
 
       expect(error, containsPair('field', 'days'));
     });
 
-    test('a missing workHours is a bad request', () async {
-      expect((await _app().put(_path, jsonEncode({'breaks': []}))).statusCode, 400);
+    test('a missing workHours or breakMinutes is a bad request', () async {
+      expect((await _app().put(_path, jsonEncode({'breakMinutes': 30}))).statusCode, 400);
+      expect((await _app().put(_path, jsonEncode({'workHours': _workHours()}))).statusCode, 400);
     });
   });
 
