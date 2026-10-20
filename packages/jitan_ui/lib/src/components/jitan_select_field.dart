@@ -28,9 +28,13 @@ class JitanSelectField<T> extends StatefulWidget {
     required this.onChanged,
     this.hintText,
     this.errorText,
+    this.info,
   });
 
   final String? label;
+
+  /// What the field means, with an example; shown from an ⓘ by the label.
+  final String? info;
   final List<JitanSelectOption<T>> options;
   final T? value;
 
@@ -105,7 +109,7 @@ class _JitanSelectFieldState<T> extends State<JitanSelectField<T>> {
       },
     );
     final label = widget.label;
-    return label == null ? field : JitanFieldLabel(label: label, child: field);
+    return label == null ? field : JitanFieldLabel(label: label, info: widget.info, child: field);
   }
 
   String? get _selectedLabel => widget.options.where((o) => o.value == widget.value).firstOrNull?.label;
