@@ -104,6 +104,7 @@ changes.
 | D26 | Who gets the kilometres | It depends on the **agreement with the client company**: charged to the customer per van trip, or paid to the employee per trip (or both). The agreement comes with the project from SAP; Jitan records the trips once and both reports show them, the agreement deciding which counts. Part of IT's projects update. |
 | D27 | Workers on a project | Each project shows the employees who worked on it or chose it (also who rode in the van). IT will add what's needed to the ERD with the projects update. |
 | D19 | Switching project during the day | The employee switches project in the **app or at a terminal**, with no rules per group. The working day continues; only the project changes from that moment. One server action serves both. |
+| D28 | Setting a group's schedule | HR sets a group's **whole schedule in one wizard** (2026-10-20): group → working days and hours → break → attendance rules (tolerance, rounding) → review, saved **once**, hours and break in one transaction (`PUT /schedules/groups/{id}`). **Every schedule has a break**; HR only chooses its **length** (15/30/45/60 min). Jitan places it in the **middle of each working day**: start = (day start + day finish − length) / 2, whole minutes (08:00–16:30, 30 min → 12:00–12:30). Only the length counts (D13: deducted automatically); the stored time exists because a `tblSchedule` row is a time from–to, and is not shown to HR. A break as long as the working day is refused. |
 
 **Still open**
 
