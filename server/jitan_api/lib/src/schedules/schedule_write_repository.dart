@@ -50,6 +50,17 @@ class ScheduleWriteRepository {
     return [for (final row in rows) (userId: row.readInt('userID'), groupCount: row.readInt('groupCount'))];
   }
 
+  /// The current, active groups of [userId].
+  Future<List<int>> groupsOf(SqlExecutor tx, int userId) async => [
+        for (final row in await tx.query(
+          'SELECT ug.groupID FROM tblUserGroup ug '
+          'JOIN tblGroup g ON g.groupID = ug.groupID AND g.groupActive = 1 AND g.groupMFD = 0 '
+          'WHERE ug.userID = :u AND ${MembershipFilters.activeGroup('ug')} ORDER BY ug.groupID',
+          {'u': userId},
+        ))
+          row.readInt('groupID'),
+      ];
+
   /// Current links of [userIds] to active schedules of the types [typeNames].
   Future<List<ScheduleLink>> currentLinks(SqlExecutor tx, List<int> userIds, List<String> typeNames) async {
     if (userIds.isEmpty) return const [];
@@ -156,11 +167,28 @@ class ScheduleWriteRepository {
       ))
           .lastInsertId;
 
-  Future<int> linkUser(SqlExecutor tx, int userId, int scheduleId) async => (await tx.execute(
-        'INSERT INTO tblUserSchedule (userID, scheduleID, userScheduleActive, userScheduleMFD) VALUES (:u, :s, 1, 0)',
-        {'u': userId, 's': scheduleId},
-      ))
-          .lastInsertId;
+  /// Gives [userId] the schedule [scheduleId]: reactivates their switched-off
+  /// link to it when there is one (the unique pair allows one row per pair),
+  /// inserts a new link otherwise.
+  Future<int> linkUser(SqlExecutor tx, int userId, int scheduleId) async {
+    final existing = await tx.query(
+      'SELECT userScheduleID FROM tblUserSchedule WHERE userID = :u AND scheduleID = :s',
+      {'u': userId, 's': scheduleId},
+    );
+    if (existing.isNotEmpty) {
+      final id = existing.single.readInt('userScheduleID');
+      await tx.execute(
+        'UPDATE tblUserSchedule SET userScheduleActive = 1, userScheduleMFD = 0 WHERE userScheduleID = :id',
+        {'id': id},
+      );
+      return id;
+    }
+    return (await tx.execute(
+      'INSERT INTO tblUserSchedule (userID, scheduleID, userScheduleActive, userScheduleMFD) VALUES (:u, :s, 1, 0)',
+      {'u': userId, 's': scheduleId},
+    ))
+        .lastInsertId;
+  }
 
   /// Switches the links [userScheduleIds] off.
   Future<void> removeLinks(SqlExecutor tx, List<int> userScheduleIds) async {

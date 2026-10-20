@@ -11,6 +11,7 @@ import '../http/api_exception.dart';
 import '../onboarding/account_setup_rules.dart';
 import '../onboarding/onboarding_repository.dart';
 import 'employee_repository.dart';
+import '../schedules/employee_schedule_sync.dart';
 import '../temporary_qr/temporary_qr_service.dart';
 import 'personal_qr_code.dart';
 
@@ -26,6 +27,7 @@ class EmployeeService {
     this._accounts = const OnboardingRepository(),
     this._credentials = const CredentialRepository(),
     this._personalQrCode = newPersonalQrCode,
+    required this._scheduleSync,
   });
 
   final EmployeeRepository _employees;
@@ -37,6 +39,7 @@ class EmployeeService {
   final OnboardingRepository _accounts;
   final CredentialRepository _credentials;
   final String Function() _personalQrCode;
+  final EmployeeScheduleSync _scheduleSync;
 
   /// Longest accepted search text. Longer input is rejected, not truncated.
   static const maxSearchLength = 100;
@@ -218,6 +221,8 @@ class EmployeeService {
         );
         final userCompanyId = await _employees.addToCompany(tx, userId, companyId);
         final userGroupId = groupId == null ? null : await _employees.addToGroup(tx, userId, groupId);
+        // A new employee in a group gets that group's schedule.
+        if (groupId != null) await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
 
         await _audit.record(
           tx,

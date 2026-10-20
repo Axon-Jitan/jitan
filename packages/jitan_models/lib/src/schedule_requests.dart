@@ -1,3 +1,4 @@
+import 'group_summary.dart';
 import 'json_reading.dart';
 import 'schedule.dart';
 
@@ -108,4 +109,42 @@ class SetBreaksRequest {
   Map<String, Object?> toJson() => {
         fieldDays: [for (final day in days) day.toJson()],
       };
+}
+
+/// Response body of `GET …/employees/{userId}/assignments/schedule-source`:
+/// the employee's groups and the one their schedule comes from.
+class ScheduleSourceResponse {
+  const ScheduleSourceResponse({required this.groups, this.sourceGroupId});
+
+  factory ScheduleSourceResponse.fromJson(Map<String, Object?> json) => ScheduleSourceResponse(
+        groups: json.readObjectList('groups').map(GroupSummary.fromJson).toList(),
+        sourceGroupId: json.readOptionalInt('sourceGroupId'),
+      );
+
+  /// The employee's current, active groups.
+  final List<GroupSummary> groups;
+
+  /// `null` when the employee has no schedule, or it isn't exactly one
+  /// group's (HR then chooses).
+  final int? sourceGroupId;
+
+  Map<String, Object?> toJson() => {
+        'groups': [for (final group in groups) group.toJson()],
+        'sourceGroupId': sourceGroupId,
+      };
+}
+
+/// Body of `PUT …/employees/{userId}/assignments/schedule-source`: "Schedules
+/// come from" one of the employee's groups.
+class ScheduleSourceRequest {
+  const ScheduleSourceRequest({required this.groupId});
+
+  factory ScheduleSourceRequest.fromJson(Map<String, Object?> json) =>
+      ScheduleSourceRequest(groupId: json.readInt(fieldGroupId));
+
+  final int groupId;
+
+  static const fieldGroupId = 'groupId';
+
+  Map<String, Object?> toJson() => {fieldGroupId: groupId};
 }

@@ -12,6 +12,7 @@ import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/user_language_repository.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
+import 'package:jitan_api/src/schedules/employee_schedule_sync.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
@@ -56,6 +57,7 @@ void main() {
       audit: const AuditLogRepository(),
       transactions: db,
     ),
+    scheduleSync: const EmployeeScheduleSync(),
   );
 
   Future<int> insertCompany(String key, {required bool active, bool mfd = false}) async {

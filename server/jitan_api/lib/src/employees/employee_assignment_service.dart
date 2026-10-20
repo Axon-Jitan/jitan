@@ -8,6 +8,7 @@ import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
 import '../languages/user_language_repository.dart';
 import '../languages/user_language_service.dart';
+import '../schedules/employee_schedule_sync.dart';
 import 'employee_assignment_repository.dart';
 import 'employee_repository.dart';
 
@@ -30,6 +31,7 @@ class EmployeeAssignmentService {
     required this._executor,
     required this._userLanguages,
     required this._languageChanges,
+    required this._scheduleSync,
   });
 
   final EmployeeAssignmentRepository _assignments;
@@ -38,6 +40,7 @@ class EmployeeAssignmentService {
   final AuditLogRepository _audit;
   final TransactionRunner _transactions;
   final SqlExecutor _executor;
+  final EmployeeScheduleSync _scheduleSync;
   final UserLanguageRepository _userLanguages;
   final UserLanguageService _languageChanges;
 
@@ -188,9 +191,11 @@ class EmployeeAssignmentService {
     await _addTransaction((tx) async {
       await _lockEmployee(tx, userId);
       await _requireMember(tx, companyId, userId);
+      var changed = false;
       for (final id in ids.where((id) => !options[id]!.isAssigned)) {
         final userGroupId = await _assignments.addGroup(tx, userId, id);
         if (userGroupId == null) continue;
+        changed = true;
         await _audit.record(
           tx,
           AuditEvent(
@@ -204,6 +209,8 @@ class EmployeeAssignmentService {
           ),
         );
       }
+      // The employee's schedules follow their groups.
+      if (changed) await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
     });
     return groups(companyId, userId);
   }
@@ -229,8 +236,38 @@ class EmployeeAssignmentService {
           },
         ),
       );
+      await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
     });
     return groups(companyId, userId);
+  }
+
+  /// The employee's groups and the one their schedule comes from.
+  Future<ScheduleSourceResponse> scheduleSource(int companyId, int userId) async {
+    await _requireMember(_executor, companyId, userId);
+    return ScheduleSourceResponse(
+      groups: [
+        for (final o in await _assignments.groupOptions(_executor, userId))
+          if (o.isAssigned && o.isActive) GroupSummary(id: o.id, name: o.name),
+      ],
+      sourceGroupId: await _scheduleSync.currentSource(_executor, userId),
+    );
+  }
+
+  /// "Schedules come from": gives the employee the schedule of one of their
+  /// groups (audited as `employee.schedule_source.changed`).
+  Future<ScheduleSourceResponse> setScheduleSource(
+    int actorUserId,
+    int companyId,
+    int userId,
+    ScheduleSourceRequest request,
+  ) async {
+    await _requireMember(_executor, companyId, userId);
+    await _transactions.transaction((tx) async {
+      await _lockEmployee(tx, userId);
+      await _requireMember(tx, companyId, userId);
+      await _scheduleSync.useGroup(tx, actorUserId, userId, request.groupId);
+    });
+    return scheduleSource(companyId, userId);
   }
 
   // ── EMP-06 Preferred language ──────────────────────────────────────────

@@ -23,6 +23,9 @@ import 'employee_assignment_service.dart';
 /// - `GET/PUT …/assignments/language` (one preferred language, replaced)
 /// - `GET/POST …/assignments/credential-groups` (access, adds only; POST
 ///   needs `manageEmployeeAccess` in every company of the employee)
+/// - `GET/PUT …/assignments/schedule-source`: which of the employee's groups
+///   their schedule comes from ("Schedules come from", employees in several
+///   groups)
 class EmployeeAssignmentRoutes {
   const EmployeeAssignmentRoutes(this._authorizer, this._assignments);
 
@@ -41,7 +44,27 @@ class EmployeeAssignmentRoutes {
     ..get('$_path/language', _languages)
     ..put('$_path/language', _setLanguage)
     ..get('$_path/credential-groups', _credentialGroups)
-    ..post('$_path/credential-groups', _addCredentialGroups);
+    ..post('$_path/credential-groups', _addCredentialGroups)
+    ..get('$_path/schedule-source', _scheduleSource)
+    ..put('$_path/schedule-source', _setScheduleSource);
+
+  Future<Response> _scheduleSource(Request request, String companyId, String userId) async {
+    final id = _companyId(companyId);
+    await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
+    return jsonResponse((await _assignments.scheduleSource(id, _userId(userId))).toJson());
+  }
+
+  Future<Response> _setScheduleSource(Request request, String companyId, String userId) async {
+    final id = _companyId(companyId);
+    final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
+    final ScheduleSourceRequest body;
+    try {
+      body = ScheduleSourceRequest.fromJson(await readJsonObject(request));
+    } on FormatException catch (e) {
+      throw ApiException.badRequest(e.message);
+    }
+    return jsonResponse((await _assignments.setScheduleSource(identity.userId, id, _userId(userId), body)).toJson());
+  }
 
   Future<Response> _languages(Request request, String companyId, String userId) async {
     final id = _companyId(companyId);

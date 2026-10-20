@@ -13,6 +13,7 @@ import 'package:jitan_api/src/http/api_exception.dart';
 import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
+import 'package:jitan_api/src/schedules/employee_schedule_sync.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
@@ -40,6 +41,7 @@ void main() {
         audit: audit,
         transactions: db,
         temporaryQr: TemporaryQrService(tokens: TemporaryQrTokens.withRandomKey(), store: InMemoryTemporaryTokenStore()),
+        scheduleSync: const EmployeeScheduleSync(),
       );
 
   CreateEmployeeRequest request(String code, {int? group}) =>

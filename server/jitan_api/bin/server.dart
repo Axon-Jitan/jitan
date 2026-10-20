@@ -58,6 +58,7 @@ import 'package:jitan_api/src/schedules/schedule_write_repository.dart';
 import 'package:jitan_api/src/users/account_service.dart';
 import 'package:jitan_api/src/users/me_routes.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
+import 'package:jitan_api/src/schedules/employee_schedule_sync.dart';
 import 'package:logging/logging.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
@@ -140,6 +141,7 @@ Future<void> main() async {
         audit: const AuditLogRepository(),
         transactions: db,
         temporaryQr: temporaryQr,
+        scheduleSync: const EmployeeScheduleSync(),
       ),
     ),
     assignments: EmployeeAssignmentRoutes(
@@ -153,6 +155,7 @@ Future<void> main() async {
         executor: db,
         userLanguages: const UserLanguageRepository(),
         languageChanges: languageChanges,
+        scheduleSync: const EmployeeScheduleSync(),
       ),
     ),
     groups: GroupRoutes(

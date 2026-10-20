@@ -116,6 +116,7 @@ SELECT e.name FROM (
   UNION ALL SELECT 'group.renamed'
   UNION ALL SELECT 'group.deactivated'
   UNION ALL SELECT 'group.reactivated'
+  UNION ALL SELECT 'employee.schedule_source.changed'
   UNION ALL SELECT 'schedule.created'
   UNION ALL SELECT 'schedule.deactivated'
 ) e WHERE NOT EXISTS (SELECT 1 FROM tblEventType x WHERE x.eventTypeName = e.name);

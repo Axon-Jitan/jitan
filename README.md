@@ -88,7 +88,9 @@ dart run bin/server.dart
   `PUT`/`DELETE /schedules/groups/{groupId}/work-hours` and `…/breaks`: set or remove a
   group's work hours and breaks (fresh rows for the group's employees, old rows switched
   off, audited; saving the same values changes nothing). Staged for the HR Schedules
-  screens
+  screens. An employee's schedule follows their groups automatically;
+  `GET`/`PUT …/employees/{userId}/assignments/schedule-source` reads or sets which group
+  it comes from for employees in several groups
 
 An id in a path that is not a known row, including one too large for an integer, is 404.
 

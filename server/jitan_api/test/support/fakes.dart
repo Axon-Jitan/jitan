@@ -19,6 +19,7 @@ import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:jitan_api/src/groups/group_management_repository.dart';
+import 'package:jitan_api/src/schedules/employee_schedule_sync.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
 import 'package:jitan_api/src/schedules/schedule_write_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
@@ -423,6 +424,25 @@ class UnusedGroupManagementRepository implements GroupManagementRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw StateError('Group management is tested against MySQL, not with fakes.');
+}
+
+/// Records when an employee's schedules are brought in line with their
+/// groups; the real behaviour is tested against MySQL.
+class FakeEmployeeScheduleSync implements EmployeeScheduleSync {
+  final groupChanges = <(int actor, int user)>[];
+  final sources = <(int actor, int user, int group)>[];
+  int? currentSourceGroupId;
+
+  @override
+  Future<void> afterGroupChange(SqlExecutor tx, int actorUserId, int userId) async =>
+      groupChanges.add((actorUserId, userId));
+
+  @override
+  Future<void> useGroup(SqlExecutor tx, int actorUserId, int userId, int groupId) async =>
+      sources.add((actorUserId, userId, groupId));
+
+  @override
+  Future<int?> currentSource(SqlExecutor executor, int userId) async => currentSourceGroupId;
 }
 
 class FakeAuditLog implements AuditLogRepository {

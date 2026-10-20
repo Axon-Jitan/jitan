@@ -250,7 +250,9 @@ temporary_qr time_registration users`. `audit` is the event-log writer (there is
 `schedules`: a group's schedules are derived from its employees who are only in that group
 (type and day rows found by name, `schedules/schedule_names.dart`); saving gives fresh rows
 to those employees and to employees in several groups whose schedule follows the group,
-switching old rows off (never in place, never deleted). Planned, not built yet: `locations`, `geofences`,
+switching old rows off (never in place, never deleted). After any change of an employee's
+groups, `EmployeeScheduleSync` brings their schedule in line (one group: its schedule; none:
+no schedule; several: kept while it belongs to one, else HR picks "Schedules come from"). Planned, not built yet: `locations`, `geofences`,
 `work_sessions`, `reports`.
 
 Modules waiting on ERD gaps, not to be built until resolved: `devices` (GAP-05),

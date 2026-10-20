@@ -65,6 +65,10 @@ enum AuditEventType {
   /// `tblSchedule` row (with its type, day, group and rounding rule).
   scheduleCreated('schedule.created'),
 
+  /// HR/Admin chose which of an employee's groups their schedule comes from
+  /// ("Schedules come from").
+  scheduleSourceChanged('employee.schedule_source.changed'),
+
   /// A schedule row no employee uses any more was switched off (soft
   /// delete), after a save or a removal by HR/Admin.
   scheduleDeactivated('schedule.deactivated');

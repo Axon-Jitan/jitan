@@ -69,6 +69,7 @@ class TestApp {
           temporaryQr: temporaryQr,
           accounts: onboarding,
           personalQrCode: () => 'QR-${++_qrCounter}',
+          scheduleSync: scheduleSync,
         ),
       ),
       assignments: EmployeeAssignmentRoutes(
@@ -82,6 +83,7 @@ class TestApp {
           executor: unusedExecutor,
           userLanguages: userLanguages,
           languageChanges: languageChanges,
+          scheduleSync: scheduleSync,
         ),
       ),
       groups: GroupRoutes(
@@ -175,6 +177,7 @@ class TestApp {
   final assignments = FakeEmployeeAssignmentRepository();
   final groups = FakeGroupRepository();
   final schedules = FakeScheduleRepository();
+  final scheduleSync = FakeEmployeeScheduleSync();
   late final scheduleService = ScheduleService(schedules: schedules, groups: groups);
   final audit = FakeAuditLog();
   final transactions = FakeTransactions();

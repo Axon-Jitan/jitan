@@ -213,6 +213,9 @@ the employee's `tblUser` row lock as its **first** statement (a transaction with
 cannot be a deadlock victim) and then uses plain reads; no locking reads with joins. Fix
 or replace the driver before production (also see the transaction-pool leak worked
 around in `Database.transaction`).
+Also because of this, assignment transactions don't lock group rows: a group schedule
+saved at the same moment as an employee joins the group may leave that employee on the
+previous rows until the group's next save (TIME_ENGINE_ANALYSIS D2d). Revisit with the driver.
 
 ## QR-TEMP: Temporary onboarding and recovery QRs
 Status: `DONE` (2026-10-08, IT decision) · production multi-instance store pending IT
