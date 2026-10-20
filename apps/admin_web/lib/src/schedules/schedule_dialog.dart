@@ -221,59 +221,60 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     final startLabel = context.t(AdminTextKeys.scheduleFormStart);
     final finishLabel = context.t(AdminTextKeys.scheduleFormFinish);
     final hint = context.t(AdminTextKeys.scheduleFormTimeHint);
-    return [
-      _Section(
-        title: context.t(c.sameHours ? AdminTextKeys.scheduleFormHours : AdminTextKeys.scheduleFormHoursByDay),
-        trailing: ScheduleCheckRow(
-          label: context.t(AdminTextKeys.scheduleFormSameHours),
-          value: c.sameHours,
-          onChanged: busy ? null : c.setSameHours,
-        ),
-        child: c.sameHours
-            ? Align(
-                alignment: Alignment.centerLeft,
-                child: ScheduleHoursRow(
-                  startLabel: startLabel,
-                  finishLabel: finishLabel,
-                  timeHint: hint,
-                  start: c.start,
-                  finish: c.finish,
-                  onStart: busy ? null : c.setStart,
-                  onFinish: busy ? null : c.setFinish,
+    final sameHours = ScheduleCheckRow(
+      label: context.t(AdminTextKeys.scheduleFormSameHours),
+      value: c.sameHours,
+      onChanged: busy ? null : c.setSameHours,
+    );
+    final hours = ScheduleHoursTable(
+      startLabel: startLabel,
+      finishLabel: finishLabel,
+      timeHint: hint,
+      afterFirst: sameHours,
+      lines: c.sameHours
+          ? [(day: null, start: c.start, finish: c.finish, onStart: busy ? null : c.setStart, onFinish: busy ? null : c.setFinish)]
+          : [
+              for (final day in selectedDays)
+                (
+                  day: dayShortName(t, day.weekday),
+                  start: c.hoursOf(day.id).start,
+                  finish: c.hoursOf(day.id).finish,
+                  onStart: busy ? null : (String? time) => c.setDayStart(day.id, time),
+                  onFinish: busy ? null : (String? time) => c.setDayFinish(day.id, time),
                 ),
-              )
-            : Column(
+            ],
+    );
+    final tolerance = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _toleranceField(context, AdminTextKeys.scheduleFormArrivalTolerance, _arrival, ScheduleFormController.fieldArrival),
+        const SizedBox(width: _toleranceGap),
+        _toleranceField(context, AdminTextKeys.scheduleFormLeavingTolerance, _leaving, ScheduleFormController.fieldLeaving),
+      ],
+    );
+    final hoursSection = _Section(
+      title: context.t(c.sameHours ? AdminTextKeys.scheduleFormHours : AdminTextKeys.scheduleFormHoursByDay),
+      child: hours,
+    );
+    final toleranceSection = _Section(title: context.t(AdminTextKeys.scheduleFormTolerance), child: tolerance);
+    return [
+      // Hours and attendance tolerance side by side; stacked when narrow.
+      LayoutBuilder(
+        builder: (context, constraints) => constraints.maxWidth >= _inlineWidth
+            ? Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final (index, day) in selectedDays.indexed) ...[
-                    if (index > 0) const SizedBox(height: 10),
-                    ScheduleHoursRow(
-                      day: dayShortName(t, day.weekday),
-                      startLabel: startLabel,
-                      finishLabel: finishLabel,
-                      timeHint: hint,
-                      start: c.hoursOf(day.id).start,
-                      finish: c.hoursOf(day.id).finish,
-                      onStart: busy ? null : (time) => c.setDayStart(day.id, time),
-                      onFinish: busy ? null : (time) => c.setDayFinish(day.id, time),
-                    ),
-                  ],
+                  Expanded(child: hoursSection),
+                  const SizedBox(width: 24),
+                  SizedBox(width: _toleranceWidth, child: toleranceSection),
                 ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [hoursSection, _sectionGap, toleranceSection],
               ),
       ),
       _fieldError(context, ScheduleFormController.fieldHours),
-      _sectionGap,
-      _Section(
-        title: context.t(AdminTextKeys.scheduleFormTolerance),
-        child: Wrap(
-          spacing: 30,
-          runSpacing: 16,
-          children: [
-            _toleranceField(context, AdminTextKeys.scheduleFormArrivalTolerance, _arrival, ScheduleFormController.fieldArrival),
-            _toleranceField(context, AdminTextKeys.scheduleFormLeavingTolerance, _leaving, ScheduleFormController.fieldLeaving),
-          ],
-        ),
-      ),
       _sectionGap,
       _Section(
         title: context.t(AdminTextKeys.scheduleFormRounding),
@@ -371,6 +372,16 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
 
   /// Space between the form's sections; fields within a section sit closer.
   static const _sectionGap = SizedBox(height: 32);
+
+  static const _toleranceGap = 16.0;
+  static const _toleranceWidth = 130 * 2 + _toleranceGap;
+
+  /// Hours (day, start, finish) + tolerance fit side by side from here.
+  static const _inlineWidth = ScheduleHoursTable.dayWidth +
+      ScheduleHoursTable.timeWidth * 2 +
+      ScheduleHoursTable.dashWidth +
+      24 +
+      _toleranceWidth;
 
   String? _errorText(BuildContext context, String field) => switch (_controller.fieldErrors[field]) {
     null => null,

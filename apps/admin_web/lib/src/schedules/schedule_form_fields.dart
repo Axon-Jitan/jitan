@@ -68,61 +68,80 @@ class ScheduleDayToggle extends StatelessWidget {
   );
 }
 
-/// Start and finish on one line: "[08:00] – [16:30]", with an optional
-/// day name in front (hours per day).
-class ScheduleHoursRow extends StatelessWidget {
-  const ScheduleHoursRow({
+/// One line of a [ScheduleHoursTable]: a day (or none), start and finish.
+typedef ScheduleHoursLine = ({
+  String? day,
+  String? start,
+  String? finish,
+  ValueChanged<String?>? onStart,
+  ValueChanged<String?>? onFinish,
+});
+
+/// Hours as a small table: "Start" and "Finish" as column headings once,
+/// then one "[--:--] – [--:--]" line per day. [afterFirst] (the "Same hours
+/// every working day" switch) sits right under the first line.
+class ScheduleHoursTable extends StatelessWidget {
+  const ScheduleHoursTable({
     super.key,
-    this.day,
+    required this.lines,
     required this.startLabel,
     required this.finishLabel,
     required this.timeHint,
-    required this.start,
-    required this.finish,
-    required this.onStart,
-    required this.onFinish,
+    this.afterFirst,
   });
 
-  final String? day;
+  final List<ScheduleHoursLine> lines;
   final String startLabel;
   final String finishLabel;
   final String timeHint;
-  final String? start;
-  final String? finish;
-  final ValueChanged<String?>? onStart;
-  final ValueChanged<String?>? onFinish;
+  final Widget? afterFirst;
 
-  static const _timeWidth = 150.0;
-  static const _dayWidth = 56.0;
+  static const timeWidth = 130.0;
+  static const dashWidth = 28.0;
+  static const dayWidth = 56.0;
 
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.end,
-    children: [
-      if (day case final day?)
+  Widget build(BuildContext context) {
+    final withDays = lines.any((l) => l.day != null);
+    Widget cells(Widget? day, Widget start, Widget finish) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (withDays) SizedBox(width: dayWidth, child: day),
+        SizedBox(width: timeWidth, child: start),
         SizedBox(
-          width: _dayWidth,
-          height: JitanDimensions.fieldHeight,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(day, style: JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w600)),
-          ),
+          width: dashWidth,
+          child: finish is Text
+              ? null
+              : Center(
+                  child: Text('–', style: JitanTextStyles.inputText.copyWith(color: JitanColors.inkMuted)),
+                ),
         ),
-      SizedBox(
-        width: _timeWidth,
-        child: ScheduleTimeField(label: startLabel, hint: timeHint, value: start, onChanged: onStart),
-      ),
-      SizedBox(
-        width: 32,
-        height: JitanDimensions.fieldHeight,
-        child: Center(child: Text('–', style: JitanTextStyles.inputText.copyWith(color: JitanColors.inkMuted))),
-      ),
-      SizedBox(
-        width: _timeWidth,
-        child: ScheduleTimeField(label: finishLabel, hint: timeHint, value: finish, onChanged: onFinish),
-      ),
-    ],
-  );
+        SizedBox(width: timeWidth, child: finish),
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        cells(
+          null,
+          Text(startLabel, style: JitanTextStyles.fieldLabel),
+          Text(finishLabel, style: JitanTextStyles.fieldLabel),
+        ),
+        const SizedBox(height: JitanDimensions.fieldLabelGap),
+        for (final (index, line) in lines.indexed) ...[
+          if (index > 0) const SizedBox(height: 10),
+          cells(
+            line.day == null
+                ? null
+                : Text(line.day!, style: JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w600)),
+            ScheduleTimeField(hint: timeHint, value: line.start, onChanged: line.onStart),
+            ScheduleTimeField(hint: timeHint, value: line.finish, onChanged: line.onFinish),
+          ),
+          if (index == 0 && afterFirst != null) ...[const SizedBox(height: 10), afterFirst!],
+        ],
+      ],
+    );
+  }
 }
 
 /// A whole number of minutes with "min" inside the box (tolerances).
@@ -134,8 +153,10 @@ class ScheduleMinutesField extends StatelessWidget {
     required this.unit,
     required this.enabled,
     this.errorText,
+    this.width = 130,
   });
 
+  final double width;
   final String label;
   final TextEditingController controller;
   final String unit;
@@ -145,43 +166,44 @@ class ScheduleMinutesField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final error = errorText;
-    return JitanFieldLabel(
-      label: label,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 150,
-            height: JitanDimensions.fieldHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: enabled ? JitanColors.surface : JitanColors.disabledFill,
-              borderRadius: BorderRadius.circular(JitanDimensions.inputRadius),
-              border: Border.all(color: error == null ? JitanColors.inputBorder : JitanColors.error),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    enabled: enabled,
-                    keyboardType: TextInputType.number,
-                    maxLength: 2,
-                    style: JitanTextStyles.inputText,
-                    cursorColor: JitanColors.ink,
-                    decoration: const InputDecoration.collapsed(hintText: null).copyWith(counterText: ''),
+    // Fixed width: a long (translated) label wraps instead of widening the row.
+    return SizedBox(
+      width: width,
+      child: JitanFieldLabel(
+        label: label,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: width,
+              height: JitanDimensions.fieldHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: enabled ? JitanColors.surface : JitanColors.disabledFill,
+                borderRadius: BorderRadius.circular(JitanDimensions.inputRadius),
+                border: Border.all(color: error == null ? JitanColors.inputBorder : JitanColors.error),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      enabled: enabled,
+                      keyboardType: TextInputType.number,
+                      maxLength: 2,
+                      style: JitanTextStyles.inputText,
+                      cursorColor: JitanColors.ink,
+                      decoration: const InputDecoration.collapsed(hintText: null).copyWith(counterText: ''),
+                    ),
                   ),
-                ),
-                Text(unit, style: JitanTextStyles.inputHint),
-              ],
+                  Text(unit, style: JitanTextStyles.inputHint),
+                ],
+              ),
             ),
-          ),
-          if (error != null) ...[
-            const SizedBox(height: 6),
-            Text(error, style: JitanTextStyles.fieldError),
+            if (error != null) ...[const SizedBox(height: 6), Text(error, style: JitanTextStyles.fieldError)],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -207,16 +229,17 @@ class ScheduleCheckRow extends StatelessWidget {
           visualDensity: VisualDensity.compact,
         ),
         const SizedBox(width: 4),
-        Text(label, style: JitanTextStyles.inputText),
+        Flexible(child: Text(label, style: JitanTextStyles.inputText)),
       ],
     ),
   );
 }
 
 class ScheduleTimeField extends StatelessWidget {
-  const ScheduleTimeField({super.key, required this.label, required this.value, required this.onChanged, this.hint});
+  const ScheduleTimeField({super.key, this.label, required this.value, required this.onChanged, this.hint});
 
-  final String label;
+  /// `null` in a table row, where the column heading names the field.
+  final String? label;
   final String? value;
   final ValueChanged<String?>? onChanged;
 
@@ -241,7 +264,13 @@ class ScheduleTimeField extends StatelessWidget {
 
 /// No rounding, or up / down by one of the intervals.
 class ScheduleRoundingField extends StatelessWidget {
-  const ScheduleRoundingField({super.key, required this.label, required this.value, required this.intervals, required this.onChanged});
+  const ScheduleRoundingField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.intervals,
+    required this.onChanged,
+  });
 
   final String label;
   final ScheduleRounding? value;
@@ -263,7 +292,10 @@ class ScheduleRoundingField extends StatelessWidget {
     return JitanSelectField<String>(
       label: label,
       value: _keyOf(value),
-      options: [for (final MapEntry(:key, :value) in choices.entries) JitanSelectOption(value: key, label: roundingText(t, value))],
+      options: [
+        for (final MapEntry(:key, :value) in choices.entries)
+          JitanSelectOption(value: key, label: roundingText(t, value)),
+      ],
       onChanged: onChanged == null ? null : (key) => onChanged!(choices[key]),
     );
   }
@@ -302,7 +334,10 @@ class ScheduleFormBanner extends StatelessWidget {
             TextButton(
               onPressed: onAction,
               style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24)),
-              child: Text('$action →', style: JitanTextStyles.stateTitle.copyWith(fontSize: 16, color: JitanColors.vermilion)),
+              child: Text(
+                '$action →',
+                style: JitanTextStyles.stateTitle.copyWith(fontSize: 16, color: JitanColors.vermilion),
+              ),
             ),
         ],
       ),

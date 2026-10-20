@@ -54,8 +54,10 @@ Future<void> _choose(WidgetTester tester, String field, String option) async {
   await tester.pumpAndSettle();
 }
 
-void _pickTime(WidgetTester tester, String label, String time) =>
-    tester.widget<JitanSelectField<String>>(find.widgetWithText(JitanSelectField<String>, label).first).onChanged!(time);
+/// Start is the first time field of the hours table, Finish the second.
+void _pickTime(WidgetTester tester, String label, String time) => tester
+    .widget<ScheduleTimeField>(find.byType(ScheduleTimeField).at(label == 'Start' ? 0 : 1))
+    .onChanged!(time);
 
 void main() {
   testWidgets('loading, then one row per group and kind with its summary', (tester) async {
