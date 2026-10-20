@@ -75,14 +75,14 @@ class _RemoveAssignmentDialogState extends State<RemoveAssignmentDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(context.t(AdminTextKeys.removeAssignmentWhatHappens), style: JitanTextStyles.stateTitle.copyWith(fontSize: 14)),
+                Text(context.t(AdminTextKeys.removeAssignmentWhatHappens), style: JitanTextStyles.stateTitle.copyWith(fontSize: 16)),
                 const SizedBox(height: 14),
                 Text(
                   context.t(_company ? AdminTextKeys.removeCompanySoftDelete : AdminTextKeys.removeGroupSoftDelete),
-                  style: JitanTextStyles.stateMessage.copyWith(fontSize: 13),
+                  style: JitanTextStyles.stateMessage.copyWith(fontSize: 15),
                 ),
                 const SizedBox(height: 10),
-                Text(context.t(AdminTextKeys.removeAssignmentAudit), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
+                Text(context.t(AdminTextKeys.removeAssignmentAudit), style: JitanTextStyles.stateMessage.copyWith(fontSize: 15)),
               ],
             ),
           ),

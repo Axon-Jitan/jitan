@@ -34,7 +34,7 @@ class JitanTabBar extends StatelessWidget {
                     child: Text(
                       label,
                       style: JitanTextStyles.tableCell.copyWith(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: i == selected ? FontWeight.w600 : FontWeight.w400,
                         color: i == selected ? JitanColors.surface : JitanColors.inkMuted,
                       ),

@@ -107,7 +107,7 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         context.t(AdminTextKeys.temporaryQrRecoveryFacts, args: {'expiry': expiry}),
-                        style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 13, color: JitanColors.warning),
+                        style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 15, color: JitanColors.warning),
                       ),
                     )
                   else ...[
@@ -120,7 +120,7 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
                     const SizedBox(height: 14),
                     Text(
                       context.t(AdminTextKeys.temporaryQrOnboardingInstruction),
-                      style: JitanTextStyles.inputText.copyWith(fontSize: 14),
+                      style: JitanTextStyles.inputText.copyWith(fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 18),
@@ -128,7 +128,7 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         context.t(AdminTextKeys.temporaryQrOnboardingFacts, args: {'expiry': expiry}),
-                        style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 12, color: JitanColors.inkMuted),
+                        style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 14, color: JitanColors.inkMuted),
                       ),
                     ),
                   ],
@@ -138,7 +138,7 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         context.t(AdminTextKeys.temporaryQrRecoveryNotTerminal),
-                        style: JitanTextStyles.stateMessage.copyWith(fontSize: 12),
+                        style: JitanTextStyles.stateMessage.copyWith(fontSize: 14),
                       ),
                     )
                   else ...[
@@ -149,7 +149,7 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         context.t(AdminTextKeys.temporaryQrReplacementNote),
-                        style: JitanTextStyles.stateMessage.copyWith(fontSize: 12),
+                        style: JitanTextStyles.stateMessage.copyWith(fontSize: 14),
                       ),
                     ),
                   ],
@@ -190,7 +190,7 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
           const SizedBox(height: 16),
           Text(
             context.t(AdminTextKeys.temporaryQrExpiredStatusText),
-            style: JitanTextStyles.stateMessage.copyWith(fontSize: 13, color: JitanColors.errorStrong),
+            style: JitanTextStyles.stateMessage.copyWith(fontSize: 15, color: JitanColors.errorStrong),
           ),
         ],
       ),

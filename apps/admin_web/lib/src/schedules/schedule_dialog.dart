@@ -311,9 +311,9 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.t(AdminTextKeys.scheduleFormBreakNoteTitle), style: JitanTextStyles.stateTitle.copyWith(fontSize: 14)),
+                  Text(context.t(AdminTextKeys.scheduleFormBreakNoteTitle), style: JitanTextStyles.stateTitle.copyWith(fontSize: 16)),
                   const SizedBox(height: 6),
-                  Text(context.t(AdminTextKeys.scheduleFormBreakNoteText), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
+                  Text(context.t(AdminTextKeys.scheduleFormBreakNoteText), style: JitanTextStyles.stateMessage.copyWith(fontSize: 15)),
                 ],
               ),
             ),
@@ -362,5 +362,5 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     );
   }
 
-  static final _sectionTitle = JitanTextStyles.stateTitle.copyWith(fontSize: 14);
+  static final _sectionTitle = JitanTextStyles.stateTitle.copyWith(fontSize: 16);
 }

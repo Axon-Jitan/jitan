@@ -262,7 +262,7 @@ class _GroupsTab extends StatelessWidget {
               const SizedBox(height: 12),
             ],
             const SizedBox(height: 23),
-            Text(context.t(AdminTextKeys.assignmentsGroupsHint), style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
+            Text(context.t(AdminTextKeys.assignmentsGroupsHint), style: JitanTextStyles.stateMessage.copyWith(fontSize: 14)),
           ],
         ),
       ),
@@ -357,21 +357,21 @@ class _AccessTab extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(context.t(AdminTextKeys.assignmentsAccessCurrent), style: JitanTextStyles.stateTitle.copyWith(fontSize: 14)),
+                    Text(context.t(AdminTextKeys.assignmentsAccessCurrent), style: JitanTextStyles.stateTitle.copyWith(fontSize: 16)),
                     const SizedBox(height: 18),
                     if (assigned.isEmpty)
-                      Text(context.t(AdminTextKeys.assignmentsAccessNone), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13))
+                      Text(context.t(AdminTextKeys.assignmentsAccessNone), style: JitanTextStyles.stateMessage.copyWith(fontSize: 15))
                     else
                       for (final o in assigned)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(o.name, style: JitanTextStyles.tableCell.copyWith(fontSize: 14)),
+                          child: Text(o.name, style: JitanTextStyles.tableCell.copyWith(fontSize: 16)),
                         ),
                   ],
                 ),
               ),
               const SizedBox(height: 29),
-              Text(context.t(AdminTextKeys.assignmentsAccessHint), style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
+              Text(context.t(AdminTextKeys.assignmentsAccessHint), style: JitanTextStyles.stateMessage.copyWith(fontSize: 14)),
             ],
           );
         },
@@ -405,9 +405,9 @@ class _NoteBox extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: JitanTextStyles.stateTitle.copyWith(fontSize: 14)),
+        Text(title, style: JitanTextStyles.stateTitle.copyWith(fontSize: 16)),
         const SizedBox(height: 9),
-        Text(text, style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
+        Text(text, style: JitanTextStyles.stateMessage.copyWith(fontSize: 14)),
       ],
     ),
   );
