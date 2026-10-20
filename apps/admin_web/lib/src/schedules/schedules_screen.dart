@@ -45,7 +45,14 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   };
 
   Future<void> _open({GroupSchedule? group, ScheduleKind? kind}) async {
-    final saved = await showScheduleDialog(context, api: widget.api, groups: _groups, group: group, kind: kind);
+    final saved = await showScheduleDialog(
+      context,
+      api: widget.api,
+      groups: _groups,
+      options: _controller.options,
+      group: group,
+      kind: kind,
+    );
     if (saved == null || !mounted) return;
     await _controller.load();
     if (!mounted) return;
@@ -118,7 +125,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   Widget _toolbar(BuildContext context) {
     final filter = _controller.filter;
     void update(ScheduleFilter next) => _controller.updateFilter(next);
-    final groups = {for (final row in _controller.allRows) row.group.id: row.group.name};
+    final groups = {for (final g in _groups) g.group.id: g.group.name};
     return Wrap(
       spacing: 14,
       runSpacing: 14,
@@ -129,6 +136,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
           child: JitanFieldLabel(
             label: context.t(AdminTextKeys.scheduleSearchLabel),
             child: JitanSearchField(
+              outlined: true,
               hintText: context.t(AdminTextKeys.scheduleSearch),
               onChanged: (text) => update(
                 ScheduleFilter(search: text.trim(), kind: filter.kind, groupId: filter.groupId, status: filter.status),

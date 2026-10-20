@@ -35,10 +35,17 @@ typedef ScheduleFormMessage = ({String key, Map<String, Object> args});
 /// The checks here only give HR quick feedback; the server validates every
 /// value again and is the authority (ENGINEERING_RULES §19).
 class ScheduleFormController extends ChangeNotifier {
-  /// With [group] and [kind], the form edits that schedule.
-  ScheduleFormController(this._api, {required this.groups, GroupSchedule? group, ScheduleKind? kind})
-    : _groupId = group?.group.id,
-      _kind = kind ?? ScheduleKind.workHours {
+  /// With [group] and [kind], the form edits that schedule. With [options]
+  /// already loaded, the form is ready at once.
+  ScheduleFormController(
+    this._api, {
+    required this.groups,
+    GroupSchedule? group,
+    ScheduleKind? kind,
+    ScheduleOptions? options,
+  }) : _groupId = group?.group.id,
+       _kind = kind ?? ScheduleKind.workHours,
+       _options = options == null ? const ScheduleOptionsLoading() : ScheduleOptionsLoaded(options) {
     if (group != null && kind != null) editExisting();
   }
 
@@ -47,7 +54,7 @@ class ScheduleFormController extends ChangeNotifier {
   /// Every active group, from the Schedules list.
   final List<GroupSchedule> groups;
 
-  ScheduleOptionsState _options = const ScheduleOptionsLoading();
+  ScheduleOptionsState _options;
   ScheduleOptionsState get options => _options;
 
   int? _groupId;

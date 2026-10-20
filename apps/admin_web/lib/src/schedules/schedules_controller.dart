@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
@@ -42,6 +44,11 @@ class SchedulesController extends ChangeNotifier {
   ScheduleFilter _filter = const ScheduleFilter();
   ScheduleFilter get filter => _filter;
 
+  /// The form's choices, loaded with the list so "Add schedule" opens
+  /// complete; `null` until loaded (the form then loads them itself).
+  ScheduleOptions? _options;
+  ScheduleOptions? get options => _options;
+
   int _latestRequest = 0;
   bool _disposed = false;
 
@@ -56,11 +63,20 @@ class SchedulesController extends ChangeNotifier {
   Future<void> load() async {
     final request = ++_latestRequest;
     _emit(const SchedulesLoading());
+    if (_options == null) unawaited(_loadOptions());
     try {
       final groups = await _api.groupSchedules();
       if (request == _latestRequest) _emit(SchedulesLoaded(groups));
     } on ApiClientException catch (failure) {
       if (request == _latestRequest) _emit(SchedulesFailed(failure));
+    }
+  }
+
+  Future<void> _loadOptions() async {
+    try {
+      _options = await _api.options();
+    } on ApiClientException {
+      // The form shows its own loading and error state instead.
     }
   }
 

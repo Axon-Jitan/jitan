@@ -17,11 +17,12 @@ Future<GroupSchedule?> showScheduleDialog(
   BuildContext context, {
   required SchedulesApi api,
   required List<GroupSchedule> groups,
+  ScheduleOptions? options,
   GroupSchedule? group,
   ScheduleKind? kind,
 }) => showDialog<GroupSchedule>(
   context: context,
-  builder: (_) => ScheduleDialog(api: api, groups: groups, group: group, kind: kind),
+  builder: (_) => ScheduleDialog(api: api, groups: groups, options: options, group: group, kind: kind),
 );
 
 /// Figma `HR / Schedules — Create Work hours` (1317:2), `Create Break`
@@ -32,10 +33,13 @@ Future<GroupSchedule?> showScheduleDialog(
 /// left out (no screen lists the employees' differing schedules yet), and
 /// times are picked in 5-minute steps.
 class ScheduleDialog extends StatefulWidget {
-  const ScheduleDialog({super.key, required this.api, required this.groups, this.group, this.kind});
+  const ScheduleDialog({super.key, required this.api, required this.groups, this.options, this.group, this.kind});
 
   final SchedulesApi api;
   final List<GroupSchedule> groups;
+
+  /// The form's choices when already loaded; otherwise the dialog loads them.
+  final ScheduleOptions? options;
   final GroupSchedule? group;
   final ScheduleKind? kind;
 
@@ -49,10 +53,17 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     groups: widget.groups,
     group: widget.group,
     kind: widget.kind,
-  )..loadOptions();
+    options: widget.options,
+  );
 
   late final _arrival = TextEditingController(text: _controller.arrivalTolerance);
   late final _leaving = TextEditingController(text: _controller.leavingTolerance);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.options == null) _controller.loadOptions();
+  }
 
   @override
   void dispose() {
@@ -88,14 +99,20 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
         subtitle: context.t(workHours ? AdminTextKeys.scheduleFormWorkHoursSubtitle : AdminTextKeys.scheduleFormBreaksSubtitle),
         onClose: c.submitting ? null : () => Navigator.of(context).pop(),
         footerNote: context.t(AdminTextKeys.scheduleFormFooter),
-        body: switch (c.options) {
-          ScheduleOptionsLoading() => SizedBox(
-            height: 200,
-            child: JitanLoadingState(label: context.t(AdminTextKeys.scheduleFormOptionsLoading)),
-          ),
-          ScheduleOptionsFailed(:final failure) => SizedBox(height: 240, child: _optionsError(context, failure)),
-          ScheduleOptionsLoaded(:final options) => _form(context, options),
-        },
+        // Switching type or per-day hours changes the height: animate it.
+        body: AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: switch (c.options) {
+            ScheduleOptionsLoading() => SizedBox(
+              height: 200,
+              child: JitanLoadingState(label: context.t(AdminTextKeys.scheduleFormOptionsLoading)),
+            ),
+            ScheduleOptionsFailed(:final failure) => SizedBox(height: 240, child: _optionsError(context, failure)),
+            ScheduleOptionsLoaded(:final options) => _form(context, options),
+          },
+        ),
         actions: [
           JitanPrimaryButton(
             label: context.t(AdminTextKeys.scheduleFormSave),
