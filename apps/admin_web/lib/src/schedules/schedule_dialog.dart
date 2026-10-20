@@ -273,19 +273,14 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     ];
   }
 
-  /// Step 3: the break, every working day (always part of a schedule).
+  /// Step 3: the break's length (always part of a schedule; the server
+  /// places it in the middle of each working day).
   List<Widget> _break(BuildContext context, ScheduleOptions options) {
     final c = _controller;
     final busy = c.submitting;
     return [
       ScheduleFieldColumns(
         children: [
-          ScheduleTimeField(
-            label: context.t(AdminTextKeys.scheduleFormUsualTime),
-            hint: context.t(AdminTextKeys.scheduleFormTimeHint),
-            value: c.breakStart,
-            onChanged: busy ? null : c.setBreakStart,
-          ),
           JitanSelectField<int>(
             label: context.t(AdminTextKeys.scheduleFormLength),
             value: c.breakLength,
@@ -364,7 +359,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
       (AdminTextKeys.scheduleReviewHours, hours),
       (
         AdminTextKeys.scheduleReviewBreak,
-        context.t(AdminTextKeys.scheduleReviewBreakValue, args: {'start': c.breakStart ?? '', 'minutes': c.breakLength ?? 0}),
+        context.t(AdminTextKeys.scheduleReviewBreakValue, args: {'minutes': c.breakLength ?? 0}),
       ),
       (
         AdminTextKeys.scheduleReviewAttendance,

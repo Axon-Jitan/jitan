@@ -57,12 +57,13 @@ String workHoursSummary(Translations t, ScheduleVariant variant) {
   return '$hours · $tolerance · $rounding';
 }
 
-/// "Mon–Fri · 12:00 · 30 min".
+/// "Mon–Fri · 30 min". Only the length is shown: HR chooses only that, and
+/// the stored time (the middle of the working day) is technical.
 String breaksSummary(Translations t, ScheduleVariant variant) {
   if (variant.breaks.isEmpty) return t.t(CommonTextKeys.valueUnavailable);
   return [
-    for (final (weekdays, (start, minutes)) in _runs(t, [for (final b in variant.breaks) (b.day.weekday, (b.usualStart, b.lengthMinutes))]))
-      t.t(AdminTextKeys.scheduleSummaryBreak, args: {'days': weekdays, 'start': start, 'minutes': minutes}),
+    for (final (weekdays, minutes) in _runs(t, [for (final b in variant.breaks) (b.day.weekday, b.lengthMinutes)]))
+      t.t(AdminTextKeys.scheduleSummaryBreak, args: {'days': weekdays, 'minutes': minutes}),
   ].join(', ');
 }
 

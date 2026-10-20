@@ -94,7 +94,7 @@ void main() {
     expect(find.text('Blue collar · Work hours'), findsOneWidget);
     expect(find.text('Blue collar · Break'), findsOneWidget);
     expect(find.text('Mon–Fri 08:00–16:30'), findsOneWidget);
-    expect(find.text('Mon–Fri · 12:00 · 30 min'), findsOneWidget);
+    expect(find.text('Mon–Fri · 30 min'), findsOneWidget);
     expect(find.textContaining('White collar ·'), findsNothing, reason: 'no schedule, no row');
   });
 
@@ -133,8 +133,8 @@ void main() {
     await _toBreakStep(tester);
 
     // Step 3: the break is always part of the schedule.
-    expect(find.text('Deducted automatically. Employees don\'t register breaks.'), findsOneWidget);
-    tester.widget<ScheduleTimeField>(find.byType(ScheduleTimeField)).onChanged!('12:00');
+    expect(find.text('Every working day. Deducted automatically; employees do not register breaks.'), findsOneWidget);
+    expect(find.byType(ScheduleTimeField), findsNothing, reason: 'HR only sets the length');
     tester.widget<JitanSelectField<int>>(find.widgetWithText(JitanSelectField<int>, 'Length')).onChanged!(30);
     await tester.pump();
     await _continue(tester);
@@ -144,7 +144,7 @@ void main() {
     await _continue(tester);
     expect(find.text('Review schedule'), findsOneWidget);
     expect(find.text('Mon 08:00–16:30'), findsOneWidget);
-    expect(find.text('12:00 · 30 min every working day'), findsOneWidget);
+    expect(find.text('30 min every working day'), findsOneWidget);
 
     api.writeResult = groupSchedule(2, 'White collar', work: workDays([1], '08:00', '16:30'), breakDays: breaks([1], '12:00', 30));
     await tester.tap(find.text('Save schedule'));
@@ -156,7 +156,7 @@ void main() {
     final (method, groupId, request as SetGroupScheduleRequest) = api.writes.single;
     expect((method, groupId), ('setSchedule', 2));
     expect([for (final d in request.workHours.days) (d.dayId, d.start, d.finish)], [(11, '08:00', '16:30')]);
-    expect([for (final b in request.breaks) (b.dayId, b.usualStart)], [(11, '12:00')]);
+    expect(request.breakMinutes, 30);
     expect(find.text('Create schedule'), findsNothing);
     expect(find.text('Schedule saved for White collar.'), findsOneWidget);
   });

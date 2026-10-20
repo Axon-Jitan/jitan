@@ -66,7 +66,6 @@ void main() {
     expect(c.fieldErrors[ScheduleFormController.fieldBreak]?.key, AdminTextKeys.scheduleErrorBreakIncomplete);
 
     c
-      ..setBreakStart('12:00')
       ..setBreakLength(30)
       ..next();
     expect(c.step, ScheduleStep.attendance);
@@ -80,7 +79,6 @@ void main() {
   test('saves the whole schedule in one request: hours, break on every working day, tolerance, rounding', () async {
     final c = await filledIn();
     c
-      ..setBreakStart('12:00')
       ..setBreakLength(30)
       ..next()
       ..arrivalTolerance = '5'
@@ -93,7 +91,7 @@ void main() {
     final (method, groupId, request as SetGroupScheduleRequest) = api.writes.single;
     expect((method, groupId), ('setSchedule', 2));
     expect([for (final d in request.workHours.days) (d.dayId, d.start, d.finish)], [(11, '07:30', '16:00'), (15, '07:30', '16:00')]);
-    expect([for (final b in request.breaks) (b.dayId, b.usualStart, b.lengthMinutes)], [(11, '12:00', 30), (15, '12:00', 30)]);
+    expect(request.breakMinutes, 30, reason: 'the server places it in the middle of each day');
     expect((request.workHours.arrivalToleranceMinutes, request.workHours.leavingToleranceMinutes), (5, 0));
     expect(request.workHours.startRounding?.roundUp, isTrue);
     expect(request.workHours.finishRounding, isNull);
@@ -112,7 +110,6 @@ void main() {
       ..setDayStart(15, '08:00')
       ..setDayFinish(15, '12:00')
       ..next()
-      ..setBreakStart('10:00')
       ..setBreakLength(15)
       ..next()
       ..next();
@@ -137,19 +134,19 @@ void main() {
 
     c
       ..setStart('08:00')
-      ..setFinish('12:00')
+      ..setFinish('08:30')
       ..next()
       ..next();
     expect(c.fieldErrors[ScheduleFormController.fieldBreak]?.key, AdminTextKeys.scheduleErrorBreakIncomplete);
 
     c
-      ..setBreakStart('11:45')
       ..setBreakLength(30)
       ..next();
-    expect(c.fieldErrors[ScheduleFormController.fieldBreak]?.key, AdminTextKeys.scheduleErrorBreakOutside);
+    expect(c.fieldErrors[ScheduleFormController.fieldBreak]?.key, AdminTextKeys.scheduleErrorBreakOutside,
+        reason: 'a 30-minute break in a 30-minute day');
 
     c
-      ..setBreakStart('10:00')
+      ..setBreakLength(15)
       ..next()
       ..arrivalTolerance = '61'
       ..next();
@@ -176,7 +173,7 @@ void main() {
 
     expect(c.dayIds, {11, 12, 13, 14, 15});
     expect((c.sameHours, c.start, c.finish, c.arrivalTolerance), (true, '08:00', '16:30', '10'));
-    expect((c.breakStart, c.breakLength), ('12:00', 30));
+    expect(c.breakLength, 30);
     expect(c.startRounding?.roundUp, isTrue);
     expect(c.finishRounding?.roundUp, isFalse);
   });
@@ -190,7 +187,7 @@ void main() {
       ..next();
     expect(c.step, ScheduleStep.review);
 
-    api.writeFailure = ApiClientExceptionFor.validation(SetGroupScheduleRequest.fieldBreaks);
+    api.writeFailure = ApiClientExceptionFor.validation(SetGroupScheduleRequest.fieldBreakMinutes);
     expect(await c.submit(), isNull);
     expect(c.step, ScheduleStep.breaks);
 

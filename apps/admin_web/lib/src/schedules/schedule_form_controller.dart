@@ -35,8 +35,9 @@ enum ScheduleStep { group, hours, breaks, attendance, review }
 /// State of the Create / Edit schedule wizard: a group's whole schedule in
 /// one pass, Group → Working hours → Break → Attendance rules → Review, and
 /// one save (`PUT /schedules/groups/{groupId}`, hours and break together in
-/// one transaction). Every schedule has a break (product owner,
-/// 2026-10-20): HR sets its usual time and length. Agreed with the product owner on 2026-10-20 instead of
+/// one transaction). Every schedule has a break; HR only chooses its length
+/// and the server places it in the middle of each working day (product
+/// owner, 2026-10-20; decision D28). Agreed with the product owner on 2026-10-20 instead of
 /// separate Work hours and Break wizards (Figma 1365:…), so a break never
 /// comes before its working hours.
 ///
@@ -86,8 +87,6 @@ class ScheduleFormController extends ChangeNotifier {
 
   final Map<int, ({String? start, String? finish})> _dayHours = {};
 
-  String? _breakStart;
-  String? get breakStart => _breakStart;
   int? _breakLength;
   int? get breakLength => _breakLength;
 
@@ -180,8 +179,6 @@ class ScheduleFormController extends ChangeNotifier {
 
   void setDayFinish(int dayId, String? time) => _change(() => _dayHours[dayId] = (start: hoursOf(dayId).start, finish: time));
 
-  void setBreakStart(String? time) => _change(() => _breakStart = time);
-
   void setBreakLength(int? minutes) => _change(() => _breakLength = minutes);
 
   void setStartRounding(ScheduleRounding? rounding) => _change(() => _startRounding = rounding);
@@ -232,7 +229,6 @@ class ScheduleFormController extends ChangeNotifier {
     _startRounding = first?.start!.rounding;
     _finishRounding = first?.finish!.rounding;
     final breaks = variant?.breaks ?? const <BreakSchedule>[];
-    _breakStart = breaks.firstOrNull?.usualStart;
     _breakLength = breaks.firstOrNull?.lengthMinutes;
     _change(() {});
   }
@@ -272,7 +268,7 @@ class ScheduleFormController extends ChangeNotifier {
             startRounding: _startRounding,
             finishRounding: _finishRounding,
           ),
-          breaks: [for (final day in days) BreakDay(dayId: day.id, usualStart: _breakStart!, lengthMinutes: _breakLength!)],
+          breakMinutes: _breakLength!,
         ),
       );
     } on ApiClientException catch (failure) {
@@ -303,14 +299,14 @@ class ScheduleFormController extends ChangeNotifier {
           }
         }
       case ScheduleStep.breaks:
-        final start = _minutes(_breakStart), length = _breakLength;
-        if (start == null || length == null) {
+        final length = _breakLength;
+        if (length == null) {
           _error(fieldBreak, AdminTextKeys.scheduleErrorBreakIncomplete);
           return;
         }
         for (final day in days) {
           final workStart = _minutes(effectiveHoursOf(day.id).start), workFinish = _minutes(effectiveHoursOf(day.id).finish);
-          if (workStart == null || workFinish == null || start < workStart || start + length > workFinish) {
+          if (workStart == null || workFinish == null || length >= workFinish - workStart) {
             _error(fieldBreak, AdminTextKeys.scheduleErrorBreakOutside);
           }
         }
@@ -333,7 +329,7 @@ class ScheduleFormController extends ChangeNotifier {
         final (step, field) = switch (error!.field) {
           SetWorkHoursRequest.fieldArrivalTolerance => (ScheduleStep.attendance, fieldArrival),
           SetWorkHoursRequest.fieldLeavingTolerance => (ScheduleStep.attendance, fieldLeaving),
-          SetGroupScheduleRequest.fieldBreaks => (ScheduleStep.breaks, fieldBreak),
+          SetGroupScheduleRequest.fieldBreakMinutes => (ScheduleStep.breaks, fieldBreak),
           _ => (ScheduleStep.hours, fieldHours),
         };
         _step = step;

@@ -95,7 +95,7 @@ void main() {
         breaks: [...breaks([1, 2, 3, 4, 5], '12:00', 30), ...breaks([6, 7], '11:00', 15)],
       );
 
-      expect(breaksSummary(t, variant), 'Mon–Fri · 12:00 · 30 min, Sat, Sun · 11:00 · 15 min');
+      expect(breaksSummary(t, variant), 'Mon–Fri · 30 min, Sat, Sun · 15 min');
     });
   });
 }
