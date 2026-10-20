@@ -27,7 +27,7 @@ import 'dart:io';
 
 import 'package:jitan_api/src/config/app_config.dart';
 import 'package:jitan_api/src/config/config_exception.dart';
-import 'package:jitan_api/src/config/env_file.dart';
+import 'package:jitan_api/src/config/config_sources.dart';
 import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_core/jitan_core.dart';
 
@@ -50,11 +50,7 @@ Future<void> main(List<String> args) async {
 
   final AppConfig config;
   try {
-    final envFile = File('.env');
-    config = AppConfig.fromEnvironment({
-      if (envFile.existsSync()) ...parseEnvFile(envFile.readAsLinesSync()),
-      ...Platform.environment,
-    });
+    config = AppConfig.fromSources(ConfigSources.load(Platform.environment));
   } on ConfigException catch (e) {
     stderr.writeln('Refusing to run: ${e.message}');
     exitCode = 78;

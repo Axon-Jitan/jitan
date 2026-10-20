@@ -6,6 +6,7 @@ import 'package:mysql_client_plus/mysql_client_plus.dart';
 
 import '../config/database_config.dart';
 import 'database_exception.dart';
+import 'database_tls.dart';
 import 'db_row.dart';
 import 'sql_executor.dart';
 
@@ -14,7 +15,9 @@ import 'sql_executor.dart';
 class Database implements SqlExecutor, TransactionRunner {
   Database._(this._pool);
 
+  /// Fails with a ConfigException when the TLS settings can't be loaded.
   factory Database.connect(DatabaseConfig config, {int maxConnections = 10}) {
+    final tls = DatabaseTls.of(config);
     return Database._(
       MySQLConnectionPool(
         host: config.host,
@@ -24,6 +27,8 @@ class Database implements SqlExecutor, TransactionRunner {
         databaseName: config.name,
         maxConnections: maxConnections,
         secure: config.secure,
+        securityContext: tls.context,
+        onBadCertificate: tls.onBadCertificate,
         collation: 'utf8mb4_general_ci',
       ),
     );

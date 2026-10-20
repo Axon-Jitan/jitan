@@ -13,9 +13,13 @@ class HealthRoutes {
 
   final DatabaseHealthRepository _databaseHealth;
 
+  /// `/health/live` and `/health/ready` are the names IT's network test
+  /// used: live = the process answers, ready = it can reach the database.
   Router get router => Router()
     ..get('/health', _health)
-    ..get('/health/database', _databaseHealthCheck);
+    ..get('/health/live', _health)
+    ..get('/health/database', _databaseHealthCheck)
+    ..get('/health/ready', _databaseHealthCheck);
 
   Response _health(Request request) => jsonResponse({'status': 'ok'});
 

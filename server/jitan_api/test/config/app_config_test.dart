@@ -1,6 +1,7 @@
 import 'package:jitan_api/src/config/app_config.dart';
 import 'package:jitan_api/src/config/app_environment.dart';
 import 'package:jitan_api/src/config/config_exception.dart';
+import 'package:jitan_api/src/config/config_sources.dart';
 import 'package:test/test.dart';
 
 const _db = {
@@ -9,7 +10,10 @@ const _db = {
   'JITAN_DB_USER': 'jitan_app',
   'JITAN_DB_PASSWORD': 's3cret',
   'JITAN_SESSION_SECRET': 'a-production-session-secret-of-32-chars-plus',
+  'JITAN_DB_TLS_FINGERPRINTS': _fingerprint,
 };
+
+const _fingerprint = '70:26:23:E5:D0:AE:AA:B2:9B:51:AA:5B:C2:85:51:FF:FD:C3:8A:BD:E1:04:32:0F:4F:6B:D2:BE:08:E3:85:B9';
 
 void main() {
   group('environment', () {
@@ -67,8 +71,9 @@ void main() {
 
     test('applies defaults', () {
       final config = AppConfig.fromEnvironment(_db);
-      expect(config.httpHost, '127.0.0.1');
-      expect(config.httpPort, 8080);
+      expect([for (final a in config.listener.addresses) a.address], ['127.0.0.1']);
+      expect(config.listener.port, 8080);
+      expect(config.listener.https, isFalse);
       expect(config.database.port, 3306);
       expect(config.database.secure, isTrue);
       expect(config.corsOrigins, isEmpty);
@@ -125,6 +130,127 @@ void main() {
       expect(
         () => AppConfig.fromEnvironment({..._db, 'JITAN_ARGON2_MEMORY_KIB': '1024'}),
         throwsA(isA<ConfigException>()),
+      );
+    });
+  });
+
+  group("IT's configuration names (docs/DEPLOYMENT_CONFIGURATION.md)", () {
+    const it = {
+      'DB_HOST': 'it-db',
+      'DB_PORT': '3307',
+      'DB_USER': 'it_user',
+      'DB_PASS': ' it pass ',
+      'DB_NAME': 'jitandev',
+      'JITAN_SESSION_SECRET': 'a-production-session-secret-of-32-chars-plus',
+      'JITAN_DB_TLS_FINGERPRINTS': _fingerprint,
+    };
+
+    test('DB_* names are read; the password is kept exactly as written', () {
+      final db = AppConfig.fromEnvironment(it).database;
+      expect((db.host, db.port, db.user, db.password, db.name), ('it-db', 3307, 'it_user', ' it pass ', 'jitandev'));
+    });
+
+    test("within one source, IT's name wins over the legacy JITAN_DB_* name", () {
+      final db = AppConfig.fromEnvironment({...it, 'JITAN_DB_HOST': 'legacy'}).database;
+      expect(db.host, 'it-db');
+    });
+
+    test('a legacy name in the environment still overrides the file', () {
+      final config = AppConfig.fromSources(ConfigSources([
+        {'JITAN_DB_HOST': 'from-environment'},
+        it,
+      ]));
+      expect(config.database.host, 'from-environment');
+    });
+
+    test('BIND_ADDRESS, then HOST, then JITAN_HTTP_HOST; PORT, then JITAN_HTTP_PORT', () {
+      final config = AppConfig.fromEnvironment({
+        ...it,
+        'BIND_ADDRESS': '10.1.101.65',
+        'HOST': '10.9.9.9',
+        'JITAN_HTTP_HOST': '0.0.0.0',
+        'PORT': '8443',
+        'JITAN_HTTP_PORT': '9000',
+      });
+      expect([for (final a in config.listener.addresses) a.address], ['10.1.101.65', '127.0.0.1']);
+      expect(config.listener.port, 8443);
+    });
+
+    test('TLS_CERT and TLS_KEY turn on HTTPS; one alone refuses to start', () {
+      final config = AppConfig.fromEnvironment({...it, 'TLS_CERT': '/etc/jitan/tls/a.crt', 'TLS_KEY': '/etc/jitan/tls/a.key'});
+      expect(config.listener.https, isTrue);
+      expect(() => AppConfig.fromEnvironment({...it, 'TLS_CERT': '/etc/jitan/tls/a.crt'}), throwsA(isA<ConfigException>()));
+    });
+
+    test('a JITAN_DEV_* setting in the configuration file is refused in production too', () {
+      expect(
+        () => AppConfig.fromSources(ConfigSources([
+          const {},
+          {...it, 'JITAN_DEV_USER_ID': '1'},
+        ])),
+        throwsA(isA<ConfigException>().having((e) => e.message, 'message', contains('JITAN_DEV_USER_ID'))),
+      );
+    });
+
+    test('error messages never contain the database password', () {
+      try {
+        AppConfig.fromEnvironment({...it, 'DB_PORT': 'not-a-port'});
+        fail('expected a ConfigException');
+      } on ConfigException catch (e) {
+        expect(e.message, isNot(contains('it pass')));
+      }
+    });
+  });
+
+  group('database TLS (SEC-01)', () {
+    final withoutTls = Map.of(_db)..remove('JITAN_DB_TLS_FINGERPRINTS');
+
+    test('production refuses an unverified database certificate', () {
+      expect(
+        () => AppConfig.fromEnvironment(withoutTls),
+        throwsA(isA<ConfigException>().having((e) => e.message, 'message', contains('JITAN_DB_TLS_FINGERPRINTS'))),
+      );
+    });
+
+    test('production refuses an unencrypted database connection', () {
+      expect(() => AppConfig.fromEnvironment({...withoutTls, 'JITAN_DB_SECURE': 'false'}), throwsA(isA<ConfigException>()));
+    });
+
+    test('fingerprints are accepted with colons and any case, and stored as 64 lowercase hex digits', () {
+      final db = AppConfig.fromEnvironment(_db).database;
+      expect(db.tlsFingerprints, {'702623e5d0aeaab29b51aa5bc28551fffdc38abde104320f4f6bd2be08e385b9'});
+      expect(db.verifiesCertificate, isTrue);
+    });
+
+    test('several fingerprints, separated by commas (CA and server certificate)', () {
+      final db = AppConfig.fromEnvironment({
+        ...withoutTls,
+        'JITAN_DB_TLS_FINGERPRINTS': '$_fingerprint, ${'AB' * 32},',
+      }).database;
+      expect(db.tlsFingerprints, hasLength(2));
+    });
+
+    test('a CA file is the other way to verify', () {
+      final db = AppConfig.fromEnvironment({...withoutTls, 'JITAN_DB_TLS_CA_FILE': '/etc/jitan/tls/db-ca.pem'}).database;
+      expect(db.tlsCaFile, '/etc/jitan/tls/db-ca.pem');
+      expect(db.verifiesCertificate, isTrue);
+    });
+
+    test('both at once, a malformed fingerprint, or TLS settings without TLS are refused', () {
+      for (final env in [
+        {..._db, 'JITAN_DB_TLS_CA_FILE': '/etc/jitan/tls/db-ca.pem'},
+        {...withoutTls, 'JITAN_DB_TLS_FINGERPRINTS': '70:26:23'},
+        {..._db, 'JITAN_ENV': 'development', 'JITAN_DB_SECURE': 'false'},
+      ]) {
+        expect(() => AppConfig.fromEnvironment(env), throwsA(isA<ConfigException>()), reason: '$env');
+      }
+    });
+
+    test('development may connect without verification, or without TLS', () {
+      expect(AppConfig.fromEnvironment({...withoutTls, 'JITAN_ENV': 'development'}).database.verifiesCertificate, isFalse);
+      expect(
+        AppConfig.fromEnvironment({...withoutTls, 'JITAN_ENV': 'development', 'JITAN_DB_SECURE': 'false'}).database.secure,
+        isFalse,
       );
     });
   });

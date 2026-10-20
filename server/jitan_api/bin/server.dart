@@ -19,7 +19,8 @@ import 'package:jitan_api/src/companies/company_routes.dart';
 import 'package:jitan_api/src/companies/company_service.dart';
 import 'package:jitan_api/src/config/app_config.dart';
 import 'package:jitan_api/src/config/config_exception.dart';
-import 'package:jitan_api/src/config/env_file.dart';
+import 'package:jitan_api/src/config/config_sources.dart';
+import 'package:jitan_api/src/config/listener_config.dart';
 import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
 import 'package:jitan_api/src/employees/employee_assignment_routes.dart';
@@ -68,22 +69,30 @@ Future<void> main() async {
   _configureLogging();
 
   final AppConfig config;
+  final SecurityContext? httpsContext;
+  final Database db;
   try {
-    config = AppConfig.fromEnvironment(_readEnvironment());
+    config = AppConfig.fromSources(ConfigSources.load(Platform.environment));
+    httpsContext = config.listener.securityContext();
+    db = Database.connect(config.database);
   } on ConfigException catch (e) {
     _log.severe('Refusing to start: ${e.message}');
     exitCode = 78; // EX_CONFIG
-    return;
-  } on FormatException catch (e) {
-    _log.severe('Refusing to start: ${e.message}');
-    exitCode = 78;
     return;
   }
 
   _log.info('Environment: ${config.environment.name}');
   _log.info('Database: ${config.database}');
+  if (!config.database.secure) {
+    _log.warning('The database connection is not encrypted (development only).');
+  } else if (!config.database.verifiesCertificate) {
+    _log.warning('The database certificate is not verified (development only). '
+        'Set JITAN_DB_TLS_FINGERPRINTS or JITAN_DB_TLS_CA_FILE.');
+  }
+  if (!config.listener.https && !config.environment.allowsDevelopmentMechanisms) {
+    _log.warning('Serving plain HTTP: only behind an IT-managed HTTPS proxy. Set TLS_CERT and TLS_KEY for direct HTTPS.');
+  }
 
-  final db = Database.connect(config.database);
   final users = UserRepository(db);
   final companyRepository = CompanyRepository(db);
   final groupRepository = GroupRepository(db);
@@ -235,27 +244,54 @@ Future<void> main() async {
     authentication: authentication,
   );
 
-  final server = await shelf_io.serve(handler, config.httpHost, config.httpPort);
-  _log.info('Jitan API listening on http://${server.address.host}:${server.port}');
-
-  late final StreamSubscription<ProcessSignal> sigint;
-  sigint = ProcessSignal.sigint.watch().listen((_) async {
-    _log.info('Shutting down.');
-    await sigint.cancel();
-    await server.close();
+  final List<HttpServer> servers;
+  try {
+    servers = await _listen(config.listener, httpsContext);
+  } on SocketException catch (e) {
+    _log.severe('Refusing to start: cannot listen ${config.listener} (${e.osError?.message ?? e.message}).');
     await db.close();
-  });
+    exitCode = 78;
+    return;
+  }
+  for (final server in servers) {
+    shelf_io.serveRequests(server, handler);
+  }
+  _log.info('Jitan API listening: ${config.listener}');
+
+  // systemd stops the service with SIGTERM; Ctrl+C sends SIGINT. Windows
+  // can't watch SIGTERM.
+  final signals = [ProcessSignal.sigint, if (!Platform.isWindows) ProcessSignal.sigterm];
+  final subscriptions = <StreamSubscription<ProcessSignal>>[];
+  var stopping = false;
+  for (final signal in signals) {
+    subscriptions.add(signal.watch().listen((_) async {
+      if (stopping) return;
+      stopping = true;
+      _log.info('Shutting down ($signal).');
+      for (final subscription in subscriptions) {
+        await subscription.cancel();
+      }
+      await Future.wait([for (final server in servers) server.close()]);
+      await db.close();
+    }));
+  }
 }
 
-/// Platform environment, plus a git-ignored `.env` in the working directory
-/// when present (development convenience). Platform values win.
-/// Every key is passed through, so the production guard sees any `JITAN_DEV_*`.
-Map<String, String> _readEnvironment() {
-  final envFile = File('.env');
-  return {
-    if (envFile.existsSync()) ...parseEnvFile(envFile.readAsLinesSync()),
-    ...Platform.environment,
-  };
+/// One server per address, all on the same port; HTTPS when [https] is
+/// given. If a later address fails, the ones already open are closed again.
+Future<List<HttpServer>> _listen(ListenerConfig listener, SecurityContext? https) async {
+  final servers = <HttpServer>[];
+  try {
+    for (final address in listener.addresses) {
+      servers.add(https == null
+          ? await HttpServer.bind(address, listener.port)
+          : await HttpServer.bindSecure(address, listener.port, https));
+    }
+    return servers;
+  } catch (_) {
+    await Future.wait([for (final server in servers) server.close(force: true)]);
+    rethrow;
+  }
 }
 
 void _configureLogging() {
