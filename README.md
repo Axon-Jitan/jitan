@@ -79,6 +79,12 @@ dart run bin/server.dart
   `GET /me/time-registrations` (`from`, `to`, `limit`, `cursor`): the read-only
   `tblTimeReg` stream (staged; no app screen yet)
 
+- `GET /schedules`: every active employee group with its schedules (work start/finish
+  times, tolerance, rounding, breaks), taken from the employees who are only in that group;
+  different sets are returned as variants, none picked. `GET /schedules/options`: the
+  schedule form's days, rounding intervals, tolerances and break lengths (staged for the
+  HR Schedules screens)
+
 An id in a path that is not a known row, including one too large for an integer, is 404.
 
 **Sessions.** `Authorization: Bearer <token>` with a token from onboarding. Set

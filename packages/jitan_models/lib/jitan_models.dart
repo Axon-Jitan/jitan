@@ -12,5 +12,6 @@ export 'src/group_summary.dart';
 export 'src/json_reading.dart';
 export 'src/language.dart';
 export 'src/onboarding.dart';
+export 'src/schedule.dart';
 export 'src/temporary_qr.dart';
 export 'src/time_registration.dart';

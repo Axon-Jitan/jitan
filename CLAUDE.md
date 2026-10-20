@@ -245,9 +245,11 @@ named so it can be found:
 | `DevCompanySelector` (admin_web, only with `JITAN_DEV_TOOLS=true`) | the production company switcher | switcher design (PRODUCT-CLARIFY-EMPLOYEES-LIST) |
 
 Backend modules today (routes / service / repository where they have endpoints and data):
-`audit auth companies employees groups health languages onboarding recovery temporary_qr
-time_registration users`. `audit` is the event-log writer (there is no `events` module).
-Planned, not built yet: `schedules` (read-only views first), `locations`, `geofences`,
+`audit auth companies employees groups health languages onboarding recovery schedules
+temporary_qr time_registration users`. `audit` is the event-log writer (there is no `events` module).
+`schedules` reads so far (a group's schedules are derived from its employees who are only in
+that group; type and day rows are found by name, `schedules/schedule_names.dart`); writes
+follow in roadmap phase 2. Planned, not built yet: `locations`, `geofences`,
 `work_sessions`, `reports`.
 
 Modules waiting on ERD gaps, not to be built until resolved: `devices` (GAP-05),

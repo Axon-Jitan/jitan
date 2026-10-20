@@ -18,6 +18,7 @@ import 'package:jitan_api/src/languages/user_language_repository.dart';
 import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
+import 'package:jitan_api/src/schedules/schedule_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
 
 /// In-memory stand-ins for unit tests. Integration tests use the real
@@ -372,6 +373,32 @@ class FakeGroupRepository implements GroupRepository {
 
   @override
   Future<bool> isAssignable(int groupId) async => groups.any((g) => g.id == groupId);
+}
+
+/// Schedules as plain lists; the service's grouping logic runs on them.
+class FakeScheduleRepository implements ScheduleRepository {
+  List<DayRow> days = const [];
+  List<SingleGroupMember> members = const [];
+  List<UserScheduleRow> userSchedules = const [];
+  List<ScheduleRuleRow> rules = const [];
+
+  @override
+  Future<List<DayRow>> listDays() async => days;
+
+  @override
+  Future<List<SingleGroupMember>> singleGroupMembers() async => members;
+
+  @override
+  Future<List<UserScheduleRow>> schedulesOf(Iterable<int> userIds) async {
+    final ids = userIds.toSet();
+    return [for (final row in userSchedules) if (ids.contains(row.userId)) row];
+  }
+
+  @override
+  Future<List<ScheduleRuleRow>> rulesOf(Iterable<int> scheduleIds) async {
+    final ids = scheduleIds.toSet();
+    return [for (final rule in rules) if (ids.contains(rule.scheduleId)) rule];
+  }
 }
 
 class FakeAuditLog implements AuditLogRepository {

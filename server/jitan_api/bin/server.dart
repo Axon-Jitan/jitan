@@ -48,6 +48,9 @@ import 'package:jitan_api/src/time_registration/time_registration_repository.dar
 import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
 import 'package:jitan_api/src/time_registration/time_registration_service.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
+import 'package:jitan_api/src/schedules/schedule_repository.dart';
+import 'package:jitan_api/src/schedules/schedule_routes.dart';
+import 'package:jitan_api/src/schedules/schedule_service.dart';
 import 'package:jitan_api/src/users/account_service.dart';
 import 'package:jitan_api/src/users/me_routes.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
@@ -190,6 +193,10 @@ Future<void> main() async {
         companies: companyRepository,
         executor: db,
       ),
+    ),
+    schedules: ScheduleRoutes(
+      authorizer,
+      ScheduleService(schedules: ScheduleRepository(db), groups: groupRepository),
     ),
     me: MeRoutes(
       users,

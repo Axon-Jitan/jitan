@@ -12,4 +12,5 @@ export 'src/languages_api.dart';
 export 'src/me_api.dart';
 export 'src/onboarding_api.dart';
 export 'src/recovery_api.dart';
+export 'src/schedules_api.dart';
 export 'src/time_registrations_api.dart';

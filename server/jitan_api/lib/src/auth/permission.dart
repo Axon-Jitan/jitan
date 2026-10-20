@@ -41,4 +41,8 @@ enum Permission {
   /// Read an employee's time registrations (`tblTimeReg`) as HR/Admin
   /// (company-scoped, through the employee's membership).
   viewTimeRegistrations,
+
+  /// See the schedules of the employee groups and the schedule form's
+  /// choices. Schedules are global, so not company-scoped.
+  viewSchedules,
 }

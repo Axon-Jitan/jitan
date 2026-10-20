@@ -13,6 +13,9 @@ abstract final class MembershipFilters {
   static String activeCredentialGroup(String alias) =>
       '$alias.userCredGroupActive = 1 AND $alias.userCredGroupMFD = 0';
 
+  /// `tblUserSchedule` row [alias] is a schedule the user currently has.
+  static String activeSchedule(String alias) => '$alias.userScheduleActive = 1 AND $alias.userScheduleMFD = 0';
+
   /// `tblUserLanguage` row [alias] is the user's current language.
   static String activeLanguage(String alias) => '$alias.userLanguageActive = 1 AND $alias.userLanguageMFD = 0';
 }

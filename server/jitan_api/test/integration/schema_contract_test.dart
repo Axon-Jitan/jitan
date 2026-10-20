@@ -39,6 +39,19 @@ const _usedColumns = {
   'tblLanguage': ['languageID', 'languageName', 'languageCode', 'languageActive', 'languageMFD'],
   'tblTranslation': ['translationID', 'languageID', 'translationUIName', 'translationUIText'],
   'tblUserLanguage': ['userLanguageID', 'userID', 'languageID', 'userLanguageActive', 'userLanguageMFD'],
+  'tblDays': ['dayID', 'dayName', 'dayActive', 'dayMFD'],
+  'tblScheduleType': ['scheduleTypeID', 'scheduleTypeName', 'scheduleTypeActive', 'scheduleTypeMFD'],
+  'tblSchedule': [
+    'scheduleID', 'scheduleTypeID', 'dayID', 'scheduleHrStart', 'scheduleMinStart', 'scheduleHrStop',
+    'scheduleMinStop', 'scheduleMarginMin', 'scheduleActive', 'scheduleMFD',
+  ],
+  'tblUserSchedule': ['userScheduleID', 'userID', 'scheduleID', 'userScheduleActive', 'userScheduleMFD'],
+  'tblRoundingRule': [
+    'roundingRuleID', 'roundingRuleValueInMin', 'roundingRuleRoundUp', 'roundingRuleActive', 'roundingRuleMFD',
+  ],
+  'tblScheduleRoundingRule': [
+    'scheduleRoundingRuleID', 'scheduleID', 'roundingRuleID', 'scheduleRoundingRuleActive', 'scheduleRoundingRuleMFD',
+  ],
 };
 
 /// Every junction table and its soft-delete columns (IT decision 2026-10-08,
