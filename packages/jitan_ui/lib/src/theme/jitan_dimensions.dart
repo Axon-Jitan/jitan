@@ -13,6 +13,10 @@ abstract final class JitanDimensions {
   /// Below this width the sidebar collapses into a drawer.
   static const compactLayoutBreakpoint = 900.0;
 
+  /// Widest a page gets (content 1120 px + page padding 32 + 48), as in
+  /// Figma; wider windows centre it.
+  static const pageMaxWidth = 1200.0;
+
   // Sidebar
   static const sidebarHorizontalPadding = 24.0;
   static const sidebarLogoInset = 28.0;
