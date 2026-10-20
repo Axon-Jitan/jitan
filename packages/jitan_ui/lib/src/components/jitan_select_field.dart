@@ -143,7 +143,7 @@ class _MenuItem extends StatelessWidget {
       backgroundColor: WidgetStatePropertyAll(selected ? JitanColors.warmWhite : null),
       overlayColor: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.pressed)
-            ? JitanColors.inputBorder
+            ? Colors.transparent
             : states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)
             ? JitanColors.inputFill
             : null,

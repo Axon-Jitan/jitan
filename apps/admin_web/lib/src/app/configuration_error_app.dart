@@ -16,7 +16,7 @@ class ConfigurationErrorApp extends StatelessWidget {
   Widget build(BuildContext context) => TranslationScope(
     translations: Translations.english(),
     child: MaterialApp(
-      theme: JitanTheme.light(),
+      theme: JitanTheme.web(),
       debugShowCheckedModeBanner: false,
       home: Builder(
         builder: (context) => Scaffold(

@@ -38,7 +38,7 @@ class _AdminAppState extends State<AdminApp> {
     controller: _currentCompany,
     child: MaterialApp.router(
       title: context.t(AdminTextKeys.appTitle),
-      theme: JitanTheme.light(),
+      theme: JitanTheme.web(),
       routerConfig: _router,
       debugShowCheckedModeBanner: false,
     ),
