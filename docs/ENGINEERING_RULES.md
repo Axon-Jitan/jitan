@@ -674,6 +674,14 @@ The approved Figma flows are the product reference for UI/UX. **The ERD comes fi
 a Figma flow needs data the ERD cannot store, the flow is changed in Figma (decided
 2026-10-12), never the database.
 
+**Build exactly what Figma shows, nothing more and nothing less** (product owner,
+2026-10-21). Same layout, components, copy, spacing, colours and states as the Figma
+frame. Do not add sections, buttons, texts or steps that are not in Figma, and do not
+leave out what is there. Do not design from your own head. Before building or changing a
+screen, open its Figma frame and compare the result with it side by side. When Figma has
+no frame for a needed state, or the frame cannot be built because of the ERD, ask the
+product owner first; never fill the gap with your own design.
+
 Do not simplify a complete flow into a generic screen.
 
 Implement:
@@ -751,7 +759,7 @@ pipeline, identity context, error model) may be built first.
 
 A feature is only "done" when applicable parts of all of these are complete:
 
-- [ ] Matches approved product/Figma behavior
+- [ ] Matches the Figma frames exactly, compared side by side (§30)
 - [ ] UI implemented
 - [ ] Responsive behavior handled: fits from 390 px to 2400 px, covered by the responsive test (§30)
 - [ ] State management implemented
