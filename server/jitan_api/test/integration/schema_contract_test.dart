@@ -22,7 +22,8 @@ const _usedColumns = {
   'tblGroup': ['groupID', 'groupName', 'groupActive', 'groupMFD'],
   'tblEventLog': [
     'eventLogID', 'eventLogTimestamp', 'userIDInit', 'userIDTarget', 'companyID', 'userCompanyID',
-    'groupID', 'userGroupID', 'credGroupID', 'userCredGroupID',
+    'groupID', 'userGroupID', 'credGroupID', 'userCredGroupID', 'scheduleID', 'scheduleTypeID', 'dayID',
+    'roundingRuleID', 'scheduleRoundingRuleID',
   ],
   'tblTimeReg': [
     'timeRegID', 'userID', 'addressID', 'timeRegTypeID', 'timeRegTimestamp', 'timeRegManualEntry',

@@ -82,8 +82,11 @@ dart run bin/server.dart
 - `GET /schedules`: every active employee group with its schedules (work start/finish
   times, tolerance, rounding, breaks), taken from the employees who are only in that group;
   different sets are returned as variants, none picked. `GET /schedules/options`: the
-  schedule form's days, rounding intervals, tolerances and break lengths (staged for the
-  HR Schedules screens)
+  schedule form's days, rounding intervals, tolerances and break lengths.
+  `PUT`/`DELETE /schedules/groups/{groupId}/work-hours` and `…/breaks`: set or remove a
+  group's work hours and breaks (fresh rows for the group's employees, old rows switched
+  off, audited; saving the same values changes nothing). Staged for the HR Schedules
+  screens
 
 An id in a path that is not a known row, including one too large for an integer, is 404.
 

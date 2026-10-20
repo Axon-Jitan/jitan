@@ -20,6 +20,31 @@ class SchedulesApi {
     }
   }
 
+  /// Sets a group's work hours, replacing any it had; the group's schedule
+  /// as it is afterwards.
+  Future<GroupSchedule> setWorkHours(int groupId, SetWorkHoursRequest request) async =>
+      _group(await _transport.putJson('schedules/groups/$groupId/work-hours', request.toJson()));
+
+  /// Removes a group's work hours.
+  Future<GroupSchedule> removeWorkHours(int groupId) async =>
+      _group(await _transport.deleteJson('schedules/groups/$groupId/work-hours'));
+
+  /// Sets a group's breaks, replacing any it had.
+  Future<GroupSchedule> setBreaks(int groupId, SetBreaksRequest request) async =>
+      _group(await _transport.putJson('schedules/groups/$groupId/breaks', request.toJson()));
+
+  /// Removes a group's breaks.
+  Future<GroupSchedule> removeBreaks(int groupId) async =>
+      _group(await _transport.deleteJson('schedules/groups/$groupId/breaks'));
+
+  static GroupSchedule _group(Map<String, Object?> json) {
+    try {
+      return GroupSchedule.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Group schedule: ${e.message}');
+    }
+  }
+
   /// The days, rounding intervals, tolerances and break lengths HR can choose.
   Future<ScheduleOptions> options() async {
     final json = await _transport.getJson('schedules/options');

@@ -70,6 +70,47 @@ void main() {
     expect(options.toleranceMinutes, [0, 5, 10, 15]);
   });
 
+  test('saves and removes work hours and breaks of a group', () async {
+    const group = GroupSchedule(
+      group: GroupSummary(id: 2, name: 'Blue collar'),
+      status: GroupScheduleStatus.noSchedule,
+      singleGroupEmployeeCount: 3,
+      variants: [],
+    );
+    final requests = <http.Request>[];
+    final client = SchedulesApi(ApiTransport(
+      baseUri: Uri.parse('http://api.test/'),
+      httpClient: MockClient((request) async {
+        requests.add(request);
+        return http.Response(jsonEncode(group.toJson()), 200);
+      }),
+    ));
+
+    await client.setWorkHours(
+      2,
+      const SetWorkHoursRequest(
+        days: [WorkHoursDay(dayId: 1, start: '08:00', finish: '16:30')],
+        startToleranceMinutes: 10,
+        finishToleranceMinutes: 10,
+        startIntervalMinutes: 15,
+        finishIntervalMinutes: 15,
+        favour: ScheduleRoundingFavour.company,
+      ),
+    );
+    await client.removeWorkHours(2);
+    await client.setBreaks(2, const SetBreaksRequest(days: [BreakDay(dayId: 1, usualStart: '12:00', lengthMinutes: 30)]));
+    final removed = await client.removeBreaks(2);
+
+    expect([for (final r in requests) '${r.method} ${r.url.path}'], [
+      'PUT /schedules/groups/2/work-hours',
+      'DELETE /schedules/groups/2/work-hours',
+      'PUT /schedules/groups/2/breaks',
+      'DELETE /schedules/groups/2/breaks',
+    ]);
+    expect((jsonDecode(requests.first.body) as Map)['favour'], 'company');
+    expect(removed.status, GroupScheduleStatus.noSchedule);
+  });
+
   test('a malformed body is an invalid response, not a crash', () async {
     final (client, _) = api({'groups': 'nope'});
 

@@ -19,6 +19,7 @@ import 'package:jitan_api/src/onboarding/onboarding_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
+import 'package:jitan_api/src/schedules/schedule_write_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
 
 /// In-memory stand-ins for unit tests. Integration tests use the real
@@ -399,6 +400,17 @@ class FakeScheduleRepository implements ScheduleRepository {
     final ids = scheduleIds.toSet();
     return [for (final rule in rules) if (ids.contains(rule.scheduleId)) rule];
   }
+}
+
+/// Schedule writes are exercised against MySQL
+/// (`schedule_editing_integration_test.dart`); route tests only reach
+/// validation and permissions, so any write call here is a test bug.
+class UnusedScheduleWriteRepository implements ScheduleWriteRepository {
+  const UnusedScheduleWriteRepository();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw StateError('Schedule writes are tested against MySQL, not with fakes.');
 }
 
 class FakeAuditLog implements AuditLogRepository {

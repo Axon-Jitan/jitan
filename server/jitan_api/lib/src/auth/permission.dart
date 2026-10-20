@@ -45,4 +45,8 @@ enum Permission {
   /// See the schedules of the employee groups and the schedule form's
   /// choices. Schedules are global, so not company-scoped.
   viewSchedules,
+
+  /// Set or remove an employee group's work hours and breaks. Schedules are
+  /// global, so not company-scoped.
+  manageSchedules,
 }

@@ -47,7 +47,15 @@ enum AuditEventType {
 
   /// The preferred language changed (by the employee or HR/Admin). Generic:
   /// `tblEventLog` cannot say which language (GAP-12, accepted for V1).
-  languageChanged('employee.language.changed');
+  languageChanged('employee.language.changed'),
+
+  /// HR/Admin saved a group's work hours or breaks: one event per new
+  /// `tblSchedule` row (with its type, day, group and rounding rule).
+  scheduleCreated('schedule.created'),
+
+  /// A schedule row no employee uses any more was switched off (soft
+  /// delete), after a save or a removal by HR/Admin.
+  scheduleDeactivated('schedule.deactivated');
 
   const AuditEventType(this.typeName);
 
@@ -63,7 +71,12 @@ enum EventLogReference {
   group('groupID'),
   userGroup('userGroupID'),
   credGroup('credGroupID'),
-  userCredGroup('userCredGroupID');
+  userCredGroup('userCredGroupID'),
+  schedule('scheduleID'),
+  scheduleType('scheduleTypeID'),
+  day('dayID'),
+  roundingRule('roundingRuleID'),
+  scheduleRoundingRule('scheduleRoundingRuleID');
 
   const EventLogReference(this.column);
 

@@ -24,6 +24,7 @@ import 'package:jitan_api/src/languages/language_service.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_api/src/recovery/recovery_routes.dart';
 import 'package:jitan_api/src/recovery/recovery_service.dart';
+import 'package:jitan_api/src/schedules/schedule_editing_service.dart';
 import 'package:jitan_api/src/schedules/schedule_routes.dart';
 import 'package:jitan_api/src/schedules/schedule_service.dart';
 import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
@@ -126,7 +127,16 @@ class TestApp {
           executor: unusedExecutor,
         ),
       ),
-      schedules: ScheduleRoutes(Authorizer(permissions), ScheduleService(schedules: schedules, groups: groups)),
+      schedules: ScheduleRoutes(
+        Authorizer(permissions),
+        scheduleService,
+        ScheduleEditingService(
+          writes: const UnusedScheduleWriteRepository(),
+          schedules: scheduleService,
+          audit: audit,
+          transactions: transactions,
+        ),
+      ),
       me: MeRoutes(
         users,
         AccountService(
@@ -155,6 +165,7 @@ class TestApp {
   final assignments = FakeEmployeeAssignmentRepository();
   final groups = FakeGroupRepository();
   final schedules = FakeScheduleRepository();
+  late final scheduleService = ScheduleService(schedules: schedules, groups: groups);
   final audit = FakeAuditLog();
   final transactions = FakeTransactions();
   final onboarding = FakeOnboardingRepository();

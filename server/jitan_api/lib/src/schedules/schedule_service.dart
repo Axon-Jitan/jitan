@@ -20,7 +20,7 @@ class ScheduleService {
 
   /// The fixed choices of the schedule form, with the days Monday first.
   Future<ScheduleOptions> options() async => ScheduleOptions(
-        days: (await _days()).values.toList()..sort((a, b) => a.weekday.compareTo(b.weekday)),
+        days: (await activeDays()).values.toList()..sort((a, b) => a.weekday.compareTo(b.weekday)),
         roundingIntervalMinutes: ScheduleChoices.roundingIntervalMinutes,
         toleranceMinutes: ScheduleChoices.toleranceMinutes,
         breakLengthMinutes: ScheduleChoices.breakLengthMinutes,
@@ -28,7 +28,7 @@ class ScheduleService {
 
   /// Every active group with its schedules, by group name.
   Future<List<GroupSchedule>> groupSchedules() async {
-    final days = await _days();
+    final days = await activeDays();
     final groups = await _groups.listActive();
     final members = <int, Set<int>>{};
     for (final member in await _schedules.singleGroupMembers()) {
@@ -175,9 +175,13 @@ class ScheduleService {
     return ScheduleRoundingFavour.mixed;
   }
 
+  /// One active group with its schedules; `null` when it is not active.
+  Future<GroupSchedule?> groupSchedule(int groupId) async =>
+      (await groupSchedules()).where((g) => g.group.id == groupId).firstOrNull;
+
   /// The active days by ID. A day name Jitan doesn't know, or two rows for
   /// one weekday, is a configuration error, not a guess.
-  Future<Map<int, ScheduleDay>> _days() async {
+  Future<Map<int, ScheduleDay>> activeDays() async {
     final days = <int, ScheduleDay>{};
     final seen = <int>{};
     for (final row in await _schedules.listDays()) {

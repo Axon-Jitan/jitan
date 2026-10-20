@@ -44,6 +44,15 @@ abstract final class ApiErrorCode {
   /// Reset account access on an employee who has not set up Jitan yet.
   static const accountNotActivated = 'account_not_activated';
 
+  /// A schedule for an employee group that has no employee who is only in
+  /// that group: nobody would get it ("Add an employee who is only in Blue
+  /// collar first").
+  static const groupWithoutEmployees = 'group_without_employees';
+
+  /// The group's employees have different work hours, so a break can't be
+  /// checked against them: set the work hours first.
+  static const scheduleEmployeesDiffer = 'schedule_employees_differ';
+
   static const unauthenticated = 'unauthenticated';
   static const forbidden = 'forbidden';
   static const notFound = 'not_found';

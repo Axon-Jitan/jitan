@@ -48,9 +48,11 @@ import 'package:jitan_api/src/time_registration/time_registration_repository.dar
 import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
 import 'package:jitan_api/src/time_registration/time_registration_service.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
+import 'package:jitan_api/src/schedules/schedule_editing_service.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
 import 'package:jitan_api/src/schedules/schedule_routes.dart';
 import 'package:jitan_api/src/schedules/schedule_service.dart';
+import 'package:jitan_api/src/schedules/schedule_write_repository.dart';
 import 'package:jitan_api/src/users/account_service.dart';
 import 'package:jitan_api/src/users/me_routes.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
@@ -82,6 +84,7 @@ Future<void> main() async {
   final users = UserRepository(db);
   final companyRepository = CompanyRepository(db);
   final groupRepository = GroupRepository(db);
+  final scheduleService = ScheduleService(schedules: ScheduleRepository(db), groups: groupRepository);
 
   final PermissionEvaluator permissions = config.environment.allowsDevelopmentMechanisms
       ? DevelopmentPermissionEvaluator(config.environment)
@@ -196,7 +199,13 @@ Future<void> main() async {
     ),
     schedules: ScheduleRoutes(
       authorizer,
-      ScheduleService(schedules: ScheduleRepository(db), groups: groupRepository),
+      scheduleService,
+      ScheduleEditingService(
+        writes: const ScheduleWriteRepository(),
+        schedules: scheduleService,
+        audit: const AuditLogRepository(),
+        transactions: db,
+      ),
     ),
     me: MeRoutes(
       users,

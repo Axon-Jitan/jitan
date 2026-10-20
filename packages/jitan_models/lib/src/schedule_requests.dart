@@ -1,0 +1,111 @@
+import 'json_reading.dart';
+import 'schedule.dart';
+
+/// Work hours on one day of a [SetWorkHoursRequest].
+class WorkHoursDay {
+  const WorkHoursDay({required this.dayId, required this.start, required this.finish});
+
+  factory WorkHoursDay.fromJson(Map<String, Object?> json) =>
+      WorkHoursDay(dayId: json.readInt('dayId'), start: json.readString('start'), finish: json.readString('finish'));
+
+  /// `tblDays.dayID`.
+  final int dayId;
+
+  /// Wall-clock `HH:mm`; [finish] is after [start] on the same day.
+  final String start;
+  final String finish;
+
+  Map<String, Object?> toJson() => {'dayId': dayId, 'start': start, 'finish': finish};
+}
+
+/// Body of `PUT /schedules/groups/{groupId}/work-hours`: the group's work
+/// hours, replacing any it had. Applies from now; registrations already made
+/// keep their times.
+class SetWorkHoursRequest {
+  const SetWorkHoursRequest({
+    required this.days,
+    required this.startToleranceMinutes,
+    required this.finishToleranceMinutes,
+    required this.startIntervalMinutes,
+    required this.finishIntervalMinutes,
+    required this.favour,
+  });
+
+  factory SetWorkHoursRequest.fromJson(Map<String, Object?> json) => SetWorkHoursRequest(
+        days: json.readObjectList(fieldDays).map(WorkHoursDay.fromJson).toList(),
+        startToleranceMinutes: json.readInt(fieldStartTolerance),
+        finishToleranceMinutes: json.readInt(fieldFinishTolerance),
+        startIntervalMinutes: json.readInt(fieldStartInterval),
+        finishIntervalMinutes: json.readInt(fieldFinishInterval),
+        favour: _favour(json.readString(fieldFavour)),
+      );
+
+  final List<WorkHoursDay> days;
+  final int startToleranceMinutes;
+  final int finishToleranceMinutes;
+  final int startIntervalMinutes;
+  final int finishIntervalMinutes;
+
+  /// [ScheduleRoundingFavour.company] or [ScheduleRoundingFavour.employee].
+  final ScheduleRoundingFavour favour;
+
+  /// Field names, for [ApiError.field].
+  static const fieldDays = 'days';
+  static const fieldStartTolerance = 'startToleranceMinutes';
+  static const fieldFinishTolerance = 'finishToleranceMinutes';
+  static const fieldStartInterval = 'startIntervalMinutes';
+  static const fieldFinishInterval = 'finishIntervalMinutes';
+  static const fieldFavour = 'favour';
+
+  Map<String, Object?> toJson() => {
+        fieldDays: [for (final day in days) day.toJson()],
+        fieldStartTolerance: startToleranceMinutes,
+        fieldFinishTolerance: finishToleranceMinutes,
+        fieldStartInterval: startIntervalMinutes,
+        fieldFinishInterval: finishIntervalMinutes,
+        fieldFavour: favour.name,
+      };
+
+  static ScheduleRoundingFavour _favour(String name) => switch (name) {
+        'company' => ScheduleRoundingFavour.company,
+        'employee' => ScheduleRoundingFavour.employee,
+        _ => throw FormatException('"$fieldFavour" must be "company" or "employee".'),
+      };
+}
+
+/// The break on one day of a [SetBreaksRequest].
+class BreakDay {
+  const BreakDay({required this.dayId, required this.usualStart, required this.lengthMinutes});
+
+  factory BreakDay.fromJson(Map<String, Object?> json) => BreakDay(
+        dayId: json.readInt('dayId'),
+        usualStart: json.readString('usualStart'),
+        lengthMinutes: json.readInt('lengthMinutes'),
+      );
+
+  final int dayId;
+
+  /// Wall-clock `HH:mm`.
+  final String usualStart;
+  final int lengthMinutes;
+
+  Map<String, Object?> toJson() => {'dayId': dayId, 'usualStart': usualStart, 'lengthMinutes': lengthMinutes};
+}
+
+/// Body of `PUT /schedules/groups/{groupId}/breaks`: the group's breaks,
+/// replacing any it had. Each break lies within the group's work hours of
+/// that day and is deducted automatically.
+class SetBreaksRequest {
+  const SetBreaksRequest({required this.days});
+
+  factory SetBreaksRequest.fromJson(Map<String, Object?> json) =>
+      SetBreaksRequest(days: json.readObjectList(fieldDays).map(BreakDay.fromJson).toList());
+
+  final List<BreakDay> days;
+
+  static const fieldDays = 'days';
+
+  Map<String, Object?> toJson() => {
+        fieldDays: [for (final day in days) day.toJson()],
+      };
+}
