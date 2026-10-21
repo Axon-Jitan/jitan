@@ -19,6 +19,7 @@ class JitanTextField extends StatelessWidget {
     this.onSubmitted,
     this.autofocus = false,
     this.maxLength,
+    this.inputFormatters = const [],
   });
 
   final String label;
@@ -37,6 +38,9 @@ class JitanTextField extends StatelessWidget {
   /// still validates: this is only for quick feedback.
   final int? maxLength;
 
+  /// Arrange or limit what is typed (e.g. a phone number's grouping).
+  final List<TextInputFormatter> inputFormatters;
+
   @override
   Widget build(BuildContext context) => JitanFieldLabel(
         label: label,
@@ -47,7 +51,7 @@ class JitanTextField extends StatelessWidget {
           keyboardType: keyboardType,
           textInputAction: textInputAction,
           onSubmitted: onSubmitted,
-          inputFormatters: [if (maxLength case final max?) LengthLimitingTextInputFormatter(max)],
+          inputFormatters: [...inputFormatters, if (maxLength case final max?) LengthLimitingTextInputFormatter(max)],
           style: JitanTextStyles.inputText,
           cursorColor: JitanColors.ink,
           decoration: jitanFieldDecoration(hintText: hintText, errorText: errorText),

@@ -43,6 +43,11 @@ abstract final class EmployeeImportText {
         args: {'column': context.t(columnKey(_columnOfField(detail)))},
       ),
       EmployeeImportProblemKind.emailInvalid => context.t(AdminTextKeys.employeeImportProblemEmailInvalid),
+      EmployeeImportProblemKind.phoneInvalid => context.t(
+        detail == PhoneNumberProblem.missingCountryCode.name
+            ? AdminTextKeys.employeeImportProblemPhoneCountryCode
+            : AdminTextKeys.employeeImportProblemPhoneInvalid,
+      ),
       EmployeeImportProblemKind.groupUnknown =>
         context.t(AdminTextKeys.employeeImportProblemGroupUnknown, args: {'group': detail}),
       EmployeeImportProblemKind.groupAmbiguous =>

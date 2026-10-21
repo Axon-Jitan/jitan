@@ -125,7 +125,7 @@ class AddEmployeeController extends ChangeNotifier {
       CreateEmployeeRequest.fieldFirstName: ?_check(input.firstName, CreateEmployeeRequest.maxFirstNameLength),
       CreateEmployeeRequest.fieldLastName: ?_check(input.lastName, CreateEmployeeRequest.maxLastNameLength),
       CreateEmployeeRequest.fieldCode: ?_check(input.code, CreateEmployeeRequest.maxCodeLength),
-      CreateEmployeeRequest.fieldPhone: ?_check(input.phone, CreateEmployeeRequest.maxPhoneLength, required: false),
+      CreateEmployeeRequest.fieldPhone: ?_checkPhone(input.phone),
       CreateEmployeeRequest.fieldEmail: ?_checkEmail(input.email),
     };
     _input = input;
@@ -195,7 +195,7 @@ class AddEmployeeController extends ChangeNotifier {
           firstName: input.firstName.trim(),
           lastName: input.lastName.trim(),
           code: input.code.trim(),
-          phone: _blankToNull(input.phone),
+          phone: _blankToNull(input.phone) == null ? null : PhoneNumbers.check(input.phone).formatted,
           email: _blankToNull(input.email),
           companyIds: _companyIds,
           groupIds: _groupIds,
@@ -248,6 +248,7 @@ class AddEmployeeController extends ChangeNotifier {
       _fieldErrors = {
         field: switch (field) {
           CreateEmployeeRequest.fieldEmail => AdminTextKeys.employeeFieldErrorEmail,
+          CreateEmployeeRequest.fieldPhone => AdminTextKeys.employeeFieldErrorPhoneInvalid,
           CreateEmployeeRequest.fieldCompanyIds ||
           CreateEmployeeRequest.fieldGroupIds ||
           CreateEmployeeRequest.fieldScheduleGroupId => AdminTextKeys.employeeFieldErrorUnavailable,
@@ -276,6 +277,18 @@ class AddEmployeeController extends ChangeNotifier {
     if (required && trimmed.isEmpty) return AdminTextKeys.employeeFieldErrorRequired;
     if (trimmed.runes.length > maxLength) return AdminTextKeys.employeeFieldErrorTooLong;
     return null;
+  }
+
+  /// The phone rule shared with the server ([PhoneNumbers]): optional, but
+  /// when given, an international number with `+` and its country code.
+  static String? _checkPhone(String value) {
+    if (value.trim().isEmpty) return null;
+    return switch (PhoneNumbers.check(value).problem) {
+      null => null,
+      PhoneNumberProblem.notANumber => AdminTextKeys.employeeFieldErrorPhoneLetters,
+      PhoneNumberProblem.missingCountryCode => AdminTextKeys.employeeFieldErrorPhoneCountryCode,
+      PhoneNumberProblem.invalid => AdminTextKeys.employeeFieldErrorPhoneInvalid,
+    };
   }
 
   static String? _checkEmail(String value) {

@@ -226,6 +226,11 @@ const builtInEnglish = <String, String>{
   'employee.field.error.required': 'Required.',
   'employee.field.error.duplicateCode': 'This employee code is already in use.',
   'employee.field.error.tooLong': 'One of the values is too long.',
+  'employee.field.error.phoneLetters': 'A phone number has only digits.',
+  'employee.field.error.phoneCountryCode': 'Start with + and the country code, like +32 470 12 34 56.',
+  'employee.field.error.phoneInvalid': 'This is not a valid phone number. Check the digits.',
+  'employee.import.problem.phoneCountryCode': 'Phone number needs + and the country code',
+  'employee.import.problem.phoneInvalid': 'Phone number is not valid',
 
   // Employee details (EMP-03)
   'employee.details.title': 'Employee details',

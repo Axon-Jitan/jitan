@@ -203,6 +203,11 @@ abstract final class AdminTextKeys {
   static const employeeFieldErrorRequired = 'employee.field.error.required';
   static const employeeFieldErrorDuplicateCode = 'employee.field.error.duplicateCode';
   static const employeeFieldErrorTooLong = 'employee.field.error.tooLong';
+  static const employeeFieldErrorPhoneLetters = 'employee.field.error.phoneLetters';
+  static const employeeFieldErrorPhoneCountryCode = 'employee.field.error.phoneCountryCode';
+  static const employeeFieldErrorPhoneInvalid = 'employee.field.error.phoneInvalid';
+  static const employeeImportProblemPhoneCountryCode = 'employee.import.problem.phoneCountryCode';
+  static const employeeImportProblemPhoneInvalid = 'employee.import.problem.phoneInvalid';
 
   static const employeeDetailsTitle = 'employee.details.title';
 

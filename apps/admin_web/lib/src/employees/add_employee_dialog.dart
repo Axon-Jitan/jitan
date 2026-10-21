@@ -12,6 +12,7 @@ import '../schedules/schedule_summary_text.dart';
 import 'add_employee_activation.dart';
 import 'add_employee_controller.dart';
 import 'add_employee_stepper.dart';
+import 'phone_number_input_formatter.dart';
 
 /// Opens Add employee. HR chooses the employee's companies in step 2.
 /// Completes with the created employee once HR finished the setup, `null`
@@ -234,6 +235,7 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
           hintText: context.t(AdminTextKeys.employeeFieldPhoneHint),
           controller: _phone,
           keyboardType: TextInputType.phone,
+          inputFormatters: const [PhoneNumberInputFormatter()],
           errorText: _error(CreateEmployeeRequest.fieldPhone),
         ),
         JitanTextField(
