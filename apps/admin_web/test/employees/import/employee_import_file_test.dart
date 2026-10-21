@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:admin_web/src/employees/import/csv_reader.dart';
 import 'package:admin_web/src/employees/import/employee_import_file.dart';
@@ -99,6 +100,37 @@ void main() {
       expect(
         () => EmployeeImportFileReader.read('template.xlsx', template, _names),
         _problem(ImportFileProblemKind.noEmployees),
+      );
+    });
+  });
+
+  group('the sample files in dev/import-samples', () {
+    List<EmployeeImportRow> sample(String name) =>
+        EmployeeImportFileReader.read(name, File('../../dev/import-samples/$name').readAsBytesSync(), _names).rows;
+    String rowText(EmployeeImportRow r) =>
+        [r.row, r.firstName, r.lastName, r.code, r.phone, r.email, r.groups.join('|')].join(' / ');
+
+    test('a workbook written by another tool (absolute sheet link, inline text) reads like its CSV', () {
+      final xlsx = sample('employees-ready.xlsx');
+
+      expect(xlsx, hasLength(10));
+      expect(xlsx.map(rowText), sample('employees-ready.csv').map(rowText));
+      expect(rowText(xlsx[3]), '5 / [DEV] Dries / Jacobs / DEVIMP04 / +32 472 80 11 02 / null / Blue collar|White collar');
+      expect(xlsx.first.firstName, '[DEV] Anna');
+    });
+
+    test('the problem samples read every row, empty cells as empty', () {
+      final xlsx = sample('employees-with-problems.xlsx');
+
+      expect(xlsx, hasLength(12));
+      expect(xlsx.map(rowText), sample('employees-with-problems.csv').map(rowText));
+      expect((xlsx[3].lastName, xlsx[4].code), ('', ''));
+    });
+
+    test('the missing-column sample is refused', () {
+      expect(
+        () => sample('employees-missing-column.csv'),
+        throwsA(isA<ImportFileProblem>().having((p) => p.column, 'column', ImportColumn.code)),
       );
     });
   });

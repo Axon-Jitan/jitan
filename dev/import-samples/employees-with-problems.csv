@@ -1,0 +1,13 @@
+﻿First name,Last name,Employee code,Phone,Email,Groups
+[DEV] Karel,Pauwels,DEVIMP11,+32 475 11 22 33,,Blue collar
+[DEV] Lotte,Hermans,DEVIMP12,,lotte.hermans@example.com,White collar
+[DEV] Mats,Michiels,DEVIMP13,+32 476 44 55 66,,
+[DEV] Nina,,DEVIMP14,,,Blue collar
+[DEV] Olivier,Lambrechts,,,,Blue collar
+[DEV] Pieter,Aerts,SBW,,,White collar
+[DEV] Quinten,Martens,DEVIMP11,,,Blue collar
+[DEV] Roos,Segers,DEVIMP15,,,Cleaners
+[DEV] Sander,Wuyts,DEVIMP16,0470 12 34 56,,Blue collar
+[DEV] Tine,Mertens,DEVIMP17,+32 4ab 12,,White collar
+[DEV] Ward,Dubois,DEVIMP18,+3247,,Blue collar
+[DEV] Xena,Lemmens,DEVIMP19,,xena.lemmens.example.com,

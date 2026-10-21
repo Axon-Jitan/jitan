@@ -1,0 +1,11 @@
+﻿First name;Last name;Employee code;Phone;Email;Groups
+[DEV] Anna;Peeters;DEVIMP01;+32470123456;anna.peeters@example.com;Blue collar
+[DEV] Bram;Janssens;DEVIMP02;+32 471 22 10 98;;Blue collar
+[DEV] Chloé;Maes;DEVIMP03;;chloe.maes@example.com;White collar
+[DEV] Dries;Jacobs;DEVIMP04;+32 472 80 11 02;;"Blue collar; White collar"
+[DEV] Elise;Willems;DEVIMP05;+31 6 12345678;elise.willems@example.com;White collar
+[DEV] Finn;Claes;DEVIMP06;+256 772 123456;;Blue collar
+[DEV] Greet;Wouters;DEVIMP07;;;
+[DEV] Hanne;Goossens;DEVIMP08;+44 20 7946 0958;hanne.goossens@example.com;White collar
+[DEV] Ilias;De Smet;DEVIMP09;+32 473 45 67 89;;Blue collar
+[DEV] Jana;Vermeulen;DEVIMP10;+32 474 98 76 54;jana.vermeulen@example.com;White collar
