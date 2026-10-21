@@ -55,6 +55,86 @@ abstract final class AdminTextKeys {
   static const employeeNoCompanyTitle = 'employee.noCompany.title';
   static const employeeNoCompanyMessage = 'employee.noCompany.message';
 
+  // Import employees (Figma 1419:2 … 1419:404)
+  static const employeeImportAction = 'employee.import.action';
+  static const employeeImportBack = 'employee.import.back';
+  static const employeeImportTitle = 'employee.import.title';
+  /// Argument: `{company}`.
+  static const employeeImportSubtitle = 'employee.import.subtitle';
+  static const employeeImportDropTitle = 'employee.import.drop.title';
+  /// Argument: `{max}`.
+  static const employeeImportDropHint = 'employee.import.drop.hint';
+  static const employeeImportChoose = 'employee.import.choose';
+  static const employeeImportChooseAnother = 'employee.import.chooseAnother';
+  static const employeeImportReading = 'employee.import.reading';
+  /// Argument: `{size}`.
+  static const employeeImportFileKb = 'employee.import.file.kb';
+  /// Argument: `{size}`.
+  static const employeeImportFileMb = 'employee.import.file.mb';
+  static const employeeImportColumnsTitle = 'employee.import.columns.title';
+  static const employeeImportColumnsSubtitle = 'employee.import.columns.subtitle';
+  static const employeeImportColumnRequired = 'employee.import.column.required';
+  static const employeeImportColumnOptional = 'employee.import.column.optional';
+  static const employeeImportColumnGroupsNote = 'employee.import.column.groupsNote';
+  static const employeeImportColumnFirstName = 'employee.import.column.firstName';
+  static const employeeImportColumnLastName = 'employee.import.column.lastName';
+  static const employeeImportColumnCode = 'employee.import.column.code';
+  static const employeeImportColumnPhone = 'employee.import.column.phone';
+  static const employeeImportColumnEmail = 'employee.import.column.email';
+  static const employeeImportColumnGroups = 'employee.import.column.groups';
+  static const employeeImportTemplate = 'employee.import.template';
+  static const employeeImportTemplateFile = 'employee.import.templateFile';
+  static const employeeImportUnusableTitle = 'employee.import.unusable.title';
+  static const employeeImportUnusableType = 'employee.import.unusable.type';
+  static const employeeImportUnusableUnreadable = 'employee.import.unusable.unreadable';
+  /// Argument: `{column}`.
+  static const employeeImportUnusableMissingColumn = 'employee.import.unusable.missingColumn';
+  static const employeeImportUnusableEmpty = 'employee.import.unusable.empty';
+  /// Argument: `{count}`, `{max}`.
+  static const employeeImportUnusableTooMany = 'employee.import.unusable.tooMany';
+  /// Plural (`.one`/`.other`); the number is shown beside it.
+  static const employeeImportSummaryRows = 'employee.import.summary.rows';
+  static const employeeImportSummaryReady = 'employee.import.summary.ready';
+  /// Plural; the number is shown beside it.
+  static const employeeImportSummaryProblems = 'employee.import.summary.problems';
+  /// Plural; argument `{size}`.
+  static const employeeImportFileRows = 'employee.import.file.rows';
+  static const employeeImportChange = 'employee.import.change';
+  static const employeeImportTableRow = 'employee.import.table.row';
+  static const employeeImportTableCode = 'employee.import.table.code';
+  static const employeeImportTableStatus = 'employee.import.table.status';
+  /// Argument: `{shown}`, `{total}`.
+  static const employeeImportTableMore = 'employee.import.table.more';
+  /// Argument: `{row}`.
+  static const employeeImportRowLabel = 'employee.import.rowLabel';
+  static const employeeImportReady = 'employee.import.ready';
+  static const employeeImportProblemFirstNameMissing = 'employee.import.problem.firstNameMissing';
+  static const employeeImportProblemLastNameMissing = 'employee.import.problem.lastNameMissing';
+  static const employeeImportProblemCodeMissing = 'employee.import.problem.codeMissing';
+  /// Argument: `{code}`.
+  static const employeeImportProblemCodeUsed = 'employee.import.problem.codeUsed';
+  /// Argument: `{row}`.
+  static const employeeImportProblemCodeRepeated = 'employee.import.problem.codeRepeated';
+  /// Argument: `{column}`.
+  static const employeeImportProblemTooLong = 'employee.import.problem.tooLong';
+  static const employeeImportProblemEmailInvalid = 'employee.import.problem.emailInvalid';
+  /// Argument: `{group}`.
+  static const employeeImportProblemGroupUnknown = 'employee.import.problem.groupUnknown';
+  /// Argument: `{group}`.
+  static const employeeImportProblemGroupAmbiguous = 'employee.import.problem.groupAmbiguous';
+  static const employeeImportNote = 'employee.import.note';
+  /// Plural.
+  static const employeeImportSubmit = 'employee.import.submit';
+  /// Plural.
+  static const employeeImportImporting = 'employee.import.importing';
+  /// Plural; argument `{company}`.
+  static const employeeImportDoneTitle = 'employee.import.done.title';
+  /// Plural.
+  static const employeeImportDoneSkipped = 'employee.import.done.skipped';
+  static const employeeImportDoneOnboarding = 'employee.import.done.onboarding';
+  static const employeeImportDoneBack = 'employee.import.done.back';
+  static const employeeImportDoneAgain = 'employee.import.done.again';
+
   static const employeeAddAction = 'employee.add.action';
   static const employeeAddTitle = 'employee.add.title';
   static const employeeAddSubtitle = 'employee.add.subtitle';

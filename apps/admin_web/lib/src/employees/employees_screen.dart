@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../app/admin_routes.dart';
 import '../common/api_failure_text.dart';
 import '../company_context/company_switcher.dart';
 import '../company_context/current_company.dart';
@@ -23,10 +25,7 @@ enum EmployeeStatusFilter { active, inactive }
 /// 1401:2, `No company selected` 1401:121): the employees of the company
 /// chosen in "Current company", with search, status filter, and each row's
 /// "⋯" (Manage employee, 1399:10).
-///
-/// "Import CSV / Excel" (Figma) arrives with the import feature, built next
-/// (product owner, 2026-10-21); the page never offers a button that does
-/// nothing.
+/// "Import CSV / Excel" opens Import employees for the same company.
 class EmployeesScreen extends StatefulWidget {
   const EmployeesScreen({
     super.key,
@@ -132,10 +131,22 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           JitanPageHeader(
             title: context.t(AdminTextKeys.employeeTitle),
             subtitle: context.t(AdminTextKeys.employeeListSubtitle),
-            action: JitanPrimaryButton(
-              label: context.t(AdminTextKeys.employeeAddAction),
-              icon: Icons.add,
-              onPressed: company == null ? null : () => _addEmployee(company),
+            action: Wrap(
+              spacing: 22,
+              runSpacing: 10,
+              children: [
+                JitanOutlineButton(
+                  label: context.t(AdminTextKeys.employeeImportAction),
+                  height: JitanDimensions.controlHeight,
+                  onPressed: company == null ? null : () => context.go(AdminRoutes.employeeImport),
+                ),
+                JitanPrimaryButton(
+                  label: context.t(AdminTextKeys.employeeAddAction),
+                  icon: Icons.add,
+                  height: JitanDimensions.controlHeight,
+                  onPressed: company == null ? null : () => _addEmployee(company),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: JitanDimensions.headerToToolbar),

@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:admin_web/src/companies/companies_screen.dart';
 import 'package:admin_web/src/company_context/current_company.dart';
 import 'package:admin_web/src/employees/employee_details_dialog.dart';
 import 'package:admin_web/src/employees/employees_screen.dart';
+import 'package:admin_web/src/employees/import/employee_import_screen.dart';
+import 'package:admin_web/src/employees/import/platform/import_file_picker.dart';
 import 'package:admin_web/src/groups/employee_picker.dart';
 import 'package:admin_web/src/groups/group_page.dart';
 import 'package:admin_web/src/groups/groups_screen.dart';
@@ -345,4 +349,49 @@ void main() {
       _fitsTheWindow(tester, width, 'Remove schedule?');
     });
   }
+
+  // Import employees: Ready, can't be used, preview with problems, done.
+  for (final width in _widths) {
+    testWidgets('Import employees, every state, at $width px', (tester) async {
+      final api = FakeEmployeesApi();
+      final files = <ChosenImportFile>[];
+      await _pump(tester, width, EmployeeImportScreen(api: api, chooseFile: () async => files.removeAt(0), download: (_, _, _) {}));
+      await tester.pump();
+      _fitsTheWindow(tester, width, 'Import ready');
+
+      Future<void> choose(String name, String csv, String button) async {
+        files.add(ChosenImportFile(name: name, bytes: utf8.encode(csv)));
+        await tester.tap(find.text(button).last);
+        await tester.pump();
+      }
+
+      await choose('almeco.csv', 'First name\nA\n', 'Choose file');
+      _fitsTheWindow(tester, width, "Import can't be used");
+
+      final rows = StringBuffer('First name;Last name;Employee code;Groups;Phone\n');
+      for (var i = 0; i < 12; i++) {
+        rows.writeln('Chloé-Marie Alexandra;Vandenbroucke-Verstraete;CODE$i;"Blue collar; White collar; Drivers";+32 470 12 34 56');
+      }
+      await choose('a-rather-long-file-name-from-the-payroll-export.csv', '$rows', 'Choose another file');
+      _fitsTheWindow(tester, width, 'Import reading');
+      api.checkSucceeds(const [
+        EmployeeImportProblem(row: 3, kind: EmployeeImportProblemKind.groupAmbiguous, detail: 'A group name that is rather long'),
+      ]);
+      await tester.pump();
+      _fitsTheWindow(tester, width, 'Import preview');
+
+      await tester.ensureVisible(find.text('Import 11 employees'));
+      await tester.tap(find.text('Import 11 employees'));
+      await tester.pump();
+      _fitsTheWindow(tester, width, 'Importing');
+      api.importSucceeds(const EmployeeImportResult(
+        added: 11,
+        skipped: [EmployeeImportProblem(row: 3, kind: EmployeeImportProblemKind.groupAmbiguous, detail: 'x')],
+      ));
+      await tester.pump();
+      _fitsTheWindow(tester, width, 'Import done');
+      expect(find.text('11 employees added to Almeco'), findsOneWidget);
+    });
+  }
 }
+

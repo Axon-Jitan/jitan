@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../companies/companies_screen.dart';
 import '../employees/employees_screen.dart';
+import '../employees/import/employee_import_screen.dart';
 import '../groups/group_page.dart';
 import '../groups/groups_screen.dart';
 import '../schedules/schedules_screen.dart';
@@ -37,6 +38,13 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
                 schedulesApi: services.schedulesApi,
               ),
             ),
+            routes: [
+              GoRoute(
+                path: 'import',
+                pageBuilder: (context, state) =>
+                    NoTransitionPage(child: EmployeeImportScreen(api: services.employeesApi)),
+              ),
+            ],
           ),
           GoRoute(
             path: AdminRoutes.schedules,

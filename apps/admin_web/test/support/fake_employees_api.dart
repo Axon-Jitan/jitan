@@ -88,6 +88,39 @@ class FakeEmployeesApi implements EmployeesApi {
   void resetSucceeds() => _pendingResets.last.complete();
 
   void resetFails(ApiClientException failure) => _pendingResets.last.completeError(failure);
+
+  /// (companyId, request) of every import check.
+  final importChecks = <(int, EmployeeImportRequest)>[];
+  final _pendingChecks = <Completer<EmployeeImportCheck>>[];
+
+  @override
+  Future<EmployeeImportCheck> checkImport(int companyId, EmployeeImportRequest request) {
+    importChecks.add((companyId, request));
+    final completer = Completer<EmployeeImportCheck>();
+    _pendingChecks.add(completer);
+    return completer.future;
+  }
+
+  void checkSucceeds(List<EmployeeImportProblem> problems) =>
+      _pendingChecks.last.complete(EmployeeImportCheck(problems: problems));
+
+  void checkFails(ApiClientException failure) => _pendingChecks.last.completeError(failure);
+
+  /// (companyId, request) of every import.
+  final imports = <(int, EmployeeImportRequest)>[];
+  final _pendingImports = <Completer<EmployeeImportResult>>[];
+
+  @override
+  Future<EmployeeImportResult> importEmployees(int companyId, EmployeeImportRequest request) {
+    imports.add((companyId, request));
+    final completer = Completer<EmployeeImportResult>();
+    _pendingImports.add(completer);
+    return completer.future;
+  }
+
+  void importSucceeds(EmployeeImportResult result) => _pendingImports.last.complete(result);
+
+  void importFails(ApiClientException failure) => _pendingImports.last.completeError(failure);
 }
 
 /// Stand-in for [GroupsApi] with a controllable result.

@@ -3,6 +3,9 @@
 abstract final class AdminRoutes {
   static const companies = '/companies';
   static const employees = '/employees';
+
+  /// Import employees, opened from Employees.
+  static const employeeImport = '$employees/import';
   static const schedules = '/schedules';
   static const groups = '/groups';
 
