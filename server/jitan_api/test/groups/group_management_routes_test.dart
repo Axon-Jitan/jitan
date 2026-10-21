@@ -45,11 +45,10 @@ void main() {
       });
     }
 
-    test('a missing name, employees or work hours, or malformed JSON, is a bad request', () async {
+    test('a missing name or malformed JSON is a bad request', () async {
       final app = TestApp();
 
       expect((await app.post('/groups', jsonEncode({}))).statusCode, 400);
-      expect((await app.post('/groups', jsonEncode({'name': 'Drivers'}))).statusCode, 400, reason: 'every group has work hours');
       expect((await app.post('/groups', '{')).statusCode, 400);
     });
   });

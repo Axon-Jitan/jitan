@@ -1,7 +1,9 @@
 import 'package:jitan_models/jitan_models.dart';
 
 import '../groups/group_repository.dart';
+import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
+import 'group_schedule_link_repository.dart';
 import 'schedule_choices.dart';
 import 'schedule_names.dart';
 import 'schedule_repository.dart';
@@ -12,11 +14,19 @@ import 'schedule_repository.dart';
 /// schedules are therefore the ones its employees **who are only in that
 /// group** have. When they differ, every set is returned as a variant and
 /// none is picked (ENGINEERING_RULES §20).
+///
+/// With [_groupLinks] and [_db] (PROPOSAL, ERD_GAPS GAP-15, local database
+/// only) a group's schedule is its own rows in `tblGroupSchedule`: a group
+/// has hours or not, its employees cannot differ, and an empty group can
+/// have hours.
 class ScheduleService {
-  ScheduleService({required this._schedules, required this._groups});
+  ScheduleService({required this._schedules, required this._groups, this._groupLinks, this._db})
+    : assert((_groupLinks == null) == (_db == null), 'group links need the database');
 
   final ScheduleRepository _schedules;
   final GroupRepository _groups;
+  final GroupScheduleLinkRepository? _groupLinks;
+  final SqlExecutor? _db;
 
   /// The fixed choices of the schedule form, with the days Monday first.
   Future<ScheduleOptions> options() async => ScheduleOptions(
@@ -34,6 +44,7 @@ class ScheduleService {
     for (final member in await _schedules.singleGroupMembers()) {
       members.putIfAbsent(member.groupId, () => {}).add(member.userId);
     }
+    if (_groupLinks case final groupLinks?) return _ownedSchedules(groupLinks, groups, members, days);
     final rows = await _schedules.schedulesOf(members.values.expand((ids) => ids));
     final scheduleIdsOf = <int, Set<int>>{};
     final scheduleById = <int, UserScheduleRow>{};
@@ -93,15 +104,58 @@ class ScheduleService {
       singleGroupEmployeeCount: userIds.length,
       variants: [
         for (final set in sets)
-          _variant(group, set.count, [for (final id in set.scheduleIds) scheduleById[id]!], rulesOf, days),
+          _variant(group, set.count, [for (final id in set.scheduleIds) _rowOf(scheduleById[id]!)], rulesOf, days),
       ],
     );
+  }
+
+  /// GAP-15: each group's own rows, one variant or none.
+  Future<List<GroupSchedule>> _ownedSchedules(
+    GroupScheduleLinkRepository groupLinks,
+    List<GroupSummary> groups,
+    Map<int, Set<int>> members,
+    Map<int, ScheduleDay> days,
+  ) async {
+    final rowsOf = <int, List<_Row>>{};
+    for (final row in await groupLinks.rowsOfGroups(_db!)) {
+      rowsOf.putIfAbsent(row.groupId, () => []).add((
+        scheduleId: row.scheduleId,
+        typeName: row.typeName,
+        dayId: row.dayId,
+        startHour: row.startHour,
+        startMinute: row.startMinute,
+        stopHour: row.stopHour,
+        stopMinute: row.stopMinute,
+        marginMinutes: row.marginMinutes,
+      ));
+    }
+    final rulesOf = <int, List<ScheduleRuleRow>>{};
+    for (final rule in await _schedules.rulesOf(rowsOf.values.expand((rows) => rows).map((r) => r.scheduleId))) {
+      rulesOf.putIfAbsent(rule.scheduleId, () => []).add(rule);
+    }
+    return [
+      for (final group in groups)
+        switch ((rowsOf[group.id] ?? const <_Row>[], members[group.id]?.length ?? 0)) {
+          (final rows, final count) when rows.isEmpty => GroupSchedule(
+            group: group,
+            status: GroupScheduleStatus.noSchedule,
+            singleGroupEmployeeCount: count,
+            variants: const [],
+          ),
+          (final rows, final count) => GroupSchedule(
+            group: group,
+            status: GroupScheduleStatus.configured,
+            singleGroupEmployeeCount: count,
+            variants: [_variant(group, count, rows, rulesOf, days)],
+          ),
+        },
+    ];
   }
 
   ScheduleVariant _variant(
     GroupSummary group,
     int employeeCount,
-    List<UserScheduleRow> rows,
+    List<_Row> rows,
     Map<int, List<ScheduleRuleRow>> rulesOf,
     Map<int, ScheduleDay> days,
   ) {
@@ -152,7 +206,7 @@ class ScheduleService {
   /// A start or finish with its tolerance and its rounding rule: none when no
   /// rule is linked (not rounded), or when several are (a data problem: HR
   /// sees no rounding and saves it again).
-  static WorkBoundary _boundary(String time, UserScheduleRow row, Map<int, List<ScheduleRuleRow>> rulesOf) {
+  static WorkBoundary _boundary(String time, _Row row, Map<int, List<ScheduleRuleRow>> rulesOf) {
     final rules = rulesOf[row.scheduleId] ?? const [];
     return WorkBoundary(
       time: time,
@@ -183,6 +237,29 @@ class ScheduleService {
     return days;
   }
 
+  static _Row _rowOf(UserScheduleRow row) => (
+    scheduleId: row.scheduleId,
+    typeName: row.typeName,
+    dayId: row.dayId,
+    startHour: row.startHour,
+    startMinute: row.startMinute,
+    stopHour: row.stopHour,
+    stopMinute: row.stopMinute,
+    marginMinutes: row.marginMinutes,
+  );
+
   static String _time(int hour, int minute) =>
       '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 }
+
+/// One schedule row, whoever has it (an employee or, with GAP-15, a group).
+typedef _Row = ({
+  int scheduleId,
+  String typeName,
+  int dayId,
+  int startHour,
+  int startMinute,
+  int stopHour,
+  int stopMinute,
+  int marginMinutes,
+});

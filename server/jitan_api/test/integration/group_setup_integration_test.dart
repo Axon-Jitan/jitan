@@ -244,4 +244,9 @@ void main() {
     );
     expect(await groupsNamed('DRIVERS'), 1, reason: 'the existing Drivers (case-insensitive match)');
   });
+
+  test('a group without employees or work hours (both optional)', () async {
+    final created = await setup.create(users['actor']!, CreateGroupRequest(name: '$prefix Empty'), mayManage: allowed);
+    expect((created.name, created.employeeCount), ('$prefix Empty', 0));
+  });
 }

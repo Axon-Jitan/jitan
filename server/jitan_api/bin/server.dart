@@ -63,6 +63,7 @@ import 'package:jitan_api/src/users/account_service.dart';
 import 'package:jitan_api/src/users/me_routes.dart';
 import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:jitan_api/src/schedules/employee_schedule_sync.dart';
+import 'package:jitan_api/src/schedules/group_schedule_link_repository.dart';
 import 'package:logging/logging.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
@@ -99,12 +100,25 @@ Future<void> main() async {
   final users = UserRepository(db);
   final companyRepository = CompanyRepository(db);
   final groupRepository = GroupRepository(db);
-  final scheduleService = ScheduleService(schedules: ScheduleRepository(db), groups: groupRepository);
+  // PROPOSAL (ERD_GAPS GAP-15): groups own their schedule in tblGroupSchedule,
+  // a table only in the local development database.
+  final groupLinks = config.devGroupSchedules ? const GroupScheduleLinkRepository() : null;
+  if (groupLinks != null) {
+    _log.warning('JITAN_DEV_GROUP_SCHEDULES: using the proposed tblGroupSchedule (GAP-15, local database only).');
+  }
+  final scheduleSync = EmployeeScheduleSync(groupLinks: groupLinks);
+  final scheduleService = ScheduleService(
+    schedules: ScheduleRepository(db),
+    groups: groupRepository,
+    groupLinks: groupLinks,
+    db: groupLinks == null ? null : db,
+  );
   final scheduleEditing = ScheduleEditingService(
     writes: const ScheduleWriteRepository(),
     schedules: scheduleService,
     audit: const AuditLogRepository(),
     transactions: db,
+    groupLinks: groupLinks,
   );
   final groupManagement = GroupManagementService(
     groups: const GroupManagementRepository(),
@@ -117,7 +131,7 @@ Future<void> main() async {
     assignments: const EmployeeAssignmentRepository(),
     employees: EmployeeRepository(db),
     audit: const AuditLogRepository(),
-    scheduleSync: const EmployeeScheduleSync(),
+    scheduleSync: scheduleSync,
     transactions: db,
   );
 
@@ -173,7 +187,7 @@ Future<void> main() async {
         audit: const AuditLogRepository(),
         transactions: db,
         temporaryQr: temporaryQr,
-        scheduleSync: const EmployeeScheduleSync(),
+        scheduleSync: scheduleSync,
       ),
     ),
     assignments: EmployeeAssignmentRoutes(
@@ -187,7 +201,7 @@ Future<void> main() async {
         executor: db,
         userLanguages: const UserLanguageRepository(),
         languageChanges: languageChanges,
-        scheduleSync: const EmployeeScheduleSync(),
+        scheduleSync: scheduleSync,
       ),
     ),
     groups: GroupRoutes(
@@ -200,6 +214,7 @@ Future<void> main() async {
         members: groupMembers,
         schedules: scheduleEditing,
         transactions: db,
+        groupsOwnSchedules: groupLinks != null,
       ),
     ),
     languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db), languageChanges)),

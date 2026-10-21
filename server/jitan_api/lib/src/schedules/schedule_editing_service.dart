@@ -4,6 +4,7 @@ import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
+import 'group_schedule_link_repository.dart';
 import 'schedule_choices.dart';
 import 'schedule_names.dart';
 import 'schedule_service.dart';
@@ -32,18 +33,25 @@ typedef _NewRow = ({
 /// rounded times they were stored with. Saving what is already there changes
 /// nothing. Every created or switched-off row is audited in the same
 /// transaction.
+///
+/// With [_groupLinks] (PROPOSAL, ERD_GAPS GAP-15, local database only) the
+/// group owns its rows through `tblGroupSchedule`: a save links the new rows
+/// to the group, so a group with no employees keeps its hours too, and the
+/// employees who follow the group still get them in `tblUserSchedule`.
 class ScheduleEditingService {
   ScheduleEditingService({
     required this._writes,
     required this._schedules,
     required this._audit,
     required this._transactions,
+    this._groupLinks,
   });
 
   final ScheduleWriteRepository _writes;
   final ScheduleService _schedules;
   final AuditLogRepository _audit;
   final TransactionRunner _transactions;
+  final GroupScheduleLinkRepository? _groupLinks;
 
   static const _workTypes = [ScheduleTypeNames.workStart, ScheduleTypeNames.workFinish];
   static const _breakTypes = [ScheduleTypeNames.breakTime];
@@ -215,13 +223,24 @@ class ScheduleEditingService {
     if (!locked && !await _writes.lockGroup(tx, groupId)) {
       throw ApiException.notFound('Group $groupId does not exist.');
     }
-    final (employees: affected, links: links) = await _affected(tx, groupId, typeNames);
+    final groupLinks = _groupLinks;
+    final groupOwn = groupLinks == null ? const <GroupScheduleLink>[] : await groupLinks.currentLinks(tx, [groupId], typeNames);
+    final (employees: affected, links: links) = await _affected(
+      tx,
+      groupId,
+      typeNames,
+      groupRows: groupLinks == null ? null : {for (final l in groupOwn) l.scheduleId},
+    );
 
-    // Saving what every affected employee already has changes nothing.
-    final currentSets = _distinctSets(affected, links);
-    if (currentSets.length == 1) {
-      final shapes = await _writes.shapes(tx, currentSets.single);
-      if (_sameRows(shapes, rows)) return;
+    // Saving what the group (or every affected employee) already has changes nothing.
+    if (groupLinks != null) {
+      if (groupOwn.isNotEmpty && _sameRows(await _writes.shapes(tx, [for (final l in groupOwn) l.scheduleId]), rows)) return;
+    } else {
+      final currentSets = _distinctSets(affected, links);
+      if (currentSets.length == 1) {
+        final shapes = await _writes.shapes(tx, currentSets.single);
+        if (_sameRows(shapes, rows)) return;
+      }
     }
 
     final created = <int>[];
@@ -244,6 +263,7 @@ class ScheduleEditingService {
             await _writes.insertRule(tx, intervalMinutes: interval, roundUp: row.roundUp!);
         ruleLinkId = await _writes.linkRule(tx, scheduleId, ruleId);
       }
+      final groupScheduleId = await groupLinks?.link(tx, groupId, scheduleId);
       await _audit.record(
         tx,
         AuditEvent(
@@ -256,18 +276,22 @@ class ScheduleEditingService {
             EventLogReference.group: groupId,
             EventLogReference.roundingRule: ?ruleId,
             EventLogReference.scheduleRoundingRule: ?ruleLinkId,
+            EventLogReference.groupSchedule: ?groupScheduleId,
           },
         ),
       );
     }
 
+    await groupLinks?.removeLinks(tx, [for (final l in groupOwn) l.groupScheduleId]);
     await _writes.removeLinks(tx, [for (final l in links) l.userScheduleId]);
     for (final userId in affected) {
       for (final scheduleId in created) {
         await _writes.linkUser(tx, userId, scheduleId);
       }
     }
-    for (final scheduleId in await _writes.unused(tx, {for (final l in links) l.scheduleId}.toList())) {
+    final previous = {for (final l in links) l.scheduleId, for (final l in groupOwn) l.scheduleId}.toList();
+    final stillLinked = groupLinks == null ? const <int>{} : await groupLinks.stillLinked(tx, previous);
+    for (final scheduleId in [for (final id in await _writes.unused(tx, previous)) if (!stillLinked.contains(id)) id]) {
       await _writes.deactivateSchedules(tx, [scheduleId]);
       await _audit.record(
         tx,
@@ -281,15 +305,19 @@ class ScheduleEditingService {
   }
 
   /// The employees [groupId]'s schedules of [typeNames] apply to, and their
-  /// current links of those kinds. 409 when no employee is only in the group.
+  /// current links of those kinds. Without [groupRows] (the ERD as it is)
+  /// the group's rows are what its employees only in it have: 409 when there
+  /// is no such employee. With [groupRows] (the group's own rows, GAP-15) an
+  /// empty group is fine.
   Future<({List<int> employees, List<ScheduleLink> links})> _affected(
     SqlExecutor tx,
     int groupId,
-    List<String> typeNames,
-  ) async {
+    List<String> typeNames, {
+    Set<int>? groupRows,
+  }) async {
     final employees = await _writes.groupEmployees(tx, groupId);
     final single = [for (final e in employees) if (e.groupCount == 1) e.userId];
-    if (single.isEmpty) {
+    if (single.isEmpty && groupRows == null) {
       throw const ApiException(
         409,
         ApiErrorCode.groupWithoutEmployees,
@@ -297,14 +325,14 @@ class ScheduleEditingService {
       );
     }
     final links = await _writes.currentLinks(tx, [for (final e in employees) e.userId], typeNames);
-    final groupRows = {for (final l in links) if (single.contains(l.userId)) l.scheduleId};
+    final rowsOfGroup = groupRows ?? {for (final l in links) if (single.contains(l.userId)) l.scheduleId};
     // An employee in several groups follows this group when all of their
     // schedules of these kinds are this group's rows.
     final followers = [
       for (final e in employees)
         if (e.groupCount > 1)
           if ([for (final l in links) if (l.userId == e.userId) l.scheduleId] case final own
-              when own.isNotEmpty && own.every(groupRows.contains))
+              when own.isNotEmpty && own.every(rowsOfGroup.contains))
             e.userId,
     ];
     final affected = [...single, ...followers];

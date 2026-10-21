@@ -17,7 +17,7 @@ void main() {
     expect(GroupNameRequest.maxNameLength, 100);
   });
 
-  test('Create group carries the name, the employees and the work hours', () {
+  test('Create group: the name, with optional employees and work hours', () {
     const request = CreateGroupRequest(
       name: 'Drivers',
       employeeIds: [11, 12],
@@ -31,9 +31,12 @@ void main() {
       ),
     );
     final back = CreateGroupRequest.fromJson(request.toJson());
-    expect((back.name, back.schedule.breakMinutes), ('Drivers', 30));
+    expect((back.name, back.schedule!.breakMinutes), ('Drivers', 30));
     expect(back.employeeIds, [11, 12]);
-    expect(back.schedule.workHours.days.single.finish, '16:30');
-    expect(() => CreateGroupRequest.fromJson(const {'name': 'Drivers'}), throwsFormatException);
+    expect(back.schedule!.workHours.days.single.finish, '16:30');
+
+    final empty = CreateGroupRequest.fromJson(const {'name': 'Drivers'});
+    expect(empty.employeeIds, isEmpty, reason: 'employees are optional');
+    expect(empty.schedule, isNull, reason: 'work hours are optional');
   });
 }

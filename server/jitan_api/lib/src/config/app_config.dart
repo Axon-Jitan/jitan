@@ -18,6 +18,7 @@ class AppConfig {
     required this.corsOrigins,
     required this.database,
     required this.devUserId,
+    this.devGroupSchedules = false,
     required this.sessionSecret,
     required this.sessionLifetime,
     required this.passwordHashing,
@@ -66,6 +67,7 @@ class AppConfig {
       devUserId: environment.allowsDevelopmentMechanisms
           ? _optionalPositiveInt(sources, 'JITAN_DEV_USER_ID')
           : null,
+      devGroupSchedules: environment.allowsDevelopmentMechanisms && _flag(sources, 'JITAN_DEV_GROUP_SCHEDULES'),
       sessionSecret: _sessionSecret(sources, environment),
       sessionLifetime: Duration(days: _optionalPositiveInt(sources, 'JITAN_SESSION_LIFETIME_DAYS') ?? 30),
       passwordHashing: _passwordHashing(sources),
@@ -159,6 +161,12 @@ class AppConfig {
   /// Always `null` in production.
   final int? devUserId;
 
+  /// PROPOSAL (ERD_GAPS GAP-15): groups own their schedule through
+  /// `tblGroupSchedule`, a table only in the local development database.
+  /// `JITAN_DEV_GROUP_SCHEDULES=true`; always `false` in production (any
+  /// `JITAN_DEV_*` setting stops the server there).
+  final bool devGroupSchedules;
+
   /// Key that signs session tokens. `null` only in development/test, where a
   /// random one is generated at startup (sessions then end on restart).
   final String? sessionSecret;
@@ -190,6 +198,13 @@ class AppConfig {
     if (raw == 'false') return false;
     throw ConfigException('$key must be true or false; got "$raw".');
   }
+
+  /// `true` or `false` (default `false`).
+  static bool _flag(ConfigSources sources, String key) => switch (sources.value([key])) {
+    null || 'false' => false,
+    'true' => true,
+    final raw => throw ConfigException('$key must be true or false; got "$raw".'),
+  };
 
   static int? _optionalPositiveInt(ConfigSources sources, String key) {
     final raw = sources.value([key]);

@@ -92,7 +92,11 @@ enum EventLogReference {
   scheduleType('scheduleTypeID'),
   day('dayID'),
   roundingRule('roundingRuleID'),
-  scheduleRoundingRule('scheduleRoundingRuleID');
+  scheduleRoundingRule('scheduleRoundingRuleID'),
+
+  /// PROPOSAL (ERD_GAPS GAP-15): exists only in the local database; written
+  /// only with `JITAN_DEV_GROUP_SCHEDULES=true`.
+  groupSchedule('groupScheduleID');
 
   const EventLogReference(this.column);
 

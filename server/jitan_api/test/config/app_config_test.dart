@@ -39,6 +39,22 @@ void main() {
       expect(() => AppConfig.fromEnvironment({..._db, 'JITAN_DEV_USER_ID': '1'}), throwsA(isA<ConfigException>()));
     });
 
+    test('the proposed group schedules (GAP-15): development only, off by default, true/false', () {
+      expect(
+        () => AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'production', 'JITAN_DEV_GROUP_SCHEDULES': 'true'}),
+        throwsA(isA<ConfigException>().having((e) => e.message, 'message', contains('JITAN_DEV_GROUP_SCHEDULES'))),
+      );
+      expect(AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'development'}).devGroupSchedules, isFalse);
+      expect(
+        AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'development', 'JITAN_DEV_GROUP_SCHEDULES': 'true'}).devGroupSchedules,
+        isTrue,
+      );
+      expect(
+        () => AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'development', 'JITAN_DEV_GROUP_SCHEDULES': 'yes'}),
+        throwsA(isA<ConfigException>()),
+      );
+    });
+
     test('production refuses any other JITAN_DEV_* variable too', () {
       expect(() => AppConfig.fromEnvironment({..._db, 'JITAN_DEV_ANYTHING': 'x'}), throwsA(isA<ConfigException>()));
     });

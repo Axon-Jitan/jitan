@@ -4,6 +4,7 @@ import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
+import 'group_schedule_link_repository.dart';
 import 'schedule_names.dart';
 import 'schedule_write_repository.dart';
 
@@ -31,14 +32,20 @@ import 'schedule_write_repository.dart';
 /// transactions take only the employee lock). If HR saves the group's
 /// schedule at the same moment, the new member may keep the previous rows
 /// until the group's next save.
+///
+/// With [_groupLinks] (PROPOSAL, ERD_GAPS GAP-15, local database only) a
+/// group's schedule is its own rows in `tblGroupSchedule`, not what its
+/// other employees have: a group with no other employees still has hours.
 class EmployeeScheduleSync {
   const EmployeeScheduleSync({
     this._writes = const ScheduleWriteRepository(),
     this._audit = const AuditLogRepository(),
+    this._groupLinks,
   });
 
   final ScheduleWriteRepository _writes;
   final AuditLogRepository _audit;
+  final GroupScheduleLinkRepository? _groupLinks;
 
   /// Every kind of schedule a group gives its employees.
   static const _types = ScheduleTypeNames.all;
@@ -74,7 +81,9 @@ class EmployeeScheduleSync {
     }
     final schedule = await _groupSchedule(tx, groupId, userId);
     if (!schedule.hasEmployees) {
-      throw const ApiException(409, ApiErrorCode.groupWithoutEmployees, 'Add an employee who is only in this group first.');
+      throw _groupLinks == null
+          ? const ApiException(409, ApiErrorCode.groupWithoutEmployees, 'Add an employee who is only in this group first.')
+          : const ApiException.validation(ScheduleSourceRequest.fieldGroupId, 'This group has no work hours yet.');
     }
     if (schedule.differs) {
       throw const ApiException(
@@ -115,6 +124,10 @@ class EmployeeScheduleSync {
     int groupId,
     int exceptUserId,
   ) async {
+    if (_groupLinks case final groupLinks?) {
+      final rows = [for (final l in await groupLinks.currentLinks(tx, [groupId], _types)) l.scheduleId]..sort();
+      return (hasEmployees: rows.isNotEmpty, differs: false, rows: rows, allRows: rows.toSet());
+    }
     final single = [
       for (final e in await _writes.groupEmployees(tx, groupId))
         if (e.groupCount == 1 && e.userId != exceptUserId) e.userId,
@@ -144,7 +157,9 @@ class EmployeeScheduleSync {
     for (final scheduleId in target) {
       if (!have.contains(scheduleId)) await _writes.linkUser(tx, userId, scheduleId);
     }
-    for (final scheduleId in await _writes.unused(tx, [for (final l in removed) l.scheduleId])) {
+    final previous = [for (final l in removed) l.scheduleId];
+    final stillLinked = await _groupLinks?.stillLinked(tx, previous) ?? const <int>{};
+    for (final scheduleId in [for (final id in await _writes.unused(tx, previous)) if (!stillLinked.contains(id)) id]) {
       await _writes.deactivateSchedules(tx, [scheduleId]);
       await _audit.record(
         tx,
