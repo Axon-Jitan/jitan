@@ -1,6 +1,7 @@
 import '../database/db_row.dart';
 import '../database/like_pattern.dart';
 import '../database/sql_executor.dart';
+import '../database/sql_in_list.dart';
 import '../employees/membership_filters.dart';
 
 /// An employee row of the group page, before companies and groups are
@@ -54,11 +55,13 @@ class GroupMemberRepository {
   /// The current companies of [userIds]: `(companyID, companyName)` per user.
   Future<Map<int, List<(int, String)>>> companiesOf(List<int> userIds) async {
     if (userIds.isEmpty) return const {};
+    final ids = SqlInList('u', userIds);
     final rows = await _executor.query(
       'SELECT uc.userID, c.companyID, c.companyName FROM tblUserCompany uc '
       'JOIN tblCompany c ON c.companyID = uc.companyID '
-      'WHERE uc.userID IN (${userIds.join(',')}) AND ${MembershipFilters.activeCompany('uc')} AND c.companyMFD = 0 '
+      'WHERE uc.userID IN (${ids.placeholders}) AND ${MembershipFilters.activeCompany('uc')} AND c.companyMFD = 0 '
       'ORDER BY c.companyName, c.companyID',
+      ids.params,
     );
     final byUser = <int, List<(int, String)>>{};
     for (final row in rows) {
@@ -70,11 +73,13 @@ class GroupMemberRepository {
   /// The current, active groups of [userIds], by name.
   Future<Map<int, List<String>>> groupsOf(List<int> userIds) async {
     if (userIds.isEmpty) return const {};
+    final ids = SqlInList('u', userIds);
     final rows = await _executor.query(
       'SELECT ug.userID, g.groupName FROM tblUserGroup ug JOIN tblGroup g ON g.groupID = ug.groupID '
-      'WHERE ug.userID IN (${userIds.join(',')}) AND ${MembershipFilters.activeGroup('ug')} '
+      'WHERE ug.userID IN (${ids.placeholders}) AND ${MembershipFilters.activeGroup('ug')} '
       'AND g.groupActive = 1 AND g.groupMFD = 0 '
       'ORDER BY g.groupName, g.groupID',
+      ids.params,
     );
     final byUser = <int, List<String>>{};
     for (final row in rows) {

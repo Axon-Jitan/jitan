@@ -221,6 +221,21 @@ IT's database**, items 2–3 before production
 - [x] **Production refuses `JITAN_DB_SECURE=false`** (2026-10-20, `app_config.dart`).
 - [ ] **Least privilege** for the API's database account (SELECT/INSERT/UPDATE; IT's
       development account also has DELETE/CREATE/DROP/ALTER).
+- [ ] **Database not reachable from the internet** (ENGINEERING_RULES §28a.3): confirm
+      with IT that MySQL listens only on the private network / VM and the firewall allows
+      only the API host.
+- [x] **SQL and data-leak audit** (2026-10-21, §28a): every query reviewed. All values
+      are bound parameters; the only SQL text built at run time is fixed text from the
+      code (column/table names from enums and constant descriptors, `MembershipFilters`,
+      placeholder lists). Two `IN (…)` lists that inlined integer IDs now use
+      placeholders (`SqlInList`). Configuration errors no longer send their detail (table
+      and row names) to the client; it is logged instead. No database driver in any app,
+      no secrets or credentials in the repository, no password, hash, PIN, QR or token
+      in log lines. Every non-public endpoint checks a permission; every
+      `/companies/{id}/employees/{userId}/…` operation checks that the employee belongs to
+      that company. Tests: `sql_injection_integration_test.dart` (hostile text in
+      searches and stored names, cross-company reads) and `error_middleware_test.dart`
+      (no internal detail in responses).
 - [ ] **Sign-in rate limiting / lockout** (`POST /auth/sign-in`, ONB-04 for onboarding and
       recovery). Failed sign-ins are not audited; decide whether they should be, with no
       password or code value logged.
