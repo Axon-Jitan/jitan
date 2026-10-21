@@ -38,13 +38,15 @@ class EmployeesTable extends StatelessWidget {
   /// The row's "⋯".
   final ValueChanged<EmployeeSummary> onManage;
 
-  /// Column widths proportional to Figma 1401:2 (x = 52/287/397/537/678/812/986/1092).
+  /// Column widths from Figma 1401:2, with Schedule widened so a time range
+  /// ("Mon–Fri 08:00–16:30") fits; Location (only "—" until GAP-11) and
+  /// Onboarding give up that room.
   static const _flexName = 235;
   static const _flexCode = 110;
   static const _flexType = 140;
-  static const _flexLocation = 141;
-  static const _flexSchedule = 134;
-  static const _flexOnboarding = 174;
+  static const _flexLocation = 100;
+  static const _flexSchedule = 200;
+  static const _flexOnboarding = 150;
   static const _flexStatus = 106;
   static const _flexActions = 80;
 
