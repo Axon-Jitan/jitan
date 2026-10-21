@@ -7,6 +7,10 @@
 enum AuditEventType {
   employeeCreated('employee.created'),
 
+  /// HR/Admin removed the employee: `tblUser.userMFD = 1`, hidden from every
+  /// list; nothing is deleted.
+  employeeRemoved('employee.removed'),
+
   /// HR/Admin generated a temporary onboarding QR (stored nowhere in MySQL;
   /// only the fact is logged).
   onboardingQrGenerated('employee.onboarding_qr.generated'),

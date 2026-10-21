@@ -109,6 +109,14 @@ class EmployeeRepository {
       ))
           .lastInsertId;
 
+  /// Marks [userId] for deletion (`userMFD = 1`): hidden from every list,
+  /// refused at sign-in; the row and everything that refers to it stay.
+  /// `false` when the user was already marked.
+  Future<bool> markRemoved(SqlExecutor tx, int userId) async =>
+      (await tx.execute('UPDATE tblUser SET userMFD = 1 WHERE userID = :userId AND userMFD = 0', {'userId': userId}))
+          .affectedRows ==
+      1;
+
   /// Links [userId] to [companyId]; returns the `userCompanyID`.
   Future<int> addToCompany(SqlExecutor tx, int userId, int companyId) async => (await tx.execute(
         'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) '

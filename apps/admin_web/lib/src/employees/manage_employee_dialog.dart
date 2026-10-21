@@ -5,12 +5,13 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 
 /// What HR picked in "Manage employee".
-enum EmployeeAction { onboardingQr, resetAccess }
+enum EmployeeAction { onboardingQr, resetAccess, remove }
 
 Future<EmployeeAction?> showManageEmployeeDialog(BuildContext context, {required EmployeeSummary employee}) =>
     showJitanModal<EmployeeAction>(context, builder: (_) => ManageEmployeeDialog(employee: employee));
 
-/// Figma `HR / Employees — Manage account actions` (1399:10): the row's "⋯".
+/// Figma `HR / Employees — Manage account actions` (1399:10): the row's "⋯",
+/// with "Remove employee" from `Manage employee` (238:3689).
 /// An onboarding QR is only for an employee who has not activated yet, and
 /// Reset account access only for one who has (server rules); the other one
 /// is shown unavailable rather than leading to a refusal.
@@ -26,6 +27,7 @@ class ManageEmployeeDialog extends StatelessWidget {
     final choices = [
       (EmployeeAction.onboardingQr, AdminTextKeys.employeeManageQr, AdminTextKeys.employeeManageQrText, !employee.isActivated),
       (EmployeeAction.resetAccess, AdminTextKeys.employeeManageReset, AdminTextKeys.employeeManageResetText, employee.isActivated),
+      (EmployeeAction.remove, AdminTextKeys.employeeManageRemove, AdminTextKeys.employeeManageRemoveText, true),
     ];
     return JitanModal(
       width: 480,

@@ -23,6 +23,10 @@ enum Permission {
   /// See the assignable employee groups (e.g. Blue/White collar).
   viewGroups,
 
+  /// "Remove employee" (company-scoped): hides the employee everywhere
+  /// (`tblUser.userMFD = 1`); the record and its history stay.
+  removeEmployee,
+
   /// "Reset account access" for an employee of one company (company-scoped):
   /// clears their password so they set up Jitan again with their QR.
   resetEmployeeAccess,

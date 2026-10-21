@@ -14,6 +14,7 @@ import 'add_employee_dialog.dart';
 import 'employees_controller.dart';
 import 'employees_table.dart';
 import 'manage_employee_dialog.dart';
+import 'remove_employee_dialog.dart';
 import 'reset_access_dialog.dart';
 import 'temporary_qr/temporary_qr_dialog.dart';
 
@@ -97,6 +98,14 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     if (companyId == null) return;
     final action = await showManageEmployeeDialog(context, employee: employee);
     if (action == null || !mounted) return;
+    if (action == EmployeeAction.remove) {
+      final name = [employee.firstName, employee.lastName].whereType<String>().join(' ');
+      final success = context.t(AdminTextKeys.employeeRemoveSuccess, args: {'name': name.isEmpty ? employee.code : name});
+      if (!await showRemoveEmployeeDialog(context, employeesApi: widget.api, employee: employee, companyId: companyId)) return;
+      _say(success);
+      await _controller?.load();
+      return;
+    }
     final EmployeeDetails details;
     try {
       details = await widget.api.details(companyId, employee.id);
@@ -122,6 +131,9 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         _say(success);
         if (!mounted) return;
         await showTemporaryQrDialog(context, employeesApi: widget.api, employee: details, purpose: TemporaryQrPurpose.recovery);
+      case EmployeeAction.remove:
+        // Handled above: it needs no details.
+        return;
     }
     await _controller?.load();
   }

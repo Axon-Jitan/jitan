@@ -177,6 +177,54 @@ void main() {
     expect(find.text('Thomas Vermeulen'), findsOneWidget);
   });
 
+  testWidgets('the row "⋯": Remove employee asks first, then hides them once the server confirms', (tester) async {
+    final (api, _) = await _pump(tester);
+    api.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW', companyIds: [8, 7])]);
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Employee actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove from the active employee list'), findsOneWidget, reason: '238:3689');
+    await tester.tap(find.text('Remove employee'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Remove employee?'), findsOneWidget, reason: '238:3853');
+    expect(find.text('Are you sure you want to remove Disan Ssebowa?'), findsOneWidget);
+    expect(find.text('This employee will be hidden from normal views. Historical records will remain available.'), findsOneWidget);
+    expect(api.removes, isEmpty, reason: 'nothing before the confirmation');
+
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Remove'));
+    await tester.pump();
+    expect(api.removes, [(8, 1)], reason: 'no company filter: one of the companies of the employee');
+    expect(find.text('Disan Ssebowa was removed.'), findsNothing, reason: 'no success before the server confirms');
+
+    api.removeSucceeds();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Remove employee?'), findsNothing);
+    expect(find.text('Disan Ssebowa was removed.'), findsOneWidget);
+    expect(api.calls, hasLength(2), reason: 'the list reloads');
+  });
+
+  testWidgets('Remove employee: a refusal stays in the dialog and says why', (tester) async {
+    final (api, _) = await _pump(tester, selected: _almeco);
+    api.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW')]);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Employee actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove employee'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Remove'));
+    await tester.pump();
+    expect(api.removes, [(7, 1)]);
+    api.removeFails(const ApiClientException.network('offline'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Remove employee?'), findsOneWidget);
+    expect(api.calls, hasLength(1), reason: 'nothing changed: no reload');
+  });
+
   testWidgets('the row "⋯": Manage employee offers the onboarding QR to someone not activated yet', (tester) async {
     final (api, _) = await _pump(tester, selected: _almeco);
     api.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW')]);

@@ -87,6 +87,19 @@ class FakeEmployeeRepository implements EmployeeRepository {
     ];
   }
 
+  /// Users [markRemoved] marked (MFD).
+  final removed = <int>{};
+
+  @override
+  Future<bool> markRemoved(SqlExecutor tx, int userId) async {
+    writes.add('markRemoved $userId');
+    if (!removed.add(userId)) return false;
+    for (final list in byCompany.keys.toList()) {
+      byCompany[list] = [for (final e in byCompany[list]!) if (e.id != userId) e];
+    }
+    return true;
+  }
+
   @override
   Future<bool> codeExists(SqlExecutor executor, String code) async => takenCodes.contains(code);
 

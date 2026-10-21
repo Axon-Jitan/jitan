@@ -136,6 +136,19 @@ abstract final class AdminTextKeys {
   static const employeeImportDoneBack = 'employee.import.done.back';
   static const employeeImportDoneAgain = 'employee.import.done.again';
 
+  // Remove employee (Figma 238:3689, 238:3853)
+  static const employeeManageRemove = 'employee.manage.remove';
+  static const employeeManageRemoveText = 'employee.manage.remove.text';
+  static const employeeRemoveTitle = 'employee.remove.title';
+
+  /// Argument: `{name}`.
+  static const employeeRemoveQuestion = 'employee.remove.question';
+  static const employeeRemoveEffect = 'employee.remove.effect';
+  static const employeeRemoveConfirm = 'employee.remove.confirm';
+
+  /// Argument: `{name}`.
+  static const employeeRemoveSuccess = 'employee.remove.success';
+
   static const employeeAddAction = 'employee.add.action';
   static const employeeAddTitle = 'employee.add.title';
   static const employeeAddSubtitle = 'employee.add.subtitle';

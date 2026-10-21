@@ -174,6 +174,35 @@ void main() {
     );
   });
 
+  test('Remove employee: userMFD = 1, gone from the list, row and memberships kept, audited', () async {
+    final created = await service().create(actorId, companyId, request('RM1'));
+
+    await service().remove(actorId, companyId, created.id);
+
+    final user = (await db.query('SELECT userMFD FROM tblUser WHERE userID = :id', {'id': created.id})).single;
+    expect(user.readBool('userMFD'), isTrue, reason: 'kept in the database, marked for deletion');
+    expect(
+      await scalar('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :id', {'id': created.id}, 'n'),
+      1,
+      reason: 'nothing else is touched',
+    );
+    final listed = await EmployeeRepository(db).listForCompany(companyId, nameOrCodeContains: 'DT${stamp}RM1');
+    expect(listed, isEmpty);
+    expect(
+      await scalar(
+        'SELECT COUNT(*) AS n FROM tblEventLog WHERE userIDTarget = :id AND userIDInit = :actor AND companyID = :company',
+        {'id': created.id, 'actor': actorId, 'company': companyId},
+        'n',
+      ),
+      2,
+      reason: 'created and removed',
+    );
+    await expectLater(
+      service().remove(actorId, companyId, created.id),
+      throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 404)),
+    );
+  });
+
   test('a duplicate code is refused with 409 and writes nothing', () async {
     await service().create(actorId, companyId, request('D1'));
 

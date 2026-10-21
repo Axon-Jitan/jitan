@@ -176,6 +176,15 @@ const builtInEnglish = <String, String>{
   'employee.import.done.back': 'Back to Employees',
   'employee.import.done.again': 'Import another file',
 
+  // Remove employee
+  'employee.manage.remove': 'Remove employee',
+  'employee.manage.remove.text': 'Remove from the active employee list',
+  'employee.remove.title': 'Remove employee?',
+  'employee.remove.question': 'Are you sure you want to remove {name}?',
+  'employee.remove.effect': 'This employee will be hidden from normal views. Historical records will remain available.',
+  'employee.remove.confirm': 'Remove',
+  'employee.remove.success': '{name} was removed.',
+
   // Add employee (EMP-02)
   'employee.add.action': 'Add employee',
   'employee.add.title': 'Add employee',

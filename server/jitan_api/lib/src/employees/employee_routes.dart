@@ -27,6 +27,8 @@ import 'employee_service.dart';
 /// - `GET /companies/{companyId}/employees/{userId}`
 /// - `POST /companies/{companyId}/employees/{userId}/onboarding-qr`: a new
 ///   temporary onboarding QR (replaces the previous one)
+/// - `POST /companies/{companyId}/employees/{userId}/remove`: "Remove
+///   employee" (hidden everywhere, kept in the database as MFD)
 /// - `POST /companies/{companyId}/employees/{userId}/reset-access`: "Reset
 ///   account access" (clears the password, ends every session)
 /// - `POST /companies/{companyId}/employees/{userId}/recovery-qr`: a new
@@ -50,7 +52,15 @@ class EmployeeRoutes {
     ..get(_employeePath, _details)
     ..post('$_employeePath/onboarding-qr', (Request r, String c, String u) => _temporaryQr(r, c, u, TemporaryQrPurpose.onboarding))
     ..post('$_employeePath/recovery-qr', (Request r, String c, String u) => _temporaryQr(r, c, u, TemporaryQrPurpose.recovery))
-    ..post('$_employeePath/reset-access', _resetAccess);
+    ..post('$_employeePath/reset-access', _resetAccess)
+    ..post('$_employeePath/remove', _remove);
+
+  Future<Response> _remove(Request request, String companyId, String userId) async {
+    final id = _companyId(companyId);
+    final identity = await _authorizer.require(request, Permission.removeEmployee, companyId: id);
+    await _employees.remove(identity.userId, id, _id(userId));
+    return Response(204);
+  }
 
   Future<Response> _resetAccess(Request request, String companyId, String userId) async {
     final id = _companyId(companyId);

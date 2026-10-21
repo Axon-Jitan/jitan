@@ -18,6 +18,22 @@ class FakeEmployeesApi implements EmployeesApi {
     return completer.future;
   }
 
+  /// (companyId, userId) of every remove.
+  final removes = <(int, int)>[];
+  final _pendingRemoves = <Completer<void>>[];
+
+  @override
+  Future<void> remove(int companyId, int userId) {
+    removes.add((companyId, userId));
+    final completer = Completer<void>();
+    _pendingRemoves.add(completer);
+    return completer.future;
+  }
+
+  void removeSucceeds() => _pendingRemoves.last.complete();
+
+  void removeFails(ApiClientException failure) => _pendingRemoves.last.completeError(failure);
+
   /// Every company (no "Current company"): recorded in [calls] as company -1.
   @override
   Future<List<EmployeeSummary>> listAll({String? search}) => listForCompany(-1, search: search);
@@ -152,6 +168,7 @@ EmployeeSummary employee(
   List<String> groups = const [],
   bool active = true,
   bool activated = false,
+  List<int> companyIds = const [],
 }) => EmployeeSummary(
   id: id,
   firstName: first,
@@ -160,4 +177,5 @@ EmployeeSummary employee(
   groups: groups,
   isActive: active,
   isActivated: activated,
+  companyIds: companyIds,
 );
