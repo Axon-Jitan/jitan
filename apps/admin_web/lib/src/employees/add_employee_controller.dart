@@ -50,16 +50,22 @@ class AddEmployeeController extends ChangeNotifier {
     required this._groupsApi,
     required this._companiesApi,
     required this._schedulesApi,
-    required this.companyId,
-  }) : _companyIds = [companyId];
+    this.companyId,
+  }) : _companyIds = [?companyId];
 
   final EmployeesApi _employeesApi;
   final GroupsApi _groupsApi;
   final CompaniesApi _companiesApi;
   final SchedulesApi _schedulesApi;
 
-  /// The company HR works in: the employee is always added to it.
-  final int companyId;
+  /// The company chosen in the Employees filter, if any: step 2 starts with
+  /// it. The employee's companies are HR's choice in step 2 (product owner,
+  /// 2026-10-21: the filter never has to be set before adding someone).
+  final int? companyId;
+
+  /// The company the employee was created through (the first chosen; they
+  /// are added to every chosen company alike).
+  int? _createdIn;
 
   static final _emailShape = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
@@ -165,7 +171,7 @@ class AddEmployeeController extends ChangeNotifier {
     _notify();
   }
 
-  void setCompanies(List<int> ids) => _change(() => _companyIds = [companyId, ...ids.where((id) => id != companyId)]);
+  void setCompanies(List<int> ids) => _change(() => _companyIds = List.unmodifiable(ids));
 
   void setGroups(List<int> ids) => _change(() => _groupIds = List.unmodifiable(ids));
 
@@ -175,13 +181,19 @@ class AddEmployeeController extends ChangeNotifier {
   Future<void> create() async {
     final input = _input;
     if (input == null || _submitting || _step != AddEmployeeStep.assignments) return;
+    if (_companyIds.isEmpty) {
+      _fieldErrors = {CreateEmployeeRequest.fieldCompanyIds: AdminTextKeys.employeeFieldErrorRequired};
+      _notify();
+      return;
+    }
+    final [through, ...] = _companyIds;
     _submitting = true;
     _fieldErrors = const {};
     _formFailure = null;
     _notify();
     try {
       _created = await _employeesApi.create(
-        companyId,
+        through,
         CreateEmployeeRequest(
           firstName: input.firstName.trim(),
           lastName: input.lastName.trim(),
@@ -193,6 +205,7 @@ class AddEmployeeController extends ChangeNotifier {
           scheduleGroupId: scheduleGroupId,
         ),
       );
+      _createdIn = through;
       _step = AddEmployeeStep.activation;
     } on ApiClientException catch (failure) {
       _refused(input, failure);
@@ -206,12 +219,13 @@ class AddEmployeeController extends ChangeNotifier {
   /// Step 3: the temporary onboarding QR of the new employee.
   Future<void> requestQr() async {
     final created = _created;
-    if (created == null) return;
+    final company = _createdIn;
+    if (created == null || company == null) return;
     _qr = null;
     _qrFailure = null;
     _notify();
     try {
-      _qr = await _employeesApi.temporaryQr(companyId, created.id, TemporaryQrPurpose.onboarding);
+      _qr = await _employeesApi.temporaryQr(company, created.id, TemporaryQrPurpose.onboarding);
     } on ApiClientException catch (failure) {
       _qrFailure = failure;
     }

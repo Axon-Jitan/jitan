@@ -63,13 +63,13 @@ void main() {
     expect(companies.calls, isEmpty, reason: 'nothing is loaded before step 2');
   });
 
-  test('step 2: the current company is always chosen; Work schedule offers only the chosen groups\' hours', () async {
+  test('step 2: the filter company is pre-filled and can be changed; Work schedule offers only the chosen groups\' hours', () async {
     await toStep2();
     expect(controller.step, AddEmployeeStep.assignments);
     expect(controller.companyIds, [7]);
 
     controller.setCompanies([8]);
-    expect(controller.companyIds, [7, 8], reason: 'Almeco stays');
+    expect(controller.companyIds, [8], reason: 'the filter is only a filter');
 
     controller.setGroups([3]);
     expect([for (final s in controller.scheduleChoices) s.group.name], ['White collar']);
@@ -85,7 +85,7 @@ void main() {
   test('creating sends everything in one request, then asks for the onboarding QR', () async {
     await toStep2();
     controller
-      ..setCompanies([8])
+      ..setCompanies([7, 8])
       ..setGroups([3, 4])
       ..setScheduleGroup(4);
 
@@ -126,5 +126,32 @@ void main() {
 
     expect(controller.step, AddEmployeeStep.assignments);
     expect(controller.fieldErrors, {CreateEmployeeRequest.fieldGroupIds: AdminTextKeys.employeeFieldErrorUnavailable});
+  });
+
+  test('without a filter company: HR must choose one; the employee is created through the first chosen', () async {
+    controller.dispose();
+    controller = AddEmployeeController(
+      employeesApi: employees,
+      groupsApi: groups,
+      companiesApi: companies,
+      schedulesApi: schedules,
+    );
+    await toStep2();
+    expect(controller.companyIds, isEmpty);
+
+    await controller.create();
+    expect(controller.fieldErrors, {CreateEmployeeRequest.fieldCompanyIds: AdminTextKeys.employeeFieldErrorRequired});
+    expect(employees.creates, isEmpty, reason: 'nothing is sent without a company');
+
+    controller.setCompanies([8, 7]);
+    final creating = controller.create();
+    final (through, request) = employees.creates.single;
+    expect(through, 8);
+    expect(request.companyIds, [8, 7]);
+    employees.createSucceeds(employee(21, 'Disan', 'Ssebowa', 'SBW'));
+    await Future<void>.delayed(Duration.zero);
+    expect(employees.qrRequests, [(8, 21, TemporaryQrPurpose.onboarding)]);
+    employees.qrSucceeds('qr-value', expiresAt: DateTime.utc(2026, 10, 21, 12, 10));
+    await creating;
   });
 }

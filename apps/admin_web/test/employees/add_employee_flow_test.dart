@@ -111,7 +111,7 @@ void main() {
 
     expect(find.text('Step 2 of 3'), findsOneWidget);
     expect(find.text('No schedule available for the selected groups.'), findsOneWidget, reason: '1399:270, no group yet');
-    expect(find.text('Almeco'), findsOneWidget, reason: 'the current company is chosen');
+    expect(find.text('Almeco'), findsOneWidget, reason: 'the filter company is pre-filled');
     await choose(tester, 'Companies', ['PCA']);
     await choose(tester, 'Employee groups', ['White collar', 'Drivers']);
     expect(find.text('Choose a group schedule'), findsOneWidget, reason: '1399:588, two groups with hours');
@@ -136,7 +136,7 @@ void main() {
     await tester.pump();
     expect(find.text('Activate employee account'), findsOneWidget);
     expect(find.descendant(of: find.byType(JitanModal), matching: find.text('Not activated')), findsOneWidget);
-    expect(find.text('Almeco · White collar · Drivers'), findsOneWidget);
+    expect(find.text('Almeco · PCA · White collar · Drivers'), findsOneWidget, reason: 'every chosen company');
     expect(find.widgetWithText(JitanSecondaryButton, 'Back'), findsNothing, reason: 'the employee exists now');
     expect(employees.qrRequests.single, (7, 2, TemporaryQrPurpose.onboarding));
     expect(find.text('Generating the onboarding QR…'), findsOneWidget, reason: '1399:747');

@@ -13,7 +13,8 @@ import 'add_employee_activation.dart';
 import 'add_employee_controller.dart';
 import 'add_employee_stepper.dart';
 
-/// Opens Add employee for [companyId]. Completes with the created employee
+/// Opens Add employee; [companyId] (the Employees filter, if set) pre-fills
+/// step 2's Companies. Completes with the created employee
 /// once HR finished the setup, `null` when closed before the employee was
 /// created.
 Future<EmployeeSummary?> showAddEmployeeDialog(
@@ -22,7 +23,7 @@ Future<EmployeeSummary?> showAddEmployeeDialog(
   required GroupsApi groupsApi,
   required CompaniesApi companiesApi,
   required SchedulesApi schedulesApi,
-  required int companyId,
+  int? companyId,
 }) => showJitanModal<EmployeeSummary>(
   context,
   // A click beside the dialog must not throw away what HR entered.
@@ -53,14 +54,15 @@ class AddEmployeeDialog extends StatefulWidget {
     required this.groupsApi,
     required this.companiesApi,
     required this.schedulesApi,
-    required this.companyId,
+    this.companyId,
   });
 
   final EmployeesApi employeesApi;
   final GroupsApi groupsApi;
   final CompaniesApi companiesApi;
   final SchedulesApi schedulesApi;
-  final int companyId;
+  /// The company chosen in the Employees filter, if any (pre-filled).
+  final int? companyId;
 
   @override
   State<AddEmployeeDialog> createState() => _AddEmployeeDialogState();
@@ -196,7 +198,7 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
 
   String get _companyName => switch (_controller.options) {
     AssignmentOptionsLoaded(:final companies) =>
-      companies.where((company) => company.id == widget.companyId).firstOrNull?.name ?? '',
+      [for (final company in companies) if (_controller.companyIds.contains(company.id)) company.name].join(' · '),
     _ => '',
   };
 
@@ -275,7 +277,6 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
               hintText: context.t(AdminTextKeys.employeeFieldCompaniesHint),
               options: [for (final company in companies) JitanSelectOption(value: company.id, label: company.name)],
               values: c.companyIds,
-              locked: {widget.companyId},
               errorText: _error(CreateEmployeeRequest.fieldCompanyIds),
               onChanged: c.submitting ? null : c.setCompanies,
             ),
