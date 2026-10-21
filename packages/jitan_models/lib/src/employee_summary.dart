@@ -1,4 +1,5 @@
 import 'json_reading.dart';
+import 'schedule.dart';
 
 /// One row of the HR/Admin Employees list for a company.
 ///
@@ -10,6 +11,8 @@ import 'json_reading.dart';
 ///
 /// - [isActivated]: onboarding completed, i.e. `userPassword IS NOT NULL`
 ///   (decision 2026-10-07). Only this flag leaves the server, never the hash.
+/// - [schedule]: the hours the employee currently has (`tblUserSchedule`),
+///   the "Schedule" column (Figma `1401:2`); `null` without hours.
 ///
 /// Not included: location (ERD GAP-11), policy
 /// (PRODUCT-CLARIFY-EMPLOYEE-POLICY).
@@ -22,6 +25,7 @@ class EmployeeSummary {
     required this.groups,
     required this.isActive,
     required this.isActivated,
+    this.schedule,
   });
 
   factory EmployeeSummary.fromJson(Map<String, Object?> json) => EmployeeSummary(
@@ -32,6 +36,7 @@ class EmployeeSummary {
         groups: json.readStringList('groups'),
         isActive: json.readBool('isActive'),
         isActivated: json.readBool('isActivated'),
+        schedule: json['schedule'] == null ? null : ScheduleVariant.fromJson(json.readObject('schedule')),
       );
 
   final int id;
@@ -46,6 +51,20 @@ class EmployeeSummary {
   /// Onboarding completed (`userPassword IS NOT NULL`).
   final bool isActivated;
 
+  final ScheduleVariant? schedule;
+
+  /// The same employee with [schedule].
+  EmployeeSummary withSchedule(ScheduleVariant? schedule) => EmployeeSummary(
+        id: id,
+        firstName: firstName,
+        lastName: lastName,
+        code: code,
+        groups: groups,
+        isActive: isActive,
+        isActivated: isActivated,
+        schedule: schedule,
+      );
+
   Map<String, Object?> toJson() => {
         'id': id,
         'firstName': firstName,
@@ -54,6 +73,7 @@ class EmployeeSummary {
         'groups': groups,
         'isActive': isActive,
         'isActivated': isActivated,
+        if (schedule case final schedule?) 'schedule': schedule.toJson(),
       };
 }
 

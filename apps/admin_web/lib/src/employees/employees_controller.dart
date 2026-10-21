@@ -33,7 +33,9 @@ class EmployeesFailed extends EmployeesState {
 ///
 /// Holds no business rules: scoping and filtering happen on the server.
 class EmployeesController extends ChangeNotifier {
-  EmployeesController(this._api, {required this.companyId, this.searchDelay = defaultSearchDelay});
+  /// [search]: the text already in the search field (e.g. after switching company).
+  EmployeesController(this._api, {required this.companyId, this.searchDelay = defaultSearchDelay, String search = ''})
+    : _search = search.trim();
 
   static const defaultSearchDelay = Duration(milliseconds: 300);
 
@@ -44,7 +46,7 @@ class EmployeesController extends ChangeNotifier {
   EmployeesState _state = const EmployeesLoading();
   EmployeesState get state => _state;
 
-  String _search = '';
+  String _search;
   Timer? _searchTimer;
   int _latestRequest = 0;
   bool _disposed = false;

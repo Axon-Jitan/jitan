@@ -100,7 +100,7 @@ void main() {
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
     await tester.pump();
     expect(find.text('Required.'), findsNWidgets(3));
-    expect(companies.calls, isEmpty);
+    expect(companies.calls, [null], reason: 'only the Current company switcher; step 2 loads nothing yet');
   });
 
   testWidgets('the whole flow: details, assignments with work schedule, onboarding QR, Finish setup', (tester) async {

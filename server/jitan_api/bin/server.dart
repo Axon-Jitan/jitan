@@ -188,6 +188,7 @@ Future<void> main() async {
         transactions: db,
         temporaryQr: temporaryQr,
         scheduleSync: scheduleSync,
+        schedules: scheduleService,
       ),
     ),
     assignments: EmployeeAssignmentRoutes(

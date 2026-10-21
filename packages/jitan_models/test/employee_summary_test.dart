@@ -50,4 +50,23 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('an employee carries their hours for the Schedule column', () {
+    const hours = ScheduleVariant(
+      employeeCount: 1,
+      workDays: [
+        WorkDaySchedule(
+          day: ScheduleDay(id: 1, name: 'Monday', weekday: 1),
+          start: WorkBoundary(time: '08:00', toleranceMinutes: 0),
+          finish: WorkBoundary(time: '16:30', toleranceMinutes: 0),
+        ),
+      ],
+      breaks: [],
+    );
+    const without = EmployeeSummary(id: 1, firstName: 'A', lastName: 'B', code: 'C', groups: [], isActive: true, isActivated: false);
+
+    final back = EmployeeSummary.fromJson(without.withSchedule(hours).toJson());
+    expect(back.schedule!.workDays.single.finish!.time, '16:30');
+    expect(EmployeeSummary.fromJson(without.toJson()).schedule, isNull);
+  });
 }

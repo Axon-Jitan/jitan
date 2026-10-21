@@ -66,17 +66,17 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Manage employees for the selected company and track onboarding.'), findsOneWidget);
+    expect(find.text('Manage your workforce and employee onboarding'), findsOneWidget);
   });
 
-  testWidgets('without dev tools there is no development company selector', (tester) async {
+  testWidgets('Employees asks for a company in "Current company"; nothing is chosen for HR', (tester) async {
     useDesktopSize(tester);
 
     await tester.pumpWidget(app(TestServices(), initialLocation: '/employees'));
     await tester.pump();
 
-    expect(find.text('DEV · Current company'), findsNothing);
-    expect(find.text('No company selected'), findsOneWidget);
+    expect(find.text('Current company'), findsOneWidget);
+    expect(find.text('Select a company to view its employees.'), findsOneWidget);
   });
 
   testWidgets('an unknown URL lands on Companies', (tester) async {

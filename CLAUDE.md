@@ -205,7 +205,7 @@ dart analyze                       # repo root, must report no issues
 cd server/jitan_api && dart test   # also: packages/jitan_models, jitan_api_client, jitan_core
 cd apps/admin_web && flutter test  # also: packages/jitan_ui, apps/employee_mobile
 cd server/jitan_api && dart run bin/server.dart
-cd apps/admin_web && flutter run -d chrome --web-port 5000 --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080 --dart-define=JITAN_DEV_TOOLS=true
+cd apps/admin_web && flutter run -d chrome --web-port 5000 --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080
 ```
 
 Details (env vars, dev seed, integration tests): [README.md](README.md).
@@ -242,7 +242,6 @@ named so it can be found:
 | `DevelopmentPermissionEvaluator` / `UnconfiguredPermissionEvaluator` | evaluator over `tblCredGroup`/`tblAppModulesCredGroup`/`tblFunction` | CLARIFY-10, -11 |
 | Sidebar role caption omitted | signed-in user's credential group from a `/me` endpoint | CLARIFY-11 |
 | Cleartext `http://` in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`) | HTTPS API; release builds already refuse cleartext | production hosting |
-| `DevCompanySelector` (admin_web, only with `JITAN_DEV_TOOLS=true`) | the production company switcher | switcher design (PRODUCT-CLARIFY-EMPLOYEES-LIST) |
 
 Backend modules today (routes / service / repository where they have endpoints and data):
 `audit auth companies employees groups health languages onboarding recovery schedules

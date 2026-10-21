@@ -13,9 +13,6 @@ abstract final class AdminTextKeys {
   static const navSchedules = 'nav.schedules';
   static const navGroups = 'nav.groups';
 
-  static const devCompanySelectorLabel = 'dev.companySelector.label';
-  static const devCompanySelectorPlaceholder = 'dev.companySelector.placeholder';
-  static const devCompanySelectorLoadFailed = 'dev.companySelector.loadFailed';
 
   static const companyTitle = 'company.title';
   static const companyListSubtitle = 'company.list.subtitle';
@@ -61,6 +58,22 @@ abstract final class AdminTextKeys {
   static const employeeAddAction = 'employee.add.action';
   static const employeeAddTitle = 'employee.add.title';
   static const employeeAddSubtitle = 'employee.add.subtitle';
+  static const employeeColumnSchedule = 'employee.column.schedule';
+  static const employeeColumnActions = 'employee.column.actions';
+  static const employeeActionsMenu = 'employee.actions.menu';
+  static const employeeFilterStatus = 'employee.filter.status';
+  static const employeeFilterStatusAll = 'employee.filter.status.all';
+  static const employeeFilterCompany = 'employee.filter.company';
+  static const employeeFilterCompanyHint = 'employee.filter.company.hint';
+  static const employeeFilterCompanyFailed = 'employee.filter.company.failed';
+  static const employeeSection = 'employee.section';
+  static const employeeNoCompany = 'employee.noCompany';
+  static const employeeNoMatch = 'employee.noMatch';
+  static const employeeManageTitle = 'employee.manage.title';
+  static const employeeManageQr = 'employee.manage.qr';
+  static const employeeManageQrText = 'employee.manage.qr.text';
+  static const employeeManageReset = 'employee.manage.reset';
+  static const employeeManageResetText = 'employee.manage.reset.text';
   static const employeeAddSubtitleAssignments = 'employee.add.subtitle.assignments';
   static const employeeAddStepInformation = 'employee.add.step.information';
   static const employeeAddStepAssignments = 'employee.add.step.assignments';

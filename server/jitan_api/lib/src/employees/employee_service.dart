@@ -12,6 +12,7 @@ import '../onboarding/account_setup_rules.dart';
 import '../onboarding/onboarding_repository.dart';
 import 'employee_repository.dart';
 import '../schedules/employee_schedule_sync.dart';
+import '../schedules/schedule_service.dart';
 import '../temporary_qr/temporary_qr_service.dart';
 import 'personal_qr_code.dart';
 
@@ -28,6 +29,7 @@ class EmployeeService {
     this._credentials = const CredentialRepository(),
     this._personalQrCode = newPersonalQrCode,
     required this._scheduleSync,
+    this._schedules,
   });
 
   final EmployeeRepository _employees;
@@ -41,6 +43,9 @@ class EmployeeService {
   final String Function() _personalQrCode;
   final EmployeeScheduleSync _scheduleSync;
 
+  /// Reads each employee's hours for the list; `null` leaves them out.
+  final ScheduleService? _schedules;
+
   /// Longest accepted search text. Longer input is rejected, not truncated.
   static const maxSearchLength = 100;
 
@@ -52,7 +57,11 @@ class EmployeeService {
       throw const ApiException.badRequest('Search text must be at most $maxSearchLength characters.');
     }
     await _requireCompany(companyId);
-    return _employees.listForCompany(companyId, nameOrCodeContains: term.isEmpty ? null : term);
+    final employees = await _employees.listForCompany(companyId, nameOrCodeContains: term.isEmpty ? null : term);
+    final schedules = _schedules;
+    if (schedules == null || employees.isEmpty) return employees;
+    final hours = await schedules.employeeSchedules(employees.map((e) => e.id));
+    return [for (final e in employees) e.withSchedule(hours[e.id])];
   }
 
   /// One employee of [companyId]. 404 when the company does not exist or

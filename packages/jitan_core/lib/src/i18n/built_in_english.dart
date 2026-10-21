@@ -54,10 +54,6 @@ const builtInEnglish = <String, String>{
   'nav.companies': 'Companies',
   'nav.employees': 'Employees',
 
-  // Development-only tools (visible only in builds with JITAN_DEV_TOOLS=true)
-  'dev.companySelector.label': 'DEV · Current company',
-  'dev.companySelector.placeholder': 'Choose a company',
-  'dev.companySelector.loadFailed': 'Companies could not be loaded.',
 
   // ── Companies ─────────────────────────────────────────────────────────
   'company.title': 'Companies',
@@ -77,7 +73,7 @@ const builtInEnglish = <String, String>{
 
   // ── Employees ─────────────────────────────────────────────────────────
   'employee.title': 'Employees',
-  'employee.list.subtitle': 'Manage employees for the selected company and track onboarding.',
+  'employee.list.subtitle': 'Manage your workforce and employee onboarding',
   'employee.search': 'Search name or employee code',
   'employee.list.loading': 'Loading employees…',
   'employee.column.name': 'Employee',
@@ -86,6 +82,22 @@ const builtInEnglish = <String, String>{
   'employee.column.location': 'Location',
   'employee.column.onboarding': 'Onboarding',
   'employee.column.status': 'Status',
+  'employee.column.schedule': 'Schedule',
+  'employee.column.actions': 'Actions',
+  'employee.actions.menu': 'Employee actions',
+  'employee.filter.status': 'Status',
+  'employee.filter.status.all': 'All statuses',
+  'employee.filter.company': 'Current company',
+  'employee.filter.company.hint': 'Select a company',
+  'employee.filter.company.failed': 'Companies could not be loaded. Choose to try again.',
+  'employee.section': 'Employees',
+  'employee.noCompany': 'Select a company to view its employees.',
+  'employee.noMatch': 'No matching employees. Change the search or the status.',
+  'employee.manage.title': 'Manage employee',
+  'employee.manage.qr': 'Generate onboarding QR',
+  'employee.manage.qr.text': 'Create a new employee activation QR',
+  'employee.manage.reset': 'Reset account access',
+  'employee.manage.reset.text': 'Reset employee login credentials',
   'employee.location.unavailable': 'Employee locations are not available yet.',
   'employee.onboarding.activated': 'Activated',
   'employee.onboarding.notActivated': 'Not activated',

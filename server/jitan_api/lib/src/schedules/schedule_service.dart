@@ -104,7 +104,7 @@ class ScheduleService {
       singleGroupEmployeeCount: userIds.length,
       variants: [
         for (final set in sets)
-          _variant(group, set.count, [for (final id in set.scheduleIds) _rowOf(scheduleById[id]!)], rulesOf, days),
+          _variant(group.name, set.count, [for (final id in set.scheduleIds) _rowOf(scheduleById[id]!)], rulesOf, days),
       ],
     );
   }
@@ -146,14 +146,34 @@ class ScheduleService {
             group: group,
             status: GroupScheduleStatus.configured,
             singleGroupEmployeeCount: count,
-            variants: [_variant(group, count, rows, rulesOf, days)],
+            variants: [_variant(group.name, count, rows, rulesOf, days)],
           ),
         },
     ];
   }
 
+  /// The hours each of [userIds] currently has (`tblUserSchedule`), for the
+  /// Employees list; employees without hours are left out.
+  Future<Map<int, ScheduleVariant>> employeeSchedules(Iterable<int> userIds) async {
+    final rows = await _schedules.schedulesOf(userIds);
+    if (rows.isEmpty) return const {};
+    final days = await activeDays();
+    final rulesOf = <int, List<ScheduleRuleRow>>{};
+    for (final rule in await _schedules.rulesOf(rows.map((r) => r.scheduleId))) {
+      rulesOf.putIfAbsent(rule.scheduleId, () => []).add(rule);
+    }
+    final byUser = <int, List<_Row>>{};
+    for (final row in rows) {
+      byUser.putIfAbsent(row.userId, () => []).add(_rowOf(row));
+    }
+    return {
+      for (final MapEntry(key: userId, value: own) in byUser.entries)
+        userId: _variant('Employee $userId', 1, own, rulesOf, days),
+    };
+  }
+
   ScheduleVariant _variant(
-    GroupSummary group,
+    String owner,
     int employeeCount,
     List<_Row> rows,
     Map<int, List<ScheduleRuleRow>> rulesOf,
@@ -165,7 +185,7 @@ class ScheduleService {
     void add<T>(Map<int, T> byDay, int dayId, T value, String what) {
       if (byDay.containsKey(dayId)) {
         throw ApiException.configurationError(
-          '${group.name} has two "$what" schedules on ${days[dayId]?.name ?? 'day $dayId'}; one is expected.',
+          '$owner has two "$what" schedules on ${days[dayId]?.name ?? 'day $dayId'}; one is expected.',
         );
       }
       byDay[dayId] = value;

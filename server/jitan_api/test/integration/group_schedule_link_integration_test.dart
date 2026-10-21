@@ -229,6 +229,10 @@ void main() {
       unorderedEquals([(ScheduleTypeNames.breakTime, '10:0'), (ScheduleTypeNames.workFinish, '6:0'), (ScheduleTypeNames.workStart, '6:0')]),
       reason: 'the break is placed mid-day: 06:00–14:30, 30 min → 10:00',
     );
+
+    final listed = (await schedules.employeeSchedules([users['A']!]))[users['A']]!;
+    expect(listed.workDays.single.start!.time, '06:00', reason: 'the Employees list shows these hours');
+    expect(listed.breaks.single.lengthMinutes, 30);
   });
 
   test('new hours: the group and its employee move to new rows; the old ones are switched off', () async {

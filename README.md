@@ -130,13 +130,11 @@ Refuses to run outside `development`/`test`.
 ```sh
 cd apps/admin_web
 flutter run -d chrome --web-port 5000 \
-  --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080 \
-  --dart-define=JITAN_DEV_TOOLS=true
+  --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080
 ```
 
-`JITAN_DEV_TOOLS=true` (development only) shows the **current company selector** above every
-page. Company-scoped pages such as Employees need a current company, and the production
-company switcher is not designed yet. Leave it out of production builds.
+Company-scoped pages such as Employees use the company chosen in their "Current company"
+field.
 
 `JITAN_API_BASE_URL` is required. Without it the app shows a configuration error instead
 of guessing. The API must list the web origin in `JITAN_CORS_ORIGINS`

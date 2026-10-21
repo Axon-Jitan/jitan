@@ -11,7 +11,6 @@ class AdminServices {
     required this.schedulesApi,
     required this.groupManagementApi,
     required this.groupMembersApi,
-    this.devTools = false,
   });
 
   final CompaniesApi companiesApi;
@@ -22,6 +21,4 @@ class AdminServices {
   final GroupManagementApi groupManagementApi;
   final GroupMembersApi groupMembersApi;
 
-  /// DEVELOPMENT ONLY tools in the UI (see `AdminWebConfig.devTools`).
-  final bool devTools;
 }

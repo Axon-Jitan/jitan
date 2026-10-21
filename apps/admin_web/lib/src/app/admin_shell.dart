@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import '../company_context/dev_company_selector.dart';
 import '../l10n/admin_text_keys.dart';
 import 'admin_routes.dart';
 
@@ -22,14 +21,12 @@ class AdminShell extends StatelessWidget {
     required this.location,
     required this.child,
     required this.companiesApi,
-    required this.devTools,
   });
 
   /// Current route path, for highlighting the active item.
   final String location;
   final Widget child;
   final CompaniesApi companiesApi;
-  final bool devTools;
 
   @override
   Widget build(BuildContext context) => JitanWebShell(
@@ -46,14 +43,6 @@ class AdminShell extends StatelessWidget {
         JitanNavDestination(label: context.t(AdminTextKeys.navGroups), path: AdminRoutes.groups),
       ],
     ),
-    child: devTools
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DevCompanySelector(companiesApi: companiesApi),
-              Expanded(child: child),
-            ],
-          )
-        : child,
+    child: child,
   );
 }

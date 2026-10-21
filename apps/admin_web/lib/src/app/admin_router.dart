@@ -13,7 +13,7 @@ import 'admin_shell.dart';
 /// URL routing for the HR/Admin app. Unknown paths go to Companies.
 GoRouter buildAdminRouter({required AdminServices services, String? initialLocation}) {
   AdminShell shell(String location, Widget child) =>
-      AdminShell(location: location, companiesApi: services.companiesApi, devTools: services.devTools, child: child);
+      AdminShell(location: location, companiesApi: services.companiesApi, child: child);
 
   return GoRouter(
     initialLocation: initialLocation ?? AdminRoutes.companies,

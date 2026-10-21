@@ -5,18 +5,29 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../common/api_failure_text.dart';
+import '../company_context/company_switcher.dart';
 import '../company_context/current_company.dart';
+import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'add_employee_dialog.dart';
 import 'employees_controller.dart';
 import 'employees_table.dart';
+import 'manage_employee_dialog.dart';
+import 'reset_access_dialog.dart';
+import 'temporary_qr/temporary_qr_dialog.dart';
 
-/// HR/Admin "Employees" page for the current company (Figma
-/// `Admin / Employees` 153:137, `HR / Employees` 153:906).
+/// Which employees the Status filter shows.
+enum EmployeeStatusFilter { active, inactive }
+
+/// HR/Admin "Employees" page (Figma `HR / Employees — Company switcher open`
+/// 1401:2, `No company selected` 1401:121): the employees of the company
+/// chosen in "Current company", with search, status filter, and each row's
+/// "⋯" (Manage employee, 1399:10).
 ///
-/// "Import CSV / Excel" (Figma) is not shown: bulk import is a separate task
-/// (roadmap §8), and the page never offers a button that does nothing.
-class EmployeesScreen extends StatelessWidget {
+/// "Import CSV / Excel" (Figma) arrives with the import feature, built next
+/// (product owner, 2026-10-21); the page never offers a button that does
+/// nothing.
+class EmployeesScreen extends StatefulWidget {
   const EmployeesScreen({
     super.key,
     required this.api,
@@ -31,8 +42,88 @@ class EmployeesScreen extends StatelessWidget {
   final SchedulesApi schedulesApi;
 
   @override
-  Widget build(BuildContext context) {
+  State<EmployeesScreen> createState() => _EmployeesScreenState();
+}
+
+class _EmployeesScreenState extends State<EmployeesScreen> {
+  EmployeesController? _controller;
+  CompanySummary? _company;
+  String _search = '';
+  EmployeeStatusFilter? _status;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     final company = CurrentCompanyScope.of(context).company;
+    if (company?.id == _company?.id) return;
+    // Another company: a fresh list, with the search HR typed.
+    _company = company;
+    _controller?.dispose();
+    _controller = company == null ? null : (EmployeesController(widget.api, companyId: company.id, search: _search)..load());
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _say(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
+
+  Future<void> _addEmployee(CompanySummary company) async {
+    final created = await showAddEmployeeDialog(
+      context,
+      employeesApi: widget.api,
+      groupsApi: widget.groupsApi,
+      companiesApi: widget.companiesApi,
+      schedulesApi: widget.schedulesApi,
+      companyId: company.id,
+    );
+    if (created == null || !mounted) return;
+    await _controller?.load();
+    if (!mounted) return;
+    final name = [created.firstName, created.lastName].whereType<String>().join(' ');
+    _say(context.t(AdminTextKeys.employeeAddSuccess, args: {'name': name}));
+  }
+
+  /// "⋯" → Manage employee → the onboarding QR, or Reset account access and
+  /// then the recovery QR (as in Employee details).
+  Future<void> _manage(CompanySummary company, EmployeeSummary employee) async {
+    final action = await showManageEmployeeDialog(context, employee: employee);
+    if (action == null || !mounted) return;
+    final EmployeeDetails details;
+    try {
+      details = await widget.api.details(company.id, employee.id);
+    } on ApiClientException catch (failure) {
+      if (mounted) _say(context.t(failureTextKeysFor(failure).message));
+      return;
+    }
+    if (!mounted) return;
+    switch (action) {
+      case EmployeeAction.onboardingQr:
+        // After Reset account access the recovery QR applies; onboarding is
+        // only for an employee who never had a password (server rule).
+        await showTemporaryQrDialog(
+          context,
+          employeesApi: widget.api,
+          employee: details,
+          purpose: details.accessResetPending ? TemporaryQrPurpose.recovery : TemporaryQrPurpose.onboarding,
+        );
+      case EmployeeAction.resetAccess:
+        final name = [details.firstName, details.lastName].whereType<String>().join(' ');
+        final success = context.t(AdminTextKeys.employeeResetAccessSuccess, args: {'name': name.isEmpty ? details.code : name});
+        if (!await showResetAccessDialog(context, employeesApi: widget.api, employee: details)) return;
+        _say(success);
+        if (!mounted) return;
+        await showTemporaryQrDialog(context, employeesApi: widget.api, employee: details, purpose: TemporaryQrPurpose.recovery);
+    }
+    await _controller?.load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final company = _company;
+    final controller = _controller;
     return SingleChildScrollView(
       padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
       child: Column(
@@ -41,152 +132,105 @@ class EmployeesScreen extends StatelessWidget {
           JitanPageHeader(
             title: context.t(AdminTextKeys.employeeTitle),
             subtitle: context.t(AdminTextKeys.employeeListSubtitle),
+            action: JitanPrimaryButton(
+              label: context.t(AdminTextKeys.employeeAddAction),
+              icon: Icons.add,
+              onPressed: company == null ? null : () => _addEmployee(company),
+            ),
           ),
           const SizedBox(height: JitanDimensions.headerToToolbar),
-          if (company == null)
-            JitanSurfaceCard(
-              radius: JitanDimensions.tableCardRadius,
-              child: SizedBox(
-                height: JitanDimensions.tableStateHeight,
-                child: JitanEmptyState(
-                  title: context.t(AdminTextKeys.employeeNoCompanyTitle),
-                  message: context.t(AdminTextKeys.employeeNoCompanyMessage),
-                ),
-              ),
-            )
+          _toolbar(context),
+          const SizedBox(height: 28),
+          Text(context.t(AdminTextKeys.employeeSection), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
+          const SizedBox(height: 16),
+          if (company == null || controller == null)
+            GroupStateText(context.t(AdminTextKeys.employeeNoCompany))
           else
-            // Keyed by company: switching company starts a fresh list.
-            _CompanyEmployees(
-              key: ValueKey(company.id),
-              api: api,
-              groupsApi: groupsApi,
-              companiesApi: companiesApi,
-              schedulesApi: schedulesApi,
-              company: company,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CompanyEmployees extends StatefulWidget {
-  const _CompanyEmployees({
-    super.key,
-    required this.api,
-    required this.groupsApi,
-    required this.companiesApi,
-    required this.schedulesApi,
-    required this.company,
-  });
-
-  final EmployeesApi api;
-  final GroupsApi groupsApi;
-  final CompaniesApi companiesApi;
-  final SchedulesApi schedulesApi;
-  final CompanySummary company;
-
-  @override
-  State<_CompanyEmployees> createState() => _CompanyEmployeesState();
-}
-
-class _CompanyEmployeesState extends State<_CompanyEmployees> {
-  late final EmployeesController _controller = EmployeesController(widget.api, companyId: widget.company.id)..load();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _addEmployee() async {
-    final created = await showAddEmployeeDialog(
-      context,
-      employeesApi: widget.api,
-      groupsApi: widget.groupsApi,
-      companiesApi: widget.companiesApi,
-      schedulesApi: widget.schedulesApi,
-      companyId: widget.company.id,
-    );
-    if (created == null || !mounted) return;
-    await _controller.load();
-    if (!mounted) return;
-    final name = [created.firstName, created.lastName].whereType<String>().join(' ');
-    ScaffoldMessenger.maybeOf(
-      context,
-    )?.showSnackBar(SnackBar(content: Text(context.t(AdminTextKeys.employeeAddSuccess, args: {'name': name}))));
-  }
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Flexible(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: JitanDimensions.filterSearchWidth),
-              child: JitanFieldLabel(
-                label: context.t(CommonTextKeys.searchLabel),
-                child: JitanSearchField(
-                  outlined: true,
-                  hintText: context.t(AdminTextKeys.employeeSearch),
-                  onChanged: _controller.updateSearch,
-                ),
+            ListenableBuilder(
+              listenable: controller,
+              builder: (context, _) => JitanSurfaceCard(
+                radius: JitanDimensions.tableCardRadius,
+                child: _content(context, company, controller),
               ),
             ),
-          ),
-          const Spacer(),
-          const SizedBox(width: 12),
-          JitanPrimaryButton(
-            label: context.t(AdminTextKeys.employeeAddAction),
-            icon: Icons.add,
-            height: JitanDimensions.controlHeight,
-            onPressed: _addEmployee,
-          ),
         ],
       ),
-      const SizedBox(height: JitanDimensions.toolbarToTable),
-      JitanSurfaceCard(
-        radius: JitanDimensions.tableCardRadius,
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 150),
-          alignment: Alignment.topCenter,
-          child: ListenableBuilder(
-            listenable: _controller,
-            builder: (context, _) => _content(context, _controller.state),
-          ),
-        ),
-      ),
-    ],
-  );
+    );
+  }
 
-  Widget _content(BuildContext context, EmployeesState state) => switch (state) {
+  Widget _toolbar(BuildContext context) {
+    final search = JitanFieldLabel(
+      label: context.t(CommonTextKeys.searchLabel),
+      child: JitanSearchField(
+        outlined: true,
+        hintText: context.t(AdminTextKeys.employeeSearch),
+        onChanged: (text) {
+          _search = text;
+          _controller?.updateSearch(text);
+        },
+      ),
+    );
+    final status = JitanSelectField<EmployeeStatusFilter?>(
+      label: context.t(AdminTextKeys.employeeFilterStatus),
+      value: _status,
+      options: [
+        JitanSelectOption(value: null, label: context.t(AdminTextKeys.employeeFilterStatusAll)),
+        JitanSelectOption(value: EmployeeStatusFilter.active, label: context.t(CommonTextKeys.statusActive)),
+        JitanSelectOption(value: EmployeeStatusFilter.inactive, label: context.t(CommonTextKeys.statusInactive)),
+      ],
+      onChanged: (value) => setState(() => _status = value),
+    );
+    final switcher = CompanySwitcher(companiesApi: widget.companiesApi);
+    return LayoutBuilder(
+      builder: (context, constraints) => constraints.maxWidth < JitanDimensions.phoneBreakpoint
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [search, const SizedBox(height: 14), status, const SizedBox(height: 14), switcher],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Flexible(flex: 330, child: search),
+                const SizedBox(width: 20),
+                Flexible(flex: 220, child: status),
+                const SizedBox(width: 64),
+                Flexible(flex: 255, child: switcher),
+                const Spacer(flex: 215),
+              ],
+            ),
+    );
+  }
+
+  Widget _content(BuildContext context, CompanySummary company, EmployeesController controller) => switch (controller.state) {
     EmployeesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.employeeListLoading))),
-    EmployeesFailed(:final failure) => _centered(_error(context, failure)),
+    EmployeesFailed(:final failure) => _centered(_error(context, failure, controller)),
     EmployeesLoaded(employees: [], search: '') => _centered(
       JitanEmptyState(
         title: context.t(AdminTextKeys.employeeEmptyTitle),
-        message: context.t(AdminTextKeys.employeeEmptyMessage, args: {'company': widget.company.name}),
+        message: context.t(AdminTextKeys.employeeEmptyMessage, args: {'company': company.name}),
       ),
     ),
-    EmployeesLoaded(employees: [], :final search) => _centered(
-      JitanEmptyState(
-        title: context.t(AdminTextKeys.employeeNoMatchTitle),
-        message: context.t(AdminTextKeys.employeeNoMatchMessage, args: {'search': search}),
+    EmployeesLoaded(:final employees) => switch ([
+      for (final e in employees)
+        if (_status == null || e.isActive == (_status == EmployeeStatusFilter.active)) e,
+    ]) {
+      [] => _centered(
+        JitanEmptyState(
+          title: context.t(AdminTextKeys.employeeNoMatchTitle),
+          message: context.t(AdminTextKeys.employeeNoMatch),
+        ),
       ),
-    ),
-    EmployeesLoaded(:final employees) => EmployeesTable(employees: employees),
+      final visible => EmployeesTable(employees: visible, onManage: (employee) => _manage(company, employee)),
+    },
   };
 
-  Widget _error(BuildContext context, ApiClientException failure) {
+  Widget _error(BuildContext context, ApiClientException failure, EmployeesController controller) {
     final keys = failureTextKeysFor(failure);
     return JitanErrorState(
       title: context.t(keys.title),
       message: context.t(keys.message),
       retryLabel: context.t(CommonTextKeys.retry),
-      onRetry: _controller.load,
+      onRetry: controller.load,
     );
   }
 

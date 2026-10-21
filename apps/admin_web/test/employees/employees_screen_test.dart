@@ -46,9 +46,9 @@ void main() {
   testWidgets('without a current company: explains it and requests nothing', (tester) async {
     final (api, _) = await _pump(tester);
 
-    expect(find.text('Employees'), findsOneWidget);
-    expect(find.text('No company selected'), findsOneWidget);
-    expect(find.text('Search name or employee code'), findsNothing);
+    expect(find.text('Employees'), findsWidgets, reason: 'the title and the section heading');
+    expect(find.text('Select a company to view its employees.'), findsOneWidget, reason: '1401:121');
+    expect(find.text('Current company'), findsOneWidget);
     expect(api.calls, isEmpty, reason: 'never guesses a company');
   });
 
@@ -64,9 +64,10 @@ void main() {
     ]);
     await tester.pump();
 
-    for (final header in ['Employee', 'Code', 'Type', 'Location', 'Onboarding', 'Status']) {
+    for (final header in ['Employee', 'Code', 'Type', 'Location', 'Schedule', 'Onboarding', 'Actions']) {
       expect(find.text(header), findsOneWidget, reason: header);
     }
+    expect(find.text('Status'), findsNWidgets(2), reason: 'the filter and the column');
     expect(find.text('Policy'), findsNothing, reason: 'PRODUCT-CLARIFY-EMPLOYEE-POLICY');
     expect(find.text('Disan Ssebowa'), findsOneWidget);
     expect(find.text('SBW'), findsOneWidget);
@@ -76,7 +77,8 @@ void main() {
     expect(find.text('Inactive'), findsOneWidget);
     // Location per row (GAP-11); the nameless employee adds a name
     // placeholder and has no groups.
-    expect(find.text('—'), findsNWidgets(3 + 2));
+    // Schedule per row: none of these has hours yet.
+    expect(find.text('—'), findsNWidgets(3 + 2 + 3));
     // Onboarding: userPassword IS NOT NULL → Activated (none of these yet).
     expect(find.text('Not activated'), findsNWidgets(3));
   });
@@ -117,7 +119,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('No matching employees'), findsOneWidget);
-    expect(find.text('No employee name or code contains “zz”.'), findsOneWidget);
+    expect(find.text('No matching employees. Change the search or the status.'), findsOneWidget);
   });
 
   testWidgets('switching company loads the new company and never shows the old rows', (tester) async {
@@ -148,5 +150,54 @@ void main() {
     await tester.tap(find.text('Try again'));
     await tester.pump();
     expect(api.calls, hasLength(2));
+  });
+
+  testWidgets('the Status filter shows active or inactive employees', (tester) async {
+    final (api, _) = await _pump(tester, selected: _almeco);
+    api.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW'), employee(2, 'Thomas', 'Vermeulen', 'TVM', active: false)]);
+    await tester.pump();
+
+    tester.widget<JitanSelectField<EmployeeStatusFilter?>>(find.byType(JitanSelectField<EmployeeStatusFilter?>)).onChanged!(
+      EmployeeStatusFilter.inactive,
+    );
+    await tester.pump();
+    expect(find.text('Disan Ssebowa'), findsNothing);
+    expect(find.text('Thomas Vermeulen'), findsOneWidget);
+  });
+
+  testWidgets('the row "⋯": Manage employee offers the onboarding QR to someone not activated yet', (tester) async {
+    final (api, _) = await _pump(tester, selected: _almeco);
+    api.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW')]);
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Employee actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Manage employee'), findsOneWidget);
+    expect(find.text('Disan Ssebowa · Not activated'), findsOneWidget, reason: '1399:10');
+    await tester.tap(find.text('Reset account access'));
+    await tester.pumpAndSettle();
+    expect(find.text('Manage employee'), findsOneWidget, reason: 'unavailable before activation: nothing happens');
+
+    await tester.tap(find.text('Generate onboarding QR'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(api.detailRequests, [(7, 1)]);
+    api.detailsSucceed(
+      const EmployeeDetails(
+        id: 1,
+        companyId: 7,
+        companyName: 'Almeco',
+        firstName: 'Disan',
+        lastName: 'Ssebowa',
+        code: 'SBW',
+        groups: [],
+        phone: null,
+        isActive: true,
+        isActivated: false,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(api.qrRequests.single, (7, 1, TemporaryQrPurpose.onboarding));
   });
 }
