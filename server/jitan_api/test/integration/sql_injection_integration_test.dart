@@ -145,6 +145,44 @@ void main() {
     );
   });
 
+  test('group_management_repository: escape edge cases stay data in insert, nameTaken and rename', () async {
+    const repo = GroupManagementRepository();
+    // The driver pastes escaped values into the SQL text (no server-side
+    // prepared statements in mysql_client_plus 0.1.3): ' becomes '', \ becomes
+    // \. These are the inputs that break weaker escaping.
+    const tricky = [
+      r"\'",
+      r"\'",
+      "''",
+      r"\' OR 1=1 -- ",
+      "x' OR groupName LIKE '%",
+      ':except :name :id',
+      'ʼ OR 1=1 -- ',
+      '\u0000 nul',
+    ];
+    for (final (i, value) in tricky.indexed) {
+      final name = '$prefix E$i $value';
+      final id = await db.transaction((tx) => repo.insert(tx, name));
+      createdGroups.add(id);
+      final stored = (await db.query('SELECT groupName FROM tblGroup WHERE groupID = :g', {'g': id})).single;
+      expect(stored.readString('groupName'), name, reason: 'stored verbatim: $value');
+
+      // Taken only by itself, not by every group (an injected OR 1=1 would make it true).
+      expect(await db.transaction((tx) => repo.nameTaken(tx, name)), isTrue, reason: value);
+      expect(await db.transaction((tx) => repo.nameTaken(tx, name, exceptGroupId: id)), isFalse, reason: value);
+      expect(await db.transaction((tx) => repo.nameTaken(tx, '$prefix none $value')), isFalse, reason: value);
+
+      await db.transaction((tx) => repo.rename(tx, id, '$name renamed'));
+      final renamed = (await db.query('SELECT groupName FROM tblGroup WHERE groupID = :g', {'g': id})).single;
+      expect(renamed.readString('groupName'), '$name renamed', reason: 'rename changed only this row: $value');
+    }
+    final others = await db.query(
+      "SELECT COUNT(*) AS n FROM tblGroup WHERE groupName LIKE '% renamed' AND groupName NOT LIKE CONCAT(:p, '%')",
+      {'p': prefix},
+    );
+    expect(others.single.readInt('n'), 0, reason: 'no other group was renamed');
+  });
+
   test('an employee is never readable through another company', () async {
     expect(await employees.findInCompany(db, companyB, alice), isNull);
     expect(await employees.findDetails(companyB, alice), isNull);
