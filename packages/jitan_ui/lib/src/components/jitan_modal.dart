@@ -149,7 +149,32 @@ class JitanModal extends StatelessWidget {
     return _footerRowWithNote();
   }
 
-  Widget _footerRowWithNote() => Row(
+  /// With a note: note and buttons on one line; on a narrow screen the note
+  /// goes above the buttons, which wrap instead of overflowing.
+  Widget _footerRowWithNote() => LayoutBuilder(
+        builder: (context, constraints) => constraints.maxWidth >= _noteRowMinWidth
+            ? _noteRow()
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(footerNote!, style: JitanTextStyles.modalSubtitle.copyWith(fontSize: 14)),
+                  const SizedBox(height: 10),
+                  OverflowBar(
+                    alignment: MainAxisAlignment.end,
+                    overflowAlignment: OverflowBarAlignment.end,
+                    overflowDirection: VerticalDirection.up,
+                    spacing: 12,
+                    overflowSpacing: 10,
+                    children: [...leadingActions, ...actions],
+                  ),
+                ],
+              ),
+      );
+
+  static const _noteRowMinWidth = 480.0;
+
+  Widget _noteRow() => Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           for (var i = 0; i < leadingActions.length; i++) ...[

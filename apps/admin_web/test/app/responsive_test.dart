@@ -215,10 +215,12 @@ void main() {
       expect(find.text('Fabian Peeters · FPT'), findsOneWidget);
     });
 
-    testWidgets('Employees page and Add employee at $width px', (tester) async {
+    testWidgets('Employees page and Add employee, every step, at $width px', (tester) async {
       final employees = FakeEmployeesApi();
       final groupsApi = FakeGroupsApi();
-      await _pump(tester, width, EmployeesScreen(api: employees, groupsApi: groupsApi));
+      final companiesApi = FakeCompaniesApi();
+      final schedulesApi = FakeSchedulesApi();
+      await _pump(tester, width, EmployeesScreen(api: employees, groupsApi: groupsApi, companiesApi: companiesApi, schedulesApi: schedulesApi));
       employees.succeed([
         employee(1, 'Disan', 'Ssebowa', 'SBW', groups: ['White collar', 'Blue collar']),
         employee(2, 'Thomas', 'Vermeulen', 'TVM', active: false),
@@ -228,11 +230,30 @@ void main() {
 
       await tester.tap(find.text('Add employee'));
       await _settle(tester);
+      _fitsTheWindow(tester, width, 'Add employee, step 1');
+      await tester.enterText(find.widgetWithText(TextField, 'Enter first name'), 'Kevin');
+      await tester.enterText(find.widgetWithText(TextField, 'Enter last name'), 'De Vos');
+      await tester.enterText(find.widgetWithText(TextField, 'Enter employee code'), 'KDV');
+      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
+      await tester.pump();
+      companiesApi.succeed([company(7, 'Almeco'), company(8, 'PCA')]);
+      await tester.pump();
       groupsApi.succeed(const [GroupSummary(id: 3, name: 'White collar'), GroupSummary(id: 4, name: 'Blue collar')]);
       await tester.pump();
-      _fitsTheWindow(tester, width, 'Add employee');
-      await tester.tapAt(const Offset(2, 2));
+      schedulesApi.succeedList([blue, white]);
       await _settle(tester);
+      _fitsTheWindow(tester, width, 'Add employee, step 2');
+
+      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
+      await tester.pump();
+      employees.createSucceeds(employee(5, 'Kevin', 'De Vos', 'KDV'));
+      await tester.pump();
+      await tester.pump();
+      employees.qrSucceeds('header.payload.signature', expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Add employee, step 3 (onboarding QR)');
     });
 
     testWidgets('Employee details and Reset access (staged for V2) at $width px', (tester) async {

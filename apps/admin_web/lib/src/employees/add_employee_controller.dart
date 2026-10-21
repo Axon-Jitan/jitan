@@ -4,44 +4,81 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../l10n/admin_text_keys.dart';
 
-/// The Add employee form's values.
-typedef NewEmployeeInput = ({String firstName, String lastName, String code, int? groupId, String phone});
+/// The steps of Add employee, in order.
+enum AddEmployeeStep { information, assignments, activation }
 
-/// Loading state of the "Employee type" options.
-sealed class GroupOptions {
-  const GroupOptions();
+/// Step 1's values, as typed.
+typedef NewEmployeeInput = ({String firstName, String lastName, String code, String phone, String email});
+
+/// Step 2's choices, loaded from the server.
+sealed class AssignmentOptions {
+  const AssignmentOptions();
 }
 
-class GroupOptionsLoading extends GroupOptions {
-  const GroupOptionsLoading();
+class AssignmentOptionsLoading extends AssignmentOptions {
+  const AssignmentOptionsLoading();
 }
 
-class GroupOptionsLoaded extends GroupOptions {
-  const GroupOptionsLoaded(this.groups);
+class AssignmentOptionsLoaded extends AssignmentOptions {
+  const AssignmentOptionsLoaded({required this.companies, required this.groups, required this.schedules});
 
+  final List<CompanySummary> companies;
   final List<GroupSummary> groups;
+
+  /// Each group's schedule, by group ID (only groups that have hours).
+  final Map<int, GroupSchedule> schedules;
 }
 
-/// Types could not be loaded. The employee can still be created without
-/// one; the type is added later (EMP-05).
-class GroupOptionsFailed extends GroupOptions {
-  const GroupOptionsFailed();
+class AssignmentOptionsFailed extends AssignmentOptions {
+  const AssignmentOptionsFailed(this.failure);
+
+  final ApiClientException failure;
 }
 
-/// State and submission of the Add employee form (EMP-02).
+/// Add employee (Figma `153:970` → `985:2` → `1233:2`): the employee's
+/// details, their companies, groups and work schedule, then the onboarding
+/// QR. The employee is created when HR leaves step 2 (`POST
+/// /companies/{id}/employees`, one transaction); step 3 shows a temporary
+/// onboarding QR for them.
 ///
 /// Client checks are only for quick feedback; the server validates again
-/// and is the authority (ENGINEERING_RULES §19). Server errors are mapped
-/// back onto the field they concern.
+/// and is the authority (ENGINEERING_RULES §19). Server errors land on the
+/// field, and the step, they concern.
 class AddEmployeeController extends ChangeNotifier {
-  AddEmployeeController({required this._employeesApi, required this._groupsApi, required this.companyId});
+  AddEmployeeController({
+    required this._employeesApi,
+    required this._groupsApi,
+    required this._companiesApi,
+    required this._schedulesApi,
+    required this.companyId,
+  }) : _companyIds = [companyId];
 
   final EmployeesApi _employeesApi;
   final GroupsApi _groupsApi;
+  final CompaniesApi _companiesApi;
+  final SchedulesApi _schedulesApi;
+
+  /// The company HR works in: the employee is always added to it.
   final int companyId;
 
-  GroupOptions _groups = const GroupOptionsLoading();
-  GroupOptions get groups => _groups;
+  static final _emailShape = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  AddEmployeeStep _step = AddEmployeeStep.information;
+  AddEmployeeStep get step => _step;
+
+  NewEmployeeInput? _input;
+
+  AssignmentOptions _options = const AssignmentOptionsLoading();
+  AssignmentOptions get options => _options;
+  bool _optionsRequested = false;
+
+  List<int> _companyIds;
+  List<int> get companyIds => _companyIds;
+
+  List<int> _groupIds = const [];
+  List<int> get groupIds => _groupIds;
+
+  int? _scheduleGroupId;
 
   bool _submitting = false;
   bool get submitting => _submitting;
@@ -54,102 +91,198 @@ class AddEmployeeController extends ChangeNotifier {
   ApiClientException? _formFailure;
   ApiClientException? get formFailure => _formFailure;
 
+  EmployeeSummary? _created;
+  EmployeeSummary? get created => _created;
+
+  TemporaryQrResponse? _qr;
+  TemporaryQrResponse? get qr => _qr;
+  ApiClientException? _qrFailure;
+  ApiClientException? get qrFailure => _qrFailure;
+
   bool _disposed = false;
 
-  Future<void> loadGroups() async {
-    _set(() => _groups = const GroupOptionsLoading());
-    try {
-      final groups = await _groupsApi.listGroups();
-      _set(() => _groups = GroupOptionsLoaded(groups));
-    } on ApiClientException {
-      _set(() => _groups = const GroupOptionsFailed());
-    }
+  /// The groups chosen in step 2 that have work hours: the "Work schedule"
+  /// choices (product owner, 2026-10-21: only the employee's own groups).
+  List<GroupSchedule> get scheduleChoices => switch (_options) {
+    AssignmentOptionsLoaded(:final schedules) => [for (final id in _groupIds) ?schedules[id]],
+    _ => const [],
+  };
+
+  /// The chosen work schedule's group: HR's choice, or the only choice.
+  int? get scheduleGroupId {
+    final choices = scheduleChoices;
+    if (choices.any((s) => s.group.id == _scheduleGroupId)) return _scheduleGroupId;
+    return choices.length == 1 ? choices.single.group.id : null;
   }
 
-  /// Validates and creates the employee. Returns it once the server has
-  /// confirmed; `null` when validation or the request failed (the errors are
-  /// then in [fieldErrors] / [formFailure]).
-  Future<EmployeeSummary?> submit(NewEmployeeInput input) async {
-    if (_submitting) return null;
-
+  /// Step 1: checks the details, then shows step 2.
+  void next(NewEmployeeInput input) {
+    if (_step != AddEmployeeStep.information) return;
     final invalid = {
       CreateEmployeeRequest.fieldFirstName: ?_check(input.firstName, CreateEmployeeRequest.maxFirstNameLength),
       CreateEmployeeRequest.fieldLastName: ?_check(input.lastName, CreateEmployeeRequest.maxLastNameLength),
       CreateEmployeeRequest.fieldCode: ?_check(input.code, CreateEmployeeRequest.maxCodeLength),
       CreateEmployeeRequest.fieldPhone: ?_check(input.phone, CreateEmployeeRequest.maxPhoneLength, required: false),
+      CreateEmployeeRequest.fieldEmail: ?_checkEmail(input.email),
     };
-    _set(() {
-      _fieldErrors = invalid;
-      _formFailure = null;
-    });
-    if (invalid.isNotEmpty) return null;
+    _input = input;
+    _fieldErrors = invalid;
+    _formFailure = null;
+    if (invalid.isEmpty) {
+      _step = AddEmployeeStep.assignments;
+      if (!_optionsRequested) loadOptions();
+    }
+    _notify();
+  }
 
-    _set(() => _submitting = true);
+  void back() {
+    if (_submitting || _step != AddEmployeeStep.assignments) return;
+    _step = AddEmployeeStep.information;
+    _formFailure = null;
+    _notify();
+  }
+
+  /// Companies, groups and the groups' schedules for step 2.
+  Future<void> loadOptions() async {
+    _optionsRequested = true;
+    _options = const AssignmentOptionsLoading();
+    _notify();
     try {
-      return await _employeesApi.create(
+      final companies = await _companiesApi.listCompanies();
+      final groups = await _groupsApi.listGroups();
+      final schedules = await _schedulesApi.groupSchedules();
+      _options = AssignmentOptionsLoaded(
+        companies: companies,
+        groups: groups,
+        schedules: {
+          for (final s in schedules)
+            if (s.status == GroupScheduleStatus.configured && s.variants.length == 1) s.group.id: s,
+        },
+      );
+    } on ApiClientException catch (failure) {
+      _options = AssignmentOptionsFailed(failure);
+    }
+    _notify();
+  }
+
+  void setCompanies(List<int> ids) => _change(() => _companyIds = [companyId, ...ids.where((id) => id != companyId)]);
+
+  void setGroups(List<int> ids) => _change(() => _groupIds = List.unmodifiable(ids));
+
+  void setScheduleGroup(int? groupId) => _change(() => _scheduleGroupId = groupId);
+
+  /// Step 2: creates the employee, then asks for their onboarding QR.
+  Future<void> create() async {
+    final input = _input;
+    if (input == null || _submitting || _step != AddEmployeeStep.assignments) return;
+    _submitting = true;
+    _fieldErrors = const {};
+    _formFailure = null;
+    _notify();
+    try {
+      _created = await _employeesApi.create(
         companyId,
         CreateEmployeeRequest(
           firstName: input.firstName.trim(),
           lastName: input.lastName.trim(),
           code: input.code.trim(),
-          groupIds: [?input.groupId],
-          phone: input.phone.trim().isEmpty ? null : input.phone.trim(),
+          phone: _blankToNull(input.phone),
+          email: _blankToNull(input.email),
+          companyIds: _companyIds,
+          groupIds: _groupIds,
+          scheduleGroupId: scheduleGroupId,
         ),
       );
+      _step = AddEmployeeStep.activation;
     } on ApiClientException catch (failure) {
-      final fieldError = _fieldErrorFor(failure, input);
-      _set(() {
-        if (fieldError != null) {
-          _fieldErrors = {fieldError.$1: fieldError.$2};
-        } else {
-          _formFailure = failure;
-        }
-      });
-      return null;
+      _refused(input, failure);
     } finally {
-      _set(() => _submitting = false);
+      _submitting = false;
+      _notify();
+    }
+    if (_created != null) await requestQr();
+  }
+
+  /// Step 3: the temporary onboarding QR of the new employee.
+  Future<void> requestQr() async {
+    final created = _created;
+    if (created == null) return;
+    _qr = null;
+    _qrFailure = null;
+    _notify();
+    try {
+      _qr = await _employeesApi.temporaryQr(companyId, created.id, TemporaryQrPurpose.onboarding);
+    } on ApiClientException catch (failure) {
+      _qrFailure = failure;
+    }
+    _notify();
+  }
+
+  /// Takes HR back to the step a refusal is about.
+  void _refused(NewEmployeeInput input, ApiClientException failure) {
+    final error = failure.error;
+    final field = error?.field;
+    if (error?.code == ApiErrorCode.duplicateEmployeeCode) {
+      _step = AddEmployeeStep.information;
+      _fieldErrors = {CreateEmployeeRequest.fieldCode: AdminTextKeys.employeeFieldErrorDuplicateCode};
+    } else if (error?.code == ApiErrorCode.validationFailed && field != null) {
+      final onStep1 = const {
+        CreateEmployeeRequest.fieldFirstName,
+        CreateEmployeeRequest.fieldLastName,
+        CreateEmployeeRequest.fieldCode,
+        CreateEmployeeRequest.fieldPhone,
+        CreateEmployeeRequest.fieldEmail,
+      }.contains(field);
+      if (onStep1) _step = AddEmployeeStep.information;
+      _fieldErrors = {
+        field: switch (field) {
+          CreateEmployeeRequest.fieldEmail => AdminTextKeys.employeeFieldErrorEmail,
+          CreateEmployeeRequest.fieldCompanyIds ||
+          CreateEmployeeRequest.fieldGroupIds ||
+          CreateEmployeeRequest.fieldScheduleGroupId => AdminTextKeys.employeeFieldErrorUnavailable,
+          _ when onStep1 && _isBlank(input, field) => AdminTextKeys.employeeFieldErrorRequired,
+          _ => AdminTextKeys.employeeFieldErrorTooLong,
+        },
+      };
+    } else {
+      _formFailure = failure;
     }
   }
 
-  /// The error key for one field, or `null` when it is fine. Lengths count
-  /// characters as the server and MySQL do (code points).
+  static bool _isBlank(NewEmployeeInput input, String field) => switch (field) {
+    CreateEmployeeRequest.fieldFirstName => input.firstName.trim().isEmpty,
+    CreateEmployeeRequest.fieldLastName => input.lastName.trim().isEmpty,
+    CreateEmployeeRequest.fieldCode => input.code.trim().isEmpty,
+    _ => false,
+  };
+
+  static String? _blankToNull(String value) => value.trim().isEmpty ? null : value.trim();
+
+  /// A translation key when [value] is blank (if [required]) or longer than
+  /// [maxLength] characters as MySQL counts them.
   static String? _check(String value, int maxLength, {bool required = true}) {
     final trimmed = value.trim();
-    if (trimmed.isEmpty) return required ? AdminTextKeys.employeeFieldErrorRequired : null;
-    return trimmed.runes.length > maxLength ? AdminTextKeys.employeeFieldErrorTooLong : null;
-  }
-
-  /// (field, translation key) for a failure that concerns one field. The
-  /// server names the field but not the reason: a value that was sent is
-  /// too long, an empty one is missing.
-  static (String, String)? _fieldErrorFor(ApiClientException failure, NewEmployeeInput input) {
-    final error = failure.error;
-    if (error == null) return null;
-    if (error.code == ApiErrorCode.duplicateEmployeeCode) {
-      return (CreateEmployeeRequest.fieldCode, AdminTextKeys.employeeFieldErrorDuplicateCode);
-    }
-    if (error.code == ApiErrorCode.validationFailed && error.field != null) {
-      return (
-        error.field!,
-        switch (error.field) {
-          CreateEmployeeRequest.fieldGroupIds => AdminTextKeys.employeeFieldErrorInvalidType,
-          CreateEmployeeRequest.fieldFirstName when input.firstName.trim().isNotEmpty =>
-            AdminTextKeys.employeeFieldErrorTooLong,
-          CreateEmployeeRequest.fieldLastName when input.lastName.trim().isNotEmpty =>
-            AdminTextKeys.employeeFieldErrorTooLong,
-          CreateEmployeeRequest.fieldCode when input.code.trim().isNotEmpty => AdminTextKeys.employeeFieldErrorTooLong,
-          CreateEmployeeRequest.fieldPhone when input.phone.trim().isNotEmpty => AdminTextKeys.employeeFieldErrorTooLong,
-          _ => AdminTextKeys.employeeFieldErrorRequired,
-        },
-      );
-    }
+    if (required && trimmed.isEmpty) return AdminTextKeys.employeeFieldErrorRequired;
+    if (trimmed.runes.length > maxLength) return AdminTextKeys.employeeFieldErrorTooLong;
     return null;
   }
 
-  void _set(VoidCallback change) {
-    if (_disposed) return;
-    change();
-    notifyListeners();
+  static String? _checkEmail(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+    if (trimmed.runes.length > CreateEmployeeRequest.maxEmailLength) return AdminTextKeys.employeeFieldErrorTooLong;
+    return _emailShape.hasMatch(trimmed) ? null : AdminTextKeys.employeeFieldErrorEmail;
+  }
+
+  void _change(VoidCallback update) {
+    update();
+    _fieldErrors = const {};
+    _formFailure = null;
+    _notify();
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
   }
 
   @override

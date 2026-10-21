@@ -8,6 +8,7 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../support/fake_companies_api.dart';
+import '../support/fake_schedules_api.dart';
 import '../support/fake_employees_api.dart';
 
 final _almeco = company(7, 'Almeco');
@@ -32,7 +33,7 @@ Future<(FakeEmployeesApi, CurrentCompanyController)> _pump(WidgetTester tester, 
         child: MaterialApp(
           theme: JitanTheme.light(),
           home: Scaffold(
-            body: EmployeesScreen(api: api, groupsApi: _groups),
+            body: EmployeesScreen(api: api, groupsApi: _groups, companiesApi: FakeCompaniesApi(), schedulesApi: FakeSchedulesApi()),
           ),
         ),
       ),

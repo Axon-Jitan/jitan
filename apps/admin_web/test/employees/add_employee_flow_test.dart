@@ -9,11 +9,19 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../support/fake_companies_api.dart';
 import '../support/fake_employees_api.dart';
+import '../support/fake_schedules_api.dart';
 
-/// Add employee from the Employees page: open → fill → create → list reloads.
+final _white = groupSchedule(3, 'White collar', work: workDays([1, 2, 3, 4, 5], '08:00', '16:30'), breakDays: breaks([1, 2, 3, 4, 5], '12:00', 30));
+final _drivers = groupSchedule(4, 'Drivers', work: workDays([1, 2, 3, 4, 5], '06:00', '14:30'), breakDays: breaks([1, 2, 3, 4, 5], '10:00', 30));
+
+/// Add employee from the Employees page (Figma prototype `153:970` →
+/// `985:2` → `1233:2`): details → companies, groups, work schedule → the
+/// onboarding QR → Finish setup, and the list reloads.
 void main() {
   late FakeEmployeesApi employees;
   late FakeGroupsApi groups;
+  late FakeCompaniesApi companies;
+  late FakeSchedulesApi schedules;
 
   Future<void> pumpPage(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1440, 1024);
@@ -21,6 +29,8 @@ void main() {
     addTearDown(tester.view.reset);
     employees = FakeEmployeesApi();
     groups = FakeGroupsApi();
+    companies = FakeCompaniesApi();
+    schedules = FakeSchedulesApi();
     final current = CurrentCompanyController()..select(company(7, 'Almeco'));
     addTearDown(current.dispose);
 
@@ -30,9 +40,9 @@ void main() {
         child: CurrentCompanyScope(
           controller: current,
           child: MaterialApp(
-            theme: JitanTheme.light(),
+            theme: JitanTheme.web(),
             home: Scaffold(
-              body: EmployeesScreen(api: employees, groupsApi: groups),
+              body: EmployeesScreen(api: employees, groupsApi: groups, companiesApi: companies, schedulesApi: schedules),
             ),
           ),
         ),
@@ -42,112 +52,115 @@ void main() {
     await tester.pump();
   }
 
-  Future<void> openDialog(WidgetTester tester) async {
+  Finder field(String hint) => find.widgetWithText(TextField, hint);
+
+  Future<void> fillStep1(WidgetTester tester, {String code = 'KDV'}) async {
     await tester.tap(find.text('Add employee'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    groups.succeed(const [GroupSummary(id: 3, name: 'White collar'), GroupSummary(id: 4, name: 'Blue collar')]);
+    await tester.enterText(field('Enter first name'), 'Kevin');
+    await tester.enterText(field('Enter last name'), 'De Vos');
+    await tester.enterText(field('Enter employee code'), code);
+  }
+
+  Future<void> continueToStep2(WidgetTester tester) async {
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
+    await tester.pump();
+    companies.succeed([company(7, 'Almeco'), company(8, 'PCA')]);
+    await tester.pump();
+    groups.succeed(const [GroupSummary(id: 3, name: 'White collar'), GroupSummary(id: 4, name: 'Drivers')]);
+    await tester.pump();
+    schedules.succeedList([_white, _drivers]);
     await tester.pump();
   }
 
-  Finder field(String label) => find.descendant(
-    of: find.ancestor(of: find.text(label), matching: find.byType(JitanTextField)),
-    matching: find.byType(TextField),
-  );
-
-  testWidgets('shows the modal with only the ERD-backed fields', (tester) async {
-    await pumpPage(tester);
-    await openDialog(tester);
-
-    // Scoped to the modal: the table behind it has its own "Location" header.
-    Finder inModal(String text) => find.descendant(of: find.byType(Dialog), matching: find.text(text));
-
-    expect(inModal('Create the employee record.'), findsOneWidget);
-    for (final label in ['First name', 'Last name', 'Employee code', 'Employee type', 'Phone number']) {
-      expect(inModal(label), findsOneWidget, reason: label);
+  Future<void> choose(WidgetTester tester, String fieldLabel, List<String> options) async {
+    await tester.tap(find.descendant(of: find.widgetWithText(JitanMultiSelectField<int>, fieldLabel), matching: find.byType(InkWell)).first);
+    await tester.pumpAndSettle();
+    for (final option in options) {
+      await tester.tap(find.widgetWithText(MenuItemButton, option));
+      await tester.pumpAndSettle();
     }
-    expect(inModal('Location'), findsNothing, reason: 'ERD GAP-11');
-    expect(inModal('Work policy'), findsNothing, reason: 'PRODUCT-CLARIFY-EMPLOYEE-POLICY');
+    await tester.tapAt(const Offset(1400, 1000));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('step 1 matches Figma: no Employee type; Continue checks the required fields', (tester) async {
+    await pumpPage(tester);
+    await tester.tap(find.text('Add employee'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    for (final text in ['Employee information', 'Work & assignments', 'Account activation', 'Personal information',
+        'Contact details', 'First name', 'Last name', 'Employee code', 'Phone number', 'Email', 'Step 1 of 3']) {
+      expect(find.text(text), findsWidgets, reason: text);
+    }
+    expect(find.text('Employee type'), findsNothing, reason: 'it is the employee group, chosen in step 2');
+
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
+    await tester.pump();
+    expect(find.text('Required.'), findsNWidgets(3));
+    expect(companies.calls, isEmpty);
   });
 
-  testWidgets('creates the employee, closes, reloads the list and confirms', (tester) async {
+  testWidgets('the whole flow: details, assignments with work schedule, onboarding QR, Finish setup', (tester) async {
     await pumpPage(tester);
-    await openDialog(tester);
+    await fillStep1(tester);
+    await tester.enterText(field('Optional').last, 'kevin@example.com');
+    await continueToStep2(tester);
 
-    await tester.enterText(field('First name'), 'Kevin');
-    await tester.enterText(field('Last name'), 'De Vos');
-    await tester.enterText(field('Employee code'), 'KDV');
-    await tester.tap(find.text('No type'));
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('White collar').last);
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Create employee'));
+    expect(find.text('Step 2 of 3'), findsOneWidget);
+    expect(find.text('Almeco'), findsOneWidget, reason: 'the current company is chosen');
+    await choose(tester, 'Companies', ['PCA']);
+    await choose(tester, 'Employee groups', ['White collar', 'Drivers']);
+
+    await tester.tap(find.widgetWithText(JitanSelectField<int>, 'Work schedule'));
+    await tester.pumpAndSettle();
+    expect(find.text('White collar · Mon–Fri 08:00–16:30'), findsWidgets);
+    await tester.tap(find.text('Drivers · Mon–Fri 06:00–14:30').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
     await tester.pump();
-
     final (companyId, request) = employees.creates.single;
     expect(companyId, 7);
-    expect(request.code, 'KDV');
-    expect(request.groupIds, [3]);
+    expect((request.firstName, request.lastName, request.code, request.email), ('Kevin', 'De Vos', 'KDV', 'kevin@example.com'));
+    expect(request.companyIds, [7, 8]);
+    expect(request.groupIds, [3, 4]);
+    expect(request.scheduleGroupId, 4);
 
-    employees.createSucceeds(employee(2, 'Kevin', 'De Vos', 'KDV', groups: ['White collar']));
+    employees.createSucceeds(employee(2, 'Kevin', 'De Vos', 'KDV', groups: ['White collar', 'Drivers']));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Activate employee account'), findsOneWidget);
+    expect(find.descendant(of: find.byType(JitanModal), matching: find.text('Not activated')), findsOneWidget);
+    expect(find.text('Almeco · White collar · Drivers'), findsOneWidget);
+    expect(find.widgetWithText(JitanSecondaryButton, 'Back'), findsNothing, reason: 'the employee exists now');
+    expect(employees.qrRequests.single, (7, 2, TemporaryQrPurpose.onboarding));
+    employees.qrSucceeds('header.payload.signature', expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(JitanQrCode), findsOneWidget);
+    expect(find.text('header.payload.signature'), findsNothing, reason: 'a credential: shown only as a QR');
+
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Finish setup'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-
-    expect(find.text('Create the employee record.'), findsNothing, reason: 'modal closed');
-    expect(employees.calls, hasLength(2), reason: 'list reloaded after the server confirmed');
-    employees.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW'), employee(2, 'Kevin', 'De Vos', 'KDV')]);
-    await tester.pump();
-
-    expect(find.text('Kevin De Vos'), findsOneWidget);
-    expect(find.text('Kevin De Vos was added.'), findsOneWidget);
+    expect(employees.calls.length, 2, reason: 'the list reloads');
   });
 
-  testWidgets('a duplicate code keeps the modal open with the error on the code field', (tester) async {
+  testWidgets('a taken code brings HR back to step 1, under the code', (tester) async {
     await pumpPage(tester);
-    await openDialog(tester);
-
-    await tester.enterText(field('First name'), 'X');
-    await tester.enterText(field('Last name'), 'Y');
-    await tester.enterText(field('Employee code'), 'SBW');
-    await tester.tap(find.text('Create employee'));
+    await fillStep1(tester);
+    await continueToStep2(tester);
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
     await tester.pump();
     employees.createFails(
-      const ApiClientException.server(
-        409,
-        ApiError(code: ApiErrorCode.duplicateEmployeeCode, message: 'x', field: 'code'),
-      ),
+      const ApiClientException.server(409, ApiError(code: ApiErrorCode.duplicateEmployeeCode, message: 'x', field: 'code')),
     );
     await tester.pump();
 
+    expect(find.text('Step 1 of 3'), findsOneWidget);
     expect(find.text('This employee code is already in use.'), findsOneWidget);
-    expect(find.text('Create the employee record.'), findsOneWidget, reason: 'still open');
-    expect(employees.calls, hasLength(1), reason: 'no reload without a successful create');
-  });
-
-  testWidgets('required fields are flagged before anything is sent', (tester) async {
-    await pumpPage(tester);
-    await openDialog(tester);
-
-    await tester.tap(find.text('Create employee'));
-    await tester.pump();
-
-    expect(find.text('Required.'), findsNWidgets(3));
-    expect(employees.creates, isEmpty);
-  });
-
-  testWidgets('a network failure shows a form error and the form stays usable', (tester) async {
-    await pumpPage(tester);
-    await openDialog(tester);
-
-    await tester.enterText(field('First name'), 'X');
-    await tester.enterText(field('Last name'), 'Y');
-    await tester.enterText(field('Employee code'), 'Z1');
-    await tester.tap(find.text('Create employee'));
-    await tester.pump();
-    employees.createFails(const ApiClientException.network('offline'));
-    await tester.pump();
-
-    expect(find.text('Can’t reach Jitan'), findsOneWidget);
-    expect(find.text('Create employee'), findsOneWidget, reason: 'button back, can retry');
   });
 }

@@ -1,140 +1,130 @@
 import 'package:admin_web/src/employees/add_employee_controller.dart';
+import 'package:admin_web/src/l10n/admin_text_keys.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
+import '../support/fake_companies_api.dart';
 import '../support/fake_employees_api.dart';
+import '../support/fake_schedules_api.dart';
 
-NewEmployeeInput _input({
-  String firstName = 'Disan',
-  String lastName = 'Ssebowa',
-  String code = 'SBW',
-  int? groupId,
-  String phone = '',
-}) => (firstName: firstName, lastName: lastName, code: code, groupId: groupId, phone: phone);
+NewEmployeeInput _input({String first = 'Disan', String code = 'SBW', String email = ''}) =>
+    (firstName: first, lastName: 'Ssebowa', code: code, phone: '', email: email);
 
 ApiClientException _server(int status, String code, {String? field}) =>
     ApiClientException.server(status, ApiError(code: code, message: 'x', field: field));
 
+final _white = groupSchedule(3, 'White collar', work: workDays([1, 2, 3, 4, 5], '08:00', '16:30'), breakDays: breaks([1, 2, 3, 4, 5], '12:00', 30));
+final _drivers = groupSchedule(4, 'Drivers', work: workDays([1, 2, 3, 4, 5], '06:00', '14:30'), breakDays: breaks([1, 2, 3, 4, 5], '10:00', 30));
+final _night = groupSchedule(5, 'Night', status: GroupScheduleStatus.noSchedule);
+
 void main() {
   late FakeEmployeesApi employees;
   late FakeGroupsApi groups;
+  late FakeCompaniesApi companies;
+  late FakeSchedulesApi schedules;
   late AddEmployeeController controller;
 
   setUp(() {
     employees = FakeEmployeesApi();
     groups = FakeGroupsApi();
-    controller = AddEmployeeController(employeesApi: employees, groupsApi: groups, companyId: 7);
+    companies = FakeCompaniesApi();
+    schedules = FakeSchedulesApi();
+    controller = AddEmployeeController(
+      employeesApi: employees,
+      groupsApi: groups,
+      companiesApi: companies,
+      schedulesApi: schedules,
+      companyId: 7,
+    );
   });
-
   tearDown(() => controller.dispose());
 
-  test('loads the employee types', () async {
-    final load = controller.loadGroups();
-    expect(controller.groups, isA<GroupOptionsLoading>());
+  /// Step 1 done, step 2's choices loaded.
+  Future<void> toStep2() async {
+    controller.next(_input());
+    await Future<void>.delayed(Duration.zero);
+    companies.succeed([company(7, 'Almeco'), company(8, 'PCA')]);
+    await Future<void>.delayed(Duration.zero);
+    groups.succeed(const [GroupSummary(id: 3, name: 'White collar'), GroupSummary(id: 4, name: 'Drivers'), GroupSummary(id: 5, name: 'Night')]);
+    await Future<void>.delayed(Duration.zero);
+    schedules.succeedList([_white, _drivers, _night]);
+    await Future<void>.delayed(Duration.zero);
+  }
 
-    groups.succeed(const [GroupSummary(id: 3, name: 'White collar')]);
-    await load;
+  test('step 1: required fields and the email are checked before step 2', () {
+    controller.next(_input(first: ' ', email: 'disan.example.com'));
 
-    expect((controller.groups as GroupOptionsLoaded).groups.single.name, 'White collar');
-  });
-
-  test('types failing to load does not block creating', () async {
-    final load = controller.loadGroups();
-    groups.fail(const ApiClientException.network('offline'));
-    await load;
-
-    expect(controller.groups, isA<GroupOptionsFailed>());
-  });
-
-  test('blank required fields are flagged without calling the server', () async {
-    final result = await controller.submit(_input(firstName: ' ', code: ''));
-
-    expect(result, isNull);
-    expect(controller.fieldErrors.keys, unorderedEquals(['firstName', 'code']));
-    expect(employees.creates, isEmpty);
-  });
-
-  test('values longer than the database allows are flagged without calling the server', () async {
-    final result = await controller.submit(
-      _input(
-        firstName: 'x' * (CreateEmployeeRequest.maxFirstNameLength + 1),
-        code: 'x' * CreateEmployeeRequest.maxCodeLength,
-        phone: '1' * (CreateEmployeeRequest.maxPhoneLength + 1),
-      ),
-    );
-
-    expect(result, isNull);
+    expect(controller.step, AddEmployeeStep.information);
     expect(controller.fieldErrors, {
-      'firstName': 'employee.field.error.tooLong',
-      'phone': 'employee.field.error.tooLong',
+      CreateEmployeeRequest.fieldFirstName: AdminTextKeys.employeeFieldErrorRequired,
+      CreateEmployeeRequest.fieldEmail: AdminTextKeys.employeeFieldErrorEmail,
     });
-    expect(employees.creates, isEmpty);
+    expect(companies.calls, isEmpty, reason: 'nothing is loaded before step 2');
   });
 
-  test('a server validation error on a filled-in field is shown as too long', () async {
-    final submit = controller.submit(_input(lastName: 'Ssebowa'));
-    employees.createFails(_server(400, ApiErrorCode.validationFailed, field: 'lastName'));
-    await submit;
+  test('step 2: the current company is always chosen; Work schedule offers only the chosen groups\' hours', () async {
+    await toStep2();
+    expect(controller.step, AddEmployeeStep.assignments);
+    expect(controller.companyIds, [7]);
 
-    expect(controller.fieldErrors, {'lastName': 'employee.field.error.tooLong'});
+    controller.setCompanies([8]);
+    expect(controller.companyIds, [7, 8], reason: 'Almeco stays');
+
+    controller.setGroups([3]);
+    expect([for (final s in controller.scheduleChoices) s.group.name], ['White collar']);
+    expect(controller.scheduleGroupId, 3, reason: 'one choice: chosen for HR');
+
+    controller.setGroups([3, 4, 5]);
+    expect([for (final s in controller.scheduleChoices) s.group.name], ['White collar', 'Drivers'], reason: 'Night has no hours');
+    expect(controller.scheduleGroupId, isNull, reason: 'several: HR chooses');
+    controller.setScheduleGroup(4);
+    expect(controller.scheduleGroupId, 4);
   });
 
-  test('sends trimmed values for the current company; empty phone becomes null', () async {
-    final submit = controller.submit(_input(firstName: ' Disan ', code: ' SBW ', groupId: 3, phone: '  '));
+  test('creating sends everything in one request, then asks for the onboarding QR', () async {
+    await toStep2();
+    controller
+      ..setCompanies([8])
+      ..setGroups([3, 4])
+      ..setScheduleGroup(4);
+
+    final creating = controller.create();
     expect(controller.submitting, isTrue);
-
-    employees.createSucceeds(employee(5, 'Disan', 'Ssebowa', 'SBW'));
-    final created = await submit;
-
-    expect(created?.id, 5);
-    expect(controller.submitting, isFalse);
     final (companyId, request) = employees.creates.single;
     expect(companyId, 7);
-    expect(request.firstName, 'Disan');
-    expect(request.code, 'SBW');
-    expect(request.groupIds, [3]);
-    expect(request.phone, isNull);
+    expect(request.companyIds, [7, 8]);
+    expect(request.groupIds, [3, 4]);
+    expect(request.scheduleGroupId, 4);
+    expect(request.email, isNull, reason: 'blank email is not sent');
+
+    employees.createSucceeds(employee(20, 'Disan', 'Ssebowa', 'SBW'));
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.step, AddEmployeeStep.activation);
+    expect(employees.qrRequests, [(7, 20, TemporaryQrPurpose.onboarding)]);
+    employees.qrSucceeds('qr-value', expiresAt: DateTime.utc(2026, 10, 21, 12, 10));
+    await creating;
+    expect(controller.qr!.qrCode, 'qr-value');
   });
 
-  test('a second submit while busy is ignored (no double create)', () async {
-    final first = controller.submit(_input());
-    final second = await controller.submit(_input());
-
-    expect(second, isNull);
-    expect(employees.creates, hasLength(1));
-    employees.createSucceeds(employee(5, 'Disan', 'Ssebowa', 'SBW'));
-    await first;
-  });
-
-  test('a duplicate code is shown on the code field', () async {
-    final submit = controller.submit(_input());
+  test('a taken code takes HR back to step 1, under the code', () async {
+    await toStep2();
+    final creating = controller.create();
     employees.createFails(_server(409, ApiErrorCode.duplicateEmployeeCode, field: 'code'));
+    await creating;
 
-    expect(await submit, isNull);
-    expect(controller.fieldErrors, {'code': 'employee.field.error.duplicateCode'});
-    expect(controller.formFailure, isNull);
+    expect(controller.step, AddEmployeeStep.information);
+    expect(controller.fieldErrors, {CreateEmployeeRequest.fieldCode: AdminTextKeys.employeeFieldErrorDuplicateCode});
   });
 
-  test('a server validation error lands on its field', () async {
-    final submit = controller.submit(_input(groupId: 9));
-    employees.createFails(_server(400, ApiErrorCode.validationFailed, field: 'groupIds'));
-    await submit;
+  test('a group no longer available stays on step 2, under the groups', () async {
+    await toStep2();
+    controller.setGroups([3]);
+    final creating = controller.create();
+    employees.createFails(_server(400, ApiErrorCode.validationFailed, field: CreateEmployeeRequest.fieldGroupIds));
+    await creating;
 
-    expect(controller.fieldErrors, {'groupIds': 'employee.field.error.invalidType'});
-  });
-
-  test('other failures become a form error, and the form can be retried', () async {
-    final submit = controller.submit(_input());
-    employees.createFails(const ApiClientException.network('offline'));
-    await submit;
-
-    expect(controller.formFailure?.kind, ApiFailureKind.network);
-    expect(controller.submitting, isFalse);
-
-    final retry = controller.submit(_input());
-    expect(controller.formFailure, isNull, reason: 'cleared on retry');
-    employees.createSucceeds(employee(5, 'Disan', 'Ssebowa', 'SBW'));
-    expect(await retry, isNotNull);
+    expect(controller.step, AddEmployeeStep.assignments);
+    expect(controller.fieldErrors, {CreateEmployeeRequest.fieldGroupIds: AdminTextKeys.employeeFieldErrorUnavailable});
   });
 }

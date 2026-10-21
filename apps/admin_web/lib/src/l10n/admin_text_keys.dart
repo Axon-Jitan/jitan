@@ -61,7 +61,41 @@ abstract final class AdminTextKeys {
   static const employeeAddAction = 'employee.add.action';
   static const employeeAddTitle = 'employee.add.title';
   static const employeeAddSubtitle = 'employee.add.subtitle';
-  static const employeeAddSubmit = 'employee.add.submit';
+  static const employeeAddSubtitleAssignments = 'employee.add.subtitle.assignments';
+  static const employeeAddStepInformation = 'employee.add.step.information';
+  static const employeeAddStepAssignments = 'employee.add.step.assignments';
+  static const employeeAddStepActivation = 'employee.add.step.activation';
+  static const employeeAddStepOf = 'employee.add.stepOf';
+  static const employeeAddContinue = 'employee.add.continue';
+  static const employeeAddSectionPersonal = 'employee.add.section.personal';
+  static const employeeAddSectionContact = 'employee.add.section.contact';
+  static const employeeAddSectionAssignments = 'employee.add.section.assignments';
+  static const employeeFieldFirstNameHint = 'employee.field.firstName.hint';
+  static const employeeFieldLastNameHint = 'employee.field.lastName.hint';
+  static const employeeFieldCodeHint = 'employee.field.code.hint';
+  static const employeeFieldEmail = 'employee.field.email';
+  static const employeeFieldCompanies = 'employee.field.companies';
+  static const employeeFieldCompaniesHint = 'employee.field.companies.hint';
+  static const employeeFieldGroups = 'employee.field.groups';
+  static const employeeFieldGroupsHint = 'employee.field.groups.hint';
+  static const employeeFieldSchedule = 'employee.field.schedule';
+  static const employeeFieldScheduleOption = 'employee.field.schedule.option';
+  static const employeeFieldErrorEmail = 'employee.field.error.email';
+  static const employeeFieldErrorUnavailable = 'employee.field.error.unavailable';
+  static const employeeAddActivationTitle = 'employee.add.activation.title';
+  static const employeeAddActivationSubtitle = 'employee.add.activation.subtitle';
+  static const employeeAddActivationNotActivated = 'employee.add.activation.notActivated';
+  static const employeeAddActivationEmployee = 'employee.add.activation.employee';
+  static const employeeAddActivationStep1 = 'employee.add.activation.step1';
+  static const employeeAddActivationStep2 = 'employee.add.activation.step2';
+  static const employeeAddActivationStep3 = 'employee.add.activation.step3';
+  static const employeeAddActivationScan = 'employee.add.activation.scan';
+  static const employeeAddActivationScanHint = 'employee.add.activation.scanHint';
+  static const employeeAddActivationNote = 'employee.add.activation.note';
+  static const employeeAddActivationLoading = 'employee.add.activation.loading';
+  static const employeeAddActivationFailed = 'employee.add.activation.failed';
+  static const employeeAddFinish = 'employee.add.finish';
+  static const employeeAddLoading = 'employee.add.loading';
 
   /// Argument: `{name}`.
   static const employeeAddSuccess = 'employee.add.success';
@@ -69,13 +103,10 @@ abstract final class AdminTextKeys {
   static const employeeFieldLastName = 'employee.field.lastName';
   static const employeeFieldCode = 'employee.field.code';
   static const employeeFieldType = 'employee.field.type';
-  static const employeeFieldTypeNone = 'employee.field.type.none';
-  static const employeeFieldTypeLoadFailed = 'employee.field.type.loadFailed';
   static const employeeFieldPhone = 'employee.field.phone';
   static const employeeFieldPhoneHint = 'employee.field.phone.hint';
   static const employeeFieldErrorRequired = 'employee.field.error.required';
   static const employeeFieldErrorDuplicateCode = 'employee.field.error.duplicateCode';
-  static const employeeFieldErrorInvalidType = 'employee.field.error.invalidType';
   static const employeeFieldErrorTooLong = 'employee.field.error.tooLong';
 
   static const employeeDetailsTitle = 'employee.details.title';

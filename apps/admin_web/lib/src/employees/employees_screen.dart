@@ -17,10 +17,18 @@ import 'employees_table.dart';
 /// "Import CSV / Excel" (Figma) is not shown: bulk import is a separate task
 /// (roadmap §8), and the page never offers a button that does nothing.
 class EmployeesScreen extends StatelessWidget {
-  const EmployeesScreen({super.key, required this.api, required this.groupsApi});
+  const EmployeesScreen({
+    super.key,
+    required this.api,
+    required this.groupsApi,
+    required this.companiesApi,
+    required this.schedulesApi,
+  });
 
   final EmployeesApi api;
   final GroupsApi groupsApi;
+  final CompaniesApi companiesApi;
+  final SchedulesApi schedulesApi;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +60,8 @@ class EmployeesScreen extends StatelessWidget {
               key: ValueKey(company.id),
               api: api,
               groupsApi: groupsApi,
+              companiesApi: companiesApi,
+              schedulesApi: schedulesApi,
               company: company,
             ),
         ],
@@ -65,11 +75,15 @@ class _CompanyEmployees extends StatefulWidget {
     super.key,
     required this.api,
     required this.groupsApi,
+    required this.companiesApi,
+    required this.schedulesApi,
     required this.company,
   });
 
   final EmployeesApi api;
   final GroupsApi groupsApi;
+  final CompaniesApi companiesApi;
+  final SchedulesApi schedulesApi;
   final CompanySummary company;
 
   @override
@@ -90,6 +104,8 @@ class _CompanyEmployeesState extends State<_CompanyEmployees> {
       context,
       employeesApi: widget.api,
       groupsApi: widget.groupsApi,
+      companiesApi: widget.companiesApi,
+      schedulesApi: widget.schedulesApi,
       companyId: widget.company.id,
     );
     if (created == null || !mounted) return;
