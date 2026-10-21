@@ -30,7 +30,7 @@ void main() {
     await api.candidates(5, search: '  pee ');
     await api.candidates(5, search: ' ');
     await api.candidates(null, search: 'pee');
-    await api.add(5, [7, 8]);
+    await api.add(5, [7, 8], followIds: [8]);
     await api.remove(5, 7);
 
     expect(members.single.displayName, 'Fabian Peeters');
@@ -43,6 +43,6 @@ void main() {
       'POST http://api.test/groups/5/members',
       'DELETE http://api.test/groups/5/members/7',
     ]);
-    expect(jsonDecode(requests[4].body), {'ids': [7, 8]});
+    expect(jsonDecode(requests[4].body), {'ids': [7, 8], 'followIds': [8]});
   });
 }

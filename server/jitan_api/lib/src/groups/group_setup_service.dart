@@ -43,6 +43,11 @@ class GroupSetupService {
     final ids = request.employeeIds.isEmpty
         ? const <int>[]
         : GroupMemberService.validIds(request.employeeIds, CreateGroupRequest.fieldEmployeeIds);
+    final follow = GroupMemberService.validFollowIds(
+      request.followEmployeeIds,
+      ids,
+      CreateGroupRequest.fieldFollowEmployeeIds,
+    );
     final hours = request.schedule;
     final schedule = hours == null ? null : await _schedules.prepareSchedule(hours);
     await _members.requireMayManage(ids, mayManage);
@@ -58,7 +63,11 @@ class GroupSetupService {
     final id = await _transactions.transaction((tx) async {
       final id = await _management.createIn(tx, actorUserId, name);
       if (ids.isNotEmpty) await _members.addIn(tx, actorUserId, id, ids);
-      if (schedule != null) await _schedules.applySchedule(tx, actorUserId, id, schedule);
+      if (schedule != null) {
+        await _schedules.applySchedule(tx, actorUserId, id, schedule);
+        // "Use {group} hours": these employees, also in other groups, follow it.
+        await _members.followIn(tx, actorUserId, id, follow);
+      }
       return id;
     });
     return _management.find(id);

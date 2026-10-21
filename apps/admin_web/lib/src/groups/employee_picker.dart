@@ -26,6 +26,7 @@ class EmployeePicker extends StatefulWidget {
     this.dropdown = false,
     this.hintKey = AdminTextKeys.groupsPickerSearch,
     this.noOtherGroupsKey = AdminTextKeys.groupsPickerAlsoInNone,
+    this.below,
   });
 
   /// The employees matching a search (`null`: no search).
@@ -39,6 +40,10 @@ class EmployeePicker extends StatefulWidget {
 
   /// The search field's placeholder.
   final String hintKey;
+
+  /// Extra content under an employee's row (e.g. whose hours they will
+  /// work, `1390:1106`); `null` adds nothing.
+  final Widget? Function(GroupMember employee)? below;
 
   /// The text for an employee in no other group: "Also in: None" in Add
   /// employees (1349:356), "No other groups" in Create group (1354:7).
@@ -188,6 +193,7 @@ class _EmployeePickerState extends State<EmployeePicker> {
                           style: JitanTextStyles.stateMessage.copyWith(fontSize: 12),
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (widget.below?.call(employee) case final extra?) ...[const SizedBox(height: 4), extra],
                       ],
                     ),
                   ),

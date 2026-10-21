@@ -40,6 +40,10 @@ class CreateGroupController extends ChangeNotifier {
   Map<int, GroupMember> _selected = const {};
   Map<int, GroupMember> get selected => _selected;
 
+  /// Chosen employees in other groups who "Use {group} hours" (Figma
+  /// `1405:473`); the others keep theirs (the default).
+  Set<int> _follow = const {};
+
   ScheduleOptionsState _options = const ScheduleOptionsLoading();
   ScheduleOptionsState get options => _options;
   bool _optionsRequested = false;
@@ -71,8 +75,12 @@ class CreateGroupController extends ChangeNotifier {
 
   bool _disposed = false;
 
-  /// The chosen employees in no other group: the work hours are kept on them.
-  int get onlyHereCount => _selected.values.where((m) => m.groups.isEmpty).length;
+  /// Whether [employee] will work the new group's hours: always when they
+  /// are in no other group, otherwise when HR chose "Use … hours".
+  bool follows(GroupMember employee) => employee.groups.isEmpty || _follow.contains(employee.id);
+
+  /// "{n} of {total} employees will work the … hours."
+  int get willWorkCount => _selected.values.where(follows).length;
 
   bool get canContinue => switch (_step) {
     CreateGroupStep.details => _name.trim().isNotEmpty,
@@ -139,7 +147,16 @@ class CreateGroupController extends ChangeNotifier {
     _nameError = null;
   });
 
-  void setSelected(Map<int, GroupMember> selected) => _change(() => _selected = Map.unmodifiable(selected));
+  void setSelected(Map<int, GroupMember> selected) => _change(() {
+    _selected = Map.unmodifiable(selected);
+    _follow = {for (final id in _follow) if (selected.containsKey(id)) id};
+  });
+
+  /// × on a chosen employee.
+  void deselect(int employeeId) => setSelected({..._selected}..remove(employeeId));
+
+  void setFollows(int employeeId, bool follows) =>
+      _change(() => _follow = follows ? {..._follow, employeeId} : ({..._follow}..remove(employeeId)));
 
   void toggleDay(int dayId) => _change(() => _dayIds.contains(dayId) ? _dayIds.remove(dayId) : _dayIds.add(dayId));
 
@@ -223,6 +240,10 @@ class CreateGroupController extends ChangeNotifier {
         CreateGroupRequest(
           name: _name.trim(),
           employeeIds: _selected.keys.toList(),
+          followEmployeeIds: [
+            for (final e in _selected.values)
+              if (e.groups.isNotEmpty && _follow.contains(e.id)) e.id,
+          ],
           schedule: _hoursEmpty ? null : SetGroupScheduleRequest(
             workHours: SetWorkHoursRequest(
               days: [

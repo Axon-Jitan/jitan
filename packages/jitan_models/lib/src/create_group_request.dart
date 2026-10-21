@@ -13,25 +13,34 @@ import 'schedule_requests.dart';
 /// whose only group is the new one, so hours then need one of them among
 /// [employeeIds].
 class CreateGroupRequest {
-  const CreateGroupRequest({required this.name, this.employeeIds = const [], this.schedule});
+  const CreateGroupRequest({required this.name, this.employeeIds = const [], this.schedule, this.followEmployeeIds = const []});
 
   factory CreateGroupRequest.fromJson(Map<String, Object?> json) => CreateGroupRequest(
     name: json.readString(fieldName),
     employeeIds: json[fieldEmployeeIds] == null ? const [] : json.readIntList(fieldEmployeeIds),
     schedule: json[fieldSchedule] == null ? null : SetGroupScheduleRequest.fromJson(json.readObject(fieldSchedule)),
+    followEmployeeIds: json[fieldFollowEmployeeIds] == null ? const [] : json.readIntList(fieldFollowEmployeeIds),
   );
 
   final String name;
   final List<int> employeeIds;
   final SetGroupScheduleRequest? schedule;
 
+  /// Of [employeeIds], those already in other groups who "Use {group} hours"
+  /// (Figma `1405:473`): their hours come from the new group from now on.
+  /// The others keep their current hours. Employees in no other group always
+  /// follow the new group. Applies only together with [schedule].
+  final List<int> followEmployeeIds;
+
   static const fieldName = GroupNameRequest.fieldName;
   static const fieldEmployeeIds = 'employeeIds';
   static const fieldSchedule = 'schedule';
+  static const fieldFollowEmployeeIds = 'followEmployeeIds';
 
   Map<String, Object?> toJson() => {
     fieldName: name,
     if (employeeIds.isNotEmpty) fieldEmployeeIds: employeeIds,
     if (schedule case final schedule?) fieldSchedule: schedule.toJson(),
+    if (followEmployeeIds.isNotEmpty) fieldFollowEmployeeIds: followEmployeeIds,
   };
 }

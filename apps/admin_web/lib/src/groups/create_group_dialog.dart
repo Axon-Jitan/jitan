@@ -11,6 +11,7 @@ import '../schedules/schedule_form_fields.dart';
 import '../schedules/schedule_summary_text.dart';
 import 'create_group_controller.dart';
 import 'employee_picker.dart';
+import 'group_hours_choice.dart';
 import 'group_state_text.dart';
 
 /// Opens Create group; completes with the new group once the server created
@@ -187,14 +188,59 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
           onChanged: c.setSelected,
         ),
       ),
-      const SizedBox(height: 14),
-      Text(
-        context.t(
-          c.onlyHereCount == 1 ? AdminTextKeys.groupsEmployeesOnlyHereOne : AdminTextKeys.groupsEmployeesOnlyHereOther,
-          args: {'n': c.onlyHereCount, 'group': name},
+      // The chosen employees, each with whose hours they will work (1405:473).
+      for (final (index, employee) in c.selected.values.indexed)
+        Container(
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+          decoration: BoxDecoration(
+            color: index.isOdd ? JitanColors.tableStripe : JitanColors.surface,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${employee.displayName} · ${employee.code}', style: JitanTextStyles.tableCellStrong, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Text(
+                      employee.groups.isEmpty
+                          ? context.t(AdminTextKeys.groupsPickerNoOtherGroups)
+                          : context.t(AdminTextKeys.groupsPickerAlsoIn, args: {'groups': employee.groups.join(', ')}),
+                      style: JitanTextStyles.stateMessage.copyWith(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    GroupHoursChoice(
+                      employee: employee,
+                      groupName: name,
+                      follows: c.follows(employee),
+                      onChanged: c.submitting ? null : (follows) => c.setFollows(employee.id, follows),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: context.t(AdminTextKeys.groupsEmployeesRemove),
+                onPressed: c.submitting ? null : () => c.deselect(employee.id),
+                icon: const Icon(Icons.close, size: 16, color: JitanColors.inkMuted),
+              ),
+            ],
+          ),
         ),
-        style: JitanTextStyles.stateMessage.copyWith(fontSize: 13),
-      ),
+      if (c.selected.isNotEmpty) ...[
+        const SizedBox(height: 14),
+        // Employees are optional (product owner, 2026-10-21): this only warns.
+        if (c.willWorkCount == 0)
+          Text(context.t(AdminTextKeys.groupsEmployeesNoneWillWork, args: {'group': name}), style: JitanTextStyles.fieldError)
+        else
+          Text(
+            context.t(AdminTextKeys.groupsEmployeesWillWork, args: {'n': c.willWorkCount, 'total': c.selected.length, 'group': name}),
+            style: JitanTextStyles.stateMessage.copyWith(fontSize: 13),
+          ),
+      ],
     ];
   }
 

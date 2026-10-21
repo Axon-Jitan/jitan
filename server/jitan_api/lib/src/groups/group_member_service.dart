@@ -65,19 +65,28 @@ class GroupMemberService {
   /// Adds [userIds] to [groupId] (an active group): new links, or removed
   /// ones reactivated; employees already in it are skipped and not audited
   /// again. All or nothing.
+  ///
+  /// [followIds] (of [userIds]): employees already in other groups whose
+  /// hours come from [groupId] from now on ("Use {group} hours", Figma
+  /// `1390:1106`); the others keep theirs.
   Future<List<GroupMember>> add(
     int actorUserId,
     int groupId,
     List<int> userIds, {
+    List<int> followIds = const [],
     required Future<void> Function(int companyId) mayManage,
     required Future<bool> Function(int companyId) mayView,
   }) async {
     final ids = validIds(userIds, AddAssignmentsRequest.fieldIds);
+    final follow = validFollowIds(followIds, ids, AddGroupMembersRequest.fieldFollowIds);
     if (await _requireGroup(groupId) == false) {
       throw const ApiException.validation(AddAssignmentsRequest.fieldIds, 'The group is deactivated; reactivate it first.');
     }
     await requireMayManage(ids, mayManage);
-    await _retryOnDeadlock((tx) => addIn(tx, actorUserId, groupId, ids));
+    await _retryOnDeadlock((tx) async {
+      await addIn(tx, actorUserId, groupId, ids);
+      await followIn(tx, actorUserId, groupId, follow);
+    });
     return members(groupId, mayView: mayView);
   }
 
@@ -101,6 +110,23 @@ class GroupMemberService {
       if (userGroupId == null) continue;
       await _record(tx, AuditEventType.groupAssigned, actorUserId, userId, groupId, userGroupId);
       await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
+    }
+  }
+
+  /// [followIds] without repeats; 400 on [field] when one is not among [ids].
+  static List<int> validFollowIds(List<int> followIds, List<int> ids, String field) {
+    final follow = followIds.toSet().toList()..sort();
+    if (follow.any((id) => !ids.contains(id))) {
+      throw ApiException.validation(field, 'Only employees being added can use this group\'s hours.');
+    }
+    return follow;
+  }
+
+  /// Gives [ids] (already in [groupId]) the group's hours inside the
+  /// caller's transaction [tx], audited as a change of schedule source.
+  Future<void> followIn(SqlExecutor tx, int actorUserId, int groupId, List<int> ids) async {
+    for (final userId in ids) {
+      await _scheduleSync.useGroup(tx, actorUserId, userId, groupId);
     }
   }
 

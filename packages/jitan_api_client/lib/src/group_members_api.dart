@@ -23,8 +23,13 @@ class GroupMembersApi {
         ),
       );
 
-  Future<List<GroupMember>> add(int groupId, List<int> userIds) async =>
-      _list(await _transport.postJson('groups/$groupId/members', AddAssignmentsRequest(ids: userIds).toJson()));
+  /// Adds [userIds]; of those, [followIds] use the group's hours from now on.
+  Future<List<GroupMember>> add(int groupId, List<int> userIds, {List<int> followIds = const []}) async => _list(
+        await _transport.postJson(
+          'groups/$groupId/members',
+          AddGroupMembersRequest(ids: userIds, followIds: followIds).toJson(),
+        ),
+      );
 
   Future<List<GroupMember>> remove(int groupId, int userId) async =>
       _list(await _transport.deleteJson('groups/$groupId/members/$userId'));

@@ -426,8 +426,13 @@ abstract final class AdminTextKeys {
   static const groupsStepHours = 'groups.step.hours';
   static const groupsEmployeesField = 'groups.employees.field';
   static const groupsEmployeesHint = 'groups.employees.hint';
-  static const groupsEmployeesOnlyHereOne = 'groups.employees.onlyHere.one';
-  static const groupsEmployeesOnlyHereOther = 'groups.employees.onlyHere.other';
+  static const groupsHoursUses = 'groups.hours.uses';
+  static const groupsHoursKeep = 'groups.hours.keep';
+  static const groupsHoursKeepCurrent = 'groups.hours.keepCurrent';
+  static const groupsHoursUse = 'groups.hours.use';
+  static const groupsEmployeesWillWork = 'groups.employees.willWork';
+  static const groupsEmployeesNoneWillWork = 'groups.employees.noneWillWork';
+  static const groupsEmployeesRemove = 'groups.employees.remove';
   static const groupsHoursStartHint = 'groups.hours.startHint';
   static const groupsHoursFinishHint = 'groups.hours.finishHint';
   static const groupsHoursBreak = 'groups.hours.break';

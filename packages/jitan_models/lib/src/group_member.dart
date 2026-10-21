@@ -65,3 +65,23 @@ class GroupMemberListResponse {
         'members': [for (final member in members) member.toJson()],
       };
 }
+
+/// Body of `POST /groups/{id}/members` (Figma `1390:1106`): the employees to
+/// add, and of those already in other groups, the ones who "Use {group}
+/// hours" ([followIds]); the others keep their current hours.
+class AddGroupMembersRequest {
+  const AddGroupMembersRequest({required this.ids, this.followIds = const []});
+
+  factory AddGroupMembersRequest.fromJson(Map<String, Object?> json) => AddGroupMembersRequest(
+    ids: json.readIntList(fieldIds),
+    followIds: json[fieldFollowIds] == null ? const [] : json.readIntList(fieldFollowIds),
+  );
+
+  final List<int> ids;
+  final List<int> followIds;
+
+  static const fieldIds = 'ids';
+  static const fieldFollowIds = 'followIds';
+
+  Map<String, Object?> toJson() => {fieldIds: ids, if (followIds.isNotEmpty) fieldFollowIds: followIds};
+}

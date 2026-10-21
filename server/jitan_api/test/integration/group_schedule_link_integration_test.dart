@@ -12,6 +12,7 @@ import 'package:jitan_api/src/groups/group_member_repository.dart';
 import 'package:jitan_api/src/groups/group_member_service.dart';
 import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/groups/group_setup_service.dart';
+import 'package:jitan_api/src/http/api_exception.dart';
 import 'package:jitan_api/src/schedules/employee_schedule_sync.dart';
 import 'package:jitan_api/src/schedules/group_schedule_link_repository.dart';
 import 'package:jitan_api/src/schedules/schedule_editing_service.dart';
@@ -144,7 +145,7 @@ void main() {
       'INSERT INTO tblCompany (companyName, companyActive, companyMFD) VALUES (:n, 1, 0)',
       {'n': '$prefix Company'},
     )).lastInsertId;
-    for (final key in ['actor', 'A']) {
+    for (final key in ['actor', 'A', 'K', 'U', 'N']) {
       users[key] = (await db.execute(
         'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
         "VALUES ('[DEV-TEST]', 'Links', :code, :qr, 1, 0)",
@@ -256,5 +257,61 @@ void main() {
     expect(await employeeRows('A'), isEmpty);
     expect(await activeGroupLinks(drivers), 3);
     expect((await schedules.groupSchedule(drivers))!.status, GroupScheduleStatus.configured);
+  });
+
+  test('Create group: "Use Night hours" moves that employee to the new hours; "Keep" leaves the other', () async {
+    if (!hasTable) return markTestSkipped('tblGroupSchedule (GAP-15) is not in this database');
+    // K and U are in Day, with Day's hours (07:00).
+    final day = await setup.create(
+      users['actor']!,
+      CreateGroupRequest(name: '$prefix Day', employeeIds: [users['K']!, users['U']!], schedule: hours('07:00', '15:30')),
+      mayManage: allowed,
+    );
+    expect((await employeeRows('K')).where((r) => r.$1 == ScheduleTypeNames.workStart).single.$2, '7:0');
+
+    await setup.create(
+      users['actor']!,
+      CreateGroupRequest(
+        name: '$prefix Night',
+        employeeIds: [users['K']!, users['U']!, users['N']!],
+        schedule: hours('20:00', '23:30'),
+        followEmployeeIds: [users['U']!],
+      ),
+      mayManage: allowed,
+    );
+
+    expect((await employeeRows('K')).where((r) => r.$1 == ScheduleTypeNames.workStart).single.$2, '7:0', reason: 'keeps Day hours');
+    expect((await employeeRows('U')).where((r) => r.$1 == ScheduleTypeNames.workStart).single.$2, '20:0', reason: 'uses Night hours');
+    expect((await employeeRows('N')).where((r) => r.$1 == ScheduleTypeNames.workStart).single.$2, '20:0', reason: 'only in Night');
+    expect(day.employeeCount, 2);
+  });
+
+  test('Add employees: "Use Drivers hours" on an existing group moves that employee', () async {
+    if (!hasTable) return markTestSkipped('tblGroupSchedule (GAP-15) is not in this database');
+    await members.add(
+      users['actor']!,
+      drivers,
+      [users['K']!],
+      followIds: [users['K']!],
+      mayManage: allowed,
+      mayView: everyone,
+    );
+
+    expect((await employeeRows('K')).where((r) => r.$1 == ScheduleTypeNames.workStart).single.$2, '7:0',
+        reason: 'Drivers hours were set to 07:00–15:30 earlier in this file');
+    final drivers0700 = await db.query(
+      'SELECT COUNT(*) AS n FROM tblUserSchedule us JOIN tblGroupSchedule gs ON gs.scheduleID = us.scheduleID '
+      'AND gs.groupScheduleActive = 1 WHERE us.userID = :u AND us.userScheduleActive = 1 AND gs.groupID = :g',
+      {'u': users['K'], 'g': drivers},
+    );
+    expect(drivers0700.single.readInt('n'), 3, reason: "K follows Drivers' own rows now");
+  });
+
+  test('following is only for employees being added', () async {
+    if (!hasTable) return markTestSkipped('tblGroupSchedule (GAP-15) is not in this database');
+    await expectLater(
+      members.add(users['actor']!, drivers, [users['N']!], followIds: [users['U']!], mayManage: allowed, mayView: everyone),
+      throwsA(isA<ApiException>().having((e) => e.field, 'field', AddGroupMembersRequest.fieldFollowIds)),
+    );
   });
 }

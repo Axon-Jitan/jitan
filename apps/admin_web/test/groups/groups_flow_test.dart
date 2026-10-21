@@ -92,10 +92,19 @@ void main() {
     expect(find.text('No other groups'), findsOneWidget, reason: 'Kevin');
     await tester.tap(find.text('Fabian Peeters · FPT'));
     await tester.pump();
-    expect(find.text('Selected: 0 employees who belong only to Van drivers.'), findsOneWidget);
+    expect(
+      find.text('Choose at least one employee who will work the Van drivers hours.'),
+      findsOneWidget,
+      reason: 'Fabian keeps White collar hours by default; only a warning',
+    );
+    expect(find.text('Keep White collar hours'), findsOneWidget, reason: '1405:242');
     await tester.tap(find.text('Kevin De Vos · KDV'));
     await tester.pump();
-    expect(find.text('Selected: 1 employee who belongs only to Van drivers.'), findsOneWidget);
+    expect(find.text('Uses Van drivers hours'), findsOneWidget, reason: 'Kevin is in no other group');
+    expect(find.text('1 of 2 employees will work the Van drivers hours.'), findsOneWidget);
+    await tester.tap(find.text('Use Van drivers hours'));
+    await tester.pump();
+    expect(find.text('2 of 2 employees will work the Van drivers hours.'), findsOneWidget, reason: '1405:473');
     await _tapPrimary(tester, 'Continue');
 
     // Step 3: work hours and break.
@@ -123,6 +132,7 @@ void main() {
 
     expect(fakes.groupManagement.calls, contains('create Van drivers 11,12'));
     final sent = fakes.groupManagement.created!;
+    expect(sent.followEmployeeIds, [11], reason: 'Fabian uses the new hours');
     expect(sent.schedule!.breakMinutes, 30);
     expect([for (final d in sent.schedule!.workHours.days) (d.start, d.finish)], List.filled(5, ('08:00', '16:30')));
     fakes.schedules.succeedList([_blue, _white, _drivers]);
@@ -291,12 +301,12 @@ void main() {
 
     await tester.tap(find.text('Set up an employee group in three steps.'));
     await tester.pumpAndSettle();
-    expect(find.text('Kevin De Vos · KDV'), findsOneWidget, reason: 'the list stays open: the dialog does not jump');
+    expect(find.text('Kevin De Vos · KDV'), findsNWidgets(2), reason: 'still in the open list, and in the chosen list below it');
 
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
     expect(find.text('Create group'), findsWidgets, reason: 'a click outside does not close the dialog');
-    expect(find.text('Selected: 1 employee who belongs only to Drivers.'), findsOneWidget, reason: 'nothing lost');
+    expect(find.text('1 of 1 employees will work the Drivers hours.'), findsOneWidget, reason: 'nothing lost');
   });
 
   testWidgets('Create group with only a name: employees and hours left empty', (tester) async {
@@ -318,5 +328,22 @@ void main() {
     expect(sent.name, 'Cleaners');
     expect(sent.employeeIds, isEmpty);
     expect(sent.schedule, isNull);
+  });
+
+  testWidgets('Add employees on a group with hours: "Use Blue collar hours" is sent for that employee', (tester) async {
+    final fakes = _fakes();
+    await _pump(tester, fakes, '/groups/1');
+
+    await _tapPrimary(tester, 'Add employees');
+    expect(find.text('Keep White collar hours'), findsOneWidget, reason: '1390:1106, Fabian is in White collar');
+    await tester.tap(find.text('Fabian Peeters · FPT'));
+    await tester.pump();
+    await tester.tap(find.text('Use Blue collar hours'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add (1)'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(fakes.groupMembers.calls, contains('add 1 11 follow 11'));
   });
 }

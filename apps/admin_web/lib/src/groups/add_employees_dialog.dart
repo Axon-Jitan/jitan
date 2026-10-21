@@ -7,6 +7,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'employee_picker.dart';
+import 'group_hours_choice.dart';
 
 /// Opens Add employees for [group]; completes with the group's members as
 /// the server stored them, `null` when cancelled.
@@ -14,20 +15,26 @@ Future<List<GroupMember>?> showAddEmployeesDialog(
   BuildContext context, {
   required GroupMembersApi membersApi,
   required GroupOverview group,
+  bool groupHasHours = false,
 }) => showJitanModal<List<GroupMember>>(
   context,
   // A click beside the dialog must not throw away what HR entered.
   barrierDismissible: false,
-  builder: (_) => AddEmployeesDialog(membersApi: membersApi, group: group),
+  builder: (_) => AddEmployeesDialog(membersApi: membersApi, group: group, groupHasHours: groupHasHours),
 );
 
-/// Figma `HR / Employee groups — Employee picker` (1349:356): employees from
-/// every company, added in one save.
+/// Figma `HR / Employee groups — Employee picker` (1349:356) and `Add
+/// employees — Schedule source choices` (1390:1106): employees from every
+/// company, added in one save. When the group has work hours, an employee
+/// already in other groups chooses "Keep … hours" or "Use {group} hours".
 class AddEmployeesDialog extends StatefulWidget {
-  const AddEmployeesDialog({super.key, required this.membersApi, required this.group});
+  const AddEmployeesDialog({super.key, required this.membersApi, required this.group, this.groupHasHours = false});
 
   final GroupMembersApi membersApi;
   final GroupOverview group;
+
+  /// Whether "Use {group} hours" can be offered.
+  final bool groupHasHours;
 
   @override
   State<AddEmployeesDialog> createState() => _AddEmployeesDialogState();
@@ -35,6 +42,9 @@ class AddEmployeesDialog extends StatefulWidget {
 
 class _AddEmployeesDialogState extends State<AddEmployeesDialog> {
   Map<int, GroupMember> _selected = const {};
+
+  /// Employees in other groups who "Use {group} hours"; the others keep theirs.
+  Set<int> _follow = const {};
   bool _busy = false;
   ApiClientException? _failure;
 
@@ -44,7 +54,11 @@ class _AddEmployeesDialogState extends State<AddEmployeesDialog> {
       _failure = null;
     });
     try {
-      final members = await widget.membersApi.add(widget.group.id, _selected.keys.toList());
+      final members = await widget.membersApi.add(
+        widget.group.id,
+        _selected.keys.toList(),
+        followIds: [for (final id in _follow) if (_selected.containsKey(id)) id],
+      );
       if (mounted) Navigator.of(context).pop(members);
     } on ApiClientException catch (failure) {
       if (mounted) setState(() => _failure = failure);
@@ -69,6 +83,20 @@ class _AddEmployeesDialogState extends State<AddEmployeesDialog> {
             load: (search) => widget.membersApi.candidates(widget.group.id, search: search),
             selected: _selected,
             onChanged: (ids) => setState(() => _selected = ids),
+            below: !widget.groupHasHours
+                ? null
+                : (employee) => employee.groups.isEmpty
+                      ? null
+                      : GroupHoursChoice(
+                          employee: employee,
+                          groupName: widget.group.name,
+                          follows: _follow.contains(employee.id),
+                          onChanged: _busy
+                              ? null
+                              : (follows) => setState(
+                                  () => _follow = follows ? {..._follow, employee.id} : ({..._follow}..remove(employee.id)),
+                                ),
+                        ),
           ),
           if (failure != null) ...[
             const SizedBox(height: 16),

@@ -98,8 +98,8 @@ class FakeGroupMembersApi implements GroupMembersApi {
   }
 
   @override
-  Future<List<GroupMember>> add(int groupId, List<int> userIds) async {
-    calls.add('add $groupId ${userIds.join(',')}');
+  Future<List<GroupMember>> add(int groupId, List<int> userIds, {List<int> followIds = const []}) async {
+    calls.add('add $groupId ${userIds.join(',')}${followIds.isEmpty ? '' : ' follow ${followIds.join(',')}'}');
     if (failNext case final failure?) {
       failNext = null;
       throw failure;

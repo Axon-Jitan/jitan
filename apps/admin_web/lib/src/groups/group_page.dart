@@ -79,7 +79,13 @@ class _GroupPageState extends State<GroupPage> {
   }
 
   Future<void> _addEmployees(GroupOverview group) async {
-    final members = await showAddEmployeesDialog(context, membersApi: widget.membersApi, group: group);
+    final loaded = _controller.state;
+    final members = await showAddEmployeesDialog(
+      context,
+      membersApi: widget.membersApi,
+      group: group,
+      groupHasHours: loaded is GroupPageLoaded && loaded.schedule?.status == GroupScheduleStatus.configured,
+    );
     if (members == null || !mounted) return;
     _say(context.t(AdminTextKeys.groupsMembersAdded, args: {'group': group.name}));
     await _controller.load();

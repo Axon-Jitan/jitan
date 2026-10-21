@@ -122,9 +122,9 @@ class GroupRoutes {
   Future<Response> _addMembers(Request request, String groupId) async {
     final id = _id(groupId);
     final identity = await _authorizer.require(request, Permission.manageGroups);
-    final AddAssignmentsRequest body;
+    final AddGroupMembersRequest body;
     try {
-      body = AddAssignmentsRequest.fromJson(await readJsonObject(request));
+      body = AddGroupMembersRequest.fromJson(await readJsonObject(request));
     } on FormatException catch (e) {
       throw ApiException.badRequest(e.message);
     }
@@ -132,6 +132,7 @@ class GroupRoutes {
       identity.userId,
       id,
       body.ids,
+      followIds: body.followIds,
       mayManage: _mayManage(request),
       mayView: _mayView(request),
     );
