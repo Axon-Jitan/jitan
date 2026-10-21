@@ -336,7 +336,7 @@ else changes.
    Nothing is stored as a workaround.
 
 ## GAP-15: A group's schedule
-**Status:** `OPEN` · ERD GAP — requires clarification with IT · question sent by the product owner 2026-10-21
+**Status:** `OPEN` · ERD GAP — requires clarification with IT · question sent by the product owner 2026-10-21 · proposed table added to the **local** database only (`dev/local-db/proposals/gap15_group_schedule.sql`)
 
 1. **Requirement:** HR sets work hours per employee group (decision D2), also for a group
    that has no employees yet, and Add employee offers the existing group schedules to pick

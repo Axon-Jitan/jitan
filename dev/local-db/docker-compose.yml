@@ -28,6 +28,8 @@ services:
       # Run in name order on first start only.
       - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      # PROPOSAL awaiting IT (ERD_GAPS GAP-15): local only, see proposals/.
+      - ./proposals/gap15_group_schedule.sql:/docker-entrypoint-initdb.d/03-gap15-group-schedule.sql:ro
       - jitan-local-db-data:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
