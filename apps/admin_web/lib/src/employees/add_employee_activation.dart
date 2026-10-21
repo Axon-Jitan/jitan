@@ -103,7 +103,7 @@ class AddEmployeeActivation extends StatelessWidget {
                 ],
               ),
             ),
-            JitanStatusPill(label: context.t(AdminTextKeys.employeeAddActivationNotActivated)),
+            JitanStatusPill(label: context.t(AdminTextKeys.employeeAddActivationNotActivated), neutral: true),
           ],
         ),
         const SizedBox(height: 28),

@@ -112,7 +112,8 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
         subtitle: switch (c.step) {
           AddEmployeeStep.information => context.t(AdminTextKeys.employeeAddSubtitle),
           AddEmployeeStep.assignments => context.t(AdminTextKeys.employeeAddSubtitleAssignments),
-          AddEmployeeStep.activation => null,
+          // No subtitle in Figma, but the same space, so the dialog keeps its size.
+          AddEmployeeStep.activation => '',
         },
         // Once created, closing is "Finish setup".
         onClose: busy ? null : () => Navigator.of(context).pop(created),
@@ -129,28 +130,40 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
               ],
             ),
             const SizedBox(height: 24),
-            ...switch (c.step) {
-              AddEmployeeStep.information => _information(context),
-              AddEmployeeStep.assignments => _assignments(context),
-              AddEmployeeStep.activation => [
-                AddEmployeeActivation(
-                  employee: created!,
-                  companyName: _companyName,
-                  qr: c.qr,
-                  failure: c.qrFailure,
-                  onRetry: c.requestQr,
+            // The same size on every step, as in Figma (all three frames are
+            // one size): a long step scrolls inside it.
+            SizedBox(
+              height: _stepHeight(MediaQuery.sizeOf(context)),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ...switch (c.step) {
+                      AddEmployeeStep.information => _information(context),
+                      AddEmployeeStep.assignments => _assignments(context),
+                      AddEmployeeStep.activation => [
+                        AddEmployeeActivation(
+                          employee: created!,
+                          companyName: _companyName,
+                          qr: c.qr,
+                          failure: c.qrFailure,
+                          onRetry: c.requestQr,
+                        ),
+                      ],
+                    },
+                    if (failure != null) ...[
+                      const SizedBox(height: 16),
+                      Builder(
+                        builder: (context) {
+                          final keys = failureTextKeysFor(failure);
+                          return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
+                        },
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            },
-            if (failure != null) ...[
-              const SizedBox(height: 16),
-              Builder(
-                builder: (context) {
-                  final keys = failureTextKeysFor(failure);
-                  return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
-                },
               ),
-            ],
+            ),
           ],
         ),
         actions: switch (c.step) {
@@ -175,6 +188,11 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
       );
     },
   );
+
+  /// 430 px on a wide screen; on a phone the fields stack, so it uses the
+  /// screen's extra height (up to 560 px); on a short window it shrinks.
+  static double _stepHeight(Size screen) =>
+      (screen.height - 350).clamp(280.0, screen.width < JitanDimensions.phoneBreakpoint ? 560.0 : 430.0);
 
   String get _companyName => switch (_controller.options) {
     AssignmentOptionsLoaded(:final companies) =>

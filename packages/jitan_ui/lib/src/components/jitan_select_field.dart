@@ -203,6 +203,8 @@ class _Field extends StatelessWidget {
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(JitanDimensions.inputRadius),
+              // A focused field keeps its look; a grey fill reads as disabled.
+              focusColor: Colors.transparent,
               onTap: onTap,
               child: SizedBox(
                 height: JitanDimensions.fieldHeight,
