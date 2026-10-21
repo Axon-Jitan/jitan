@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import '../app/admin_routes.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import '../schedules/schedule_dialog.dart';
@@ -127,15 +125,6 @@ class _GroupPageState extends State<GroupPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: () => context.go(AdminRoutes.groups),
-            icon: const Icon(Icons.arrow_back, size: 18, color: JitanColors.inkMuted),
-            label: Text(context.t(AdminTextKeys.groupPageBack), style: JitanTextStyles.stateMessage),
-          ),
-        ),
-        const SizedBox(height: 8),
         JitanPageHeader(
           title: group.name,
           subtitle: context.t(AdminTextKeys.groupPageSubtitle),
@@ -150,7 +139,7 @@ class _GroupPageState extends State<GroupPage> {
                 onPressed: () => group.isActive ? _deactivate(group) : _reactivate(group),
                 child: Text(
                   context.t(group.isActive ? AdminTextKeys.groupPageDeactivate : AdminTextKeys.groupPageReactivate),
-                  style: _action,
+                  style: _action.copyWith(color: JitanColors.inkMuted),
                 ),
               ),
             ],
@@ -177,7 +166,6 @@ class _GroupPageState extends State<GroupPage> {
                 alignment: Alignment.centerLeft,
                 child: JitanPrimaryButton(
                   label: context.t(AdminTextKeys.groupPageAddEmployees),
-                  icon: Icons.add,
                   height: JitanDimensions.controlHeight,
                   onPressed: () => _addEmployees(group),
                 ),
@@ -191,40 +179,23 @@ class _GroupPageState extends State<GroupPage> {
     );
   }
 
-  Widget _memberRow(BuildContext context, GroupOverview group, GroupMember member, int index) {
-    final others = [for (final g in member.groups) if (g != group.name) g];
-    final detail = [
-      member.companies.join(', '),
-      others.isEmpty
-          ? context.t(AdminTextKeys.groupsPickerAlsoInNone)
-          : context.t(AdminTextKeys.groupsPickerAlsoIn, args: {'groups': others.join(', ')}),
-    ].where((s) => s.isNotEmpty).join(' · ');
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: index.isOdd ? JitanColors.tableStripe : JitanColors.surface,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${member.displayName} · ${member.code}', style: JitanTextStyles.tableCellStrong, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text(detail, style: JitanTextStyles.stateMessage.copyWith(fontSize: 12), overflow: TextOverflow.ellipsis),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () => _remove(group, member),
-            child: Text(context.t(AdminTextKeys.groupPageRemove), style: _action.copyWith(color: JitanColors.vermilion)),
-          ),
-        ],
-      ),
-    );
-  }
+  /// "Fabian Peeters · FPT" and Remove (1349:178).
+  Widget _memberRow(BuildContext context, GroupOverview group, GroupMember member, int index) => Container(
+    height: 48,
+    padding: const EdgeInsets.only(left: 16, right: 8),
+    color: index.isOdd ? JitanColors.tableStripe : JitanColors.surface,
+    child: Row(
+      children: [
+        Expanded(
+          child: Text('${member.displayName} · ${member.code}', style: JitanTextStyles.tableCell, overflow: TextOverflow.ellipsis),
+        ),
+        TextButton(
+          onPressed: () => _remove(group, member),
+          child: Text(context.t(AdminTextKeys.groupPageRemove), style: _action.copyWith(color: JitanColors.vermilion)),
+        ),
+      ],
+    ),
+  );
 
   /// Section 02: why there are no hours yet, or the hours and break, with
   /// the button that opens the schedule wizard for this group.
@@ -237,8 +208,12 @@ class _GroupPageState extends State<GroupPage> {
       onPressed: () => _setHours(loaded),
     );
     return switch (schedule) {
+      // 1349:6 (no employees yet) and 1349:1688 (only employees in several groups).
       null || GroupSchedule(status: GroupScheduleStatus.noSingleGroupEmployees) => [
-        Text(context.t(AdminTextKeys.groupPageHoursNoOwn), style: JitanTextStyles.fieldError),
+        Text(
+          context.t(loaded.members.isEmpty ? AdminTextKeys.groupPageHoursNoOwn : AdminTextKeys.groupPageHoursNoSingle),
+          style: JitanTextStyles.fieldError,
+        ),
       ],
       GroupSchedule(status: GroupScheduleStatus.noSchedule) => [
         Text(context.t(AdminTextKeys.groupPageHoursNone), style: JitanTextStyles.stateMessage),

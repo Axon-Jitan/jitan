@@ -10,6 +10,7 @@ import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'create_group_dialog.dart';
 import 'deactivate_group_dialog.dart';
+import 'group_state_text.dart';
 import 'groups_controller.dart';
 import 'groups_table.dart';
 import 'manage_group_dialog.dart';
@@ -57,15 +58,18 @@ class _GroupsScreenState extends State<GroupsScreen> {
     final action = await showManageGroupDialog(context, group: group);
     if (action == null || !mounted) return;
     switch (action) {
-      case GroupAction.open:
-        _open(group);
       case GroupAction.rename:
         final renamed = await showRenameGroupDialog(context, groupsApi: widget.groupsApi, group: group);
         if (renamed == null || !mounted) return;
         _say(context.t(AdminTextKeys.groupsRenamed, args: {'group': renamed.name}));
         await _controller.load();
       case GroupAction.deactivate:
-        final done = await showDeactivateGroupDialog(context, groupsApi: widget.groupsApi, group: group);
+        final done = await showDeactivateGroupDialog(
+          context,
+          groupsApi: widget.groupsApi,
+          group: group,
+          onManageEmployees: () => _open(group),
+        );
         if (done == null || !mounted) return;
         _say(context.t(AdminTextKeys.groupsDeactivated, args: {'group': done.name}));
         await _controller.load();
@@ -102,26 +106,15 @@ class _GroupsScreenState extends State<GroupsScreen> {
           const SizedBox(height: JitanDimensions.headerToToolbar),
           _toolbar(context),
           const SizedBox(height: JitanDimensions.toolbarToTable),
-          JitanSurfaceCard(
-            radius: JitanDimensions.tableCardRadius,
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 150),
-              alignment: Alignment.topCenter,
-              child: _content(context),
-            ),
-          ),
+          _content(context),
         ],
       ),
     ),
   );
 
   Widget _toolbar(BuildContext context) {
-    final search = JitanFieldLabel(
-      label: context.t(CommonTextKeys.searchLabel),
-      child: JitanSearchField(outlined: true, hintText: context.t(AdminTextKeys.groupsSearch), onChanged: _controller.updateSearch),
-    );
+    final search = JitanSearchField(outlined: true, hintText: context.t(AdminTextKeys.groupsSearch), onChanged: _controller.updateSearch);
     final status = JitanSelectField<GroupStatusFilter?>(
-      label: context.t(AdminTextKeys.groupsFilterStatus),
       value: _controller.status,
       options: [
         JitanSelectOption(value: null, label: context.t(AdminTextKeys.groupsFilterAll)),
@@ -144,29 +137,20 @@ class _GroupsScreenState extends State<GroupsScreen> {
     );
   }
 
+  /// The table, or the state line Figma draws in its place (1342:2 empty,
+  /// 1342:162 loading, 1342:322 error).
   Widget _content(BuildContext context) => switch (_controller.state) {
-    GroupsLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.groupsLoading))),
-    GroupsFailed(:final failure) => _centered(_error(context, failure)),
-    GroupsLoaded(groups: []) => _centered(
-      JitanEmptyState(title: context.t(AdminTextKeys.groupsEmptyTitle), message: context.t(AdminTextKeys.groupsEmptyMessage)),
-    ),
+    GroupsLoading() => _state(GroupStateText(context.t(AdminTextKeys.groupsLoading))),
+    GroupsFailed() => _state(GroupStateText(context.t(AdminTextKeys.groupsLoadFailed), onRetry: _controller.load)),
+    GroupsLoaded(groups: []) => _state(GroupStateText(context.t(AdminTextKeys.groupsEmptyMessage))),
     GroupsLoaded(:final schedules) => switch (_controller.visibleGroups) {
-      [] => _centered(
-        JitanEmptyState(title: context.t(AdminTextKeys.groupsNoMatchTitle), message: context.t(AdminTextKeys.groupsNoMatchMessage)),
+      [] => _state(GroupStateText(context.t(AdminTextKeys.groupsNoMatchMessage))),
+      final groups => JitanSurfaceCard(
+        radius: JitanDimensions.tableCardRadius,
+        child: GroupsTable(groups: groups, schedules: schedules, onOpen: _open, onManage: _manage),
       ),
-      final groups => GroupsTable(groups: groups, schedules: schedules, onOpen: _open, onManage: _manage),
     },
   };
 
-  Widget _error(BuildContext context, ApiClientException failure) {
-    final keys = failureTextKeysFor(failure);
-    return JitanErrorState(
-      title: context.t(keys.title),
-      message: context.t(keys.message),
-      retryLabel: context.t(CommonTextKeys.retry),
-      onRetry: _controller.load,
-    );
-  }
-
-  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableStateHeight, child: child);
+  static Widget _state(Widget child) => Padding(padding: const EdgeInsets.only(top: 20), child: child);
 }

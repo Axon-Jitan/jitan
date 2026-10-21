@@ -148,7 +148,6 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   List<Widget> _details(BuildContext context) => [
     JitanFieldLabel(
       label: context.t(AdminTextKeys.groupsFieldName),
-      info: context.t(AdminTextKeys.groupsInfoName),
       child: TextField(
         controller: _name,
         autofocus: true,
@@ -169,6 +168,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   List<Widget> _employees(BuildContext context, GroupOverview created) => [
     EmployeePicker(
       enabled: !_busy,
+      noOtherGroupsKey: AdminTextKeys.groupsPickerNoOtherGroups,
       load: (search) => widget.membersApi.candidates(created.id, search: search),
       selected: _selected,
       onChanged: (ids) => setState(() => _selected = ids),

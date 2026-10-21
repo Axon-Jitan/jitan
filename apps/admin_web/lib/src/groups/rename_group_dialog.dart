@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
-import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
@@ -69,13 +68,13 @@ class _RenameGroupDialogState extends State<RenameGroupDialog> {
   Widget build(BuildContext context) => JitanModal(
     width: 560,
     title: context.t(AdminTextKeys.groupsRenameTitle),
+    subtitle: context.t(AdminTextKeys.groupsRenameSubtitle),
     onClose: _busy ? null : () => Navigator.of(context).pop(),
     body: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         JitanFieldLabel(
           label: context.t(AdminTextKeys.groupsFieldName),
-          info: context.t(AdminTextKeys.groupsInfoName),
           child: TextField(
             controller: _name,
             autofocus: true,
@@ -87,8 +86,6 @@ class _RenameGroupDialogState extends State<RenameGroupDialog> {
                 .copyWith(counterText: ''),
           ),
         ),
-        const SizedBox(height: 10),
-        Text(context.t(AdminTextKeys.groupsFieldNameHelp), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
         if (_failure case final failure?) ...[
           const SizedBox(height: 16),
           Builder(
@@ -101,7 +98,6 @@ class _RenameGroupDialogState extends State<RenameGroupDialog> {
       ],
     ),
     actions: [
-      JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: _busy ? null : () => Navigator.of(context).pop()),
       JitanPrimaryButton(label: context.t(AdminTextKeys.groupsRenameSave), busy: _busy, onPressed: _save),
     ],
   );

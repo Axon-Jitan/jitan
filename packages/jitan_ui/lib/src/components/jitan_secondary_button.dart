@@ -38,7 +38,7 @@ class JitanSecondaryButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 28),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(JitanDimensions.inputRadius)),
       ),
-      child: Text(label),
+      child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     ),
   );
 }

@@ -5,13 +5,14 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 
 /// What HR picked in "Manage group".
-enum GroupAction { open, rename, deactivate, reactivate }
+enum GroupAction { rename, deactivate, reactivate }
 
 Future<GroupAction?> showManageGroupDialog(BuildContext context, {required GroupOverview group}) =>
     showJitanModal<GroupAction>(context, builder: (_) => ManageGroupDialog(group: group));
 
-/// The row's "⋯" (table design specification §7): open, rename, and
-/// deactivate or reactivate; it never acts on its own.
+/// Figma `HR / Groups — Manage actions` (1359:147): the row's "⋯" offers
+/// Rename group and Deactivate group; it never acts on its own. Reactivate
+/// group (an inactive group's row) has no Figma frame yet.
 class ManageGroupDialog extends StatelessWidget {
   const ManageGroupDialog({super.key, required this.group});
 
@@ -20,7 +21,6 @@ class ManageGroupDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final choices = [
-      (GroupAction.open, AdminTextKeys.groupsManageOpen, AdminTextKeys.groupsManageOpenText, false),
       (GroupAction.rename, AdminTextKeys.groupsManageRename, AdminTextKeys.groupsManageRenameText, false),
       if (group.isActive)
         (GroupAction.deactivate, AdminTextKeys.groupsManageDeactivate, AdminTextKeys.groupsManageDeactivateText, true)
@@ -30,7 +30,7 @@ class ManageGroupDialog extends StatelessWidget {
     return JitanModal(
       width: 480,
       title: context.t(AdminTextKeys.groupsManageTitle),
-      subtitle: group.name,
+      subtitle: context.t(AdminTextKeys.groupsManageSubtitle, args: {'group': group.name, 'count': group.employeeCount}),
       onClose: () => Navigator.of(context).pop(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

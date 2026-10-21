@@ -81,7 +81,7 @@ void main() {
     await _tapPrimary(tester, 'Create group');
     expect(fakes.groupManagement.calls, contains('create Van drivers'));
     expect(find.byType(EmployeePicker), findsOneWidget, reason: 'step 2');
-    expect(find.text('PCA · Also in: none'), findsOneWidget, reason: 'company and groups of each employee');
+    expect(find.text('No other groups'), findsOneWidget, reason: 'the groups of each employee (1354:7)');
 
     await tester.tap(find.text('Fabian Peeters · FPT'));
     await tester.pump();
@@ -121,15 +121,23 @@ void main() {
     await tester.tap(find.text('Deactivate group'));
     await tester.pumpAndSettle();
     expect(find.text('Cannot deactivate group'), findsOneWidget);
-    expect(find.text('Remove the 60 employees from White collar first.'), findsOneWidget);
-    await _tapPrimary(tester, 'Close');
+    expect(find.text('White collar · 60 employees'), findsOneWidget);
+    expect(find.text('Remove or reassign all 60 employees before deactivating this group.'), findsOneWidget);
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Manage employees →'));
+    await tester.pump();
+    await tester.pump();
+    fakes.schedules.succeedList([_blue, _white, _drivers]);
+    await tester.pumpAndSettle();
+    expect(find.text('Manage employees and group working hours.'), findsOneWidget, reason: 'on the group page');
+    await tester.tap(find.text('Groups').first);
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Group actions').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Rename group'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Blue');
-    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Save name'));
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Save changes'));
     await tester.pump();
     await tester.pump();
     fakes.schedules.succeedList([_blue, _white, _drivers]);
@@ -145,8 +153,8 @@ void main() {
     await _pump(tester, fakes, '/groups/3');
 
     expect(find.text('Drivers'), findsWidgets);
-    expect(find.text('Almeco · Also in: White collar'), findsOneWidget);
-    expect(find.text('Add an employee whose only group is this one. The work hours are kept on those employees.'), findsOneWidget);
+    expect(find.text('Fabian Peeters · FPT'), findsOneWidget);
+    expect(find.text('No employee has this as their only group, so the group has no work hours of its own.'), findsOneWidget);
 
     await tester.tap(find.text('Remove').first);
     await tester.pumpAndSettle();
@@ -159,6 +167,7 @@ void main() {
 
     expect(fakes.groupMembers.calls, contains('remove 3 11'));
     expect(find.text('No employees in this group yet.'), findsOneWidget);
+    expect(find.text('Add an employee whose only group is this one. The work hours are kept on those employees.'), findsOneWidget);
   });
 
   testWidgets('the group page opens the schedule wizard with the group already chosen', (tester) async {

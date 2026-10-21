@@ -9,21 +9,28 @@ import '../l10n/admin_text_keys.dart';
 
 /// Asks to deactivate [group], or says why it cannot be (it still has
 /// employees). Completes with the deactivated group, `null` otherwise.
+/// "Manage employees" closes the dialog and calls [onManageEmployees].
 Future<GroupOverview?> showDeactivateGroupDialog(
   BuildContext context, {
   required GroupManagementApi groupsApi,
   required GroupOverview group,
-}) => showJitanModal<GroupOverview>(context, builder: (_) => DeactivateGroupDialog(groupsApi: groupsApi, group: group));
+  VoidCallback? onManageEmployees,
+}) => showJitanModal<GroupOverview>(
+  context,
+  builder: (_) => DeactivateGroupDialog(groupsApi: groupsApi, group: group, onManageEmployees: onManageEmployees),
+);
 
-/// Figma `HR / Employee groups — Deactivate group` (1340:667) and `Cannot
-/// deactivate group` (1340:498). The server refuses too (group_in_use) when
-/// someone joined in the meantime. Nothing is deleted: the group is switched
-/// off and can be reactivated.
+/// Figma `HR / Employee groups — Deactivate group` (1340:667) draws Cannot
+/// deactivate group: the group still has employees. The confirmation for an
+/// empty group has no Figma frame yet. The server refuses too (group_in_use)
+/// when someone joined in the meantime. Nothing is deleted: the group is
+/// switched off.
 class DeactivateGroupDialog extends StatefulWidget {
-  const DeactivateGroupDialog({super.key, required this.groupsApi, required this.group});
+  const DeactivateGroupDialog({super.key, required this.groupsApi, required this.group, this.onManageEmployees});
 
   final GroupManagementApi groupsApi;
   final GroupOverview group;
+  final VoidCallback? onManageEmployees;
 
   @override
   State<DeactivateGroupDialog> createState() => _DeactivateGroupDialogState();
@@ -64,13 +71,41 @@ class _DeactivateGroupDialogState extends State<DeactivateGroupDialog> {
       return JitanModal(
         width: 560,
         title: context.t(AdminTextKeys.groupsCannotDeactivateTitle),
+        subtitle: context.t(AdminTextKeys.groupsCannotDeactivateSubtitle, args: {'group': name, 'count': _employees}),
         onClose: () => Navigator.of(context).pop(),
-        body: Text(
-          context.t(AdminTextKeys.groupsCannotDeactivateText, args: {'count': _employees, 'group': name}),
-          style: JitanTextStyles.stateMessage,
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(color: JitanColors.warmWhite, borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.warning_amber_rounded, size: 18, color: JitanColors.inkMuted),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(context.t(AdminTextKeys.groupsCannotDeactivateWarning), style: JitanTextStyles.tableCellStrong),
+                  const SizedBox(height: 4),
+                  Text(
+                    context.t(AdminTextKeys.groupsCannotDeactivateText, args: {'count': _employees}),
+                    style: JitanTextStyles.stateMessage.copyWith(fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
-          JitanPrimaryButton(label: context.t(AdminTextKeys.groupsClose), onPressed: () => Navigator.of(context).pop()),
+          JitanPrimaryButton(
+            label: context.t(AdminTextKeys.groupsCannotDeactivateManage),
+            onPressed: () {
+              Navigator.of(context).pop();
+              widget.onManageEmployees?.call();
+            },
+          ),
         ],
       );
     }

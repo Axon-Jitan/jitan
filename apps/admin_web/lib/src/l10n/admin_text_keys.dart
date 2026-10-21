@@ -307,7 +307,6 @@ abstract final class AdminTextKeys {
   static const groupsSubtitle = 'groups.subtitle';
   static const groupsAdd = 'groups.add';
   static const groupsSearch = 'groups.search';
-  static const groupsFilterStatus = 'groups.filter.status';
   static const groupsFilterAll = 'groups.filter.all';
   static const groupsColumnName = 'groups.column.name';
   static const groupsColumnEmployees = 'groups.column.employees';
@@ -318,14 +317,10 @@ abstract final class AdminTextKeys {
   static const groupsScheduleDiffer = 'groups.schedule.differ';
   static const groupsScheduleNoOwn = 'groups.schedule.noOwn';
   static const groupsLoading = 'groups.loading';
-  static const groupsEmptyTitle = 'groups.empty.title';
   static const groupsEmptyMessage = 'groups.empty.message';
-  static const groupsNoMatchTitle = 'groups.noMatch.title';
   static const groupsNoMatchMessage = 'groups.noMatch.message';
   static const groupsActionsMenu = 'groups.actions.menu';
   static const groupsManageTitle = 'groups.manage.title';
-  static const groupsManageOpen = 'groups.manage.open';
-  static const groupsManageOpenText = 'groups.manage.open.text';
   static const groupsManageRename = 'groups.manage.rename';
   static const groupsManageRenameText = 'groups.manage.rename.text';
   static const groupsManageDeactivate = 'groups.manage.deactivate';
@@ -339,7 +334,6 @@ abstract final class AdminTextKeys {
   static const groupsFieldName = 'groups.field.name';
   static const groupsFieldNameHint = 'groups.field.name.hint';
   static const groupsFieldNameHelp = 'groups.field.name.help';
-  static const groupsInfoName = 'groups.info.name';
   static const groupsCreateSubmit = 'groups.create.submit';
   static const groupsEmployeesSelected = 'groups.employees.selected';
   static const groupsEmployeesLater = 'groups.employees.later';
@@ -350,7 +344,6 @@ abstract final class AdminTextKeys {
   static const groupsPickerAlsoInNone = 'groups.picker.alsoIn.none';
   static const groupsPickerAdd = 'groups.picker.add';
   static const groupsPickerLoading = 'groups.picker.loading';
-  static const groupsPickerEmptyTitle = 'groups.picker.empty.title';
   static const groupsPickerEmptyMessage = 'groups.picker.empty.message';
   static const groupsRenameTitle = 'groups.rename.title';
   static const groupsRenameSave = 'groups.rename.save';
@@ -362,7 +355,6 @@ abstract final class AdminTextKeys {
   static const groupsDeactivateConfirm = 'groups.deactivate.confirm';
   static const groupsCannotDeactivateTitle = 'groups.cannotDeactivate.title';
   static const groupsCannotDeactivateText = 'groups.cannotDeactivate.text';
-  static const groupsClose = 'groups.close';
   static const groupsCreated = 'groups.created';
   static const groupsRenamed = 'groups.renamed';
   static const groupsDeactivated = 'groups.deactivated';
@@ -370,7 +362,6 @@ abstract final class AdminTextKeys {
   static const groupsMembersAdded = 'groups.members.added';
   static const groupsMemberRemoved = 'groups.member.removed';
   static const groupPageSubtitle = 'group.page.subtitle';
-  static const groupPageBack = 'group.page.back';
   static const groupPageRename = 'group.page.rename';
   static const groupPageDeactivate = 'group.page.deactivate';
   static const groupPageReactivate = 'group.page.reactivate';
@@ -384,6 +375,15 @@ abstract final class AdminTextKeys {
   static const groupPageHoursNoOwn = 'group.page.hours.noOwn';
   static const groupPageHoursNone = 'group.page.hours.none';
   static const groupPageHoursDiffer = 'group.page.hours.differ';
+  static const groupPageHoursNoSingle = 'group.page.hours.noSingle';
+  static const groupsLoadFailed = 'groups.loadFailed';
+  static const groupsManageSubtitle = 'groups.manage.subtitle';
+  static const groupsRenameSubtitle = 'groups.rename.subtitle';
+  static const groupsCannotDeactivateSubtitle = 'groups.cannotDeactivate.subtitle';
+  static const groupsCannotDeactivateWarning = 'groups.cannotDeactivate.warning';
+  static const groupsCannotDeactivateManage = 'groups.cannotDeactivate.manage';
+  static const groupsPickerNoOtherGroups = 'groups.picker.noOtherGroups';
+  static const groupsPickerLoadFailed = 'groups.picker.loadFailed';
   static const groupPageSetHours = 'group.page.setHours';
   static const groupPageEditHours = 'group.page.editHours';
   static const groupPageWorkHours = 'group.page.workHours';

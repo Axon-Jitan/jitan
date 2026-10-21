@@ -57,7 +57,8 @@ class JitanPrimaryButton extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (icon != null) ...[Icon(icon, size: 14), const SizedBox(width: 6)],
-                    Text(label),
+                    // On a narrow screen a long label ends in "…" instead of overflowing.
+                    Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
                   ],
                 ),
         ),
