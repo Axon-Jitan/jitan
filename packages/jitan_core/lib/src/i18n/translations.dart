@@ -45,11 +45,12 @@ class Translations {
   String? tOrNull(String key) => _selected[key] ?? _fallback[key];
 
   /// `<key>.one` for a count of 1, `<key>.other` otherwise, with `{n}`
-  /// replaced by [count].
+  /// replaced by [count] and other placeholders by [args].
   ///
   /// The one/other split fits English and Dutch. Languages with other plural
   /// rules (e.g. French treats 0 as singular) need richer keys when added.
-  String plural(String key, int count) => t(count == 1 ? '$key.one' : '$key.other', args: {'n': count});
+  String plural(String key, int count, {Map<String, Object> args = const {}}) =>
+      t(count == 1 ? '$key.one' : '$key.other', args: {...args, 'n': count});
 
   String _missing(String key) {
     if (_reportedMissing.add(key)) {

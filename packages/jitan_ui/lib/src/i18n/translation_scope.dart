@@ -26,7 +26,8 @@ extension TranslationLookup on BuildContext {
   String t(String key, {Map<String, Object> args = const {}}) =>
       TranslationScope.of(this).t(key, args: args);
 
-  String tPlural(String key, int count) => TranslationScope.of(this).plural(key, count);
+  String tPlural(String key, int count, {Map<String, Object> args = const {}}) =>
+      TranslationScope.of(this).plural(key, count, args: args);
 
   /// [Translations.tOrNull]: `null` when no text exists for [key].
   String? tOrNull(String key) => TranslationScope.of(this).tOrNull(key);

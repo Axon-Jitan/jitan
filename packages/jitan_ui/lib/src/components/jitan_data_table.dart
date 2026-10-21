@@ -38,6 +38,7 @@ class JitanDataTable extends StatelessWidget {
     this.minWidth = 760,
     this.maxHeight,
     this.onRowTap,
+    this.rowColor,
   });
 
   final List<JitanTableColumn> columns;
@@ -49,6 +50,11 @@ class JitanDataTable extends StatelessWidget {
 
   /// Called with the row index.
   final ValueChanged<int>? onRowTap;
+
+  /// A background for the row at an index that needs attention (e.g.
+  /// [JitanColors.errorSurface] for a row with a problem); `null` keeps the
+  /// alternating background.
+  final Color? Function(int index)? rowColor;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +70,7 @@ class JitanDataTable extends StatelessWidget {
             for (var i = 0; i < rows.length; i++)
               ColoredBox(
                 // Rows 2, 4, …: the subtle alternating background, edge to edge.
-                color: i.isOdd ? JitanColors.tableStripe : JitanColors.surface,
+                color: rowColor?.call(i) ?? (i.isOdd ? JitanColors.tableStripe : JitanColors.surface),
                 child: onRowTap == null
                     ? _Row(height: JitanDimensions.tableRowHeight, columns: columns, cells: rows[i])
                     : _TappableRow(
