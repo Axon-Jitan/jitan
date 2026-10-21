@@ -76,7 +76,8 @@ void main() {
     ]);
     await tester.pump();
 
-    for (final header in ['Employee', 'Code', 'Type', 'Location', 'Schedule', 'Onboarding', 'Actions']) {
+    expect(find.text('Location'), findsNothing, reason: 'left out: not asked when adding an employee');
+    for (final header in ['Employee', 'Code', 'Type', 'Schedule', 'Onboarding', 'Actions']) {
       expect(find.text(header), findsOneWidget, reason: header);
     }
     expect(find.text('Status'), findsNWidgets(2), reason: 'the filter and the column');
@@ -87,10 +88,9 @@ void main() {
     expect(find.text('Blue collar, Night shift'), findsOneWidget, reason: 'all groups, no priority');
     expect(find.text('Active'), findsNWidgets(2));
     expect(find.text('Inactive'), findsOneWidget);
-    // Location per row (GAP-11); the nameless employee adds a name
-    // placeholder and has no groups.
-    // Schedule per row: none of these has hours yet.
-    expect(find.text('—'), findsNWidgets(3 + 2 + 3));
+    // The nameless employee has a name placeholder and no groups; Schedule
+    // per row: none of these has hours yet.
+    expect(find.text('—'), findsNWidgets(2 + 3));
     // Onboarding: userPassword IS NOT NULL → Activated (none of these yet).
     expect(find.text('Not activated'), findsNWidgets(3));
   });

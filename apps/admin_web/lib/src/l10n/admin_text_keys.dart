@@ -38,7 +38,6 @@ abstract final class AdminTextKeys {
   static const employeeColumnName = 'employee.column.name';
   static const employeeColumnCode = 'employee.column.code';
   static const employeeColumnType = 'employee.column.type';
-  static const employeeColumnLocation = 'employee.column.location';
   static const employeeColumnOnboarding = 'employee.column.onboarding';
   static const employeeColumnStatus = 'employee.column.status';
   static const employeeLocationUnavailable = 'employee.location.unavailable';

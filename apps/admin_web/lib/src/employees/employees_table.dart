@@ -7,12 +7,13 @@ import '../l10n/admin_text_keys.dart';
 import '../schedules/schedule_summary_text.dart';
 
 /// The employees table from Figma `HR / Employees — Company switcher open`
-/// (`1401:2`): employee, code, type, location, schedule, onboarding, status
-/// and "⋯" (Manage employee, `1399:10`).
+/// (`1401:2`): employee, code, type, schedule, onboarding, status and "⋯"
+/// (Manage employee, `1399:10`).
 ///
 /// Differences from Figma, on purpose:
 /// - **Policy** is omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY).
-/// - **Location** (ERD GAP-11) has no data source yet and shows a placeholder.
+/// - **Location** is left out (product owner, 2026-10-21): Add employee
+///   does not ask for it, and the ERD has no employee location (GAP-11).
 /// - **Onboarding** has two states, Activated / Not activated
 ///   (`userPassword IS NOT NULL`). Figma's "QR generated" is not tracked.
 /// - **Type** lists every group of the employee; none is singled out.
@@ -38,13 +39,11 @@ class EmployeesTable extends StatelessWidget {
   /// The row's "⋯".
   final ValueChanged<EmployeeSummary> onManage;
 
-  /// Column widths from Figma 1401:2, with Schedule widened so a time range
-  /// ("Mon–Fri 08:00–16:30") fits; Location (only "—" until GAP-11) and
-  /// Onboarding give up that room.
-  static const _flexName = 235;
-  static const _flexCode = 110;
-  static const _flexType = 140;
-  static const _flexLocation = 100;
+  /// Column widths from Figma 1401:2 without Location: Schedule fits a time
+  /// range ("Mon–Fri 08:00–16:30"), Type and Code get Location's room.
+  static const _flexName = 255;
+  static const _flexCode = 130;
+  static const _flexType = 200;
   static const _flexSchedule = 200;
   static const _flexOnboarding = 150;
   static const _flexStatus = 106;
@@ -128,7 +127,6 @@ class EmployeesTable extends StatelessWidget {
     JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnName), flex: _flexName),
     JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnCode), flex: _flexCode),
     JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnType), flex: _flexType),
-    JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnLocation), flex: _flexLocation),
     JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnSchedule), flex: _flexSchedule),
     JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnOnboarding), flex: _flexOnboarding),
     JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnStatus), flex: _flexStatus),
@@ -148,10 +146,6 @@ class EmployeesTable extends StatelessWidget {
         employee.groups.isEmpty ? unavailable : employee.groups.join(', '),
         style: JitanTextStyles.tableCell,
         overflow: TextOverflow.ellipsis,
-      ),
-      Tooltip(
-        message: t.t(AdminTextKeys.employeeLocationUnavailable),
-        child: Text(unavailable, style: JitanTextStyles.tableCell),
       ),
       Text(
         switch (employee.schedule) {

@@ -79,7 +79,6 @@ const builtInEnglish = <String, String>{
   'employee.column.name': 'Employee',
   'employee.column.code': 'Code',
   'employee.column.type': 'Type',
-  'employee.column.location': 'Location',
   'employee.column.onboarding': 'Onboarding',
   'employee.column.status': 'Status',
   'employee.column.schedule': 'Schedule',
