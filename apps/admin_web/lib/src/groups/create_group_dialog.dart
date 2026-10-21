@@ -22,6 +22,8 @@ Future<GroupOverview?> showCreateGroupDialog(
   required SchedulesApi schedulesApi,
 }) => showJitanModal<GroupOverview>(
   context,
+  // A click beside the dialog must not throw away what HR entered.
+  barrierDismissible: false,
   builder: (_) => CreateGroupDialog(groupsApi: groupsApi, membersApi: membersApi, schedulesApi: schedulesApi),
 );
 

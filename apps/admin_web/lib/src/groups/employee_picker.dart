@@ -14,8 +14,8 @@ import 'group_state_text.dart';
 /// White collar"), so HR sees who will have this as their only group.
 ///
 /// With [dropdown] (Create group step 2, 1352:2 and 1354:7) the list opens
-/// under the "Select employees" field while HR uses it, and closes when HR
-/// clicks elsewhere.
+/// under the "Select employees" field when HR clicks or types in it, and
+/// stays open, so the dialog does not jump while HR picks.
 class EmployeePicker extends StatefulWidget {
   const EmployeePicker({
     super.key,
@@ -98,17 +98,23 @@ class _EmployeePickerState extends State<EmployeePicker> {
     widget.onChanged(next);
   }
 
-  void _setOpen(bool open) {
-    if (widget.dropdown && open != _open) setState(() => _open = open);
+  void _openList() {
+    if (widget.dropdown && !_open) setState(() => _open = true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final field = Focus(
-      onFocusChange: (focused) {
-        if (focused) _setOpen(true);
-      },
-      child: JitanSearchField(outlined: true, hintText: context.t(widget.hintKey), onChanged: _onSearch),
+    // On every press, not on focus: a field that kept focus still opens it.
+    final field = Listener(
+      onPointerDown: (_) => _openList(),
+      child: JitanSearchField(
+        outlined: true,
+        hintText: context.t(widget.hintKey),
+        onChanged: (text) {
+          _openList();
+          _onSearch(text);
+        },
+      ),
     );
     if (!widget.dropdown) {
       return Column(
@@ -116,9 +122,7 @@ class _EmployeePickerState extends State<EmployeePicker> {
         children: [field, const SizedBox(height: 12), SizedBox(height: 280, child: _list(context))],
       );
     }
-    return TapRegion(
-      onTapOutside: (_) => _setOpen(false),
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           field,
@@ -136,7 +140,6 @@ class _EmployeePickerState extends State<EmployeePicker> {
             ),
           ],
         ],
-      ),
     );
   }
 
@@ -158,6 +161,8 @@ class _EmployeePickerState extends State<EmployeePicker> {
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
+            // No hover tint: the stripes stay as they are under the mouse.
+            hoverColor: Colors.transparent,
             onTap: widget.enabled ? () => _toggle(employee) : null,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),

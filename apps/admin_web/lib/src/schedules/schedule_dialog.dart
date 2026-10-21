@@ -21,6 +21,8 @@ Future<GroupSchedule?> showScheduleDialog(
   int? groupId,
 }) => showJitanModal<GroupSchedule>(
   context,
+  // A click beside the wizard must not throw away what HR entered.
+  barrierDismissible: false,
   builder: (_) => ScheduleDialog(api: api, groups: groups, options: options, group: group, groupId: groupId),
 );
 

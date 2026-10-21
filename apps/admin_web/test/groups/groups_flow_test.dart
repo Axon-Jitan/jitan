@@ -268,4 +268,27 @@ void main() {
     await tester.pump();
     expect(fakes.groupManagement.calls, contains('reactivate 4'));
   });
+
+  testWidgets('Create group step 2: clicks beside the list or outside the dialog change nothing', (tester) async {
+    final fakes = _fakes();
+    await _pump(tester, fakes, '/groups');
+    await _tapPrimary(tester, 'Add group');
+    await tester.enterText(find.byType(TextField).last, 'Drivers');
+    await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+
+    await tester.tap(find.byType(EmployeePicker));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kevin De Vos · KDV'));
+    await tester.pump();
+
+    await tester.tap(find.text('Set up an employee group in three steps.'));
+    await tester.pumpAndSettle();
+    expect(find.text('Kevin De Vos · KDV'), findsOneWidget, reason: 'the list stays open: the dialog does not jump');
+
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Create group'), findsWidgets, reason: 'a click outside does not close the dialog');
+    expect(find.text('Selected: 1 employee who belongs only to Drivers.'), findsOneWidget, reason: 'nothing lost');
+  });
 }

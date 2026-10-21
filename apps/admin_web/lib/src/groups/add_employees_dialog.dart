@@ -14,7 +14,12 @@ Future<List<GroupMember>?> showAddEmployeesDialog(
   BuildContext context, {
   required GroupMembersApi membersApi,
   required GroupOverview group,
-}) => showJitanModal<List<GroupMember>>(context, builder: (_) => AddEmployeesDialog(membersApi: membersApi, group: group));
+}) => showJitanModal<List<GroupMember>>(
+  context,
+  // A click beside the dialog must not throw away what HR entered.
+  barrierDismissible: false,
+  builder: (_) => AddEmployeesDialog(membersApi: membersApi, group: group),
+);
 
 /// Figma `HR / Employee groups — Employee picker` (1349:356): employees from
 /// every company, added in one save.
