@@ -335,6 +335,25 @@ else changes.
    Until then the list names a schedule by its group and kind ("Blue collar · Work hours").
    Nothing is stored as a workaround.
 
+## GAP-15: A group's schedule
+**Status:** `OPEN` · ERD GAP — requires clarification with IT · question sent by the product owner 2026-10-21
+
+1. **Requirement:** HR sets work hours per employee group (decision D2), also for a group
+   that has no employees yet, and Add employee offers the existing group schedules to pick
+   from (Figma `153:970` → `985:2` "Work schedule").
+2. **Considered:** `tblGroup`, `tblUserGroup`, `tblSchedule`, `tblUserSchedule`,
+   `tblScheduleRoundingRule`, `tblEventLog`. `groupID` exists only in `tblGroup`,
+   `tblUserGroup` and `tblEventLog`; `scheduleID` only in `tblSchedule`,
+   `tblUserSchedule`, `tblScheduleRoundingRule` and `tblEventLog`.
+3. **Why not:** the only path from a group to its schedule goes through an employee
+   (`tblUserGroup` → `tblUser` → `tblUserSchedule`), so an empty group cannot keep hours
+   and a group's hours are copied onto each member. `tblEventLog` holds both IDs but is
+   the audit log (no Active flag; using it as data would repurpose it).
+4. **Missing:** a junction `tblGroupSchedule (groupScheduleID, groupID, scheduleID,
+   groupScheduleActive, groupScheduleMFD)`, like the other junction tables, plus
+   `tblEventLog.groupScheduleID` for auditing. Until then Jitan keeps the current
+   per-employee storage; nothing is stored as a workaround.
+
 ---
 
 # Clarifications
