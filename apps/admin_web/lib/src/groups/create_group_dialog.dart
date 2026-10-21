@@ -30,7 +30,8 @@ Future<GroupOverview?> showCreateGroupDialog(
 /// Figma `HR / Employee groups — Create group`: Step 1 Details (1340:160,
 /// name error 1340:836), Step 2 Employees (1352:2, list open 1354:7) and
 /// Step 3 Work hours & breaks (1377:28 empty, 1352:175 filled, 1377:290 per
-/// day, 1377:569 invalid finish). "Create group" saves all three together.
+/// day, 1377:569 invalid finish). "Create group" saves all three together;
+/// employees and hours may be left empty (product owner, 2026-10-21).
 class CreateGroupDialog extends StatefulWidget {
   const CreateGroupDialog({super.key, required this.groupsApi, required this.membersApi, required this.schedulesApi});
 
@@ -331,6 +332,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
           ),
         ],
       ),
+      if (c.hoursFailureKey case final key?) error(key),
     ];
   }
 

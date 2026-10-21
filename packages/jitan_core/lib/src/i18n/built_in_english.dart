@@ -575,6 +575,7 @@ const builtInEnglish = <String, String>{
   'groups.hours.breakHint': 'e.g. 30',
   'groups.error.finishBeforeStart': 'Finish must be after the start',
   'groups.error.breakLength': 'Enter {choices} minutes.',
+  'groups.error.hoursNeedEmployee': 'Work hours need an employee who is only in this group. Leave the hours empty and set them later on the group page.',
   'groups.field.name': 'Group name *',
   'groups.field.name.hint': 'e.g. Drivers',
   'groups.field.name.help': 'Maximum 100 characters',

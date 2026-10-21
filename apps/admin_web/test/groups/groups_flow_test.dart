@@ -93,7 +93,6 @@ void main() {
     await tester.tap(find.text('Fabian Peeters · FPT'));
     await tester.pump();
     expect(find.text('Selected: 0 employees who belong only to Van drivers.'), findsOneWidget);
-    expect(_primary(tester, 'Continue').onPressed, isNull, reason: 'Fabian is also in White collar: the hours need someone only here');
     await tester.tap(find.text('Kevin De Vos · KDV'));
     await tester.pump();
     expect(find.text('Selected: 1 employee who belongs only to Van drivers.'), findsOneWidget);
@@ -103,9 +102,10 @@ void main() {
     fakes.schedules.succeedOptions();
     await tester.pumpAndSettle();
     expect(find.text('Working days'), findsOneWidget);
-    expect(_primary(tester, 'Create group').onPressed, isNull, reason: 'nothing typed yet');
+    expect(_primary(tester, 'Create group').onPressed, isNotNull, reason: 'hours are optional: an empty step 3 is fine');
     await tester.tap(find.text('Mon–Fri'));
     await tester.pump();
+    expect(_primary(tester, 'Create group').onPressed, isNull, reason: 'days chosen but no times yet');
     final times = tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList();
     times[0].onChanged!('08:00');
     times[1].onChanged!('07:30');
@@ -123,8 +123,8 @@ void main() {
 
     expect(fakes.groupManagement.calls, contains('create Van drivers 11,12'));
     final sent = fakes.groupManagement.created!;
-    expect(sent.schedule.breakMinutes, 30);
-    expect([for (final d in sent.schedule.workHours.days) (d.start, d.finish)], List.filled(5, ('08:00', '16:30')));
+    expect(sent.schedule!.breakMinutes, 30);
+    expect([for (final d in sent.schedule!.workHours.days) (d.start, d.finish)], List.filled(5, ('08:00', '16:30')));
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
     expect(find.text('Group Van drivers created.'), findsOneWidget);
@@ -297,5 +297,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Create group'), findsWidgets, reason: 'a click outside does not close the dialog');
     expect(find.text('Selected: 1 employee who belongs only to Drivers.'), findsOneWidget, reason: 'nothing lost');
+  });
+
+  testWidgets('Create group with only a name: employees and hours left empty', (tester) async {
+    final fakes = _fakes();
+    await _pump(tester, fakes, '/groups');
+    await _tapPrimary(tester, 'Add group');
+    await tester.enterText(find.byType(TextField).last, 'Cleaners');
+    await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+    expect(_primary(tester, 'Continue').onPressed, isNotNull, reason: 'employees are optional');
+    await _tapPrimary(tester, 'Continue');
+    fakes.schedules.succeedOptions();
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Create group'));
+    await tester.pump();
+    await tester.pump();
+
+    final sent = fakes.groupManagement.created!;
+    expect(sent.name, 'Cleaners');
+    expect(sent.employeeIds, isEmpty);
+    expect(sent.schedule, isNull);
   });
 }

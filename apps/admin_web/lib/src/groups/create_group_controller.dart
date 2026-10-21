@@ -14,10 +14,11 @@ enum CreateGroupStep { details, employees, hours }
 /// hours and break, sent in **one** request that the server saves in one
 /// transaction (`POST /groups`).
 ///
-/// Every group has work hours (product owner, 2026-10-21). They are kept on
-/// the employees whose only group is the new one, so step 2 needs at least
-/// one of them. The checks here only give HR quick feedback; the server
-/// checks everything again and is the authority.
+/// Employees and work hours are optional (product owner, 2026-10-21): HR
+/// may leave step 2 and step 3 empty and fill the group later. The checks
+/// here only give HR quick feedback; the server checks everything again and
+/// is the authority (e.g. hours on IT's database as it is still need an
+/// employee who is in no other group, ERD_GAPS GAP-15).
 class CreateGroupController extends ChangeNotifier {
   CreateGroupController({required this._groupsApi, required this._schedulesApi});
 
@@ -64,6 +65,10 @@ class CreateGroupController extends ChangeNotifier {
   ApiClientException? _failure;
   ApiClientException? get failure => _failure;
 
+  /// A text key for a refusal of the work hours, shown on step 3.
+  String? _hoursFailureKey;
+  String? get hoursFailureKey => _hoursFailureKey;
+
   bool _disposed = false;
 
   /// The chosen employees in no other group: the work hours are kept on them.
@@ -71,12 +76,22 @@ class CreateGroupController extends ChangeNotifier {
 
   bool get canContinue => switch (_step) {
     CreateGroupStep.details => _name.trim().isNotEmpty,
-    CreateGroupStep.employees => onlyHereCount > 0,
+    CreateGroupStep.employees => true,
     CreateGroupStep.hours => false,
   };
 
   bool get canSubmit =>
-      _step == CreateGroupStep.hours && !_submitting && _hoursComplete && hoursErrorKey == null && breakErrorKey == null;
+      _step == CreateGroupStep.hours &&
+      !_submitting &&
+      (_hoursEmpty || (_hoursComplete && hoursErrorKey == null && breakErrorKey == null));
+
+  /// Nothing entered on step 3: the group is created without work hours.
+  bool get _hoursEmpty =>
+      _dayIds.isEmpty &&
+      (_start ?? '').isEmpty &&
+      (_finish ?? '').isEmpty &&
+      _breakText.trim().isEmpty &&
+      _dayHours.values.every((h) => (h.start ?? '').isEmpty && (h.finish ?? '').isEmpty);
 
   ({String? start, String? finish}) hoursOf(int dayId) =>
       _sameHours ? (start: _start, finish: _finish) : _dayHours[dayId] ?? (start: null, finish: null);
@@ -165,7 +180,6 @@ class CreateGroupController extends ChangeNotifier {
           _step = CreateGroupStep.employees;
         }
       case CreateGroupStep.employees:
-        if (onlyHereCount == 0) return;
         _step = CreateGroupStep.hours;
         if (!_optionsRequested) loadOptions();
       case CreateGroupStep.hours:
@@ -202,13 +216,14 @@ class CreateGroupController extends ChangeNotifier {
     if (!canSubmit || loaded is! ScheduleOptionsLoaded) return null;
     _submitting = true;
     _failure = null;
+    _hoursFailureKey = null;
     _notify();
     try {
       return await _groupsApi.create(
         CreateGroupRequest(
           name: _name.trim(),
           employeeIds: _selected.keys.toList(),
-          schedule: SetGroupScheduleRequest(
+          schedule: _hoursEmpty ? null : SetGroupScheduleRequest(
             workHours: SetWorkHoursRequest(
               days: [
                 for (final day in loaded.options.days)
@@ -237,9 +252,10 @@ class CreateGroupController extends ChangeNotifier {
     if (groupNameErrorKey(failure) case final key?) {
       _step = CreateGroupStep.details;
       _nameError = key;
-    } else if (error?.code == ApiErrorCode.groupWithoutEmployees || error?.field == CreateGroupRequest.fieldEmployeeIds) {
-      _step = CreateGroupStep.employees;
-      _failure = failure;
+    } else if (_step == CreateGroupStep.hours &&
+        (error?.code == ApiErrorCode.groupWithoutEmployees || error?.field == CreateGroupRequest.fieldEmployeeIds)) {
+      // The hours have nobody to be kept on (IT's database as it is).
+      _hoursFailureKey = AdminTextKeys.groupsErrorHoursNeedEmployee;
     } else {
       _failure = failure;
     }
@@ -253,6 +269,7 @@ class CreateGroupController extends ChangeNotifier {
   void _change(VoidCallback update) {
     update();
     _failure = null;
+    _hoursFailureKey = null;
     _notify();
   }
 

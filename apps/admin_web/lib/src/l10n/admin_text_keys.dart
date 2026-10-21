@@ -388,6 +388,7 @@ abstract final class AdminTextKeys {
   static const groupsHoursBreakHint = 'groups.hours.breakHint';
   static const groupsErrorFinishBeforeStart = 'groups.error.finishBeforeStart';
   static const groupsErrorBreakLength = 'groups.error.breakLength';
+  static const groupsErrorHoursNeedEmployee = 'groups.error.hoursNeedEmployee';
   static const groupsLoadFailed = 'groups.loadFailed';
   static const groupsManageSubtitle = 'groups.manage.subtitle';
   static const groupsRenameSubtitle = 'groups.rename.subtitle';
