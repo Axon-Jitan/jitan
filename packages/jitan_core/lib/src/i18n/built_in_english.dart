@@ -131,6 +131,8 @@ const builtInEnglish = <String, String>{
   'employee.field.groups.hint': 'Select groups',
   'employee.field.schedule': 'Work schedule',
   'employee.field.schedule.option': '{group} · {hours}',
+  'employee.field.schedule.none': 'No schedule available for the selected groups.',
+  'employee.field.schedule.choose': 'Choose a group schedule',
   'employee.field.error.email': 'Enter an email address like name@example.com.',
   'employee.field.error.unavailable': 'One of these is no longer available. Choose again.',
   'employee.add.activation.title': 'Activate employee account',

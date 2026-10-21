@@ -11,11 +11,9 @@ Status values: `TODO` · `IN PROGRESS` · `DONE (commit)`
 **Decided 2026-10-21 (product owner):** in V1 no HR/Admin table opens details when HR
 clicks a row; that comes in V2, with its Figma frames.
 
-- **Employees:** the Employee details dialog (`employee_details_dialog.dart`, with the
-  temporary onboarding/recovery QR and Reset account access) is built and tested but has
-  **no way in**. Until V2 or a designed entry point, HR cannot generate an onboarding QR
-  or reset access from the web app. **Needs a product decision before employees are
-  onboarded.**
+- **Employees:** the Employee details dialog (`employee_details_dialog.dart`) is built and
+  tested but has no way in until V2. The onboarding/recovery QR and Reset account access
+  are reachable from each row's "⋯" (Manage employee, Figma `1399:10`, 2026-10-21).
 - **Employee groups:** the group page is reached only right after Create group (and from
   "Manage employees →" in Cannot deactivate group). Adding employees or changing hours
   later needs a way in.

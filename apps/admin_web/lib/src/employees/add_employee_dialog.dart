@@ -288,8 +288,12 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
               onChanged: c.submitting ? null : c.setGroups,
             ),
             const SizedBox.shrink(),
+            // 1399:270 none available, 1399:429 one (filled in), 1399:588 several.
             JitanSelectField<int>(
               label: context.t(AdminTextKeys.employeeFieldSchedule),
+              hintText: context.t(
+                c.scheduleChoices.isEmpty ? AdminTextKeys.employeeFieldScheduleNone : AdminTextKeys.employeeFieldScheduleChoose,
+              ),
               value: c.scheduleGroupId,
               options: [
                 for (final schedule in c.scheduleChoices)
@@ -302,7 +306,7 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
                   ),
               ],
               errorText: _error(CreateEmployeeRequest.fieldScheduleGroupId),
-              onChanged: c.submitting || c.scheduleChoices.length < 2 ? null : c.setScheduleGroup,
+              onChanged: c.submitting || c.scheduleChoices.isEmpty ? null : c.setScheduleGroup,
             ),
           ],
         ),

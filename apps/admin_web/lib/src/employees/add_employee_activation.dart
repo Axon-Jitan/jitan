@@ -8,7 +8,9 @@ import '../l10n/admin_text_keys.dart';
 
 /// Add employee step 3, "Activate employee account" (Figma `1233:2`): who
 /// the employee is, the three steps they follow, and their temporary
-/// onboarding QR. The QR is a credential: shown only as a QR, never as text.
+/// onboarding QR; while it is generated, or if that failed, one line takes
+/// the card's place (`1399:747`, `1399:1368`). The QR is a credential:
+/// shown only as a QR, never as text.
 class AddEmployeeActivation extends StatelessWidget {
   const AddEmployeeActivation({
     super.key,
@@ -62,7 +64,7 @@ class AddEmployeeActivation extends StatelessWidget {
         ],
       ],
     );
-    final card = Container(
+    Widget card(TemporaryQrResponse qr) => Container(
       width: 276,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -74,11 +76,7 @@ class AddEmployeeActivation extends StatelessWidget {
         children: [
           SizedBox(
             height: 160,
-            child: switch ((qr, failure)) {
-              (_, final _?) => GroupStateText(context.t(AdminTextKeys.employeeAddActivationFailed), onRetry: onRetry),
-              (final qr?, _) => JitanQrCode(data: qr.qrCode, size: 150, semanticLabel: context.t(AdminTextKeys.employeeAddActivationScan)),
-              _ => GroupStateText(context.t(AdminTextKeys.employeeAddActivationLoading)),
-            },
+            child: JitanQrCode(data: qr.qrCode, size: 150, semanticLabel: context.t(AdminTextKeys.employeeAddActivationScan)),
           ),
           const SizedBox(height: 20),
           Text(context.t(AdminTextKeys.employeeAddActivationScan), style: JitanTextStyles.tableCellStrong),
@@ -87,6 +85,12 @@ class AddEmployeeActivation extends StatelessWidget {
         ],
       ),
     );
+    // The card while there is a QR; otherwise one line in its place.
+    final Widget qrArea = switch ((qr, failure)) {
+      (_, final _?) => _line(GroupStateText(context.t(AdminTextKeys.employeeAddActivationFailed), onRetry: onRetry)),
+      (final qr?, _) => card(qr),
+      _ => _line(GroupStateText(context.t(AdminTextKeys.employeeAddActivationLoading))),
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -109,10 +113,10 @@ class AddEmployeeActivation extends StatelessWidget {
         const SizedBox(height: 28),
         LayoutBuilder(
           builder: (context, constraints) => constraints.maxWidth < 600
-              ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [info, const SizedBox(height: 8), Center(child: card)])
+              ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [info, const SizedBox(height: 8), Center(child: qrArea)])
               : Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [Expanded(child: info), const SizedBox(width: 40), card],
+                  children: [Expanded(child: info), const SizedBox(width: 40), qrArea],
                 ),
         ),
         const SizedBox(height: 16),
@@ -120,4 +124,7 @@ class AddEmployeeActivation extends StatelessWidget {
       ],
     );
   }
+
+  /// A state line where the card would be, vertically centred like Figma.
+  static Widget _line(Widget line) => SizedBox(width: 300, height: 240, child: Align(alignment: Alignment.centerLeft, child: line));
 }

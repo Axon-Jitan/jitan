@@ -93,6 +93,8 @@ abstract final class AdminTextKeys {
   static const employeeFieldGroupsHint = 'employee.field.groups.hint';
   static const employeeFieldSchedule = 'employee.field.schedule';
   static const employeeFieldScheduleOption = 'employee.field.schedule.option';
+  static const employeeFieldScheduleNone = 'employee.field.schedule.none';
+  static const employeeFieldScheduleChoose = 'employee.field.schedule.choose';
   static const employeeFieldErrorEmail = 'employee.field.error.email';
   static const employeeFieldErrorUnavailable = 'employee.field.error.unavailable';
   static const employeeAddActivationTitle = 'employee.add.activation.title';

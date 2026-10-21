@@ -110,9 +110,11 @@ void main() {
     await continueToStep2(tester);
 
     expect(find.text('Step 2 of 3'), findsOneWidget);
+    expect(find.text('No schedule available for the selected groups.'), findsOneWidget, reason: '1399:270, no group yet');
     expect(find.text('Almeco'), findsOneWidget, reason: 'the current company is chosen');
     await choose(tester, 'Companies', ['PCA']);
     await choose(tester, 'Employee groups', ['White collar', 'Drivers']);
+    expect(find.text('Choose a group schedule'), findsOneWidget, reason: '1399:588, two groups with hours');
 
     await tester.tap(find.widgetWithText(JitanSelectField<int>, 'Work schedule'));
     await tester.pumpAndSettle();
@@ -137,6 +139,7 @@ void main() {
     expect(find.text('Almeco · White collar · Drivers'), findsOneWidget);
     expect(find.widgetWithText(JitanSecondaryButton, 'Back'), findsNothing, reason: 'the employee exists now');
     expect(employees.qrRequests.single, (7, 2, TemporaryQrPurpose.onboarding));
+    expect(find.text('Generating the onboarding QR…'), findsOneWidget, reason: '1399:747');
     employees.qrSucceeds('header.payload.signature', expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)));
     await tester.pump();
     await tester.pump();
