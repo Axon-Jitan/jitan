@@ -1,6 +1,7 @@
 import 'package:jitan_models/jitan_models.dart';
 
 import '../database/like_pattern.dart';
+import '../database/sql_in_list.dart';
 import '../database/sql_executor.dart';
 import 'membership_filters.dart';
 
@@ -71,6 +72,17 @@ class EmployeeRepository {
   /// (`tblUser.userCode` is unique across the table).
   Future<bool> codeExists(SqlExecutor executor, String code) async =>
       (await executor.query('SELECT 1 AS found FROM tblUser WHERE userCode = :code', {'code': code})).isNotEmpty;
+
+  /// Which of [codes] some user already has, in any company and including
+  /// MFD users, as stored (`tblUser.userCode` is unique; MySQL compares it
+  /// without regard to case). Reads through [executor] (a transaction) when
+  /// given.
+  Future<List<String>> existingCodes(Iterable<String> codes, {SqlExecutor? executor}) async {
+    if (codes.isEmpty) return const [];
+    final list = SqlInList('c', codes);
+    final rows = await (executor ?? _db).query('SELECT userCode FROM tblUser WHERE userCode IN (${list.placeholders})', list.params);
+    return [for (final row in rows) row.readString('userCode')];
+  }
 
   /// Inserts an active, non-MFD user and returns its `userID`. No password:
   /// the employee sets it during onboarding (`userPassword IS NULL` until then).

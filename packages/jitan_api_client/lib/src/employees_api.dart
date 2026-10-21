@@ -61,4 +61,26 @@ class EmployeesApi {
       throw ApiClientException.invalidResponse(201, 'Created employee: ${e.message}');
     }
   }
+
+  /// Import employees, preview: the rows of a file that can't be added to
+  /// [companyId], and why. Every other row is ready.
+  Future<EmployeeImportCheck> checkImport(int companyId, EmployeeImportRequest request) async {
+    final json = await _transport.postJson('companies/$companyId/employees/import/check', request.toJson());
+    try {
+      return EmployeeImportCheck.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Import check: ${e.message}');
+    }
+  }
+
+  /// Adds the ready rows of a file to [companyId] (all of them or none) and
+  /// reports the rows skipped because of a problem.
+  Future<EmployeeImportResult> importEmployees(int companyId, EmployeeImportRequest request) async {
+    final json = await _transport.postJson('companies/$companyId/employees/import', request.toJson());
+    try {
+      return EmployeeImportResult.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Import: ${e.message}');
+    }
+  }
 }

@@ -53,8 +53,8 @@ class FakeEmployeeRepository implements EmployeeRepository {
   Map<int, List<EmployeeSummary>> byCompany = {};
   final calls = <(int, String?)>[];
 
-  /// Codes [codeExists] reports as taken.
-  Set<String> existingCodes = {};
+  /// Codes [codeExists] and [existingCodes] report as taken.
+  Set<String> takenCodes = {};
 
   /// Thrown by [insertUser] when set (e.g. a duplicate-key race).
   Object? insertFailure;
@@ -73,7 +73,13 @@ class FakeEmployeeRepository implements EmployeeRepository {
   }
 
   @override
-  Future<bool> codeExists(SqlExecutor executor, String code) async => existingCodes.contains(code);
+  Future<bool> codeExists(SqlExecutor executor, String code) async => takenCodes.contains(code);
+
+  @override
+  Future<List<String>> existingCodes(Iterable<String> codes, {SqlExecutor? executor}) async => [
+        for (final taken in takenCodes)
+          if (codes.any((code) => code.toLowerCase() == taken.toLowerCase())) taken,
+      ];
 
   @override
   Future<int> insertUser(

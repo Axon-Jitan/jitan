@@ -176,7 +176,7 @@ void main() {
     });
 
     test('409 duplicate_employee_code naming "code" when the code is taken; rolled back', () async {
-      final app = _app()..employees.existingCodes = {'SBW'};
+      final app = _app()..employees.takenCodes = {'SBW'};
 
       final error = await _error(app, _body());
 

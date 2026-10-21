@@ -8,6 +8,7 @@ import '../http/api_exception.dart';
 import '../http/path_id.dart';
 import '../http/json_request.dart';
 import '../http/json_response.dart';
+import 'employee_import_service.dart';
 import 'employee_service.dart';
 
 /// HTTP endpoints for a company's employees. Consumer: the HR/Admin
@@ -15,6 +16,11 @@ import 'employee_service.dart';
 ///
 /// - `GET /companies/{companyId}/employees?search=<text>`
 /// - `POST /companies/{companyId}/employees` with a `CreateEmployeeRequest`
+/// - `POST /companies/{companyId}/employees/import/check` with an
+///   `EmployeeImportRequest`: the rows that can't be imported (Import
+///   employees preview)
+/// - `POST /companies/{companyId}/employees/import` with the same body: adds
+///   the ready rows, skips the others
 /// - `GET /companies/{companyId}/employees/{userId}`
 /// - `POST /companies/{companyId}/employees/{userId}/onboarding-qr`: a new
 ///   temporary onboarding QR (replaces the previous one)
@@ -23,10 +29,11 @@ import 'employee_service.dart';
 /// - `POST /companies/{companyId}/employees/{userId}/recovery-qr`: a new
 ///   temporary recovery QR, after a reset
 class EmployeeRoutes {
-  const EmployeeRoutes(this._authorizer, this._employees);
+  const EmployeeRoutes(this._authorizer, this._employees, this._import);
 
   final Authorizer _authorizer;
   final EmployeeService _employees;
+  final EmployeeImportService _import;
 
   static const _path = '/companies/<companyId|[0-9]+>/employees';
   static const _employeePath = '$_path/<userId|[0-9]+>';
@@ -34,6 +41,8 @@ class EmployeeRoutes {
   Router get router => Router()
     ..get(_path, _list)
     ..post(_path, _create)
+    ..post('$_path/import/check', _checkImport)
+    ..post('$_path/import', _runImport)
     ..get(_employeePath, _details)
     ..post('$_employeePath/onboarding-qr', (Request r, String c, String u) => _temporaryQr(r, c, u, TemporaryQrPurpose.onboarding))
     ..post('$_employeePath/recovery-qr', (Request r, String c, String u) => _temporaryQr(r, c, u, TemporaryQrPurpose.recovery))
@@ -83,6 +92,28 @@ class EmployeeRoutes {
     }
     final created = await _employees.create(identity.userId, id, body);
     return jsonResponse(created.toJson(), statusCode: 201);
+  }
+
+  Future<Response> _checkImport(Request request, String companyId) async {
+    final id = _companyId(companyId);
+    await _authorizer.require(request, Permission.createEmployee, companyId: id);
+    final check = await _import.check(id, await _importBody(request));
+    return jsonResponse(check.toJson());
+  }
+
+  Future<Response> _runImport(Request request, String companyId) async {
+    final id = _companyId(companyId);
+    final identity = await _authorizer.require(request, Permission.createEmployee, companyId: id);
+    final result = await _import.import(identity.userId, id, await _importBody(request));
+    return jsonResponse(result.toJson());
+  }
+
+  static Future<EmployeeImportRequest> _importBody(Request request) async {
+    try {
+      return EmployeeImportRequest.fromJson(await readJsonObject(request));
+    } on FormatException catch (e) {
+      throw ApiException.badRequest(e.message);
+    }
   }
 
   static int _companyId(String raw) => pathId(raw, 'No such company.');

@@ -15,6 +15,7 @@ import 'package:jitan_api/src/companies/company_service.dart';
 import 'package:jitan_api/src/config/app_environment.dart';
 import 'package:jitan_api/src/employees/employee_assignment_routes.dart';
 import 'package:jitan_api/src/employees/employee_assignment_service.dart';
+import 'package:jitan_api/src/employees/employee_import_service.dart';
 import 'package:jitan_api/src/employees/employee_routes.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
 import 'package:jitan_api/src/groups/group_management_service.dart';
@@ -56,23 +57,31 @@ class TestApp {
     onboarding.audit = audit;
     employees.activatedLookup =
         (id) => onboarding.users.containsKey(id) ? onboarding.passwordHashes.containsKey(id) : null;
+    final employeeService = EmployeeService(
+      employees: employees,
+      companies: companies,
+      groups: groups,
+      audit: audit,
+      transactions: transactions,
+      credentials: credentials,
+      temporaryQr: temporaryQr,
+      accounts: onboarding,
+      personalQrCode: () => 'QR-${++_qrCounter}',
+      scheduleSync: scheduleSync,
+    );
     handler = buildApp(
       corsOrigins: corsOrigins,
       health: HealthRoutes(databaseHealth),
       companies: CompanyRoutes(Authorizer(permissions), CompanyService(companies)),
       employees: EmployeeRoutes(
         Authorizer(permissions),
-        EmployeeService(
+        employeeService,
+        EmployeeImportService(
           employees: employees,
+          creator: employeeService,
           companies: companies,
           groups: groups,
-          audit: audit,
           transactions: transactions,
-          credentials: credentials,
-          temporaryQr: temporaryQr,
-          accounts: onboarding,
-          personalQrCode: () => 'QR-${++_qrCounter}',
-          scheduleSync: scheduleSync,
         ),
       ),
       assignments: EmployeeAssignmentRoutes(

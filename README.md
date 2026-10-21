@@ -68,6 +68,9 @@ dart run bin/server.dart
 - `GET /companies?search=`: company list (needs an identity, see below)
 - `GET /companies/{id}/employees?search=`: that company's employees
 - `POST /companies/{id}/employees`: create an employee in that company
+- `POST /companies/{id}/employees/import/check` and `…/import`: Import employees (the rows
+  of an Excel or CSV file, read in the browser): which rows can't be added and why; then
+  add the ready rows in one transaction, each audited like Add employee
 - `GET /companies/{id}/employees/{userId}`: one employee's details (404 outside that company)
 - `POST /companies/{id}/employees/{userId}/onboarding-qr` and `…/recovery-qr`: a new
   temporary QR (`{qrCode, purpose, expiresAt}`, `no-store`); the previous one stops working.

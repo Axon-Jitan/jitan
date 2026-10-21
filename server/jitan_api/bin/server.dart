@@ -25,6 +25,7 @@ import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
 import 'package:jitan_api/src/employees/employee_assignment_routes.dart';
 import 'package:jitan_api/src/employees/employee_assignment_service.dart';
+import 'package:jitan_api/src/employees/employee_import_service.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/employees/employee_routes.dart';
 import 'package:jitan_api/src/employees/employee_service.dart';
@@ -174,21 +175,30 @@ Future<void> main() async {
     transactions: db,
   );
 
+  final employeeService = EmployeeService(
+    employees: EmployeeRepository(db),
+    companies: companyRepository,
+    groups: groupRepository,
+    audit: const AuditLogRepository(),
+    transactions: db,
+    temporaryQr: temporaryQr,
+    scheduleSync: scheduleSync,
+    schedules: scheduleService,
+  );
+
   final handler = buildApp(
     corsOrigins: config.corsOrigins,
     health: HealthRoutes(DatabaseHealthRepository(db)),
     companies: CompanyRoutes(authorizer, CompanyService(companyRepository)),
     employees: EmployeeRoutes(
       authorizer,
-      EmployeeService(
+      employeeService,
+      EmployeeImportService(
         employees: EmployeeRepository(db),
+        creator: employeeService,
         companies: companyRepository,
         groups: groupRepository,
-        audit: const AuditLogRepository(),
         transactions: db,
-        temporaryQr: temporaryQr,
-        scheduleSync: scheduleSync,
-        schedules: scheduleService,
       ),
     ),
     assignments: EmployeeAssignmentRoutes(

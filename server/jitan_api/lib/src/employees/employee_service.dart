@@ -215,7 +215,7 @@ class EmployeeService {
     final code = _required(request.code, CreateEmployeeRequest.fieldCode, 'Employee code', CreateEmployeeRequest.maxCodeLength);
     final phone = _optional(request.phone, CreateEmployeeRequest.fieldPhone, 'Phone number', CreateEmployeeRequest.maxPhoneLength);
     final email = _optional(request.email, CreateEmployeeRequest.fieldEmail, 'Email', CreateEmployeeRequest.maxEmailLength);
-    if (email != null && !_emailShape.hasMatch(email)) {
+    if (email != null && !emailShape.hasMatch(email)) {
       throw const ApiException.validation(CreateEmployeeRequest.fieldEmail, 'Enter an email address like name@example.com.');
     }
     final otherCompanies = ({...request.companyIds}..remove(companyId)).toList()..sort();
@@ -243,62 +243,19 @@ class EmployeeService {
     try {
       return await _transactions.transaction((tx) async {
         if (await _employees.codeExists(tx, code)) throw _duplicateCode(code);
-
-        final userId = await _employees.insertUser(
+        final userId = await createIn(
           tx,
+          actorUserId,
+          companyId,
           firstName: firstName,
           lastName: lastName,
           code: code,
-          personalQrCode: _personalQrCode(),
           phone: phone,
           email: email,
+          otherCompanies: otherCompanies,
+          groupIds: groupIds,
+          scheduleGroupId: scheduleGroupId,
         );
-        final userCompanyId = await _employees.addToCompany(tx, userId, companyId);
-        await _audit.record(
-          tx,
-          AuditEvent(
-            type: AuditEventType.employeeCreated,
-            actorUserId: actorUserId,
-            references: {
-              EventLogReference.user: userId,
-              EventLogReference.company: companyId,
-              EventLogReference.userCompany: userCompanyId,
-            },
-          ),
-        );
-        for (final other in otherCompanies) {
-          final link = await _employees.addToCompany(tx, userId, other);
-          await _audit.record(
-            tx,
-            AuditEvent(
-              type: AuditEventType.companyAssigned,
-              actorUserId: actorUserId,
-              references: {
-                EventLogReference.user: userId,
-                EventLogReference.company: other,
-                EventLogReference.userCompany: link,
-              },
-            ),
-          );
-        }
-        for (final groupId in groupIds) {
-          final link = await _employees.addToGroup(tx, userId, groupId);
-          await _audit.record(
-            tx,
-            AuditEvent(
-              type: AuditEventType.groupAssigned,
-              actorUserId: actorUserId,
-              references: {EventLogReference.user: userId, EventLogReference.group: groupId, EventLogReference.userGroup: link},
-            ),
-          );
-        }
-        // The employee gets their group's hours; with several groups, those
-        // of the group HR chose as "Work schedule".
-        if (groupIds.isNotEmpty) await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
-        if (scheduleGroupId != null && groupIds.length > 1) {
-          await _scheduleSync.useGroup(tx, actorUserId, userId, scheduleGroupId);
-        }
-
         return await _employees.findInCompany(tx, companyId, userId) ??
             (throw StateError('Created user $userId is not readable in company $companyId.'));
       });
@@ -310,9 +267,87 @@ class EmployeeService {
     }
   }
 
+  /// Writes one checked employee inside the caller's transaction [tx] and
+  /// returns its `userID`: the `tblUser` row (active, with a new personal
+  /// QR), its `tblUserCompany` links ([companyId] and [otherCompanies]), its
+  /// `tblUserGroup` links, its work hours (its group's; with several groups,
+  /// those of [scheduleGroupId]), and their `tblEventLog` entries.
+  ///
+  /// The values must already be validated (trimmed, fitting their columns,
+  /// existing companies and groups); a taken code fails on the unique key.
+  Future<int> createIn(
+    SqlExecutor tx,
+    int actorUserId,
+    int companyId, {
+    required String firstName,
+    required String lastName,
+    required String code,
+    required String? phone,
+    required String? email,
+    List<int> otherCompanies = const [],
+    required List<int> groupIds,
+    int? scheduleGroupId,
+  }) async {
+    final userId = await _employees.insertUser(
+      tx,
+      firstName: firstName,
+      lastName: lastName,
+      code: code,
+      personalQrCode: _personalQrCode(),
+      phone: phone,
+      email: email,
+    );
+    final userCompanyId = await _employees.addToCompany(tx, userId, companyId);
+    await _audit.record(
+      tx,
+      AuditEvent(
+        type: AuditEventType.employeeCreated,
+        actorUserId: actorUserId,
+        references: {
+          EventLogReference.user: userId,
+          EventLogReference.company: companyId,
+          EventLogReference.userCompany: userCompanyId,
+        },
+      ),
+    );
+    for (final other in otherCompanies) {
+      final link = await _employees.addToCompany(tx, userId, other);
+      await _audit.record(
+        tx,
+        AuditEvent(
+          type: AuditEventType.companyAssigned,
+          actorUserId: actorUserId,
+          references: {
+            EventLogReference.user: userId,
+            EventLogReference.company: other,
+            EventLogReference.userCompany: link,
+          },
+        ),
+      );
+    }
+    for (final groupId in groupIds) {
+      final link = await _employees.addToGroup(tx, userId, groupId);
+      await _audit.record(
+        tx,
+        AuditEvent(
+          type: AuditEventType.groupAssigned,
+          actorUserId: actorUserId,
+          references: {EventLogReference.user: userId, EventLogReference.group: groupId, EventLogReference.userGroup: link},
+        ),
+      );
+    }
+    // The employee gets their group's hours; with several groups, those
+    // of the group HR chose as "Work schedule".
+    if (groupIds.isNotEmpty) await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
+    if (scheduleGroupId != null && groupIds.length > 1) {
+      await _scheduleSync.useGroup(tx, actorUserId, userId, scheduleGroupId);
+    }
+    return userId;
+  }
+
   /// Something@something.something, without spaces: catches typing
   /// mistakes; the address is never used to sign in.
-  static final _emailShape = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+  static final emailShape = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   Future<void> _requireCompany(int companyId) async {
     if (!await _companies.exists(companyId)) {
