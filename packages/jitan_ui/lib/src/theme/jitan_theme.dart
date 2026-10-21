@@ -42,6 +42,18 @@ abstract final class JitanTheme {
         checkboxTheme: const CheckboxThemeData(overlayColor: _noPressOverlay),
         radioTheme: const RadioThemeData(overlayColor: _noPressOverlay),
         switchTheme: const SwitchThemeData(overlayColor: _noPressOverlay),
+        // Thin and quiet: shown while scrolling or under the pointer.
+        scrollbarTheme: ScrollbarThemeData(
+          thickness: const WidgetStatePropertyAll(6),
+          radius: const Radius.circular(8),
+          crossAxisMargin: 3,
+          mainAxisMargin: 4,
+          thumbColor: WidgetStateProperty.resolveWith(
+            (states) => JitanColors.ink.withValues(
+              alpha: states.contains(WidgetState.dragged) || states.contains(WidgetState.hovered) ? 0.4 : 0.22,
+            ),
+          ),
+        ),
       );
 
   static const _noPressEffect = ButtonStyle(

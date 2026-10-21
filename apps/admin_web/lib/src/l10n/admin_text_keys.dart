@@ -49,6 +49,12 @@ abstract final class AdminTextKeys {
   /// Argument: `{company}`.
   static const employeeEmptyMessage = 'employee.empty.message';
   static const employeeEmptyMessageAll = 'employee.empty.messageAll';
+
+  /// Plural (`.one`/`.other`), Figma 1399:10 results footer.
+  static const employeeResultsDisplayed = 'employee.results.displayed';
+
+  /// Arguments: `{shown}`, `{total}`.
+  static const employeeResultsShowing = 'employee.results.showing';
   static const employeeNoMatchTitle = 'employee.noMatch.title';
 
   /// Argument: `{search}`.

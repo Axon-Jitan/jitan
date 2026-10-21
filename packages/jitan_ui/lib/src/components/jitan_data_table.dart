@@ -72,10 +72,10 @@ class JitanDataTable extends StatelessWidget {
                 // Rows 2, 4, …: the subtle alternating background, edge to edge.
                 color: rowColor?.call(i) ?? (i.isOdd ? JitanColors.tableStripe : JitanColors.surface),
                 child: onRowTap == null
-                    ? _Row(height: JitanDimensions.tableRowHeight, columns: columns, cells: rows[i])
+                    ? JitanTableRow(columns: columns, cells: rows[i])
                     : _TappableRow(
                         onTap: () => onRowTap!(i),
-                        child: _Row(height: JitanDimensions.tableRowHeight, columns: columns, cells: rows[i]),
+                        child: JitanTableRow(columns: columns, cells: rows[i]),
                       ),
               ),
           ],
@@ -87,17 +87,7 @@ class JitanDataTable extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              ColoredBox(
-                color: JitanColors.tableHeader,
-                child: _Row(
-                  height: JitanDimensions.tableHeaderHeight,
-                  columns: columns,
-                  cells: [
-                    for (final column in columns)
-                      Text(column.label, style: JitanTextStyles.tableHeader, overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ),
+              JitanTableHeaderRow(columns: columns),
               if (maxHeight == null)
                 body
               else
@@ -132,8 +122,36 @@ class _TappableRow extends StatelessWidget {
       );
 }
 
-class _Row extends StatelessWidget {
-  const _Row({required this.height, required this.columns, required this.cells});
+/// The warm-gray heading row of a [JitanDataTable], on its own so a page
+/// can keep it in view while the rows scroll (a pinned sliver header).
+class JitanTableHeaderRow extends StatelessWidget {
+  const JitanTableHeaderRow({super.key, required this.columns});
+
+  final List<JitanTableColumn> columns;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+        color: JitanColors.tableHeader,
+        child: JitanTableRow(
+          height: JitanDimensions.tableHeaderHeight,
+          columns: columns,
+          cells: [
+            for (final column in columns)
+              Text(column.label, style: JitanTextStyles.tableHeader, overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      );
+}
+
+/// One row of [JitanDataTable] cells laid out by [columns] (without its
+/// background; the table, or a page building rows lazily, colours it).
+class JitanTableRow extends StatelessWidget {
+  const JitanTableRow({
+    super.key,
+    this.height = JitanDimensions.tableRowHeight,
+    required this.columns,
+    required this.cells,
+  });
 
   final double height;
   final List<JitanTableColumn> columns;

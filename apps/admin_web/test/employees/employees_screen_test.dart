@@ -177,6 +177,27 @@ void main() {
     expect(find.text('Thomas Vermeulen'), findsOneWidget);
   });
 
+  testWidgets('one scroll for the page: the heading row stays in view, rows below; results footer', (tester) async {
+    final (api, _) = await _pump(tester, selected: _almeco);
+    api.succeed([for (var i = 1; i <= 60; i++) employee(i, 'First$i', 'Last', 'C$i', active: i != 60)]);
+    await tester.pump();
+
+    expect(find.byType(CustomScrollView), findsOneWidget);
+    expect(find.text('First40 Last'), findsNothing, reason: 'rows are built as they come into view');
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1200));
+    await tester.pump();
+
+    final heading = tester.getRect(find.text('Onboarding'));
+    expect(heading.top, inInclusiveRange(0, 46), reason: 'pinned at the top while its rows scroll');
+    expect(find.text('First1 Last'), findsNothing);
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -4000));
+    await tester.pump();
+    expect(find.text('60 employees displayed'), findsOneWidget, reason: '1399:10');
+    expect(find.text('Showing 60 of 60'), findsOneWidget);
+  });
+
   testWidgets('the row "⋯": Remove employee asks first, then hides them once the server confirms', (tester) async {
     final (api, _) = await _pump(tester);
     api.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW', companyIds: [8, 7])]);

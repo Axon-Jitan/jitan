@@ -100,8 +100,17 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     if (action == null || !mounted) return;
     if (action == EmployeeAction.remove) {
       final name = [employee.firstName, employee.lastName].whereType<String>().join(' ');
-      final success = context.t(AdminTextKeys.employeeRemoveSuccess, args: {'name': name.isEmpty ? employee.code : name});
-      if (!await showRemoveEmployeeDialog(context, employeesApi: widget.api, employee: employee, companyId: companyId)) return;
+      final success = context.t(
+        AdminTextKeys.employeeRemoveSuccess,
+        args: {'name': name.isEmpty ? employee.code : name},
+      );
+      final removed = await showRemoveEmployeeDialog(
+        context,
+        employeesApi: widget.api,
+        employee: employee,
+        companyId: companyId,
+      );
+      if (!removed) return;
       _say(success);
       await _controller?.load();
       return;
@@ -126,11 +135,19 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         );
       case EmployeeAction.resetAccess:
         final name = [details.firstName, details.lastName].whereType<String>().join(' ');
-        final success = context.t(AdminTextKeys.employeeResetAccessSuccess, args: {'name': name.isEmpty ? details.code : name});
+        final success = context.t(
+          AdminTextKeys.employeeResetAccessSuccess,
+          args: {'name': name.isEmpty ? details.code : name},
+        );
         if (!await showResetAccessDialog(context, employeesApi: widget.api, employee: details)) return;
         _say(success);
         if (!mounted) return;
-        await showTemporaryQrDialog(context, employeesApi: widget.api, employee: details, purpose: TemporaryQrPurpose.recovery);
+        await showTemporaryQrDialog(
+          context,
+          employeesApi: widget.api,
+          employee: details,
+          purpose: TemporaryQrPurpose.recovery,
+        );
       case EmployeeAction.remove:
         // Handled above: it needs no details.
         return;
@@ -142,48 +159,59 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   Widget build(BuildContext context) {
     final company = _company;
     final controller = _controller;
-    return SingleChildScrollView(
-      padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          JitanPageHeader(
-            title: context.t(AdminTextKeys.employeeTitle),
-            subtitle: context.t(AdminTextKeys.employeeListSubtitle),
-            action: Wrap(
-              spacing: 22,
-              runSpacing: 10,
-              children: [
-                JitanOutlineButton(
-                  label: context.t(AdminTextKeys.employeeImportAction),
-                  height: JitanDimensions.controlHeight,
-                  onPressed: company == null ? null : () => context.go(AdminRoutes.employeeImport),
+    // One scroll for the whole page; the table pins its heading row.
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
+          sliver: SliverMainAxisGroup(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    JitanPageHeader(
+                      title: context.t(AdminTextKeys.employeeTitle),
+                      subtitle: context.t(AdminTextKeys.employeeListSubtitle),
+                      action: Wrap(
+                        spacing: 22,
+                        runSpacing: 10,
+                        children: [
+                          JitanOutlineButton(
+                            label: context.t(AdminTextKeys.employeeImportAction),
+                            height: JitanDimensions.controlHeight,
+                            onPressed: company == null ? null : () => context.go(AdminRoutes.employeeImport),
+                          ),
+                          JitanPrimaryButton(
+                            label: context.t(AdminTextKeys.employeeAddAction),
+                            icon: Icons.add,
+                            height: JitanDimensions.controlHeight,
+                            // The company is chosen in the wizard; the filter is only a filter.
+                            onPressed: _addEmployee,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: JitanDimensions.headerToToolbar),
+                    _toolbar(context),
+                    const SizedBox(height: 28),
+                    Text(
+                      context.t(AdminTextKeys.employeeSection),
+                      style: JitanTextStyles.stateTitle.copyWith(fontSize: 18),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
-                JitanPrimaryButton(
-                  label: context.t(AdminTextKeys.employeeAddAction),
-                  icon: Icons.add,
-                  height: JitanDimensions.controlHeight,
-                  // The company is chosen in the wizard; the filter is only a filter.
-                  onPressed: _addEmployee,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: JitanDimensions.headerToToolbar),
-          _toolbar(context),
-          const SizedBox(height: 28),
-          Text(context.t(AdminTextKeys.employeeSection), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
-          const SizedBox(height: 16),
-          if (controller != null)
-            ListenableBuilder(
-              listenable: controller,
-              builder: (context, _) => JitanSurfaceCard(
-                radius: JitanDimensions.tableCardRadius,
-                child: _content(context, company, controller),
               ),
-            ),
-        ],
-      ),
+              if (controller != null)
+                ListenableBuilder(
+                  listenable: controller,
+                  builder: (context, _) => _content(context, company, controller),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -230,30 +258,35 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     );
   }
 
-  Widget _content(BuildContext context, CompanySummary? company, EmployeesController controller) => switch (controller.state) {
-    EmployeesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.employeeListLoading))),
-    EmployeesFailed(:final failure) => _centered(_error(context, failure, controller)),
-    EmployeesLoaded(employees: [], search: '') => _centered(
-      JitanEmptyState(
-        title: context.t(AdminTextKeys.employeeEmptyTitle),
-        message: company == null
-            ? context.t(AdminTextKeys.employeeEmptyMessageAll)
-            : context.t(AdminTextKeys.employeeEmptyMessage, args: {'company': company.name}),
-      ),
-    ),
-    EmployeesLoaded(:final employees) => switch ([
-      for (final e in employees)
-        if (_status == null || e.isActive == (_status == EmployeeStatusFilter.active)) e,
-    ]) {
-      [] => _centered(
-        JitanEmptyState(
-          title: context.t(AdminTextKeys.employeeNoMatchTitle),
-          message: context.t(AdminTextKeys.employeeNoMatch),
+  Widget _content(BuildContext context, CompanySummary? company, EmployeesController controller) =>
+      switch (controller.state) {
+        EmployeesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.employeeListLoading))),
+        EmployeesFailed(:final failure) => _centered(_error(context, failure, controller)),
+        EmployeesLoaded(employees: [], search: '') => _centered(
+          JitanEmptyState(
+            title: context.t(AdminTextKeys.employeeEmptyTitle),
+            message: company == null
+                ? context.t(AdminTextKeys.employeeEmptyMessageAll)
+                : context.t(AdminTextKeys.employeeEmptyMessage, args: {'company': company.name}),
+          ),
         ),
-      ),
-      final visible => EmployeesTable(employees: visible, onManage: (employee) => _manage(company, employee)),
-    },
-  };
+        EmployeesLoaded(:final employees) => switch ([
+          for (final e in employees)
+            if (_status == null || e.isActive == (_status == EmployeeStatusFilter.active)) e,
+        ]) {
+          [] => _centered(
+            JitanEmptyState(
+              title: context.t(AdminTextKeys.employeeNoMatchTitle),
+              message: context.t(AdminTextKeys.employeeNoMatch),
+            ),
+          ),
+          final visible => EmployeesTable(
+            employees: visible,
+            total: employees.length,
+            onManage: (employee) => _manage(company, employee),
+          ),
+        },
+      };
 
   Widget _error(BuildContext context, ApiClientException failure, EmployeesController controller) {
     final keys = failureTextKeysFor(failure);
@@ -265,5 +298,11 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     );
   }
 
-  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableStateHeight, child: child);
+  /// A loading, empty or error state in the table card.
+  static Widget _centered(Widget child) => SliverToBoxAdapter(
+    child: JitanSurfaceCard(
+      radius: JitanDimensions.tableCardRadius,
+      child: SizedBox(height: JitanDimensions.tableStateHeight, child: child),
+    ),
+  );
 }
