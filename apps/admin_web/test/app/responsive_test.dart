@@ -1,6 +1,7 @@
 import 'package:admin_web/src/companies/companies_screen.dart';
 import 'package:admin_web/src/company_context/current_company.dart';
 import 'package:admin_web/src/employees/employees_screen.dart';
+import 'package:admin_web/src/groups/employee_picker.dart';
 import 'package:admin_web/src/groups/group_page.dart';
 import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
@@ -147,7 +148,7 @@ void main() {
 
     testWidgets('Groups page and Create group at $width px', (tester) async {
       final groups = FakeGroupManagementApi([groupOverview(1, 'Blue collar', employees: 64), groupOverview(2, 'White collar')]);
-      final members = FakeGroupMembersApi()..pool.add(member(11, 'Fabian', 'Peeters', 'FPT', groups: ['White collar']));
+      final members = FakeGroupMembersApi()..pool.add(member(11, 'Fabian', 'Peeters', 'FPT'));
       final schedules = FakeSchedulesApi();
       await _pump(tester, width, GroupsScreen(groupsApi: groups, membersApi: members, schedulesApi: schedules));
       await tester.pump();
@@ -159,9 +160,24 @@ void main() {
       await tester.pumpAndSettle();
       _fitsTheWindow(tester, width, 'Create group, step 1');
       await tester.enterText(find.byType(TextField).last, 'Drivers');
-      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Create group'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'Create group, step 2');
+      await tester.tap(find.byType(EmployeePicker));
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Create group, step 2 with the list open');
+      await tester.tap(find.text('Fabian Peeters · FPT'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
+      await tester.pump();
+      schedules.succeedOptions();
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Create group, step 3');
+      await tester.tap(find.text('Mon–Fri'));
+      await tester.pump();
+      await tester.tap(find.text('Same hours every working day'));
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Create group, step 3, hours per day');
     });
 
     testWidgets('a group page at $width px', (tester) async {
@@ -269,7 +285,7 @@ void main() {
 
       await open('Rename', 'Rename group');
       await open('Deactivate', 'Cannot deactivate group');
-      await open('Add employees', 'Add employees');
+      await open('+ Add employees →', 'Add employees');
       await open('Remove', 'Remove from group?');
     });
 

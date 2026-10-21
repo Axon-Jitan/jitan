@@ -1,5 +1,6 @@
 import 'package:admin_web/src/app/admin_app.dart';
 import 'package:admin_web/src/groups/employee_picker.dart';
+import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
@@ -43,6 +44,9 @@ Future<void> _pump(WidgetTester tester, TestServices fakes, String location) asy
   await tester.pumpAndSettle();
 }
 
+JitanPrimaryButton _primary(WidgetTester tester, String label) =>
+    tester.widget<JitanPrimaryButton>(find.widgetWithText(JitanPrimaryButton, label));
+
 Future<void> _tapPrimary(WidgetTester tester, String label) async {
   await tester.tap(find.widgetWithText(JitanPrimaryButton, label));
   await tester.pumpAndSettle();
@@ -67,39 +71,65 @@ void main() {
     expect(find.text('Drivers'), findsOneWidget);
   });
 
-  testWidgets('Create group: the name, then employees from every company; then the group page', (tester) async {
+  testWidgets('Create group: name, employees (someone only in it), hours and break, saved together', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups');
 
     await _tapPrimary(tester, 'Add group');
-    expect(find.text('Create group'), findsWidgets);
-    await _tapPrimary(tester, 'Create group');
-    expect(find.text('Enter a name.'), findsOneWidget, reason: 'checked before sending');
-    expect(fakes.groupManagement.calls.where((c) => c.startsWith('create')), isEmpty);
-
+    expect(find.text('Set up an employee group in three steps.'), findsOneWidget);
+    expect(_primary(tester, 'Continue').onPressed, isNull, reason: 'no name yet');
     await tester.enterText(find.byType(TextField).last, '  Van drivers ');
-    await _tapPrimary(tester, 'Create group');
-    expect(fakes.groupManagement.calls, contains('create Van drivers'));
-    expect(find.byType(EmployeePicker), findsOneWidget, reason: 'step 2');
-    expect(find.text('No other groups'), findsOneWidget, reason: 'the groups of each employee (1354:7)');
+    await tester.pump();
+    await _tapPrimary(tester, 'Continue');
 
+    // Step 2: the list opens under "Select employees".
+    expect(find.text('Select employees'), findsOneWidget);
+    await tester.tap(find.byType(EmployeePicker));
+    await tester.pumpAndSettle();
+    expect(fakes.groupMembers.calls, contains('candidates new'), reason: 'the group does not exist yet');
+    expect(find.text('No other groups'), findsOneWidget, reason: 'Kevin');
     await tester.tap(find.text('Fabian Peeters · FPT'));
     await tester.pump();
+    expect(find.text('Selected: 0 employees who belong only to Van drivers.'), findsOneWidget);
+    expect(_primary(tester, 'Continue').onPressed, isNull, reason: 'Fabian is also in White collar: the hours need someone only here');
     await tester.tap(find.text('Kevin De Vos · KDV'));
     await tester.pump();
-    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add (2)'));
+    expect(find.text('Selected: 1 employee who belongs only to Van drivers.'), findsOneWidget);
+    await _tapPrimary(tester, 'Continue');
+
+    // Step 3: work hours and break.
+    fakes.schedules.succeedOptions();
+    await tester.pumpAndSettle();
+    expect(find.text('Working days'), findsOneWidget);
+    expect(_primary(tester, 'Create group').onPressed, isNull, reason: 'nothing typed yet');
+    await tester.tap(find.text('Mon–Fri'));
+    await tester.pump();
+    final times = tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList();
+    times[0].onChanged!('08:00');
+    times[1].onChanged!('07:30');
+    await tester.pump();
+    expect(find.text('Finish must be after the start'), findsOneWidget);
+    tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList()[1].onChanged!('16:30');
+    await tester.enterText(find.byType(TextField).last, '20');
+    await tester.pump();
+    expect(find.text('Enter 15, 30, 45, 60 minutes.'), findsOneWidget, reason: 'the allowed break lengths');
+    await tester.enterText(find.byType(TextField).last, '30');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Create group'));
     await tester.pump();
     await tester.pump();
-    expect(fakes.groupMembers.calls, contains('add 104 11,12'));
+
+    expect(fakes.groupManagement.calls, contains('create Van drivers 11,12'));
+    final sent = fakes.groupManagement.created!;
+    expect(sent.schedule.breakMinutes, 30);
+    expect([for (final d in sent.schedule.workHours.days) (d.start, d.finish)], List.filled(5, ('08:00', '16:30')));
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
-
     expect(find.text('Group Van drivers created.'), findsOneWidget);
     expect(find.text('Manage employees and group working hours.'), findsOneWidget, reason: 'on the group page now');
-    expect(find.text('Fabian Peeters · FPT'), findsOneWidget);
   });
 
-  testWidgets('a duplicate name is shown under the field', (tester) async {
+  testWidgets('a duplicate name found at the save is shown under the name, on step 1', (tester) async {
     final fakes = _fakes();
     fakes.groupManagement.failNext =
         const ApiClientException.server(409, ApiError(code: ApiErrorCode.duplicateGroupName, message: 'x', field: 'name'));
@@ -107,8 +137,25 @@ void main() {
 
     await _tapPrimary(tester, 'Add group');
     await tester.enterText(find.byType(TextField).last, 'Blue collar');
+    await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+    await tester.tap(find.byType(EmployeePicker));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kevin De Vos · KDV'));
+    await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+    fakes.schedules.succeedOptions();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mon–Fri'));
+    await tester.pump();
+    final times = tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList();
+    times[0].onChanged!('08:00');
+    times[1].onChanged!('16:30');
+    await tester.enterText(find.byType(TextField).last, '30');
+    await tester.pump();
     await _tapPrimary(tester, 'Create group');
 
+    expect(find.text('Group details'), findsWidgets, reason: 'back on step 1');
     expect(find.text('A group with this name already exists.'), findsOneWidget);
   });
 
@@ -189,8 +236,36 @@ void main() {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups/1');
 
-    expect(find.text('Mon–Fri 08:00–16:30 · ±5 min · start Up · 15 min, finish Down · 15 min'), findsOneWidget);
-    expect(find.text('Mon–Fri · 30 min'), findsOneWidget);
+    expect(find.text('Mon–Fri 08:00–16:30 · Break 30 min'), findsOneWidget, reason: '1378:4');
     expect(find.widgetWithText(JitanPrimaryButton, 'Edit work hours'), findsOneWidget);
+  });
+
+  testWidgets('an empty group asks to confirm; an inactive group says so and offers Reactivate group', (tester) async {
+    final fakes = _fakes();
+    await _pump(tester, fakes, '/groups');
+
+    await tester.tap(find.byTooltip('Group actions').at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Deactivate group'));
+    await tester.pumpAndSettle();
+    expect(find.text('Deactivate Drivers?'), findsOneWidget, reason: '1378:186');
+    expect(find.text('The group can no longer be assigned. You can reactivate it later.'), findsOneWidget);
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Deactivate'));
+    await tester.pump();
+    await tester.pump();
+    expect(fakes.groupManagement.calls, contains('deactivate 3'));
+    fakes.schedules.succeedList([_blue, _white, _drivers]);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Old'));
+    await tester.pump();
+    await tester.pump();
+    fakes.schedules.succeedList([_blue, _white, _drivers]);
+    await tester.pumpAndSettle();
+    expect(find.text('Inactive'), findsWidgets, reason: '1378:363');
+    await tester.tap(find.text('Reactivate group →'));
+    await tester.pump();
+    await tester.pump();
+    expect(fakes.groupManagement.calls, contains('reactivate 4'));
   });
 }

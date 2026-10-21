@@ -47,10 +47,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
   void _open(GroupOverview group) => context.go(AdminRoutes.group(group.id));
 
   Future<void> _create() async {
-    final created = await showCreateGroupDialog(context, groupsApi: widget.groupsApi, membersApi: widget.membersApi);
+    final created = await showCreateGroupDialog(
+      context,
+      groupsApi: widget.groupsApi,
+      membersApi: widget.membersApi,
+      schedulesApi: widget.schedulesApi,
+    );
     if (created == null || !mounted) return;
     _say(context.t(AdminTextKeys.groupsCreated, args: {'group': created.name}));
-    // On to the new group's page, where HR sets its work hours and break.
     _open(created);
   }
 

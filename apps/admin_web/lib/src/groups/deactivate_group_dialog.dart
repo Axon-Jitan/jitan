@@ -21,8 +21,8 @@ Future<GroupOverview?> showDeactivateGroupDialog(
 );
 
 /// Figma `HR / Employee groups — Deactivate group` (1340:667) draws Cannot
-/// deactivate group: the group still has employees. The confirmation for an
-/// empty group has no Figma frame yet. The server refuses too (group_in_use)
+/// deactivate group: the group still has employees; `Deactivate empty group`
+/// (1378:186) asks to confirm. The server refuses too (group_in_use)
 /// when someone joined in the meantime. Nothing is deleted: the group is
 /// switched off.
 class DeactivateGroupDialog extends StatefulWidget {
@@ -112,12 +112,12 @@ class _DeactivateGroupDialogState extends State<DeactivateGroupDialog> {
     final failure = _failure;
     return JitanModal(
       width: 560,
-      title: context.t(AdminTextKeys.groupsDeactivateTitle),
+      title: context.t(AdminTextKeys.groupsDeactivateTitle, args: {'group': name}),
       onClose: _busy ? null : () => Navigator.of(context).pop(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(context.t(AdminTextKeys.groupsDeactivateText, args: {'group': name}), style: JitanTextStyles.stateMessage),
+          Text(context.t(AdminTextKeys.groupsDeactivateText), style: JitanTextStyles.stateMessage),
           if (failure != null) ...[
             const SizedBox(height: 16),
             Builder(

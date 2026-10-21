@@ -29,7 +29,7 @@ class AddEmployeesDialog extends StatefulWidget {
 }
 
 class _AddEmployeesDialogState extends State<AddEmployeesDialog> {
-  Set<int> _selected = {};
+  Map<int, GroupMember> _selected = const {};
   bool _busy = false;
   ApiClientException? _failure;
 
@@ -39,7 +39,7 @@ class _AddEmployeesDialogState extends State<AddEmployeesDialog> {
       _failure = null;
     });
     try {
-      final members = await widget.membersApi.add(widget.group.id, _selected.toList());
+      final members = await widget.membersApi.add(widget.group.id, _selected.keys.toList());
       if (mounted) Navigator.of(context).pop(members);
     } on ApiClientException catch (failure) {
       if (mounted) setState(() => _failure = failure);

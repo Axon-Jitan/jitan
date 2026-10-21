@@ -36,12 +36,22 @@ class FakeGroupManagementApi implements GroupManagementApi {
     return groups[index] = change(groups[index]);
   }
 
+  /// The last Create group request.
+  CreateGroupRequest? created;
+
   @override
-  Future<GroupOverview> create(String name) => _write('create $name', () {
-    final group = GroupOverview(id: 100 + groups.length, name: name, isActive: true, employeeCount: 0);
-    groups.add(group);
-    return group;
-  });
+  Future<GroupOverview> create(CreateGroupRequest request) =>
+      _write('create ${request.name} ${request.employeeIds.join(',')}', () {
+        created = request;
+        final group = GroupOverview(
+          id: 100 + groups.length,
+          name: request.name,
+          isActive: true,
+          employeeCount: request.employeeIds.length,
+        );
+        groups.add(group);
+        return group;
+      });
 
   @override
   Future<GroupOverview> rename(int groupId, String name) => _write(
@@ -78,8 +88,8 @@ class FakeGroupMembersApi implements GroupMembersApi {
   }
 
   @override
-  Future<List<GroupMember>> candidates(int groupId, {String? search}) async {
-    calls.add('candidates $groupId ${search ?? ''}'.trim());
+  Future<List<GroupMember>> candidates(int? groupId, {String? search}) async {
+    calls.add('candidates ${groupId ?? 'new'} ${search ?? ''}'.trim());
     final inGroup = {for (final m in byGroup[groupId] ?? const <GroupMember>[]) m.id};
     return [
       for (final e in pool)

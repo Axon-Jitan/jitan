@@ -6,178 +6,317 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
+import '../schedules/schedule_form_controller.dart';
 import '../schedules/schedule_form_fields.dart';
+import '../schedules/schedule_summary_text.dart';
+import 'create_group_controller.dart';
 import 'employee_picker.dart';
-import 'group_name_error.dart';
+import 'group_state_text.dart';
 
 /// Opens Create group; completes with the new group once the server created
-/// it (with or without employees), `null` when cancelled before that.
+/// it with its employees and work hours, `null` when closed before that.
 Future<GroupOverview?> showCreateGroupDialog(
   BuildContext context, {
   required GroupManagementApi groupsApi,
   required GroupMembersApi membersApi,
+  required SchedulesApi schedulesApi,
 }) => showJitanModal<GroupOverview>(
   context,
-  builder: (_) => CreateGroupDialog(groupsApi: groupsApi, membersApi: membersApi),
+  builder: (_) => CreateGroupDialog(groupsApi: groupsApi, membersApi: membersApi, schedulesApi: schedulesApi),
 );
 
-/// Figma `HR / Employee groups — Create group — Step 1 Details` (1340:160)
-/// and `Step 2 Employees` (1352:2). Step 1 creates the group; step 2 adds
-/// employees from every company, or is skipped. The work hours and break
-/// (Figma step 3) are set on the group's page, with the schedule wizard, so
-/// there is one schedule form and every schedule has a break (2026-10-20).
+/// Figma `HR / Employee groups — Create group`: Step 1 Details (1340:160,
+/// name error 1340:836), Step 2 Employees (1352:2, list open 1354:7) and
+/// Step 3 Work hours & breaks (1377:28 empty, 1352:175 filled, 1377:290 per
+/// day, 1377:569 invalid finish). "Create group" saves all three together.
 class CreateGroupDialog extends StatefulWidget {
-  const CreateGroupDialog({super.key, required this.groupsApi, required this.membersApi});
+  const CreateGroupDialog({super.key, required this.groupsApi, required this.membersApi, required this.schedulesApi});
 
   final GroupManagementApi groupsApi;
   final GroupMembersApi membersApi;
+  final SchedulesApi schedulesApi;
 
   @override
   State<CreateGroupDialog> createState() => _CreateGroupDialogState();
 }
 
 class _CreateGroupDialogState extends State<CreateGroupDialog> {
+  late final _controller = CreateGroupController(groupsApi: widget.groupsApi, schedulesApi: widget.schedulesApi);
   final _name = TextEditingController();
-  GroupOverview? _created;
-  Set<int> _selected = {};
-  bool _busy = false;
-  String? _nameError;
-  ApiClientException? _failure;
+  final _break = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _name.addListener(() => _controller.setName(_name.text));
+    _break.addListener(() => _controller.setBreak(_break.text));
+  }
 
   @override
   void dispose() {
+    _controller.dispose();
     _name.dispose();
+    _break.dispose();
     super.dispose();
   }
 
-  Future<void> _create() async {
-    final problem = groupNameProblem(_name.text);
-    if (problem != null) return setState(() => _nameError = problem);
-    setState(() {
-      _busy = true;
-      _nameError = null;
-      _failure = null;
-    });
-    try {
-      final created = await widget.groupsApi.create(_name.text.trim());
-      if (mounted) setState(() => _created = created);
-    } on ApiClientException catch (failure) {
-      if (mounted) {
-        setState(() {
-          final nameKey = groupNameErrorKey(failure);
-          if (nameKey != null) {
-            _nameError = nameKey;
-          } else {
-            _failure = failure;
-          }
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _addEmployees() async {
-    final created = _created!;
-    setState(() {
-      _busy = true;
-      _failure = null;
-    });
-    try {
-      await widget.membersApi.add(created.id, _selected.toList());
-      if (mounted) Navigator.of(context).pop(created);
-    } on ApiClientException catch (failure) {
-      if (mounted) setState(() => _failure = failure);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+  Future<void> _submit() async {
+    final created = await _controller.submit();
+    if (created != null && mounted) Navigator.of(context).pop(created);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final created = _created;
-    final step = created == null ? 0 : 1;
-    return JitanModal(
-      width: 640,
-      title: context.t(AdminTextKeys.groupsCreateTitle),
-      subtitle: context.t(AdminTextKeys.groupsCreateSubtitle),
-      onClose: _busy ? null : () => Navigator.of(context).pop(created),
-      bandFooter: true,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ScheduleStepper(
-            current: step,
-            labels: [
-              context.t(AdminTextKeys.scheduleStepLabel, args: {'n': 1, 'label': context.t(AdminTextKeys.groupsStepDetails)}),
-              context.t(AdminTextKeys.scheduleStepLabel, args: {'n': 2, 'label': context.t(AdminTextKeys.groupsStepEmployees)}),
-            ],
-          ),
-          const SizedBox(height: 28),
-          if (created == null) ..._details(context) else ..._employees(context, created),
-          if (_failure case final failure?) ...[
-            const SizedBox(height: 16),
-            Builder(
-              builder: (context) {
-                final keys = failureTextKeysFor(failure);
-                return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
-              },
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _controller,
+    builder: (context, _) {
+      final c = _controller;
+      final busy = c.submitting;
+      final failure = c.failure;
+      return JitanModal(
+        width: 690,
+        title: context.t(AdminTextKeys.groupsCreateTitle),
+        subtitle: context.t(AdminTextKeys.groupsCreateSubtitle),
+        onClose: busy ? null : () => Navigator.of(context).pop(),
+        bandFooter: true,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ScheduleStepper(
+              current: c.step.index,
+              labels: [
+                for (final (index, key) in [
+                  AdminTextKeys.groupsStepDetails,
+                  AdminTextKeys.groupsStepEmployees,
+                  AdminTextKeys.groupsStepHours,
+                ].indexed)
+                  context.t(AdminTextKeys.scheduleStepLabel, args: {'n': index + 1, 'label': context.t(key)}),
+              ],
             ),
+            const SizedBox(height: 28),
+            ...switch (c.step) {
+              CreateGroupStep.details => _details(context),
+              CreateGroupStep.employees => _employees(context),
+              CreateGroupStep.hours => _hours(context),
+            },
+            if (failure != null) ...[
+              const SizedBox(height: 16),
+              Builder(
+                builder: (context) {
+                  final keys = failureTextKeysFor(failure);
+                  return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
+                },
+              ),
+            ],
           ],
-        ],
-      ),
-      leadingActions: [
-        JitanSecondaryButton(
-          label: context.t(created == null ? CommonTextKeys.cancel : AdminTextKeys.groupsSkipForNow),
-          onPressed: _busy ? null : () => Navigator.of(context).pop(created),
         ),
-      ],
-      actions: [
-        if (created == null)
-          JitanPrimaryButton(label: context.t(AdminTextKeys.groupsCreateSubmit), busy: _busy, onPressed: _create)
-        else
-          JitanPrimaryButton(
-            label: context.t(AdminTextKeys.groupsPickerAdd, args: {'count': _selected.length}),
-            busy: _busy,
-            onPressed: _selected.isEmpty ? null : _addEmployees,
+        leadingActions: [
+          JitanSecondaryButton(
+            label: context.t(c.step == CreateGroupStep.details ? CommonTextKeys.cancel : CommonTextKeys.back),
+            onPressed: busy ? null : () => c.step == CreateGroupStep.details ? Navigator.of(context).pop() : c.back(),
           ),
-      ],
-    );
+        ],
+        actions: [
+          if (c.step == CreateGroupStep.hours)
+            JitanPrimaryButton(
+              label: context.t(AdminTextKeys.groupsCreateSubmit),
+              busy: busy,
+              onPressed: c.canSubmit ? _submit : null,
+            )
+          else
+            JitanPrimaryButton(label: context.t(CommonTextKeys.continueAction), onPressed: c.canContinue ? c.next : null),
+        ],
+      );
+    },
+  );
+
+  /// Step 1: the name (1340:160).
+  List<Widget> _details(BuildContext context) {
+    final error = _controller.nameError;
+    return [
+      Text(context.t(AdminTextKeys.groupsStepDetails), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
+      const SizedBox(height: 24),
+      JitanFieldLabel(
+        label: context.t(AdminTextKeys.groupsFieldName),
+        child: TextField(
+          controller: _name,
+          autofocus: true,
+          maxLength: GroupNameRequest.maxNameLength,
+          style: JitanTextStyles.inputText,
+          onSubmitted: (_) => _controller.next(),
+          decoration: jitanFieldDecoration(
+            hintText: context.t(AdminTextKeys.groupsFieldNameHint),
+            errorText: error == null ? null : context.t(error),
+          ).copyWith(counterText: ''),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Text(context.t(AdminTextKeys.groupsFieldNameHelp), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
+    ];
   }
 
-  List<Widget> _details(BuildContext context) => [
-    JitanFieldLabel(
-      label: context.t(AdminTextKeys.groupsFieldName),
-      child: TextField(
-        controller: _name,
-        autofocus: true,
-        enabled: !_busy,
-        maxLength: GroupNameRequest.maxNameLength,
-        style: JitanTextStyles.inputText,
-        onSubmitted: (_) => _create(),
-        decoration: jitanFieldDecoration(
-          hintText: context.t(AdminTextKeys.groupsFieldNameHint),
-          errorText: _nameError == null ? null : context.t(_nameError!),
-        ).copyWith(counterText: ''),
+  /// Step 2: employees from every company (1352:2, 1354:7). Continue needs
+  /// someone in no other group: the work hours are kept on them.
+  List<Widget> _employees(BuildContext context) {
+    final c = _controller;
+    final name = c.name.trim();
+    return [
+      JitanFieldLabel(
+        label: context.t(AdminTextKeys.groupsEmployeesField),
+        child: EmployeePicker(
+          dropdown: true,
+          enabled: !c.submitting,
+          hintKey: AdminTextKeys.groupsEmployeesHint,
+          noOtherGroupsKey: AdminTextKeys.groupsPickerNoOtherGroups,
+          load: (search) => widget.membersApi.candidates(null, search: search),
+          selected: c.selected,
+          onChanged: c.setSelected,
+        ),
       ),
-    ),
-    const SizedBox(height: 10),
-    Text(context.t(AdminTextKeys.groupsFieldNameHelp), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
-  ];
+      const SizedBox(height: 14),
+      Text(
+        context.t(
+          c.onlyHereCount == 1 ? AdminTextKeys.groupsEmployeesOnlyHereOne : AdminTextKeys.groupsEmployeesOnlyHereOther,
+          args: {'n': c.onlyHereCount, 'group': name},
+        ),
+        style: JitanTextStyles.stateMessage.copyWith(fontSize: 13),
+      ),
+    ];
+  }
 
-  List<Widget> _employees(BuildContext context, GroupOverview created) => [
-    EmployeePicker(
-      enabled: !_busy,
-      noOtherGroupsKey: AdminTextKeys.groupsPickerNoOtherGroups,
-      load: (search) => widget.membersApi.candidates(created.id, search: search),
-      selected: _selected,
-      onChanged: (ids) => setState(() => _selected = ids),
-    ),
-    const SizedBox(height: 10),
-    Text(
-      '${context.t(AdminTextKeys.groupsEmployeesSelected, args: {'count': _selected.length})} · '
-      '${context.t(AdminTextKeys.groupsEmployeesLater)}',
-      style: JitanTextStyles.stateMessage.copyWith(fontSize: 13),
-    ),
-  ];
+  /// Step 3: working days, their hours and the break (1377:28, 1352:175,
+  /// 1377:290, 1377:569).
+  List<Widget> _hours(BuildContext context) => switch (_controller.options) {
+    ScheduleOptionsLoading() => [GroupStateText(context.t(AdminTextKeys.scheduleFormOptionsLoading))],
+    ScheduleOptionsFailed() => [
+      GroupStateText(context.t(AdminTextKeys.groupsPickerLoadFailed), onRetry: _controller.loadOptions),
+    ],
+    ScheduleOptionsLoaded(:final options) => _hoursForm(context, options),
+  };
+
+  List<Widget> _hoursForm(BuildContext context, ScheduleOptions options) {
+    final c = _controller;
+    final busy = c.submitting;
+    final t = TranslationScope.of(context);
+    final weekdays = [for (final day in options.days) if (day.weekday <= DateTime.friday) day.id];
+    final hoursError = c.hoursErrorKey;
+    final breakError = c.breakErrorKey;
+    Widget error(String key, [Map<String, Object> args = const {}]) => Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Text(context.t(key, args: args), style: JitanTextStyles.fieldError),
+    );
+    return [
+      Row(
+        children: [
+          Expanded(child: Text(context.t(AdminTextKeys.scheduleFormDays), style: JitanTextStyles.stateTitle)),
+          TextButton(
+            onPressed: busy ? null : () => c.selectDays(weekdays),
+            child: Text(
+              context.t(AdminTextKeys.scheduleFormWeekdays),
+              style: JitanTextStyles.inputText.copyWith(color: JitanColors.vermilion),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 10),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final day in options.days)
+            ScheduleDayToggle(
+              label: dayShortName(t, day.weekday),
+              selected: c.dayIds.contains(day.id),
+              onPressed: busy ? null : () => c.toggleDay(day.id),
+            ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: ScheduleCheckRow(
+          label: context.t(AdminTextKeys.scheduleFormSameHours),
+          value: c.sameHours,
+          onChanged: busy ? null : c.setSameHours,
+        ),
+      ),
+      const SizedBox(height: 16),
+      if (c.sameHours)
+        ScheduleFieldColumns(
+          children: [
+            ScheduleTimeField(
+              label: context.t(AdminTextKeys.scheduleFormStart),
+              hint: context.t(AdminTextKeys.groupsHoursStartHint),
+              value: c.start,
+              onChanged: busy ? null : c.setStart,
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ScheduleTimeField(
+                  label: context.t(AdminTextKeys.scheduleFormFinish),
+                  hint: context.t(AdminTextKeys.groupsHoursFinishHint),
+                  value: c.finish,
+                  onChanged: busy ? null : c.setFinish,
+                ),
+                if (hoursError != null) error(hoursError),
+              ],
+            ),
+          ],
+        )
+      else ...[
+        for (final day in options.days)
+          if (c.dayIds.contains(day.id))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  SizedBox(width: 92, child: Text(dayShortName(t, day.weekday), style: JitanTextStyles.inputText)),
+                  Expanded(
+                    child: ScheduleTimeField(
+                      hint: context.t(AdminTextKeys.groupsHoursStartHint),
+                      value: c.hoursOf(day.id).start,
+                      onChanged: busy ? null : (time) => c.setDayStart(day.id, time),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ScheduleTimeField(
+                      hint: context.t(AdminTextKeys.groupsHoursFinishHint),
+                      value: c.hoursOf(day.id).finish,
+                      onChanged: busy ? null : (time) => c.setDayFinish(day.id, time),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        if (hoursError != null) error(hoursError),
+      ],
+      const SizedBox(height: 16),
+      ScheduleFieldColumns(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: Text(context.t(AdminTextKeys.groupsHoursBreak), style: JitanTextStyles.fieldLabel),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _break,
+                enabled: !busy,
+                keyboardType: TextInputType.number,
+                maxLength: 3,
+                style: JitanTextStyles.inputText,
+                decoration: jitanFieldDecoration(
+                  hintText: context.t(AdminTextKeys.groupsHoursBreakHint),
+                ).copyWith(counterText: ''),
+              ),
+              if (breakError != null)
+                error(breakError, {'choices': c.breakLengths.join(', '), 'minutes': c.breakLengths.join(', ')}),
+            ],
+          ),
+        ],
+      ),
+    ];
+  }
 }

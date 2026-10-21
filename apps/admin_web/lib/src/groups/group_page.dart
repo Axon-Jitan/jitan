@@ -16,8 +16,9 @@ import 'rename_group_dialog.dart';
 
 /// One group's page (Figma `HR / Employee groups — New group setup` 1349:6,
 /// `New group with employees` 1349:178, `Multiple groups` 1349:1688,
-/// `Different work hours` 1349:1860): its employees from every company, and
-/// its work hours and break, set with the schedule wizard.
+/// `Different work hours` 1349:1860, `Work hours configured` 1378:4,
+/// `Inactive group` 1378:363): its employees from every company, and its
+/// work hours and break, set with the schedule wizard.
 class GroupPage extends StatefulWidget {
   const GroupPage({
     super.key,
@@ -135,19 +136,22 @@ class _GroupPageState extends State<GroupPage> {
                 onPressed: () => _rename(group),
                 child: Text(context.t(AdminTextKeys.groupPageRename), style: _action.copyWith(color: JitanColors.vermilion)),
               ),
-              TextButton(
-                onPressed: () => group.isActive ? _deactivate(group) : _reactivate(group),
-                child: Text(
-                  context.t(group.isActive ? AdminTextKeys.groupPageDeactivate : AdminTextKeys.groupPageReactivate),
-                  style: _action.copyWith(color: JitanColors.inkMuted),
+              if (group.isActive)
+                TextButton(
+                  onPressed: () => _deactivate(group),
+                  child: Text(context.t(AdminTextKeys.groupPageDeactivate), style: _action.copyWith(color: JitanColors.inkMuted)),
+                )
+              else
+                TextButton(
+                  onPressed: () => _reactivate(group),
+                  child: Text(context.t(AdminTextKeys.groupPageReactivate), style: _action.copyWith(color: JitanColors.vermilion)),
                 ),
-              ),
             ],
           ),
         ),
         if (!group.isActive) ...[
-          const SizedBox(height: 16),
-          Text(context.t(AdminTextKeys.groupPageInactive), style: JitanTextStyles.fieldError),
+          const SizedBox(height: 10),
+          Text(context.t(AdminTextKeys.groupPageInactive), style: JitanTextStyles.stateMessage.copyWith(color: JitanColors.ink)),
         ],
         const SizedBox(height: 28),
         _Section(
@@ -160,17 +164,18 @@ class _GroupPageState extends State<GroupPage> {
             ),
             const SizedBox(height: 14),
             for (final (index, member) in loaded.members.indexed) _memberRow(context, group, member, index),
-            if (group.isActive) ...[
-              const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: JitanPrimaryButton(
-                  label: context.t(AdminTextKeys.groupPageAddEmployees),
-                  height: JitanDimensions.controlHeight,
-                  onPressed: () => _addEmployees(group),
-                ),
-              ),
-            ],
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              // A button while the group is empty (1349:6), a link under the list (1378:4).
+              child: loaded.members.isEmpty
+                  ? JitanPrimaryButton(
+                      label: context.t(AdminTextKeys.groupPageAddEmployees),
+                      height: JitanDimensions.controlHeight,
+                      onPressed: () => _addEmployees(group),
+                    )
+                  : _link(context.t(AdminTextKeys.groupPageAddMoreEmployees), () => _addEmployees(group)),
+            ),
           ],
         ),
         const SizedBox(height: 20),
@@ -223,24 +228,31 @@ class _GroupPageState extends State<GroupPage> {
       GroupSchedule(status: GroupScheduleStatus.employeesDiffer) => [
         Text(context.t(AdminTextKeys.groupPageHoursDiffer), style: JitanTextStyles.fieldError),
         const SizedBox(height: 14),
-        Align(alignment: Alignment.centerLeft, child: button),
+        Align(alignment: Alignment.centerLeft, child: _link(context.t(AdminTextKeys.groupPageSetHoursLink), () => _setHours(loaded))),
       ],
+      // "Mon–Fri 08:00–16:30 · Break 30 min" (1378:4).
       GroupSchedule(:final variants) => [
-        _summaryLine(context.t(AdminTextKeys.groupPageWorkHours), workHoursSummary(t, variants.single)),
-        const SizedBox(height: 8),
-        _summaryLine(context.t(AdminTextKeys.groupPageBreak), breaksSummary(t, variants.single)),
+        Text(
+          context.t(
+            AdminTextKeys.groupPageHoursSummary,
+            args: {
+              'hours': workHoursDaysSummary(t, variants.single),
+              'minutes': variants.single.breaks.firstOrNull?.lengthMinutes ?? 0,
+            },
+          ),
+          style: JitanTextStyles.stateMessage,
+        ),
         const SizedBox(height: 14),
         Align(alignment: Alignment.centerLeft, child: button),
       ],
     };
   }
 
-  static Widget _summaryLine(String label, String value) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      SizedBox(width: 120, child: Text(label, style: JitanTextStyles.fieldLabel)),
-      Expanded(child: Text(value, style: JitanTextStyles.inputText)),
-    ],
+  /// A red text action with an arrow ("+ Add employees →", "Set work hours →").
+  static Widget _link(String label, VoidCallback onPressed) => TextButton(
+    onPressed: onPressed,
+    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
+    child: Text(label, style: JitanTextStyles.inputText.copyWith(color: JitanColors.vermilion)),
   );
 
   Widget _error(BuildContext context, ApiClientException failure) {

@@ -335,8 +335,6 @@ abstract final class AdminTextKeys {
   static const groupsFieldNameHint = 'groups.field.name.hint';
   static const groupsFieldNameHelp = 'groups.field.name.help';
   static const groupsCreateSubmit = 'groups.create.submit';
-  static const groupsEmployeesSelected = 'groups.employees.selected';
-  static const groupsEmployeesLater = 'groups.employees.later';
   static const groupsPickerTitle = 'groups.picker.title';
   static const groupsPickerSubtitle = 'groups.picker.subtitle';
   static const groupsPickerSearch = 'groups.picker.search';
@@ -376,6 +374,20 @@ abstract final class AdminTextKeys {
   static const groupPageHoursNone = 'group.page.hours.none';
   static const groupPageHoursDiffer = 'group.page.hours.differ';
   static const groupPageHoursNoSingle = 'group.page.hours.noSingle';
+  static const groupPageAddMoreEmployees = 'group.page.addMoreEmployees';
+  static const groupPageSetHoursLink = 'group.page.setHoursLink';
+  static const groupPageHoursSummary = 'group.page.hours.summary';
+  static const groupsStepHours = 'groups.step.hours';
+  static const groupsEmployeesField = 'groups.employees.field';
+  static const groupsEmployeesHint = 'groups.employees.hint';
+  static const groupsEmployeesOnlyHereOne = 'groups.employees.onlyHere.one';
+  static const groupsEmployeesOnlyHereOther = 'groups.employees.onlyHere.other';
+  static const groupsHoursStartHint = 'groups.hours.startHint';
+  static const groupsHoursFinishHint = 'groups.hours.finishHint';
+  static const groupsHoursBreak = 'groups.hours.break';
+  static const groupsHoursBreakHint = 'groups.hours.breakHint';
+  static const groupsErrorFinishBeforeStart = 'groups.error.finishBeforeStart';
+  static const groupsErrorBreakLength = 'groups.error.breakLength';
   static const groupsLoadFailed = 'groups.loadFailed';
   static const groupsManageSubtitle = 'groups.manage.subtitle';
   static const groupsRenameSubtitle = 'groups.rename.subtitle';
@@ -386,11 +398,8 @@ abstract final class AdminTextKeys {
   static const groupsPickerLoadFailed = 'groups.picker.loadFailed';
   static const groupPageSetHours = 'group.page.setHours';
   static const groupPageEditHours = 'group.page.editHours';
-  static const groupPageWorkHours = 'group.page.workHours';
-  static const groupPageBreak = 'group.page.break';
   static const groupPageLoading = 'group.page.loading';
   static const groupRemoveTitle = 'group.remove.title';
   static const groupRemoveText = 'group.remove.text';
   static const groupRemoveConfirm = 'group.remove.confirm';
-  static const groupsSkipForNow = 'groups.skipForNow';
 }
