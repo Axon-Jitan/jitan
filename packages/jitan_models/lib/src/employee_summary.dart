@@ -13,6 +13,9 @@ import 'schedule.dart';
 ///   (decision 2026-10-07). Only this flag leaves the server, never the hash.
 /// - [schedule]: the hours the employee currently has (`tblUserSchedule`),
 ///   the "Schedule" column (Figma `1401:2`); `null` without hours.
+/// - [companyIds]: the listed companies the employee belongs to
+///   (`tblUserCompany`), so an action can be taken in one of them when the
+///   list shows every company.
 ///
 /// Not included: location (ERD GAP-11), policy
 /// (PRODUCT-CLARIFY-EMPLOYEE-POLICY).
@@ -26,6 +29,7 @@ class EmployeeSummary {
     required this.isActive,
     required this.isActivated,
     this.schedule,
+    this.companyIds = const [],
   });
 
   factory EmployeeSummary.fromJson(Map<String, Object?> json) => EmployeeSummary(
@@ -37,6 +41,7 @@ class EmployeeSummary {
         isActive: json.readBool('isActive'),
         isActivated: json.readBool('isActivated'),
         schedule: json['schedule'] == null ? null : ScheduleVariant.fromJson(json.readObject('schedule')),
+        companyIds: json['companyIds'] == null ? const [] : json.readIntList('companyIds'),
       );
 
   final int id;
@@ -52,6 +57,7 @@ class EmployeeSummary {
   final bool isActivated;
 
   final ScheduleVariant? schedule;
+  final List<int> companyIds;
 
   /// The same employee with [schedule].
   EmployeeSummary withSchedule(ScheduleVariant? schedule) => EmployeeSummary(
@@ -63,6 +69,7 @@ class EmployeeSummary {
         isActive: isActive,
         isActivated: isActivated,
         schedule: schedule,
+        companyIds: companyIds,
       );
 
   Map<String, Object?> toJson() => {
@@ -74,19 +81,21 @@ class EmployeeSummary {
         'isActive': isActive,
         'isActivated': isActivated,
         if (schedule case final schedule?) 'schedule': schedule.toJson(),
+        if (companyIds.isNotEmpty) 'companyIds': companyIds,
       };
 }
 
-/// Response body of `GET /companies/{companyId}/employees`.
+/// Response body of `GET /companies/{companyId}/employees`, and of
+/// `GET /employees` (every company the viewer may see; [companyId] `null`).
 class EmployeeListResponse {
   const EmployeeListResponse({required this.companyId, required this.employees});
 
   factory EmployeeListResponse.fromJson(Map<String, Object?> json) => EmployeeListResponse(
-        companyId: json.readInt('companyId'),
+        companyId: json.readOptionalInt('companyId'),
         employees: json.readObjectList('employees').map(EmployeeSummary.fromJson).toList(),
       );
 
-  final int companyId;
+  final int? companyId;
   final List<EmployeeSummary> employees;
 
   Map<String, Object?> toJson() => {

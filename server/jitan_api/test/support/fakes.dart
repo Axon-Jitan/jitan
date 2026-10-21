@@ -72,6 +72,21 @@ class FakeEmployeeRepository implements EmployeeRepository {
     return byCompany[companyId] ?? const [];
   }
 
+  /// companyIds of every [listForCompanies] call.
+  final allCompanyCalls = <List<int>>[];
+
+  @override
+  Future<List<EmployeeSummary>> listForCompanies(List<int> companyIds, {String? nameOrCodeContains}) async {
+    allCompanyCalls.add(companyIds);
+    calls.add((-1, nameOrCodeContains));
+    final seen = <int>{};
+    return [
+      for (final id in companyIds)
+        for (final e in byCompany[id] ?? const <EmployeeSummary>[])
+          if (seen.add(e.id)) e,
+    ];
+  }
+
   @override
   Future<bool> codeExists(SqlExecutor executor, String code) async => takenCodes.contains(code);
 

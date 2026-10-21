@@ -122,6 +122,9 @@ void main() {
         row.readInt('companyID'),
     ];
     expect(companies, [companyId, second], reason: 'the path company once, plus the second');
+
+    final listed = await EmployeeRepository(db).listForCompanies([companyId, second], nameOrCodeContains: 'DT${stamp}E1');
+    expect(listed.map((e) => (e.id, e.companyIds.join(','))), [(created.id, '$companyId,$second')], reason: 'once, with both companies');
   });
 
   test('creates the user, company and group links, and an audit entry', () async {

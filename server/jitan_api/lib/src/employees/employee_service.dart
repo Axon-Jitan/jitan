@@ -57,7 +57,29 @@ class EmployeeService {
       throw const ApiException.badRequest('Search text must be at most $maxSearchLength characters.');
     }
     await _requireCompany(companyId);
-    final employees = await _employees.listForCompany(companyId, nameOrCodeContains: term.isEmpty ? null : term);
+    return _withSchedules(await _employees.listForCompany(companyId, nameOrCodeContains: term.isEmpty ? null : term));
+  }
+
+  /// Employees of every company for which [mayView] is true ("Current
+  /// company" not chosen: the filter is only a filter, product owner
+  /// 2026-10-21), optionally filtered by name or code. Each is listed once.
+  Future<List<EmployeeSummary>> listForAllCompanies({
+    String? search,
+    required Future<bool> Function(int companyId) mayView,
+  }) async {
+    final term = search?.trim() ?? '';
+    if (term.length > maxSearchLength) {
+      throw const ApiException.badRequest('Search text must be at most $maxSearchLength characters.');
+    }
+    final visible = <int>[
+      for (final company in await _companies.listCompanies())
+        if (await mayView(company.id)) company.id,
+    ];
+    final employees = await _employees.listForCompanies(visible, nameOrCodeContains: term.isEmpty ? null : term);
+    return _withSchedules(employees);
+  }
+
+  Future<List<EmployeeSummary>> _withSchedules(List<EmployeeSummary> employees) async {
     final schedules = _schedules;
     if (schedules == null || employees.isEmpty) return employees;
     final hours = await schedules.employeeSchedules(employees.map((e) => e.id));

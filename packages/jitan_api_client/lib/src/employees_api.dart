@@ -23,6 +23,18 @@ class EmployeesApi {
     }
   }
 
+  /// Employees of every company the user may see, each once (no "Current
+  /// company" chosen). A blank or null [search] lists all of them.
+  Future<List<EmployeeSummary>> listAll({String? search}) async {
+    final term = search?.trim() ?? '';
+    final json = await _transport.getJson('employees', query: term.isEmpty ? null : {'search': term});
+    try {
+      return EmployeeListResponse.fromJson(json).employees;
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Employee list: ${e.message}');
+    }
+  }
+
   /// One employee of [companyId].
   Future<EmployeeDetails> details(int companyId, int userId) async {
     final json = await _transport.getJson('companies/$companyId/employees/$userId');

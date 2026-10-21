@@ -4,6 +4,7 @@ import 'package:shelf_router/shelf_router.dart';
 
 import '../auth/authorizer.dart';
 import '../auth/permission.dart';
+import '../auth/request_identity.dart';
 import '../http/api_exception.dart';
 import '../http/path_id.dart';
 import '../http/json_request.dart';
@@ -15,6 +16,8 @@ import 'employee_service.dart';
 /// Employees screen (`apps/admin_web`).
 ///
 /// - `GET /companies/{companyId}/employees?search=<text>`
+/// - `GET /employees?search=<text>`: the employees of every company the
+///   viewer may see (no "Current company" chosen), each once
 /// - `POST /companies/{companyId}/employees` with a `CreateEmployeeRequest`
 /// - `POST /companies/{companyId}/employees/import/check` with an
 ///   `EmployeeImportRequest`: the rows that can't be imported (Import
@@ -40,6 +43,7 @@ class EmployeeRoutes {
 
   Router get router => Router()
     ..get(_path, _list)
+    ..get('/employees', _listAll)
     ..post(_path, _create)
     ..post('$_path/import/check', _checkImport)
     ..post('$_path/import', _runImport)
@@ -75,6 +79,18 @@ class EmployeeRoutes {
     await _authorizer.require(request, Permission.viewEmployees, companyId: id);
     final employees = await _employees.listForCompany(id, search: request.url.queryParameters['search']);
     return jsonResponse(EmployeeListResponse(companyId: id, employees: employees).toJson());
+  }
+
+  /// Every company is checked on its own: only those where the viewer has
+  /// `viewEmployees` are listed (ENGINEERING_RULES §28a.5).
+  Future<Response> _listAll(Request request) async {
+    // 401 without an identity, even when there is no company to check.
+    request.identity;
+    final employees = await _employees.listForAllCompanies(
+      search: request.url.queryParameters['search'],
+      mayView: (companyId) => _authorizer.may(request, Permission.viewEmployees, companyId: companyId),
+    );
+    return jsonResponse(EmployeeListResponse(companyId: null, employees: employees).toJson());
   }
 
   Future<Response> _create(Request request, String companyId) async {

@@ -1,5 +1,6 @@
 import 'package:jitan_models/jitan_models.dart';
 
+import '../database/db_row.dart';
 import '../database/like_pattern.dart';
 import '../database/sql_in_list.dart';
 import '../database/sql_executor.dart';
@@ -23,7 +24,12 @@ class EmployeeRepository {
   /// Groups: every active, non-MFD group of the user, by name. No group is
   /// singled out.
   Future<List<EmployeeSummary>> listForCompany(int companyId, {String? nameOrCodeContains}) =>
-      _list(_db, companyId, nameOrCodeContains: nameOrCodeContains);
+      _list(_db, [companyId], nameOrCodeContains: nameOrCodeContains);
+
+  /// Members of any of [companyIds], each once, with the companies of
+  /// [companyIds] they belong to; otherwise as [listForCompany].
+  Future<List<EmployeeSummary>> listForCompanies(List<int> companyIds, {String? nameOrCodeContains}) async =>
+      companyIds.isEmpty ? const [] : _list(_db, companyIds, nameOrCodeContains: nameOrCodeContains);
 
   /// One member of [companyId], or `null`.
   /// Locks [userId]'s `tblUser` row until the transaction ends, so changes
@@ -33,7 +39,7 @@ class EmployeeRepository {
       (await tx.query('SELECT userID FROM tblUser WHERE userID = :userId FOR UPDATE', {'userId': userId})).isNotEmpty;
 
   Future<EmployeeSummary?> findInCompany(SqlExecutor executor, int companyId, int userId) async =>
-      (await _list(executor, companyId, userId: userId)).firstOrNull;
+      (await _list(executor, [companyId], userId: userId)).firstOrNull;
 
   /// Details of [userId] as a non-MFD member of [companyId], or `null`.
   Future<EmployeeDetails?> findDetails(int companyId, int userId) async {
@@ -120,55 +126,66 @@ class EmployeeRepository {
 
   Future<List<EmployeeSummary>> _list(
     SqlExecutor executor,
-    int companyId, {
+    List<int> companyIds, {
     String? nameOrCodeContains,
     int? userId,
   }) async {
+    final companies = SqlInList('co', companyIds);
     final searchFilter = nameOrCodeContains == null
         ? ''
         : 'AND (u.userName LIKE :pattern OR u.userSurname LIKE :pattern OR u.userCode LIKE :pattern '
             "OR CONCAT_WS(' ', u.userName, u.userSurname) LIKE :pattern) ";
     final userFilter = userId == null ? '' : 'AND u.userID = :userId ';
-    final users = await executor.query(
+    // One row per membership; an employee of several listed companies is
+    // merged below.
+    final memberships = await executor.query(
       'SELECT u.userID, u.userName, u.userSurname, u.userCode, u.userActive, '
-      '(u.userPassword IS NOT NULL) AS isActivated '
+      '(u.userPassword IS NOT NULL) AS isActivated, uc.companyID '
       'FROM tblUser u JOIN tblUserCompany uc ON uc.userID = u.userID AND ${MembershipFilters.activeCompany('uc')} '
-      'WHERE uc.companyID = :companyId AND u.userMFD = 0 '
+      'WHERE uc.companyID IN (${companies.placeholders}) AND u.userMFD = 0 '
       '$searchFilter'
       '$userFilter'
-      'ORDER BY u.userSurname, u.userName, u.userID',
+      'ORDER BY u.userSurname, u.userName, u.userID, uc.companyID',
       {
-        'companyId': companyId,
+        ...companies.params,
         if (nameOrCodeContains != null) 'pattern': containsLikePattern(nameOrCodeContains),
         'userId': ?userId,
       },
     );
-    if (users.isEmpty) return const [];
+    if (memberships.isEmpty) return const [];
 
     final groupRows = await executor.query(
-      'SELECT ug.userID, g.groupName FROM tblUserGroup ug '
+      'SELECT DISTINCT ug.userID, g.groupID, g.groupName FROM tblUserGroup ug '
       'JOIN tblGroup g ON g.groupID = ug.groupID '
       'JOIN tblUserCompany uc ON uc.userID = ug.userID AND ${MembershipFilters.activeCompany('uc')} '
-      'WHERE uc.companyID = :companyId AND ${MembershipFilters.activeGroup('ug')} '
+      'WHERE uc.companyID IN (${companies.placeholders}) AND ${MembershipFilters.activeGroup('ug')} '
       'AND g.groupActive = 1 AND g.groupMFD = 0 '
       'ORDER BY g.groupName, g.groupID',
-      {'companyId': companyId},
+      companies.params,
     );
     final groupsByUser = <int, List<String>>{};
     for (final row in groupRows) {
       groupsByUser.putIfAbsent(row.readInt('userID'), () => []).add(row.readString('groupName'));
     }
 
+    final companiesByUser = <int, List<int>>{};
+    final firstRow = <int, DbRow>{};
+    for (final row in memberships) {
+      final id = row.readInt('userID');
+      firstRow.putIfAbsent(id, () => row);
+      companiesByUser.putIfAbsent(id, () => []).add(row.readInt('companyID'));
+    }
     return [
-      for (final row in users)
+      for (final MapEntry(key: id, value: row) in firstRow.entries)
         EmployeeSummary(
-          id: row.readInt('userID'),
+          id: id,
           firstName: row.readOptionalString('userName'),
           lastName: row.readOptionalString('userSurname'),
           code: row.readString('userCode'),
-          groups: groupsByUser[row.readInt('userID')] ?? const [],
+          groups: groupsByUser[id] ?? const [],
           isActive: row.readBool('userActive'),
           isActivated: row.readBool('isActivated'),
+          companyIds: companiesByUser[id]!,
         ),
     ];
   }
