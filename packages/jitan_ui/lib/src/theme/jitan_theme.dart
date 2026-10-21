@@ -22,12 +22,17 @@ abstract final class JitanTheme {
 
   /// [light] for the web apps, without a click effect: pressing a button,
   /// field, menu item or row shows no ripple and no pressed tint (product
-  /// decision 2026-10-20). Hover and the keyboard focus outline stay. The
-  /// mobile apps keep the touch ripple, the expected feedback on a phone.
+  /// decision 2026-10-20). Buttons keep their hover tint and the keyboard
+  /// focus outline stays; hover effects a component designs (table rows,
+  /// the sidebar, menu rows) set their own colour. Flutter's default grey
+  /// hover is off, so input fields, checkbox rows and list rows don't turn
+  /// grey under the mouse. The mobile apps keep the touch ripple, the
+  /// expected feedback on a phone.
   static ThemeData web() => light().copyWith(
         splashFactory: NoSplash.splashFactory,
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
         filledButtonTheme: const FilledButtonThemeData(style: _noPressEffect),
         textButtonTheme: const TextButtonThemeData(style: _noPressEffect),
         outlinedButtonTheme: const OutlinedButtonThemeData(style: _noPressEffect),

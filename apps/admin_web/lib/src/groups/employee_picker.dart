@@ -161,8 +161,6 @@ class _EmployeePickerState extends State<EmployeePicker> {
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
-            // No hover tint: the stripes stay as they are under the mouse.
-            hoverColor: Colors.transparent,
             onTap: widget.enabled ? () => _toggle(employee) : null,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),

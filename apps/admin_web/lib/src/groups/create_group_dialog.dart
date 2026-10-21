@@ -95,20 +95,32 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
               ],
             ),
             const SizedBox(height: 28),
-            ...switch (c.step) {
-              CreateGroupStep.details => _details(context),
-              CreateGroupStep.employees => _employees(context),
-              CreateGroupStep.hours => _hours(context),
-            },
-            if (failure != null) ...[
-              const SizedBox(height: 16),
-              Builder(
-                builder: (context) {
-                  final keys = failureTextKeysFor(failure);
-                  return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
-                },
+            // The same size on every step and while the employee list is
+            // open, as in the schedule wizard: a long step scrolls inside.
+            SizedBox(
+              height: _stepHeight(MediaQuery.sizeOf(context)),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ...switch (c.step) {
+                      CreateGroupStep.details => _details(context),
+                      CreateGroupStep.employees => _employees(context),
+                      CreateGroupStep.hours => _hours(context),
+                    },
+                    if (failure != null) ...[
+                      const SizedBox(height: 16),
+                      Builder(
+                        builder: (context) {
+                          final keys = failureTextKeysFor(failure);
+                          return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
+                        },
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
+            ),
           ],
         ),
         leadingActions: [
@@ -321,4 +333,10 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
       ),
     ];
   }
+
+  /// 430 px on a wide screen. On a phone the fields stack, so the step uses
+  /// the screen's extra height (up to 520 px) and the break field stays in
+  /// view; on a short window it shrinks so the dialog still fits.
+  static double _stepHeight(Size screen) =>
+      (screen.height - 350).clamp(280.0, screen.width < JitanDimensions.phoneBreakpoint ? 520.0 : 430.0);
 }
