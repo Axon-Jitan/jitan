@@ -649,6 +649,48 @@ Never:
 
 Use environment variables for secrets.
 
+### 28a. Database security and data isolation
+
+Product owner, 2026-10-21. **Priority: prevent SQL injection, unauthorized database
+access, and accidental exposure of company or employee information.** Do not assume a
+query is secure because it works: verify that user-controlled input cannot alter SQL
+execution and that every database operation is authorized.
+
+1. **Prevent SQL injection.** Every value goes in as a bound parameter (`:name`).
+   Never concatenate or interpolate user-provided input into SQL. Only fixed strings
+   written in the code may be built into a statement: column and table names from
+   enums or constants (e.g. `EventLogReference`), filters such as
+   `MembershipFilters`, and placeholder lists generated from a count (`:s0, :s1, …`).
+   An `IN (…)` list is built from placeholders, never from the values themselves.
+2. **Review dynamic SQL.** Any query whose text changes at run time (optional
+   conditions, placeholder lists, sort order) must show where each piece comes from;
+   none may come from a request. Audit existing queries the same way when they change.
+3. **No direct database access.** The database is never reachable from the public
+   internet or from a client. Every operation goes through the backend (rule 7).
+4. **No data leakage.** API responses never contain database structure, SQL, stack
+   traces, credentials, password or PIN hashes, or internal error details; failures
+   are mapped to the structured error model. Logs never contain secrets, QR values or
+   personal data beyond what is needed.
+5. **Company isolation.** A user of one company never reads, changes or receives
+   another company's data without explicit authorization. Company-scoped endpoints take
+   the company in the path, query only that company and pass it to
+   `Authorizer.require(…, companyId:)`; cross-company actions (e.g. adding an employee
+   to several companies, group members from every company) check the right in **each**
+   company concerned.
+6. **Strict access control on the backend.** Authentication, permission and resource
+   ownership are checked in the backend before any database operation, never only in
+   the UI.
+7. **Credentials stay secret.** Passwords, connection strings and secrets never appear
+   in frontend or mobile code, logs or the repository; they come from environment
+   variables or IT's configuration file.
+8. **Encrypted connections.** HTTPS between clients and the API; TLS with certificate
+   verification between the API and MySQL (required in production, SEC-01).
+9. **Least privilege.** The application's database account has only the rights its
+   operations need (SEC-01, to agree with IT).
+10. **Test for it.** Before deployment: SQL injection tests (hostile input in every
+    text field and search), unauthorized-access tests, and cross-company isolation
+    tests.
+
 ---
 
 ## 29. No destructive changes without explicit approval
@@ -778,6 +820,9 @@ A feature is only "done" when applicable parts of all of these are complete:
 - [ ] Empty states handled
 - [ ] Success state confirmed by backend
 - [ ] Soft deletion respected
+- [ ] Every query uses bound parameters; no request value is built into SQL (§28a)
+- [ ] Company isolation and permissions checked in the backend for every company touched (§28a)
+- [ ] No internal detail, hash, secret or other company's data in responses or logs (§28a)
 - [ ] No hardcoded production data
 - [ ] No production dependency on fake test data
 - [ ] No mock implementation remains in the production path
