@@ -89,6 +89,10 @@ enum EmployeeImportProblemKind {
   tooLong('too_long'),
   emailInvalid('email_invalid'),
 
+  /// The phone number is refused by `PhoneNumbers.check` (detail: the
+  /// `PhoneNumberProblem` name).
+  phoneInvalid('phone_invalid'),
+
   /// No active group has this name (detail: the name).
   groupUnknown('group_unknown'),
 

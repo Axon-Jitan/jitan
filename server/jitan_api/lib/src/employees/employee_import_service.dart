@@ -144,7 +144,7 @@ class EmployeeImportService {
     final firstName = row.firstName.trim();
     final lastName = row.lastName.trim();
     final code = row.code.trim();
-    final phone = _blankToNull(row.phone);
+    var phone = _blankToNull(row.phone);
     final email = _blankToNull(row.email);
     if (firstName.isEmpty) return problem(EmployeeImportProblemKind.firstNameMissing);
     if (lastName.isEmpty) return problem(EmployeeImportProblemKind.lastNameMissing);
@@ -155,6 +155,12 @@ class EmployeeImportService {
     if (earlier != row.row) return problem(EmployeeImportProblemKind.codeRepeated, '$earlier');
     if (taken.contains(_key(code))) return problem(EmployeeImportProblemKind.codeUsed, code);
 
+    // The phone is stored in Jitan's form; its length is checked in that form.
+    if (phone != null) {
+      final (:formatted, problem: phoneProblem) = PhoneNumbers.check(phone);
+      if (phoneProblem != null) return problem(EmployeeImportProblemKind.phoneInvalid, phoneProblem.name);
+      phone = formatted;
+    }
     for (final (value, field, max) in [
       (firstName, EmployeeImportRow.fieldFirstName, CreateEmployeeRequest.maxFirstNameLength),
       (lastName, EmployeeImportRow.fieldLastName, CreateEmployeeRequest.maxLastNameLength),

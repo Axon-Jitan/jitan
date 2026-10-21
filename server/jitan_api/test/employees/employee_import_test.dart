@@ -64,8 +64,9 @@ void main() {
         _row(9, groups: ['Cleaners']),
         _row(10, groups: ['Drivers']),
         _row(11, first: 'x' * (CreateEmployeeRequest.maxFirstNameLength + 1)),
-        _row(12, phone: '1' * (CreateEmployeeRequest.maxPhoneLength + 1)),
+        _row(12, phone: '0470 12 34 56'),
         _row(13, first: '', last: ''),
+        _row(14, phone: '+32 abc'),
       ]);
 
       expect([for (final p in problems) (p.row, p.kind, p.detail)], [
@@ -78,8 +79,9 @@ void main() {
         (9, EmployeeImportProblemKind.groupUnknown, 'Cleaners'),
         (10, EmployeeImportProblemKind.groupAmbiguous, 'Drivers'),
         (11, EmployeeImportProblemKind.tooLong, EmployeeImportRow.fieldFirstName),
-        (12, EmployeeImportProblemKind.tooLong, EmployeeImportRow.fieldPhone),
+        (12, EmployeeImportProblemKind.phoneInvalid, PhoneNumberProblem.missingCountryCode.name),
         (13, EmployeeImportProblemKind.firstNameMissing, null),
+        (14, EmployeeImportProblemKind.phoneInvalid, PhoneNumberProblem.notANumber.name),
       ]);
       expect(app.employees.writes, isEmpty, reason: 'a check writes nothing');
       expect(app.audit.events, isEmpty);
@@ -122,7 +124,7 @@ void main() {
       final app = _app()..employees.takenCodes = {'SBW'};
 
       final response = await app.post(_import, _body([
-        _row(2, code: ' APE ', phone: ' +32 470 ', email: ' anna@example.com ', groups: ['White collar']),
+        _row(2, code: ' APE ', phone: ' +32470123456 ', email: ' anna@example.com ', groups: ['White collar']),
         _row(3, code: 'SBW'),
         _row(4, code: 'BJA', groups: ['Blue collar', 'white collar']),
       ]));
@@ -141,6 +143,7 @@ void main() {
         'addToGroup 101→4',
       ]);
       expect(app.employees.insertedQrCodes, ['QR-1', 'QR-2'], reason: 'a new personal QR per employee');
+      expect(app.employees.lastPhone, isNull, reason: 'BJA has no phone');
       expect(app.transactions.outcomes, ['commit'], reason: 'one transaction for the whole file');
       expect([for (final e in app.audit.events) (e.type, e.actorUserId, e.references[EventLogReference.user])], [
         (AuditEventType.employeeCreated, 9, 100),

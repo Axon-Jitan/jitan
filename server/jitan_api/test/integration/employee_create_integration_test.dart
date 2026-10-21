@@ -146,7 +146,7 @@ void main() {
     );
   });
 
-  test('values of the maximum length fit their columns (no MySQL 1406), counted as MySQL counts', () async {
+  test('values of the maximum length fit their columns (no MySQL 1406), counted as MySQL counts; the phone is stored in one readable form', () async {
     final code = 'DT${stamp}M'.padRight(CreateEmployeeRequest.maxCodeLength, 'X');
     final lastName = '😀' * CreateEmployeeRequest.maxLastNameLength;
 
@@ -157,7 +157,7 @@ void main() {
         firstName: 'T' * CreateEmployeeRequest.maxFirstNameLength,
         lastName: lastName,
         code: code,
-        phone: '1' * CreateEmployeeRequest.maxPhoneLength,
+        phone: '+256772123456',
       ),
     );
 
@@ -167,7 +167,7 @@ void main() {
     )).single;
     expect(
       (row.readString('userSurname'), row.readString('userCode'), row.readString('cellphoneNumber')),
-      (lastName, code, '1' * CreateEmployeeRequest.maxPhoneLength),
+      (lastName, code, '+256 772 123456'),
     );
   });
 

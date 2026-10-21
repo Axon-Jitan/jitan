@@ -213,7 +213,7 @@ class EmployeeService {
       CreateEmployeeRequest.maxLastNameLength,
     );
     final code = _required(request.code, CreateEmployeeRequest.fieldCode, 'Employee code', CreateEmployeeRequest.maxCodeLength);
-    final phone = _optional(request.phone, CreateEmployeeRequest.fieldPhone, 'Phone number', CreateEmployeeRequest.maxPhoneLength);
+    final phone = phoneOf(request.phone);
     final email = _optional(request.email, CreateEmployeeRequest.fieldEmail, 'Email', CreateEmployeeRequest.maxEmailLength);
     if (email != null && !emailShape.hasMatch(email)) {
       throw const ApiException.validation(CreateEmployeeRequest.fieldEmail, 'Enter an email address like name@example.com.');
@@ -343,6 +343,28 @@ class EmployeeService {
       await _scheduleSync.useGroup(tx, actorUserId, userId, scheduleGroupId);
     }
     return userId;
+  }
+
+  /// [value] in Jitan's phone form (`+32 470 12 34 56`), `null` when
+  /// blank; 400 on the phone field when it is not an international number.
+  static String? phoneOf(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final (:formatted, :problem) = PhoneNumbers.check(value);
+    return switch (problem) {
+      null => _fitting(formatted!, CreateEmployeeRequest.fieldPhone, 'Phone number', CreateEmployeeRequest.maxPhoneLength),
+      PhoneNumberProblem.notANumber => throw const ApiException.validation(
+        CreateEmployeeRequest.fieldPhone,
+        'A phone number has only digits, spaces and + ( ) - .',
+      ),
+      PhoneNumberProblem.missingCountryCode => throw const ApiException.validation(
+        CreateEmployeeRequest.fieldPhone,
+        'Start the phone number with + and the country code, like +32 470 12 34 56.',
+      ),
+      PhoneNumberProblem.invalid => throw const ApiException.validation(
+        CreateEmployeeRequest.fieldPhone,
+        'This is not a valid phone number for its country.',
+      ),
+    };
   }
 
   /// Something@something.something, without spaces: catches typing

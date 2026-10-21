@@ -45,13 +45,13 @@ void main() {
 
       final response = await app.post(
         _path,
-        _body(firstName: ' Disan ', code: ' SBW ', groupId: 3, phone: ' +32 470 ', email: ' disan@example.com '),
+        _body(firstName: ' Disan ', code: ' SBW ', groupId: 3, phone: ' +32470123456 ', email: ' disan@example.com '),
       );
 
       expect(response.statusCode, 201);
       expect(await jsonBody(response), containsPair('code', 'SBW'));
       expect(app.employees.writes, ['insertUser SBW', 'addToCompany 100→7', 'addToGroup 100→3']);
-      expect(app.employees.lastPhone, '+32 470');
+      expect(app.employees.lastPhone, '+32 470 12 34 56', reason: 'stored in one readable form');
       expect(app.employees.lastEmail, 'disan@example.com');
       expect(app.employees.insertedQrCodes, ['QR-1'], reason: 'a new personal QR per employee');
       expect(app.transactions.outcomes, ['commit']);
@@ -114,7 +114,6 @@ void main() {
       ('firstName', CreateEmployeeRequest.maxFirstNameLength, (String v) => _body(firstName: v)),
       ('lastName', CreateEmployeeRequest.maxLastNameLength, (String v) => _body(lastName: v)),
       ('code', CreateEmployeeRequest.maxCodeLength, (String v) => _body(code: v)),
-      ('phone', CreateEmployeeRequest.maxPhoneLength, (String v) => _body(phone: v)),
     ]) {
       test('"$field": $max characters fit; one more is 400 validation_failed before any write', () async {
         final tooLong = await _error(_app(), body('x' * (max + 1)));
@@ -126,6 +125,16 @@ void main() {
         expect((await app.post(_path, body('x' * max))).statusCode, 201);
       });
     }
+
+    test('"phone": letters, no country code or an impossible number are 400 on the phone, before any write', () async {
+      for (final phone in ['cbc', '+32abc', '0470 12 34 56', '+3247']) {
+        final app = _app();
+        final error = await _error(app, _body(phone: phone));
+        expect(error, containsPair('status', 400), reason: phone);
+        expect(error, containsPair('field', 'phone'), reason: phone);
+        expect(app.employees.writes, isEmpty);
+      }
+    });
 
     test('lengths count characters as MySQL does: an emoji is one, surrounding spaces none', () async {
       final app = _app();
