@@ -7,20 +7,18 @@ import '../l10n/admin_text_keys.dart';
 import 'group_schedule_text.dart';
 
 /// The Employee groups table (Figma `HR / Employee groups — Overview`
-/// 1340:2): name, employees, schedule, status and "⋯". A row opens the
-/// group's page.
+/// 1340:2): name, employees, schedule, status and "⋯". A row click opens
+/// nothing in V1 (product owner, 2026-10-21: details from a row come in V2).
 class GroupsTable extends StatelessWidget {
   const GroupsTable({
     super.key,
     required this.groups,
     required this.schedules,
-    required this.onOpen,
     required this.onManage,
   });
 
   final List<GroupOverview> groups;
   final Map<int, GroupSchedule> schedules;
-  final ValueChanged<GroupOverview> onOpen;
   final ValueChanged<GroupOverview> onManage;
 
   /// Column widths proportional to Figma (x = 20/366/586/916/1080 in a 1120
@@ -36,7 +34,6 @@ class GroupsTable extends StatelessWidget {
     final t = TranslationScope.of(context);
     return JitanDataTable(
       maxHeight: JitanDimensions.tableMaxHeight,
-      onRowTap: (index) => onOpen(groups[index]),
       columns: [
         JitanTableColumn(label: t.t(AdminTextKeys.groupsColumnName), flex: _flexName),
         JitanTableColumn(label: t.t(AdminTextKeys.groupsColumnEmployees), flex: _flexEmployees),

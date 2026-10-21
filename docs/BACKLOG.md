@@ -6,6 +6,20 @@ product questions in [PRODUCT_CLARIFICATIONS.md](PRODUCT_CLARIFICATIONS.md).
 
 Status values: `TODO` · `IN PROGRESS` · `DONE (commit)`
 
+## EMP-DETAILS-V2: Details from a table row (version 2) · `TODO`
+
+**Decided 2026-10-21 (product owner):** in V1 no HR/Admin table opens details when HR
+clicks a row; that comes in V2, with its Figma frames.
+
+- **Employees:** the Employee details dialog (`employee_details_dialog.dart`, with the
+  temporary onboarding/recovery QR and Reset account access) is built and tested but has
+  **no way in**. Until V2 or a designed entry point, HR cannot generate an onboarding QR
+  or reset access from the web app. **Needs a product decision before employees are
+  onboarded.**
+- **Employee groups:** the group page is reached only right after Create group (and from
+  "Manage employees →" in Cannot deactivate group). Adding employees or changing hours
+  later needs a way in.
+
 ## GRP-01: Employee groups managed by HR/Admin
 
 Status: `IN PROGRESS` · decided 2026-10-20 · roadmap phase 2 · **server done** (`GET /groups/overview`, `POST /groups`, `PUT /groups/{id}`, `POST /groups/{id}/deactivate|reactivate`, `GroupManagementApi`); screen waits for the Figma frame

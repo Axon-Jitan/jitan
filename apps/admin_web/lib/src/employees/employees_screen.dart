@@ -8,7 +8,6 @@ import '../common/api_failure_text.dart';
 import '../company_context/current_company.dart';
 import '../l10n/admin_text_keys.dart';
 import 'add_employee_dialog.dart';
-import 'employee_details_dialog.dart';
 import 'employees_controller.dart';
 import 'employees_table.dart';
 
@@ -18,11 +17,10 @@ import 'employees_table.dart';
 /// "Import CSV / Excel" (Figma) is not shown: bulk import is a separate task
 /// (roadmap §8), and the page never offers a button that does nothing.
 class EmployeesScreen extends StatelessWidget {
-  const EmployeesScreen({super.key, required this.api, required this.groupsApi, required this.assignmentsApi});
+  const EmployeesScreen({super.key, required this.api, required this.groupsApi});
 
   final EmployeesApi api;
   final GroupsApi groupsApi;
-  final EmployeeAssignmentsApi assignmentsApi;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +52,6 @@ class EmployeesScreen extends StatelessWidget {
               key: ValueKey(company.id),
               api: api,
               groupsApi: groupsApi,
-              assignmentsApi: assignmentsApi,
               company: company,
             ),
         ],
@@ -68,13 +65,11 @@ class _CompanyEmployees extends StatefulWidget {
     super.key,
     required this.api,
     required this.groupsApi,
-    required this.assignmentsApi,
     required this.company,
   });
 
   final EmployeesApi api;
   final GroupsApi groupsApi;
-  final EmployeeAssignmentsApi assignmentsApi;
   final CompanySummary company;
 
   @override
@@ -166,16 +161,7 @@ class _CompanyEmployeesState extends State<_CompanyEmployees> {
         message: context.t(AdminTextKeys.employeeNoMatchMessage, args: {'search': search}),
       ),
     ),
-    EmployeesLoaded(:final employees) => EmployeesTable(
-      employees: employees,
-      onOpen: (employee) => showEmployeeDetailsDialog(
-        context,
-        employeesApi: widget.api,
-        assignmentsApi: widget.assignmentsApi,
-        companyId: widget.company.id,
-        userId: employee.id,
-      ),
-    ),
+    EmployeesLoaded(:final employees) => EmployeesTable(employees: employees),
   };
 
   Widget _error(BuildContext context, ApiClientException failure) {

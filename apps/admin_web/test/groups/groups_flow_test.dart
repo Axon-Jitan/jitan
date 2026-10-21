@@ -1,8 +1,10 @@
 import 'package:admin_web/src/app/admin_app.dart';
 import 'package:admin_web/src/groups/employee_picker.dart';
+import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
@@ -258,6 +260,11 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Old'));
+    await tester.pumpAndSettle();
+    expect(find.text('Manage employees and group working hours.'), findsNothing, reason: 'a row opens nothing in V1');
+
+    // The page itself is reached by its address (e.g. right after Create group).
+    GoRouter.of(tester.element(find.byType(GroupsScreen))).go('/groups/4');
     await tester.pump();
     await tester.pump();
     fakes.schedules.succeedList([_blue, _white, _drivers]);

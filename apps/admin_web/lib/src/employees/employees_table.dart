@@ -13,13 +13,13 @@ import '../l10n/admin_text_keys.dart';
 /// - **Onboarding** has two states, Activated / Not activated
 ///   (`userPassword IS NOT NULL`). Figma's "QR generated" is not tracked.
 /// - **Type** lists every group of the employee; none is singled out.
+///
+/// A row click opens nothing in V1 (product owner, 2026-10-21: details from
+/// a row come in V2; BACKLOG EMP-DETAILS-V2).
 class EmployeesTable extends StatelessWidget {
-  const EmployeesTable({super.key, required this.employees, this.onOpen});
+  const EmployeesTable({super.key, required this.employees});
 
   final List<EmployeeSummary> employees;
-
-  /// Opens an employee's details (row click).
-  final ValueChanged<EmployeeSummary>? onOpen;
 
   /// Column widths proportional to the Figma table without its Policy column.
   static const _flexName = 260;
@@ -43,7 +43,6 @@ class EmployeesTable extends StatelessWidget {
         JitanTableColumn(label: t.t(AdminTextKeys.employeeColumnStatus), flex: _flexStatus),
       ],
       rows: [for (final employee in employees) _cells(t, employee)],
-      onRowTap: onOpen == null ? null : (index) => onOpen!(employees[index]),
     );
   }
 

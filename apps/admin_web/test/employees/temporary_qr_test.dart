@@ -1,5 +1,5 @@
 import 'package:admin_web/src/company_context/current_company.dart';
-import 'package:admin_web/src/employees/employees_screen.dart';
+import 'package:admin_web/src/employees/employee_details_dialog.dart';
 import 'package:admin_web/src/employees/temporary_qr/temporary_qr_controller.dart';
 import 'package:admin_web/src/employees/temporary_qr/temporary_qr_dialog.dart';
 import 'package:flutter/material.dart';
@@ -47,15 +47,26 @@ void main() {
           child: MaterialApp(
             theme: JitanTheme.light(),
             home: Scaffold(
-              body: EmployeesScreen(api: employees, groupsApi: FakeGroupsApi(), assignmentsApi: FakeEmployeeAssignmentsApi()),
+              // Employee details has no way in from a row in V1 (EMP-DETAILS-V2):
+              // the test opens it directly.
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showEmployeeDetailsDialog(
+                    context,
+                    employeesApi: employees,
+                    assignmentsApi: FakeEmployeeAssignmentsApi(),
+                    companyId: 7,
+                    userId: 1,
+                  ),
+                  child: const Text('open details'),
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
-    employees.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW')]);
-    await tester.pump();
-    await tester.tap(find.text('Disan Ssebowa'));
+    await tester.tap(find.text('open details'));
     await tester.pump(const Duration(milliseconds: 300));
     employees.detailsSucceed(_disan);
     await tester.pump();

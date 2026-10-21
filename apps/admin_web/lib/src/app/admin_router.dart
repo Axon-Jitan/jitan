@@ -33,7 +33,6 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
               child: EmployeesScreen(
                 api: services.employeesApi,
                 groupsApi: services.groupsApi,
-                assignmentsApi: services.assignmentsApi,
               ),
             ),
           ),

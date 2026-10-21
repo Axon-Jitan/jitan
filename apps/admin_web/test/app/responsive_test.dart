@@ -1,5 +1,6 @@
 import 'package:admin_web/src/companies/companies_screen.dart';
 import 'package:admin_web/src/company_context/current_company.dart';
+import 'package:admin_web/src/employees/employee_details_dialog.dart';
 import 'package:admin_web/src/employees/employees_screen.dart';
 import 'package:admin_web/src/groups/employee_picker.dart';
 import 'package:admin_web/src/groups/group_page.dart';
@@ -54,6 +55,23 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 }
+
+/// Employee details has no way in from a row in V1 (EMP-DETAILS-V2), so the
+/// tests open it from a button.
+Widget _detailsOpener(FakeEmployeesApi employees) => Builder(
+  builder: (context) => Center(
+    child: TextButton(
+      onPressed: () => showEmployeeDetailsDialog(
+        context,
+        employeesApi: employees,
+        assignmentsApi: FakeEmployeeAssignmentsApi(),
+        companyId: 7,
+        userId: 1,
+      ),
+      child: const Text('open details'),
+    ),
+  ),
+);
 
 const _activated = EmployeeDetails(
   id: 1,
@@ -197,10 +215,10 @@ void main() {
       expect(find.text('Fabian Peeters · FPT'), findsOneWidget);
     });
 
-    testWidgets('Employees page, Add employee, details, Reset access at $width px', (tester) async {
+    testWidgets('Employees page and Add employee at $width px', (tester) async {
       final employees = FakeEmployeesApi();
       final groupsApi = FakeGroupsApi();
-      await _pump(tester, width, EmployeesScreen(api: employees, groupsApi: groupsApi, assignmentsApi: FakeEmployeeAssignmentsApi()));
+      await _pump(tester, width, EmployeesScreen(api: employees, groupsApi: groupsApi));
       employees.succeed([
         employee(1, 'Disan', 'Ssebowa', 'SBW', groups: ['White collar', 'Blue collar']),
         employee(2, 'Thomas', 'Vermeulen', 'TVM', active: false),
@@ -215,8 +233,12 @@ void main() {
       _fitsTheWindow(tester, width, 'Add employee');
       await tester.tapAt(const Offset(2, 2));
       await _settle(tester);
+    });
 
-      await tester.tap(find.text('Disan Ssebowa'));
+    testWidgets('Employee details and Reset access (staged for V2) at $width px', (tester) async {
+      final employees = FakeEmployeesApi();
+      await _pump(tester, width, _detailsOpener(employees));
+      await tester.tap(find.text('open details'));
       await _settle(tester);
       employees.detailsSucceed(_activated);
       await _settle(tester);
@@ -230,10 +252,8 @@ void main() {
 
     testWidgets('the temporary QR at $width px', (tester) async {
       final employees = FakeEmployeesApi();
-      await _pump(tester, width, EmployeesScreen(api: employees, groupsApi: FakeGroupsApi(), assignmentsApi: FakeEmployeeAssignmentsApi()));
-      employees.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW')]);
-      await tester.pump();
-      await tester.tap(find.text('Disan Ssebowa'));
+      await _pump(tester, width, _detailsOpener(employees));
+      await tester.tap(find.text('open details'));
       await _settle(tester);
       employees.detailsSucceed(
         const EmployeeDetails(

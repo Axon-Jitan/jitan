@@ -151,7 +151,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       [] => _state(GroupStateText(context.t(AdminTextKeys.groupsNoMatchMessage))),
       final groups => JitanSurfaceCard(
         radius: JitanDimensions.tableCardRadius,
-        child: GroupsTable(groups: groups, schedules: schedules, onOpen: _open, onManage: _manage),
+        child: GroupsTable(groups: groups, schedules: schedules, onManage: _manage),
       ),
     },
   };
