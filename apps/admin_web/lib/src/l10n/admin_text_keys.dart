@@ -48,6 +48,7 @@ abstract final class AdminTextKeys {
 
   /// Argument: `{company}`.
   static const employeeEmptyMessage = 'employee.empty.message';
+  static const employeeEmptyMessageAll = 'employee.empty.messageAll';
   static const employeeNoMatchTitle = 'employee.noMatch.title';
 
   /// Argument: `{search}`.

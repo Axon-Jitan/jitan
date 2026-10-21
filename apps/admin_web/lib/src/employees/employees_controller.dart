@@ -28,19 +28,21 @@ class EmployeesFailed extends EmployeesState {
   final ApiClientException failure;
 }
 
-/// Loads one company's employees and applies search. One controller per
-/// company: a new company gets a new controller, so results never mix.
+/// Loads one company's employees, or every company's when [companyId] is
+/// `null` ("Current company" not chosen: it is only a filter), and applies
+/// search. One controller per choice: another choice gets a new controller,
+/// so results never mix.
 ///
 /// Holds no business rules: scoping and filtering happen on the server.
 class EmployeesController extends ChangeNotifier {
   /// [search]: the text already in the search field (e.g. after switching company).
-  EmployeesController(this._api, {required this.companyId, this.searchDelay = defaultSearchDelay, String search = ''})
+  EmployeesController(this._api, {this.companyId, this.searchDelay = defaultSearchDelay, String search = ''})
     : _search = search.trim();
 
   static const defaultSearchDelay = Duration(milliseconds: 300);
 
   final EmployeesApi _api;
-  final int companyId;
+  final int? companyId;
   final Duration searchDelay;
 
   EmployeesState _state = const EmployeesLoading();
@@ -56,7 +58,10 @@ class EmployeesController extends ChangeNotifier {
     final search = _search;
     _emit(const EmployeesLoading());
     try {
-      final employees = await _api.listForCompany(companyId, search: search);
+      final company = companyId;
+      final employees = company == null
+          ? await _api.listAll(search: search)
+          : await _api.listForCompany(company, search: search);
       if (request == _latestRequest) _emit(EmployeesLoaded(employees: employees, search: search));
     } on ApiClientException catch (failure) {
       if (request == _latestRequest) _emit(EmployeesFailed(failure));

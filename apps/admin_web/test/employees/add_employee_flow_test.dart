@@ -75,14 +75,14 @@ void main() {
   }
 
   Future<void> choose(WidgetTester tester, String fieldLabel, List<String> options) async {
-    await tester.tap(find.descendant(of: find.widgetWithText(JitanMultiSelectField<int>, fieldLabel), matching: find.byType(InkWell)).first);
-    await tester.pumpAndSettle();
+    // Picking closes the list, so it is opened again for each option.
     for (final option in options) {
+      await tester.tap(find.descendant(of: find.widgetWithText(JitanMultiSelectField<int>, fieldLabel), matching: find.byType(InkWell)).first);
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(MenuItemButton, option));
       await tester.pumpAndSettle();
+      expect(find.byType(MenuItemButton), findsNothing, reason: 'the list closes on a pick');
     }
-    await tester.tapAt(const Offset(1400, 1000));
-    await tester.pumpAndSettle();
   }
 
   testWidgets('step 1 matches Figma: no Employee type; Continue checks the required fields', (tester) async {

@@ -9,8 +9,9 @@ import 'jitan_select_field.dart';
 /// A dropdown that holds several choices (Figma `HR / Add employee —
 /// Companies dropdown open` 993:292, `Employee groups dropdown open`
 /// 993:596): the chosen ones as chips ("Almeco ×") followed by the hint, and
-/// a list below the field where a chosen row shows ✓ and the others +.
-/// Choosing keeps the list open, so HR can pick several in a row.
+/// a list below the field where a chosen row shows ✓. Picking an option
+/// closes the list at once (product owner, 2026-10-21); HR opens it again to
+/// pick another. A chip's × removes it.
 class JitanMultiSelectField<T> extends StatefulWidget {
   const JitanMultiSelectField({
     super.key,
@@ -110,7 +111,7 @@ class _JitanMultiSelectFieldState<T> extends State<JitanMultiSelectField<T>> {
   }
 }
 
-/// A row of the open list: ✓ when chosen (on a soft grey), + otherwise.
+/// A row of the open list: ✓ when chosen (on a soft grey); no sign otherwise.
 class _Row extends StatelessWidget {
   const _Row({required this.label, required this.chosen, required this.width, required this.onPressed});
 
@@ -121,9 +122,11 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MenuItemButton(
-    closeOnActivate: false,
     onPressed: onPressed,
-    leadingIcon: Icon(chosen ? Icons.check_rounded : Icons.add_rounded, size: 16, color: JitanColors.inkMuted),
+    // The same space either way, so the names line up.
+    leadingIcon: chosen
+        ? const Icon(Icons.check_rounded, size: 16, color: JitanColors.inkMuted)
+        : const SizedBox.square(dimension: 16),
     style: ButtonStyle(
       minimumSize: WidgetStatePropertyAll(Size(width, _JitanMultiSelectFieldState._itemHeight)),
       maximumSize: WidgetStatePropertyAll(Size(width, _JitanMultiSelectFieldState._itemHeight)),

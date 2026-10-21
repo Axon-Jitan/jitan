@@ -103,6 +103,7 @@ const builtInEnglish = <String, String>{
   'employee.onboarding.notActivated': 'Not activated',
   'employee.empty.title': 'No employees yet',
   'employee.empty.message': 'Employees of {company} will appear here.',
+  'employee.empty.messageAll': 'Employees you add will appear here.',
   'employee.noMatch.title': 'No matching employees',
   'employee.noMatch.message': 'No employee name or code contains “{search}”.',
   'employee.noCompany.title': 'No company selected',

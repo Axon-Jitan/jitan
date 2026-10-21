@@ -43,13 +43,25 @@ Future<(FakeEmployeesApi, CurrentCompanyController)> _pump(WidgetTester tester, 
 }
 
 void main() {
-  testWidgets('without a current company: explains it and requests nothing', (tester) async {
+  testWidgets('without a current company: lists every company\'s employees (the switcher is only a filter)', (tester) async {
     final (api, _) = await _pump(tester);
 
     expect(find.text('Employees'), findsWidgets, reason: 'the title and the section heading');
-    expect(find.text('Select a company to view its employees.'), findsOneWidget, reason: '1401:121');
     expect(find.text('Current company'), findsOneWidget);
-    expect(api.calls, isEmpty, reason: 'never guesses a company');
+    expect(api.calls, [(-1, '')], reason: 'all companies, no company guessed');
+
+    api.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW'), employee(2, 'Kevin', 'De Vos', 'KDV')]);
+    await tester.pump();
+    expect(find.text('Disan Ssebowa'), findsOneWidget);
+    expect(find.text('Kevin De Vos'), findsOneWidget);
+  });
+
+  testWidgets('without a current company and no employees: the empty state names no company', (tester) async {
+    final (api, _) = await _pump(tester);
+    api.succeed(const []);
+    await tester.pump();
+
+    expect(find.text('Employees you add will appear here.'), findsOneWidget);
   });
 
   testWidgets('loads the current company and renders every column', (tester) async {

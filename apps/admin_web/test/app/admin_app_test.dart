@@ -69,14 +69,16 @@ void main() {
     expect(find.text('Manage your workforce and employee onboarding'), findsOneWidget);
   });
 
-  testWidgets('Employees asks for a company in "Current company"; nothing is chosen for HR', (tester) async {
+  testWidgets('Employees lists every company\'s employees until a company is chosen; nothing is chosen for HR', (tester) async {
     useDesktopSize(tester);
+    final services = TestServices();
 
-    await tester.pumpWidget(app(TestServices(), initialLocation: '/employees'));
+    await tester.pumpWidget(app(services, initialLocation: '/employees'));
     await tester.pump();
 
     expect(find.text('Current company'), findsOneWidget);
-    expect(find.text('Select a company to view its employees.'), findsOneWidget);
+    expect(find.text('Select a company'), findsOneWidget, reason: 'the filter stays empty');
+    expect(services.employees.calls, [(-1, '')]);
   });
 
   testWidgets('an unknown URL lands on Companies', (tester) async {

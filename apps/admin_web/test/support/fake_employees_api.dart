@@ -18,6 +18,10 @@ class FakeEmployeesApi implements EmployeesApi {
     return completer.future;
   }
 
+  /// Every company (no "Current company"): recorded in [calls] as company -1.
+  @override
+  Future<List<EmployeeSummary>> listAll({String? search}) => listForCompany(-1, search: search);
+
   void succeed(List<EmployeeSummary> employees, {int? index}) =>
       _pending[index ?? _pending.length - 1].complete(employees);
 

@@ -9,7 +9,6 @@ import '../app/admin_routes.dart';
 import '../common/api_failure_text.dart';
 import '../company_context/company_switcher.dart';
 import '../company_context/current_company.dart';
-import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'add_employee_dialog.dart';
 import 'employees_controller.dart';
@@ -47,6 +46,7 @@ class EmployeesScreen extends StatefulWidget {
 class _EmployeesScreenState extends State<EmployeesScreen> {
   EmployeesController? _controller;
   CompanySummary? _company;
+  var _started = false;
   String _search = '';
   EmployeeStatusFilter? _status;
 
@@ -54,11 +54,13 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final company = CurrentCompanyScope.of(context).company;
-    if (company?.id == _company?.id) return;
-    // Another company: a fresh list, with the search HR typed.
+    if (_started && company?.id == _company?.id) return;
+    // Another filter: a fresh list, with the search HR typed. No company
+    // chosen lists every company's employees.
+    _started = true;
     _company = company;
     _controller?.dispose();
-    _controller = company == null ? null : (EmployeesController(widget.api, companyId: company.id, search: _search)..load());
+    _controller = EmployeesController(widget.api, companyId: company?.id, search: _search)..load();
   }
 
   @override
@@ -86,12 +88,18 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
 
   /// "⋯" → Manage employee → the onboarding QR, or Reset account access and
   /// then the recovery QR (as in Employee details).
-  Future<void> _manage(CompanySummary company, EmployeeSummary employee) async {
+  ///
+  /// The actions are company-scoped endpoints: the filter company, or with
+  /// every company listed, one the employee belongs to (the same person and
+  /// the same result in each).
+  Future<void> _manage(CompanySummary? company, EmployeeSummary employee) async {
+    final companyId = company?.id ?? employee.companyIds.firstOrNull;
+    if (companyId == null) return;
     final action = await showManageEmployeeDialog(context, employee: employee);
     if (action == null || !mounted) return;
     final EmployeeDetails details;
     try {
-      details = await widget.api.details(company.id, employee.id);
+      details = await widget.api.details(companyId, employee.id);
     } on ApiClientException catch (failure) {
       if (mounted) _say(context.t(failureTextKeysFor(failure).message));
       return;
@@ -154,9 +162,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           const SizedBox(height: 28),
           Text(context.t(AdminTextKeys.employeeSection), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
           const SizedBox(height: 16),
-          if (company == null || controller == null)
-            GroupStateText(context.t(AdminTextKeys.employeeNoCompany))
-          else
+          if (controller != null)
             ListenableBuilder(
               listenable: controller,
               builder: (context, _) => JitanSurfaceCard(
@@ -212,13 +218,15 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     );
   }
 
-  Widget _content(BuildContext context, CompanySummary company, EmployeesController controller) => switch (controller.state) {
+  Widget _content(BuildContext context, CompanySummary? company, EmployeesController controller) => switch (controller.state) {
     EmployeesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.employeeListLoading))),
     EmployeesFailed(:final failure) => _centered(_error(context, failure, controller)),
     EmployeesLoaded(employees: [], search: '') => _centered(
       JitanEmptyState(
         title: context.t(AdminTextKeys.employeeEmptyTitle),
-        message: context.t(AdminTextKeys.employeeEmptyMessage, args: {'company': company.name}),
+        message: company == null
+            ? context.t(AdminTextKeys.employeeEmptyMessageAll)
+            : context.t(AdminTextKeys.employeeEmptyMessage, args: {'company': company.name}),
       ),
     ),
     EmployeesLoaded(:final employees) => switch ([
