@@ -48,6 +48,9 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   EmployeesController? _controller;
   CompanySummary? _company;
   var _started = false;
+
+  /// The list has scrolled under the fixed title and filters.
+  var _listScrolled = false;
   String _search = '';
   EmployeeStatusFilter? _status;
 
@@ -159,61 +162,101 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   Widget build(BuildContext context) {
     final company = _company;
     final controller = _controller;
-    // One scroll for the whole page; the table pins its heading row.
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
-          sliver: SliverMainAxisGroup(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    JitanPageHeader(
-                      title: context.t(AdminTextKeys.employeeTitle),
-                      subtitle: context.t(AdminTextKeys.employeeListSubtitle),
-                      action: Wrap(
-                        spacing: 22,
-                        runSpacing: 10,
-                        children: [
-                          JitanOutlineButton(
-                            label: context.t(AdminTextKeys.employeeImportAction),
-                            height: JitanDimensions.controlHeight,
-                            onPressed: company == null ? null : () => context.go(AdminRoutes.employeeImport),
-                          ),
-                          JitanPrimaryButton(
-                            label: context.t(AdminTextKeys.employeeAddAction),
-                            icon: Icons.add,
-                            height: JitanDimensions.controlHeight,
-                            // The company is chosen in the wizard; the filter is only a filter.
-                            onPressed: _addEmployee,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: JitanDimensions.headerToToolbar),
-                    _toolbar(context),
-                    const SizedBox(height: 28),
-                    Text(
-                      context.t(AdminTextKeys.employeeSection),
-                      style: JitanTextStyles.stateTitle.copyWith(fontSize: 18),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
+    final padding = JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width);
+    final top = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        JitanPageHeader(
+          title: context.t(AdminTextKeys.employeeTitle),
+          subtitle: context.t(AdminTextKeys.employeeListSubtitle),
+          action: Wrap(
+            spacing: 22,
+            runSpacing: 10,
+            children: [
+              JitanOutlineButton(
+                label: context.t(AdminTextKeys.employeeImportAction),
+                height: JitanDimensions.controlHeight,
+                onPressed: company == null ? null : () => context.go(AdminRoutes.employeeImport),
               ),
-              if (controller != null)
-                ListenableBuilder(
-                  listenable: controller,
-                  builder: (context, _) => _content(context, company, controller),
-                ),
+              JitanPrimaryButton(
+                label: context.t(AdminTextKeys.employeeAddAction),
+                icon: Icons.add,
+                height: JitanDimensions.controlHeight,
+                // The company is chosen in the wizard; the filter is only a filter.
+                onPressed: _addEmployee,
+              ),
             ],
           ),
         ),
+        const SizedBox(height: JitanDimensions.headerToToolbar),
+        _toolbar(context),
+        const SizedBox(height: 28),
+        Text(context.t(AdminTextKeys.employeeSection), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
+        const SizedBox(height: 16),
       ],
     );
+    final list = [
+      if (controller != null)
+        ListenableBuilder(listenable: controller, builder: (context, _) => _content(context, company, controller)),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // As in Linear, Notion or Stripe: title, actions and filters stay in
+        // place and only the list scrolls, its heading row pinned. On a phone
+        // or a short window they would leave too little room for the list,
+        // so there the whole page scrolls.
+        final fixedTop =
+            constraints.maxWidth >= JitanDimensions.phoneBreakpoint && constraints.maxHeight >= _fixedTopMinHeight;
+        if (!fixedTop) {
+          return CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: padding,
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    SliverToBoxAdapter(child: top),
+                    ...list,
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(padding: padding.copyWith(bottom: 0), child: top),
+            // A soft line once rows pass under the fixed part.
+            AnimatedOpacity(
+              opacity: _listScrolled ? 1 : 0,
+              duration: const Duration(milliseconds: 150),
+              child: Container(height: 1, color: JitanColors.inputBorder),
+            ),
+            Expanded(
+              child: NotificationListener<ScrollUpdateNotification>(
+                onNotification: (notification) {
+                  final scrolled = notification.metrics.pixels > 0;
+                  if (notification.depth == 0 && scrolled != _listScrolled) setState(() => _listScrolled = scrolled);
+                  return false;
+                },
+                child: CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: padding.copyWith(top: 0),
+                      sliver: SliverMainAxisGroup(slivers: list),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
+
+  /// Below this window height the title and filters scroll with the list.
+  static const _fixedTopMinHeight = 640.0;
 
   Widget _toolbar(BuildContext context) {
     final search = JitanFieldLabel(
