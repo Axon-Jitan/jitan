@@ -60,13 +60,21 @@ class ScheduleEditingService {
 
   /// Sets [groupId]'s whole schedule, its work hours and its break, in one
   /// transaction: when anything is refused, nothing is saved.
+  Future<GroupSchedule> setSchedule(int actorUserId, int groupId, SetGroupScheduleRequest request) async {
+    final schedule = await prepareSchedule(request);
+    await _transactions.transaction((tx) => applySchedule(tx, actorUserId, groupId, schedule));
+    return _result(groupId);
+  }
+
+  /// Checks [request] and turns it into schedule rows, before any
+  /// transaction (Create group saves them together with the new group).
   ///
   /// HR only chooses the break's length. It is placed in the middle of each
   /// working day (decision D28): `start = (dayStart + dayFinish - length) / 2`,
   /// whole minutes, e.g. 08:00–16:30 with 30 minutes → 12:00–12:30. Only the
   /// length counts (breaks are deducted automatically); the stored time
   /// exists because a schedule row is a time from–to.
-  Future<GroupSchedule> setSchedule(int actorUserId, int groupId, SetGroupScheduleRequest request) async {
+  Future<PreparedGroupSchedule> prepareSchedule(SetGroupScheduleRequest request) async {
     final workRows = await _workRows(request.workHours);
     final length = request.breakMinutes;
     _choice(length, ScheduleChoices.breakLengthMinutes, SetGroupScheduleRequest.fieldBreakMinutes);
@@ -90,12 +98,15 @@ class ScheduleEditingService {
         roundUp: null,
       ));
     }
-    await _transactions.transaction((tx) async {
-      if (!await _writes.lockGroup(tx, groupId)) throw ApiException.notFound('Group $groupId does not exist.');
-      await _replace(tx, actorUserId, groupId, _workTypes, workRows, locked: true);
-      await _replace(tx, actorUserId, groupId, _breakTypes, breakRows, locked: true);
-    });
-    return _result(groupId);
+    return PreparedGroupSchedule._(workRows, breakRows);
+  }
+
+  /// Gives [groupId]'s employees [schedule] inside the caller's transaction
+  /// [tx]. 409 `group_without_employees` when nobody is only in the group.
+  Future<void> applySchedule(SqlExecutor tx, int actorUserId, int groupId, PreparedGroupSchedule schedule) async {
+    if (!await _writes.lockGroup(tx, groupId)) throw ApiException.notFound('Group $groupId does not exist.');
+    await _replace(tx, actorUserId, groupId, _workTypes, schedule._work, locked: true);
+    await _replace(tx, actorUserId, groupId, _breakTypes, schedule._breaks, locked: true);
   }
 
   /// The schedule rows for [request]'s work hours, after checking it.
@@ -386,4 +397,13 @@ class ScheduleEditingService {
     final [hours, minutes] = time.split(':').map(int.parse).toList();
     return hours * 60 + minutes;
   }
+}
+
+/// A group's work hours and break, checked and turned into schedule rows
+/// ([ScheduleEditingService.prepareSchedule]), ready to be saved.
+class PreparedGroupSchedule {
+  PreparedGroupSchedule._(this._work, this._breaks);
+
+  final List<_NewRow> _work;
+  final List<_NewRow> _breaks;
 }

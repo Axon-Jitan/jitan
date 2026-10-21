@@ -12,6 +12,7 @@ void main() {
     for (final response in [
       await app.get('/groups/3/members'),
       await app.get('/groups/3/candidates?search=an'),
+      await app.get('/groups/candidates?search=an'),
       await app.post('/groups/3/members', jsonEncode({'ids': [1]})),
       await app.delete('/groups/3/members/7'),
     ]) {

@@ -23,7 +23,19 @@ void main() {
     ));
 
     expect((await api.overview()).single.employeeCount, 3);
-    expect((await api.create('Drivers')).name, 'Drivers');
+    const create = CreateGroupRequest(
+      name: 'Drivers',
+      employeeIds: [11],
+      schedule: SetGroupScheduleRequest(
+        workHours: SetWorkHoursRequest(
+          days: [WorkHoursDay(dayId: 1, start: '08:00', finish: '16:30')],
+          arrivalToleranceMinutes: 0,
+          leavingToleranceMinutes: 0,
+        ),
+        breakMinutes: 30,
+      ),
+    );
+    expect((await api.create(create)).name, 'Drivers');
     await api.rename(5, 'Van drivers');
     await api.deactivate(5);
     await api.reactivate(5);
@@ -35,6 +47,7 @@ void main() {
       'POST /groups/5/deactivate',
       'POST /groups/5/reactivate',
     ]);
+    expect(jsonDecode(requests[1].body), create.toJson(), reason: 'name, employees and hours in one request');
     expect(jsonDecode(requests[2].body), {'name': 'Van drivers'});
   });
 }

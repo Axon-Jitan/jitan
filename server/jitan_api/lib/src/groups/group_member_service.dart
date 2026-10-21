@@ -50,13 +50,14 @@ class GroupMemberService {
     return _withDetails(await _members.members(groupId), mayView);
   }
 
-  /// Employees not yet in [groupId] that HR may add, matching [search].
+  /// Employees not yet in [groupId] that HR may add, matching [search];
+  /// without [groupId], for a group still being created.
   Future<List<GroupMember>> candidates(
-    int groupId, {
+    int? groupId, {
     String? search,
     required Future<bool> Function(int companyId) mayView,
   }) async {
-    await _requireGroup(groupId);
+    if (groupId != null) await _requireGroup(groupId);
     final trimmed = search?.trim();
     return _withDetails(await _members.candidates(groupId, search: trimmed == null || trimmed.isEmpty ? null : trimmed), mayView);
   }
@@ -71,26 +72,41 @@ class GroupMemberService {
     required Future<void> Function(int companyId) mayManage,
     required Future<bool> Function(int companyId) mayView,
   }) async {
-    final ids = userIds.toSet().toList()..sort();
-    if (ids.isEmpty || ids.length > maxIds || ids.any((id) => id <= 0)) {
-      throw const ApiException.validation(AddAssignmentsRequest.fieldIds, 'Choose at least one employee.');
-    }
+    final ids = validIds(userIds, AddAssignmentsRequest.fieldIds);
     if (await _requireGroup(groupId) == false) {
       throw const ApiException.validation(AddAssignmentsRequest.fieldIds, 'The group is deactivated; reactivate it first.');
     }
-    await _mayManageAll(ids, mayManage);
-    await _retryOnDeadlock((tx) async {
-      // In ID order, so two concurrent saves lock the employees the same way.
-      for (final userId in ids) {
-        if (!await _employees.lockUser(tx, userId)) throw ApiException.notFound('Employee $userId does not exist.');
-        final userGroupId = await _assignments.addGroup(tx, userId, groupId);
-        if (userGroupId == null) continue;
-        await _record(tx, AuditEventType.groupAssigned, actorUserId, userId, groupId, userGroupId);
-        await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
-      }
-    });
+    await requireMayManage(ids, mayManage);
+    await _retryOnDeadlock((tx) => addIn(tx, actorUserId, groupId, ids));
     return members(groupId, mayView: mayView);
   }
+
+  /// [userIds] without repeats, in ID order; 400 on [field] when empty, too
+  /// many or not IDs.
+  static List<int> validIds(List<int> userIds, String field) {
+    final ids = userIds.toSet().toList()..sort();
+    if (ids.isEmpty || ids.length > maxIds || ids.any((id) => id <= 0)) {
+      throw ApiException.validation(field, 'Choose at least one employee.');
+    }
+    return ids;
+  }
+
+  /// Adds [ids] (from [validIds], permission checked) to [groupId] inside
+  /// the caller's transaction [tx].
+  Future<void> addIn(SqlExecutor tx, int actorUserId, int groupId, List<int> ids) async {
+    // In ID order, so two concurrent saves lock the employees the same way.
+    for (final userId in ids) {
+      if (!await _employees.lockUser(tx, userId)) throw ApiException.notFound('Employee $userId does not exist.');
+      final userGroupId = await _assignments.addGroup(tx, userId, groupId);
+      if (userGroupId == null) continue;
+      await _record(tx, AuditEventType.groupAssigned, actorUserId, userId, groupId, userGroupId);
+      await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
+    }
+  }
+
+  /// The current groups (names) of each of [userIds]; Create group checks
+  /// that someone will be only in the new group.
+  Future<Map<int, List<String>>> groupsOf(List<int> userIds) => _members.groupsOf(userIds);
 
   /// Removes [userId] from [groupId] (soft delete). Removing someone who is
   /// not in the group changes nothing.
@@ -102,7 +118,7 @@ class GroupMemberService {
     required Future<bool> Function(int companyId) mayView,
   }) async {
     await _requireGroup(groupId);
-    await _mayManageAll([userId], mayManage);
+    await requireMayManage([userId], mayManage);
     await _retryOnDeadlock((tx) async {
       if (!await _employees.lockUser(tx, userId)) throw ApiException.notFound('Employee $userId does not exist.');
       final userGroupId = await _assignments.removeGroup(tx, userId, groupId);
@@ -118,7 +134,8 @@ class GroupMemberService {
   Future<bool> _requireGroup(int groupId) async =>
       await _members.groupIsActive(groupId) ?? (throw ApiException.notFound('Group $groupId does not exist.'));
 
-  Future<void> _mayManageAll(List<int> userIds, Future<void> Function(int companyId) mayManage) async {
+  /// The right to manage assignments in every company of each employee.
+  Future<void> requireMayManage(List<int> userIds, Future<void> Function(int companyId) mayManage) async {
     final companies = await _members.companiesOf(userIds);
     for (final userId in userIds) {
       final ofUser = companies[userId] ?? const [];

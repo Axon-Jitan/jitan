@@ -122,6 +122,11 @@ void main() {
     expect([for (final m in searched) m.id], [users['B']]);
   });
 
+  test('candidates for a group still being created: everyone with a company', () async {
+    final all = await service.candidates(null, search: '[DEV-TEST]', mayView: everyone);
+    expect([for (final m in all) if (users.values.contains(m.id)) m.code], ['GMA$stamp', 'GMB$stamp', 'GMC$stamp']);
+  });
+
   test('adding several employees from different companies: one save, each audited once', () async {
     final members = await service.add(users['actor']!, group, [users['A']!, users['B']!, users['C']!],
         mayManage: allowed, mayView: everyone);

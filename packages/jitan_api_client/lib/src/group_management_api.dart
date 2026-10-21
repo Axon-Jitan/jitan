@@ -21,8 +21,10 @@ class GroupManagementApi {
     }
   }
 
-  Future<GroupOverview> create(String name) async =>
-      _group(await _transport.postJson('groups', GroupNameRequest(name: name).toJson()));
+  /// Create group: the group with its employees and work hours, saved by
+  /// the server in one transaction.
+  Future<GroupOverview> create(CreateGroupRequest request) async =>
+      _group(await _transport.postJson('groups', request.toJson()));
 
   Future<GroupOverview> rename(int groupId, String name) async =>
       _group(await _transport.putJson('groups/$groupId', GroupNameRequest(name: name).toJson()));

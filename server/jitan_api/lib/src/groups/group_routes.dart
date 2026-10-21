@@ -11,6 +11,7 @@ import '../http/path_id.dart';
 import 'group_management_service.dart';
 import 'group_member_service.dart';
 import 'group_repository.dart';
+import 'group_setup_service.dart';
 
 /// Employee groups (e.g. Blue/White collar). Groups are universal across
 /// companies, so nothing here is company-scoped.
@@ -20,7 +21,11 @@ import 'group_repository.dart';
 /// - `GET /groups/overview`: every group, active or not, with its number of
 ///   employees. Consumer: the HR/Admin Employee groups screen (GRP-01, built
 ///   once its Figma frame arrives; staged, rule §32).
-/// - `POST /groups` (`GroupNameRequest`, 201), `PUT /groups/{id}` (rename),
+/// - `POST /groups` (`CreateGroupRequest`, 201): the group with its
+///   employees and work hours, in one transaction (GroupSetupService).
+/// - `GET /groups/candidates?search=`: employees for Create group's step 2,
+///   before the group exists.
+/// - `PUT /groups/{id}` (`GroupNameRequest`, rename),
 ///   `POST /groups/{id}/deactivate`, `POST /groups/{id}/reactivate`.
 /// - `GET /groups/{id}/members`, `GET /groups/{id}/candidates?search=`,
 ///   `POST /groups/{id}/members` (`AddAssignmentsRequest`),
@@ -28,12 +33,13 @@ import 'group_repository.dart';
 ///   from every company (GroupMemberService). Consumer: the HR/Admin
 ///   Employee groups screens.
 class GroupRoutes {
-  const GroupRoutes(this._authorizer, this._groups, this._management, this._members);
+  const GroupRoutes(this._authorizer, this._groups, this._management, this._members, this._setup);
 
   final Authorizer _authorizer;
   final GroupRepository _groups;
   final GroupManagementService _management;
   final GroupMemberService _members;
+  final GroupSetupService _setup;
 
   static const _group = '/groups/<groupId|[0-9]+>';
 
@@ -41,6 +47,7 @@ class GroupRoutes {
     ..get('/groups', _list)
     ..get('/groups/overview', _overview)
     ..post('/groups', _create)
+    ..get('/groups/candidates', _newGroupCandidates)
     ..put(_group, _rename)
     ..post('$_group/deactivate', _deactivate)
     ..post('$_group/reactivate', _reactivate)
@@ -61,7 +68,13 @@ class GroupRoutes {
 
   Future<Response> _create(Request request) async {
     final identity = await _authorizer.require(request, Permission.manageGroups);
-    final created = await _management.create(identity.userId, await _body(request));
+    final CreateGroupRequest body;
+    try {
+      body = CreateGroupRequest.fromJson(await readJsonObject(request));
+    } on FormatException catch (e) {
+      throw ApiException.badRequest(e.message);
+    }
+    final created = await _setup.create(identity.userId, body, mayManage: _mayManage(request));
     return jsonResponse(created.toJson(), statusCode: 201);
   }
 
@@ -89,6 +102,13 @@ class GroupRoutes {
     final id = _id(groupId);
     await _authorizer.require(request, Permission.viewGroups);
     return _memberList(await _members.members(id, mayView: _mayView(request)));
+  }
+
+  /// Employees for a group still being created (`?search=`).
+  Future<Response> _newGroupCandidates(Request request) async {
+    await _authorizer.require(request, Permission.manageGroups);
+    final search = request.url.queryParameters['search'];
+    return _memberList(await _members.candidates(null, search: search, mayView: _mayView(request)));
   }
 
   /// Employees that can be added (`?search=` on name or code).

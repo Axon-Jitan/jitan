@@ -14,10 +14,11 @@ class GroupMembersApi {
 
   Future<List<GroupMember>> members(int groupId) async => _list(await _transport.getJson('groups/$groupId/members'));
 
-  /// Employees not yet in the group, matching [search] on name or code.
-  Future<List<GroupMember>> candidates(int groupId, {String? search}) async => _list(
+  /// Employees not yet in the group, matching [search] on name or code;
+  /// without [groupId], for Create group (the group doesn't exist yet).
+  Future<List<GroupMember>> candidates(int? groupId, {String? search}) async => _list(
         await _transport.getJson(
-          'groups/$groupId/candidates',
+          groupId == null ? 'groups/candidates' : 'groups/$groupId/candidates',
           query: {if (search != null && search.trim().isNotEmpty) 'search': search.trim()},
         ),
       );

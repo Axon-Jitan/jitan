@@ -21,6 +21,7 @@ import 'package:jitan_api/src/groups/group_management_service.dart';
 import 'package:jitan_api/src/groups/group_member_repository.dart';
 import 'package:jitan_api/src/groups/group_member_service.dart';
 import 'package:jitan_api/src/groups/group_routes.dart';
+import 'package:jitan_api/src/groups/group_setup_service.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
@@ -91,18 +92,12 @@ class TestApp {
       groups: GroupRoutes(
         Authorizer(permissions),
         groups,
-        GroupManagementService(
-          groups: const UnusedGroupManagementRepository(),
-          audit: audit,
-          transactions: transactions,
-          executor: unusedExecutor,
-        ),
-        GroupMemberService(
-          members: groupMembers,
-          assignments: assignments,
-          employees: employees,
-          audit: audit,
-          scheduleSync: scheduleSync,
+        groupManagement,
+        groupMemberService,
+        GroupSetupService(
+          management: groupManagement,
+          members: groupMemberService,
+          schedules: scheduleEditing,
           transactions: transactions,
         ),
       ),
@@ -152,12 +147,7 @@ class TestApp {
       schedules: ScheduleRoutes(
         Authorizer(permissions),
         scheduleService,
-        ScheduleEditingService(
-          writes: const UnusedScheduleWriteRepository(),
-          schedules: scheduleService,
-          audit: audit,
-          transactions: transactions,
-        ),
+        scheduleEditing,
       ),
       me: MeRoutes(
         users,
@@ -197,6 +187,26 @@ class TestApp {
 
   /// Group-page reads; replace with a fake to test them.
   late GroupMemberRepository groupMembers = GroupMemberRepository(unusedExecutor);
+  late final groupManagement = GroupManagementService(
+    groups: const UnusedGroupManagementRepository(),
+    audit: audit,
+    transactions: transactions,
+    executor: unusedExecutor,
+  );
+  late final groupMemberService = GroupMemberService(
+    members: groupMembers,
+    assignments: assignments,
+    employees: employees,
+    audit: audit,
+    scheduleSync: scheduleSync,
+    transactions: transactions,
+  );
+  late final scheduleEditing = ScheduleEditingService(
+    writes: const UnusedScheduleWriteRepository(),
+    schedules: scheduleService,
+    audit: audit,
+    transactions: transactions,
+  );
   late final FakeUserRepository users;
 
   /// Fixed secret and clock so tokens are reproducible.

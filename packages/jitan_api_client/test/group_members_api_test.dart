@@ -29,6 +29,7 @@ void main() {
     final members = await api.members(5);
     await api.candidates(5, search: '  pee ');
     await api.candidates(5, search: ' ');
+    await api.candidates(null, search: 'pee');
     await api.add(5, [7, 8]);
     await api.remove(5, 7);
 
@@ -38,9 +39,10 @@ void main() {
       'GET http://api.test/groups/5/members',
       'GET http://api.test/groups/5/candidates?search=pee',
       'GET http://api.test/groups/5/candidates',
+      'GET http://api.test/groups/candidates?search=pee',
       'POST http://api.test/groups/5/members',
       'DELETE http://api.test/groups/5/members/7',
     ]);
-    expect(jsonDecode(requests[3].body), {'ids': [7, 8]});
+    expect(jsonDecode(requests[4].body), {'ids': [7, 8]});
   });
 }

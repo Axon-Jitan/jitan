@@ -34,6 +34,7 @@ import 'package:jitan_api/src/groups/group_member_repository.dart';
 import 'package:jitan_api/src/groups/group_member_service.dart';
 import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/groups/group_routes.dart';
+import 'package:jitan_api/src/groups/group_setup_service.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
@@ -99,6 +100,26 @@ Future<void> main() async {
   final companyRepository = CompanyRepository(db);
   final groupRepository = GroupRepository(db);
   final scheduleService = ScheduleService(schedules: ScheduleRepository(db), groups: groupRepository);
+  final scheduleEditing = ScheduleEditingService(
+    writes: const ScheduleWriteRepository(),
+    schedules: scheduleService,
+    audit: const AuditLogRepository(),
+    transactions: db,
+  );
+  final groupManagement = GroupManagementService(
+    groups: const GroupManagementRepository(),
+    audit: const AuditLogRepository(),
+    transactions: db,
+    executor: db,
+  );
+  final groupMembers = GroupMemberService(
+    members: GroupMemberRepository(db),
+    assignments: const EmployeeAssignmentRepository(),
+    employees: EmployeeRepository(db),
+    audit: const AuditLogRepository(),
+    scheduleSync: const EmployeeScheduleSync(),
+    transactions: db,
+  );
 
   final PermissionEvaluator permissions = config.environment.allowsDevelopmentMechanisms
       ? DevelopmentPermissionEvaluator(config.environment)
@@ -172,18 +193,12 @@ Future<void> main() async {
     groups: GroupRoutes(
       authorizer,
       groupRepository,
-      GroupManagementService(
-        groups: const GroupManagementRepository(),
-        audit: const AuditLogRepository(),
-        transactions: db,
-        executor: db,
-      ),
-      GroupMemberService(
-        members: GroupMemberRepository(db),
-        assignments: const EmployeeAssignmentRepository(),
-        employees: EmployeeRepository(db),
-        audit: const AuditLogRepository(),
-        scheduleSync: const EmployeeScheduleSync(),
+      groupManagement,
+      groupMembers,
+      GroupSetupService(
+        management: groupManagement,
+        members: groupMembers,
+        schedules: scheduleEditing,
         transactions: db,
       ),
     ),
@@ -233,12 +248,7 @@ Future<void> main() async {
     schedules: ScheduleRoutes(
       authorizer,
       scheduleService,
-      ScheduleEditingService(
-        writes: const ScheduleWriteRepository(),
-        schedules: scheduleService,
-        audit: const AuditLogRepository(),
-        transactions: db,
-      ),
+      scheduleEditing,
     ),
     me: MeRoutes(
       users,

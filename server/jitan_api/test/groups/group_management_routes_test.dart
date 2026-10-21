@@ -6,6 +6,22 @@ import 'package:test/test.dart';
 
 import '../support/test_app.dart';
 
+/// Create group's body: the name, an employee and the work hours.
+String _create(String name) => jsonEncode({
+  'name': name,
+  'employeeIds': [11],
+  'schedule': {
+    'workHours': {
+      'days': [
+        {'dayId': 1, 'start': '08:00', 'finish': '16:30'},
+      ],
+      'arrivalToleranceMinutes': 0,
+      'leavingToleranceMinutes': 0,
+    },
+    'breakMinutes': 30,
+  },
+});
+
 Future<Map<String, Object?>> _error(Future<Response> request) async {
   final response = await request;
   return {'status': response.statusCode, ...(await jsonBody(response))['error']! as Map<String, Object?>};
@@ -18,7 +34,7 @@ void main() {
         final app = TestApp();
 
         for (final request in [
-          app.post('/groups', jsonEncode({'name': value})),
+          app.post('/groups', _create(value)),
           app.put('/groups/3', jsonEncode({'name': value})),
         ]) {
           final error = await _error(request);
@@ -29,10 +45,11 @@ void main() {
       });
     }
 
-    test('a missing name or malformed JSON is a bad request', () async {
+    test('a missing name, employees or work hours, or malformed JSON, is a bad request', () async {
       final app = TestApp();
 
       expect((await app.post('/groups', jsonEncode({}))).statusCode, 400);
+      expect((await app.post('/groups', jsonEncode({'name': 'Drivers'}))).statusCode, 400, reason: 'every group has work hours');
       expect((await app.post('/groups', '{')).statusCode, 400);
     });
   });
@@ -41,7 +58,7 @@ void main() {
     final app = TestApp(allowPermissions: false);
 
     for (final response in [
-      await app.post('/groups', jsonEncode({'name': 'Drivers'})),
+      await app.post('/groups', _create('Drivers')),
       await app.put('/groups/3', jsonEncode({'name': 'Drivers'})),
       await app.post('/groups/3/deactivate', ''),
       await app.post('/groups/3/reactivate', ''),

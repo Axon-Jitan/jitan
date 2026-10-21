@@ -27,19 +27,18 @@ class GroupManagementService {
 
   Future<List<GroupOverview>> overview() => _groups.overview(_executor);
 
-  Future<GroupOverview> create(int actorUserId, GroupNameRequest request) async {
-    final name = _name(request.name);
-    final id = await _transactions.transaction((tx) async {
-      if (await _groups.nameTaken(tx, name)) throw _duplicate(name);
-      final id = await _groups.insert(tx, name);
-      await _record(tx, AuditEventType.groupCreated, actorUserId, id);
-      return id;
-    });
-    return _find(id);
+  /// Adds the group [name] (from [validName]) inside the caller's
+  /// transaction [tx], audited; its ID. Create group (GroupSetupService)
+  /// adds its employees and work hours in the same transaction.
+  Future<int> createIn(SqlExecutor tx, int actorUserId, String name) async {
+    if (await _groups.nameTaken(tx, name)) throw _duplicate(name);
+    final id = await _groups.insert(tx, name);
+    await _record(tx, AuditEventType.groupCreated, actorUserId, id);
+    return id;
   }
 
   Future<GroupOverview> rename(int actorUserId, int groupId, GroupNameRequest request) async {
-    final name = _name(request.name);
+    final name = validName(request.name);
     await _transactions.transaction((tx) async {
       final group = await _lock(tx, groupId);
       if (group.name == name) return;
@@ -47,7 +46,7 @@ class GroupManagementService {
       await _groups.rename(tx, groupId, name);
       await _record(tx, AuditEventType.groupRenamed, actorUserId, groupId);
     });
-    return _find(groupId);
+    return find(groupId);
   }
 
   /// 409 `group_in_use` while employees are in the group.
@@ -66,7 +65,7 @@ class GroupManagementService {
       await _groups.setActive(tx, groupId, active: false);
       await _record(tx, AuditEventType.groupDeactivated, actorUserId, groupId);
     });
-    return _find(groupId);
+    return find(groupId);
   }
 
   Future<GroupOverview> reactivate(int actorUserId, int groupId) async {
@@ -76,13 +75,13 @@ class GroupManagementService {
       await _groups.setActive(tx, groupId, active: true);
       await _record(tx, AuditEventType.groupReactivated, actorUserId, groupId);
     });
-    return _find(groupId);
+    return find(groupId);
   }
 
   Future<GroupOverview> _lock(SqlExecutor tx, int groupId) async =>
       await _groups.lock(tx, groupId) ?? (throw ApiException.notFound('Group $groupId does not exist.'));
 
-  Future<GroupOverview> _find(int groupId) async =>
+  Future<GroupOverview> find(int groupId) async =>
       (await _groups.overview(_executor)).where((g) => g.id == groupId).firstOrNull ??
       (throw ApiException.notFound('Group $groupId does not exist.'));
 
@@ -92,7 +91,7 @@ class GroupManagementService {
       );
 
   /// The trimmed name; 400 when empty or longer than the column.
-  static String _name(String raw) {
+  static String validName(String raw) {
     final name = raw.trim();
     if (name.isEmpty) throw const ApiException.validation(GroupNameRequest.fieldName, 'Enter a name.');
     if (name.runes.length > GroupNameRequest.maxNameLength) {

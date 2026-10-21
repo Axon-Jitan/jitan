@@ -16,4 +16,24 @@ void main() {
     expect(GroupNameRequest.fromJson(const GroupNameRequest(name: 'Drivers').toJson()).name, 'Drivers');
     expect(GroupNameRequest.maxNameLength, 100);
   });
+
+  test('Create group carries the name, the employees and the work hours', () {
+    const request = CreateGroupRequest(
+      name: 'Drivers',
+      employeeIds: [11, 12],
+      schedule: SetGroupScheduleRequest(
+        workHours: SetWorkHoursRequest(
+          days: [WorkHoursDay(dayId: 1, start: '08:00', finish: '16:30')],
+          arrivalToleranceMinutes: 0,
+          leavingToleranceMinutes: 0,
+        ),
+        breakMinutes: 30,
+      ),
+    );
+    final back = CreateGroupRequest.fromJson(request.toJson());
+    expect((back.name, back.schedule.breakMinutes), ('Drivers', 30));
+    expect(back.employeeIds, [11, 12]);
+    expect(back.schedule.workHours.days.single.finish, '16:30');
+    expect(() => CreateGroupRequest.fromJson(const {'name': 'Drivers'}), throwsFormatException);
+  });
 }

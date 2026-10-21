@@ -30,7 +30,9 @@ class GroupMemberRepository {
 
   /// Active employees of at least one active company who are not in
   /// [groupId], matching [search] on name or code when given.
-  Future<List<GroupMemberRow>> candidates(int groupId, {String? search}) async {
+  /// Without [groupId]: every such employee (Create group, before the group
+  /// exists).
+  Future<List<GroupMemberRow>> candidates(int? groupId, {String? search}) async {
     final searchFilter = search == null
         ? ''
         : 'AND (u.userName LIKE :pattern OR u.userSurname LIKE :pattern OR u.userCode LIKE :pattern '
@@ -40,12 +42,12 @@ class GroupMemberRepository {
       'WHERE u.userMFD = 0 AND u.userActive = 1 '
       'AND EXISTS (SELECT 1 FROM tblUserCompany uc JOIN tblCompany c ON c.companyID = uc.companyID '
       'WHERE uc.userID = u.userID AND ${MembershipFilters.activeCompany('uc')} AND c.companyMFD = 0) '
-      'AND NOT EXISTS (SELECT 1 FROM tblUserGroup ug WHERE ug.userID = u.userID AND ug.groupID = :groupId '
-      'AND ${MembershipFilters.activeGroup('ug')}) '
+      '${groupId == null ? '' : 'AND NOT EXISTS (SELECT 1 FROM tblUserGroup ug WHERE ug.userID = u.userID '
+          'AND ug.groupID = :groupId AND ${MembershipFilters.activeGroup('ug')}) '}'
       '$searchFilter'
       'ORDER BY u.userSurname, u.userName, u.userID '
       'LIMIT $candidateLimit',
-      {'groupId': groupId, if (search != null) 'pattern': containsLikePattern(search)},
+      {'groupId': ?groupId, if (search != null) 'pattern': containsLikePattern(search)},
     ));
   }
 

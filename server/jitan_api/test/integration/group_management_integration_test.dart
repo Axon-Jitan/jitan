@@ -40,6 +40,11 @@ void main() {
       row.readString('eventTypeName'),
   ];
 
+  /// Step 1 of Create group on its own (GroupSetupService adds the
+  /// employees and work hours in the same transaction).
+  Future<GroupOverview> create(String name) async =>
+      groups.find(await db.transaction((tx) => groups.createIn(tx, actor, GroupManagementService.validName(name))));
+
   setUpAll(() async {
     db = TestDatabase.connect();
     groups = GroupManagementService(
@@ -90,7 +95,7 @@ void main() {
   });
 
   test('adding a group trims the name, makes it active and assignable, audited', () async {
-    final created = await groups.create(actor, GroupNameRequest(name: '  $prefix Drivers  '));
+    final created = await create('  $prefix Drivers  ');
     driversId = created.id;
 
     expect((created.name, created.isActive, created.employeeCount), ('$prefix Drivers', true, 0));
@@ -100,7 +105,7 @@ void main() {
 
   test('a name already in use, ignoring upper/lower case, is refused', () async {
     await expectLater(
-      groups.create(actor, GroupNameRequest(name: '$prefix DRIVERS')),
+      create('$prefix DRIVERS'),
       throwsA(isA<ApiException>()
           .having((e) => e.code, 'code', ApiErrorCode.duplicateGroupName)
           .having((e) => e.field, 'field', 'name')),
@@ -108,7 +113,7 @@ void main() {
   });
 
   test('renaming: to the same name changes nothing; to another group\'s name is refused', () async {
-    final other = await groups.create(actor, GroupNameRequest(name: '$prefix Office'));
+    final other = await create('$prefix Office');
 
     await groups.rename(actor, driversId, GroupNameRequest(name: '$prefix Drivers'));
     expect(await auditTypes(driversId), ['group.created'], reason: 'nothing changed, nothing audited');
@@ -147,7 +152,7 @@ void main() {
     expect((await groups.overview()).firstWhere((g) => g.id == driversId).isActive, isFalse, reason: 'still listed');
 
     await expectLater(
-      groups.create(actor, GroupNameRequest(name: '$prefix Van Drivers')),
+      create('$prefix Van Drivers'),
       throwsA(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.duplicateGroupName)),
       reason: 'inactive groups keep their name',
     );
