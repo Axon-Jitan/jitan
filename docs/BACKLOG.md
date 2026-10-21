@@ -238,10 +238,10 @@ IT's database**, items 2–3 before production
       (no internal detail in responses).
 - [ ] **Parameters are escaped client-side, not prepared on the server.**
       mysql_client_plus 0.1.3 substitutes `:name` parameters into the SQL text after
-      escaping (`'` → `''`, `\` → `\`, values quoted); it does not use server-side
+      escaping (`'` → `''`, `\` → `\\`, values quoted); it does not use server-side
       prepared statements. This is safe because the connection is `utf8mb4` (no
       multi-byte escape tricks) and `Database` accepts only String/int/bool/null values;
-      `sql_injection_integration_test.dart` checks the hard cases (`'`, `\'`, `''`,
+      `sql_injection_integration_test.dart` checks the hard cases (`\'`, `\\'`, `''`,
       placeholder text inside values, NUL). **Any driver upgrade or replacement must rerun
       that test.** Option for later: move `Database` to the driver's server-side prepared
       statements (positional parameters, one more round trip per query; to measure).
