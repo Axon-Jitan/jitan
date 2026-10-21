@@ -111,8 +111,8 @@ void main() {
 
     expect(find.text('Step 2 of 3'), findsOneWidget);
     expect(find.text('No schedule available for the selected groups.'), findsOneWidget, reason: '1399:270, no group yet');
-    expect(find.text('Almeco'), findsOneWidget, reason: 'the filter company is pre-filled');
-    await choose(tester, 'Companies', ['PCA']);
+    expect(find.text('Select companies'), findsOneWidget, reason: 'the Employees filter never chooses');
+    await choose(tester, 'Companies', ['Almeco', 'PCA']);
     await choose(tester, 'Employee groups', ['White collar', 'Drivers']);
     expect(find.text('Choose a group schedule'), findsOneWidget, reason: '1399:588, two groups with hours');
 
@@ -156,6 +156,7 @@ void main() {
     await pumpPage(tester);
     await fillStep1(tester);
     await continueToStep2(tester);
+    await choose(tester, 'Companies', ['Almeco']);
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
     await tester.pump();
     employees.createFails(

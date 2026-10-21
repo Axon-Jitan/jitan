@@ -35,7 +35,6 @@ void main() {
       groupsApi: groups,
       companiesApi: companies,
       schedulesApi: schedules,
-      companyId: 7,
     );
   });
   tearDown(() => controller.dispose());
@@ -63,13 +62,13 @@ void main() {
     expect(companies.calls, isEmpty, reason: 'nothing is loaded before step 2');
   });
 
-  test('step 2: the filter company is pre-filled and can be changed; Work schedule offers only the chosen groups\' hours', () async {
+  test('step 2: no company is chosen for HR; Work schedule offers only the chosen groups\' hours', () async {
     await toStep2();
     expect(controller.step, AddEmployeeStep.assignments);
-    expect(controller.companyIds, [7]);
+    expect(controller.companyIds, isEmpty, reason: 'the Employees filter never chooses');
 
     controller.setCompanies([8]);
-    expect(controller.companyIds, [8], reason: 'the filter is only a filter');
+    expect(controller.companyIds, [8]);
 
     controller.setGroups([3]);
     expect([for (final s in controller.scheduleChoices) s.group.name], ['White collar']);
@@ -109,6 +108,7 @@ void main() {
 
   test('a taken code takes HR back to step 1, under the code', () async {
     await toStep2();
+    controller.setCompanies([7]);
     final creating = controller.create();
     employees.createFails(_server(409, ApiErrorCode.duplicateEmployeeCode, field: 'code'));
     await creating;
@@ -119,7 +119,9 @@ void main() {
 
   test('a group no longer available stays on step 2, under the groups', () async {
     await toStep2();
-    controller.setGroups([3]);
+    controller
+      ..setCompanies([7])
+      ..setGroups([3]);
     final creating = controller.create();
     employees.createFails(_server(400, ApiErrorCode.validationFailed, field: CreateEmployeeRequest.fieldGroupIds));
     await creating;
@@ -128,16 +130,8 @@ void main() {
     expect(controller.fieldErrors, {CreateEmployeeRequest.fieldGroupIds: AdminTextKeys.employeeFieldErrorUnavailable});
   });
 
-  test('without a filter company: HR must choose one; the employee is created through the first chosen', () async {
-    controller.dispose();
-    controller = AddEmployeeController(
-      employeesApi: employees,
-      groupsApi: groups,
-      companiesApi: companies,
-      schedulesApi: schedules,
-    );
+  test('HR must choose a company; the employee is created through the first chosen', () async {
     await toStep2();
-    expect(controller.companyIds, isEmpty);
 
     await controller.create();
     expect(controller.fieldErrors, {CreateEmployeeRequest.fieldCompanyIds: AdminTextKeys.employeeFieldErrorRequired});

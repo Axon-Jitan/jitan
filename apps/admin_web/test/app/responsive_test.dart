@@ -248,6 +248,8 @@ void main() {
       schedulesApi.succeedList([blue, white]);
       await _settle(tester);
       _fitsTheWindow(tester, width, 'Add employee, step 2');
+      tester.widget<JitanMultiSelectField<int>>(find.widgetWithText(JitanMultiSelectField<int>, 'Companies')).onChanged!([7]);
+      await tester.pump();
 
       await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
       await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));

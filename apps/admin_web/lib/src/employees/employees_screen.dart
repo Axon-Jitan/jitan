@@ -69,14 +69,13 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
 
   void _say(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
 
-  Future<void> _addEmployee(CompanySummary? company) async {
+  Future<void> _addEmployee() async {
     final created = await showAddEmployeeDialog(
       context,
       employeesApi: widget.api,
       groupsApi: widget.groupsApi,
       companiesApi: widget.companiesApi,
       schedulesApi: widget.schedulesApi,
-      companyId: company?.id,
     );
     if (created == null || !mounted) return;
     await _controller?.load();
@@ -145,7 +144,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                   icon: Icons.add,
                   height: JitanDimensions.controlHeight,
                   // The company is chosen in the wizard; the filter is only a filter.
-                  onPressed: () => _addEmployee(company),
+                  onPressed: _addEmployee,
                 ),
               ],
             ),

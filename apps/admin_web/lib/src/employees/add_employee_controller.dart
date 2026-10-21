@@ -50,18 +50,12 @@ class AddEmployeeController extends ChangeNotifier {
     required this._groupsApi,
     required this._companiesApi,
     required this._schedulesApi,
-    this.companyId,
-  }) : _companyIds = [?companyId];
+  });
 
   final EmployeesApi _employeesApi;
   final GroupsApi _groupsApi;
   final CompaniesApi _companiesApi;
   final SchedulesApi _schedulesApi;
-
-  /// The company chosen in the Employees filter, if any: step 2 starts with
-  /// it. The employee's companies are HR's choice in step 2 (product owner,
-  /// 2026-10-21: the filter never has to be set before adding someone).
-  final int? companyId;
 
   /// The company the employee was created through (the first chosen; they
   /// are added to every chosen company alike).
@@ -78,7 +72,10 @@ class AddEmployeeController extends ChangeNotifier {
   AssignmentOptions get options => _options;
   bool _optionsRequested = false;
 
-  List<int> _companyIds;
+  /// The employee's companies: HR's choice in step 2, starting empty. The
+  /// Employees "Current company" only filters the list and never chooses
+  /// for Add employee (product owner, 2026-10-21).
+  List<int> _companyIds = const [];
   List<int> get companyIds => _companyIds;
 
   List<int> _groupIds = const [];

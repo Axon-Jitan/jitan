@@ -13,17 +13,15 @@ import 'add_employee_activation.dart';
 import 'add_employee_controller.dart';
 import 'add_employee_stepper.dart';
 
-/// Opens Add employee; [companyId] (the Employees filter, if set) pre-fills
-/// step 2's Companies. Completes with the created employee
-/// once HR finished the setup, `null` when closed before the employee was
-/// created.
+/// Opens Add employee. HR chooses the employee's companies in step 2.
+/// Completes with the created employee once HR finished the setup, `null`
+/// when closed before the employee was created.
 Future<EmployeeSummary?> showAddEmployeeDialog(
   BuildContext context, {
   required EmployeesApi employeesApi,
   required GroupsApi groupsApi,
   required CompaniesApi companiesApi,
   required SchedulesApi schedulesApi,
-  int? companyId,
 }) => showJitanModal<EmployeeSummary>(
   context,
   // A click beside the dialog must not throw away what HR entered.
@@ -33,7 +31,6 @@ Future<EmployeeSummary?> showAddEmployeeDialog(
     groupsApi: groupsApi,
     companiesApi: companiesApi,
     schedulesApi: schedulesApi,
-    companyId: companyId,
   ),
 );
 
@@ -54,15 +51,12 @@ class AddEmployeeDialog extends StatefulWidget {
     required this.groupsApi,
     required this.companiesApi,
     required this.schedulesApi,
-    this.companyId,
   });
 
   final EmployeesApi employeesApi;
   final GroupsApi groupsApi;
   final CompaniesApi companiesApi;
   final SchedulesApi schedulesApi;
-  /// The company chosen in the Employees filter, if any (pre-filled).
-  final int? companyId;
 
   @override
   State<AddEmployeeDialog> createState() => _AddEmployeeDialogState();
@@ -74,7 +68,6 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
     groupsApi: widget.groupsApi,
     companiesApi: widget.companiesApi,
     schedulesApi: widget.schedulesApi,
-    companyId: widget.companyId,
   );
 
   final _firstName = TextEditingController();
