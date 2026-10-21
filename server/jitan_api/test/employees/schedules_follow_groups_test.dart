@@ -56,7 +56,7 @@ void main() {
       app.companies.existingIds = {7};
       app.groups.groups = const [GroupSummary(id: 3, name: 'White collar')];
       String body({int? groupId}) =>
-          jsonEncode({'firstName': 'A', 'lastName': 'B', 'code': 'C${groupId ?? 0}', 'groupId': groupId, 'phone': null});
+          jsonEncode({'firstName': 'A', 'lastName': 'B', 'code': 'C${groupId ?? 0}', 'groupIds': [?groupId], 'phone': null});
 
       expect((await app.post('/companies/7/employees', body(groupId: 3))).statusCode, 201);
       expect((await app.post('/companies/7/employees', body())).statusCode, 201);

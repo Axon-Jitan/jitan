@@ -177,12 +177,17 @@ class EmployeeService {
 
   /// Creates an employee in [companyId] on behalf of [actorUserId].
   ///
-  /// In one transaction: the `tblUser` row (active, with a new personal QR),
-  /// its `tblUserCompany` link, the optional `tblUserGroup` link, and the
-  /// `tblEventLog` entry. Any failure rolls all of it back.
+  /// In one transaction (Add employee, Figma `153:970` → `985:2`): the
+  /// `tblUser` row (active, with a new personal QR), its `tblUserCompany`
+  /// links ([companyId] and the other chosen companies), its `tblUserGroup`
+  /// links, its work hours (its group's; with several groups, those of
+  /// `scheduleGroupId`), and their `tblEventLog` entries. Any failure rolls
+  /// all of it back.
   ///
   /// - 400 `validation_failed` (with `field`) for missing names or code, a
-  ///   value longer than its `tblUser` column, or an unknown/inactive group
+  ///   value longer than its `tblUser` column, a malformed email, an unknown
+  ///   company, an unknown/inactive group, or a schedule group the employee
+  ///   is not in
   /// - 404 when the company does not exist
   /// - 409 `duplicate_employee_code` when the code is taken
   Future<EmployeeSummary> create(int actorUserId, int companyId, CreateEmployeeRequest request) async {
@@ -200,11 +205,30 @@ class EmployeeService {
     );
     final code = _required(request.code, CreateEmployeeRequest.fieldCode, 'Employee code', CreateEmployeeRequest.maxCodeLength);
     final phone = _optional(request.phone, CreateEmployeeRequest.fieldPhone, 'Phone number', CreateEmployeeRequest.maxPhoneLength);
-    final groupId = request.groupId;
+    final email = _optional(request.email, CreateEmployeeRequest.fieldEmail, 'Email', CreateEmployeeRequest.maxEmailLength);
+    if (email != null && !_emailShape.hasMatch(email)) {
+      throw const ApiException.validation(CreateEmployeeRequest.fieldEmail, 'Enter an email address like name@example.com.');
+    }
+    final otherCompanies = ({...request.companyIds}..remove(companyId)).toList()..sort();
+    final groupIds = request.groupIds.toSet().toList()..sort();
+    final scheduleGroupId = request.scheduleGroupId;
 
     await _requireCompany(companyId);
-    if (groupId != null && !await _groups.isAssignable(groupId)) {
-      throw const ApiException.validation(CreateEmployeeRequest.fieldGroupId, 'Choose an existing, active group.');
+    for (final other in otherCompanies) {
+      if (!await _companies.exists(other)) {
+        throw const ApiException.validation(CreateEmployeeRequest.fieldCompanyIds, 'Choose existing companies.');
+      }
+    }
+    for (final groupId in groupIds) {
+      if (!await _groups.isAssignable(groupId)) {
+        throw const ApiException.validation(CreateEmployeeRequest.fieldGroupIds, 'Choose existing, active groups.');
+      }
+    }
+    if (scheduleGroupId != null && !groupIds.contains(scheduleGroupId)) {
+      throw const ApiException.validation(
+        CreateEmployeeRequest.fieldScheduleGroupId,
+        'Choose the work schedule of one of the employee\'s groups.',
+      );
     }
 
     try {
@@ -218,12 +242,9 @@ class EmployeeService {
           code: code,
           personalQrCode: _personalQrCode(),
           phone: phone,
+          email: email,
         );
         final userCompanyId = await _employees.addToCompany(tx, userId, companyId);
-        final userGroupId = groupId == null ? null : await _employees.addToGroup(tx, userId, groupId);
-        // A new employee in a group gets that group's schedule.
-        if (groupId != null) await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
-
         await _audit.record(
           tx,
           AuditEvent(
@@ -233,11 +254,41 @@ class EmployeeService {
               EventLogReference.user: userId,
               EventLogReference.company: companyId,
               EventLogReference.userCompany: userCompanyId,
-              EventLogReference.group: ?groupId,
-              EventLogReference.userGroup: ?userGroupId,
             },
           ),
         );
+        for (final other in otherCompanies) {
+          final link = await _employees.addToCompany(tx, userId, other);
+          await _audit.record(
+            tx,
+            AuditEvent(
+              type: AuditEventType.companyAssigned,
+              actorUserId: actorUserId,
+              references: {
+                EventLogReference.user: userId,
+                EventLogReference.company: other,
+                EventLogReference.userCompany: link,
+              },
+            ),
+          );
+        }
+        for (final groupId in groupIds) {
+          final link = await _employees.addToGroup(tx, userId, groupId);
+          await _audit.record(
+            tx,
+            AuditEvent(
+              type: AuditEventType.groupAssigned,
+              actorUserId: actorUserId,
+              references: {EventLogReference.user: userId, EventLogReference.group: groupId, EventLogReference.userGroup: link},
+            ),
+          );
+        }
+        // The employee gets their group's hours; with several groups, those
+        // of the group HR chose as "Work schedule".
+        if (groupIds.isNotEmpty) await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
+        if (scheduleGroupId != null && groupIds.length > 1) {
+          await _scheduleSync.useGroup(tx, actorUserId, userId, scheduleGroupId);
+        }
 
         return await _employees.findInCompany(tx, companyId, userId) ??
             (throw StateError('Created user $userId is not readable in company $companyId.'));
@@ -249,6 +300,10 @@ class EmployeeService {
       rethrow;
     }
   }
+
+  /// Something@something.something, without spaces: catches typing
+  /// mistakes; the address is never used to sign in.
+  static final _emailShape = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   Future<void> _requireCompany(int companyId) async {
     if (!await _companies.exists(companyId)) {

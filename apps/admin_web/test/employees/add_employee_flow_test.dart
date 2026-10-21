@@ -87,7 +87,7 @@ void main() {
     final (companyId, request) = employees.creates.single;
     expect(companyId, 7);
     expect(request.code, 'KDV');
-    expect(request.groupId, 3);
+    expect(request.groupIds, [3]);
 
     employees.createSucceeds(employee(2, 'Kevin', 'De Vos', 'KDV', groups: ['White collar']));
     await tester.pump();

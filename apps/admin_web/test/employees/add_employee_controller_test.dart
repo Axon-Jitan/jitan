@@ -93,7 +93,7 @@ void main() {
     expect(companyId, 7);
     expect(request.firstName, 'Disan');
     expect(request.code, 'SBW');
-    expect(request.groupId, 3);
+    expect(request.groupIds, [3]);
     expect(request.phone, isNull);
   });
 
@@ -118,10 +118,10 @@ void main() {
 
   test('a server validation error lands on its field', () async {
     final submit = controller.submit(_input(groupId: 9));
-    employees.createFails(_server(400, ApiErrorCode.validationFailed, field: 'groupId'));
+    employees.createFails(_server(400, ApiErrorCode.validationFailed, field: 'groupIds'));
     await submit;
 
-    expect(controller.fieldErrors, {'groupId': 'employee.field.error.invalidType'});
+    expect(controller.fieldErrors, {'groupIds': 'employee.field.error.invalidType'});
   });
 
   test('other failures become a form error, and the form can be retried', () async {

@@ -22,13 +22,13 @@ void main() {
 
     final created = await api.create(
       7,
-      const CreateEmployeeRequest(firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', groupId: 3),
+      const CreateEmployeeRequest(firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', groupIds: [3]),
     );
 
     expect(sent.method, 'POST');
     expect(sent.url.toString(), 'http://api.test/companies/7/employees');
     expect(sent.headers['content-type'], startsWith('application/json'));
-    expect(jsonDecode(sent.body), containsPair('groupId', 3));
+    expect(jsonDecode(sent.body), containsPair('groupIds', [3]));
     expect(created.id, 5);
   });
 

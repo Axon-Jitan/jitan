@@ -23,7 +23,15 @@ String _body({
   Object? code = 'SBW',
   Object? groupId,
   Object? phone,
-}) => jsonEncode({'firstName': firstName, 'lastName': lastName, 'code': code, 'groupId': groupId, 'phone': phone});
+  Object? email,
+}) => jsonEncode({
+  'firstName': firstName,
+  'lastName': lastName,
+  'code': code,
+  'groupIds': [?groupId],
+  'phone': phone,
+  'email': email,
+});
 
 Future<Map<String, Object?>> _error(TestApp app, String body) async {
   final response = await app.post(_path, body);
@@ -37,23 +45,28 @@ void main() {
 
       final response = await app.post(
         _path,
-        _body(firstName: ' Disan ', code: ' SBW ', groupId: 3, phone: ' +32 470 '),
+        _body(firstName: ' Disan ', code: ' SBW ', groupId: 3, phone: ' +32 470 ', email: ' disan@example.com '),
       );
 
       expect(response.statusCode, 201);
       expect(await jsonBody(response), containsPair('code', 'SBW'));
       expect(app.employees.writes, ['insertUser SBW', 'addToCompany 100→7', 'addToGroup 100→3']);
       expect(app.employees.lastPhone, '+32 470');
+      expect(app.employees.lastEmail, 'disan@example.com');
       expect(app.employees.insertedQrCodes, ['QR-1'], reason: 'a new personal QR per employee');
       expect(app.transactions.outcomes, ['commit']);
 
-      final event = app.audit.events.single;
-      expect(event.type, AuditEventType.employeeCreated);
-      expect(event.actorUserId, 9);
-      expect(event.references, {
+      final [created, assigned] = app.audit.events;
+      expect(created.type, AuditEventType.employeeCreated);
+      expect(created.actorUserId, 9);
+      expect(created.references, {
         EventLogReference.user: 100,
         EventLogReference.company: 7,
         EventLogReference.userCompany: 600,
+      });
+      expect(assigned.type, AuditEventType.groupAssigned);
+      expect(assigned.references, {
+        EventLogReference.user: 100,
         EventLogReference.group: 3,
         EventLogReference.userGroup: 1000,
       });
@@ -123,12 +136,42 @@ void main() {
       expect(tooLong, containsPair('field', 'code'));
     });
 
-    test('400 naming groupId for an unknown or inactive group', () async {
+    test('400 naming groupIds for an unknown or inactive group', () async {
       final app = _app();
 
       final error = await _error(app, _body(groupId: 99));
 
-      expect(error, containsPair('field', 'groupId'));
+      expect(error, containsPair('field', 'groupIds'));
+      expect(app.employees.writes, isEmpty);
+    });
+
+    test('400 naming email for an address that is not one; nothing written', () async {
+      final app = _app();
+
+      final error = await _error(app, _body(email: 'disan.example.com'));
+
+      expect(error, containsPair('field', 'email'));
+      expect(app.employees.writes, isEmpty);
+    });
+
+    test('400 naming scheduleGroupId for a work schedule outside the employee\'s groups', () async {
+      final app = _app();
+
+      final error = await _error(
+        app,
+        jsonEncode({'firstName': 'A', 'lastName': 'B', 'code': 'C', 'groupIds': [3], 'scheduleGroupId': 4}),
+      );
+
+      expect(error, containsPair('field', 'scheduleGroupId'));
+      expect(app.employees.writes, isEmpty);
+    });
+
+    test('other companies need the right to add employees there too', () async {
+      final app = _app(allow: false);
+
+      final response = await app.post(_path, jsonEncode({'firstName': 'A', 'lastName': 'B', 'code': 'C', 'companyIds': [8]}));
+
+      expect(response.statusCode, 403);
       expect(app.employees.writes, isEmpty);
     });
 

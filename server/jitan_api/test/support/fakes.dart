@@ -63,6 +63,7 @@ class FakeEmployeeRepository implements EmployeeRepository {
   final writes = <String>[];
   final insertedQrCodes = <String>[];
   String? lastPhone;
+  String? lastEmail;
   var _nextId = 100;
 
   @override
@@ -82,8 +83,10 @@ class FakeEmployeeRepository implements EmployeeRepository {
     required String code,
     required String personalQrCode,
     required String? phone,
+    String? email,
   }) async {
     if (insertFailure != null) throw insertFailure!;
+    lastEmail = email;
     final id = _nextId++;
     writes.add('insertUser $code');
     insertedQrCodes.add(personalQrCode);

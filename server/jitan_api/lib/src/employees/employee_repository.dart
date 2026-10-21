@@ -81,12 +81,13 @@ class EmployeeRepository {
     required String code,
     required String personalQrCode,
     required String? phone,
+    String? email,
   }) async =>
       (await tx.execute(
-        'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, cellphoneNumber, '
+        'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, cellphoneNumber, userEmail, '
         'userKioskMode, userActive, userMFD) '
-        'VALUES (:firstName, :lastName, :code, :qr, :phone, 0, 1, 0)',
-        {'firstName': firstName, 'lastName': lastName, 'code': code, 'qr': personalQrCode, 'phone': phone},
+        'VALUES (:firstName, :lastName, :code, :qr, :phone, :email, 0, 1, 0)',
+        {'firstName': firstName, 'lastName': lastName, 'code': code, 'qr': personalQrCode, 'phone': phone, 'email': email},
       ))
           .lastInsertId;
 

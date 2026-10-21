@@ -107,7 +107,7 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
                   maxLength: CreateEmployeeRequest.maxCodeLength,
                   errorText: errorFor(CreateEmployeeRequest.fieldCode),
                 ),
-                _typeField(context, busy: busy, errorText: errorFor(CreateEmployeeRequest.fieldGroupId)),
+                _typeField(context, busy: busy, errorText: errorFor(CreateEmployeeRequest.fieldGroupIds)),
                 JitanTextField(
                   label: context.t(AdminTextKeys.employeeFieldPhone),
                   controller: _phone,

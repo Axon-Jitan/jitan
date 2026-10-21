@@ -7,23 +7,32 @@ void main() {
       firstName: 'Disan',
       lastName: 'Ssebowa',
       code: 'SBW',
-      groupId: 3,
       phone: '+32 470',
+      email: 'disan@example.com',
+      companyIds: [8],
+      groupIds: [3, 4],
+      scheduleGroupId: 4,
     );
 
     final decoded = CreateEmployeeRequest.fromJson(original.toJson());
 
     expect(decoded.firstName, 'Disan');
     expect(decoded.code, 'SBW');
-    expect(decoded.groupId, 3);
     expect(decoded.phone, '+32 470');
+    expect(decoded.email, 'disan@example.com');
+    expect(decoded.companyIds, [8]);
+    expect(decoded.groupIds, [3, 4]);
+    expect(decoded.scheduleGroupId, 4);
   });
 
   test('CreateEmployeeRequest accepts missing optional fields', () {
     final decoded = CreateEmployeeRequest.fromJson({'firstName': 'A', 'lastName': 'B', 'code': 'C'});
 
-    expect(decoded.groupId, isNull);
+    expect(decoded.groupIds, isEmpty);
+    expect(decoded.companyIds, isEmpty);
     expect(decoded.phone, isNull);
+    expect(decoded.email, isNull);
+    expect(decoded.scheduleGroupId, isNull);
   });
 
   test('CreateEmployeeRequest rejects a missing required field', () {

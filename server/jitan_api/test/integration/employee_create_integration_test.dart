@@ -32,6 +32,7 @@ void main() {
   final stamp = DateTime.now().microsecondsSinceEpoch % 100000000;
   late int companyId;
   late int groupId;
+  final extraCompanies = <int>[];
   late int actorId;
 
   EmployeeService service({AuditLogRepository audit = const AuditLogRepository()}) => EmployeeService(
@@ -45,7 +46,7 @@ void main() {
       );
 
   CreateEmployeeRequest request(String code, {int? group}) =>
-      CreateEmployeeRequest(firstName: 'Test', lastName: 'Employee $code', code: 'DT$stamp$code', groupId: group);
+      CreateEmployeeRequest(firstName: 'Test', lastName: 'Employee $code', code: 'DT$stamp$code', groupIds: [?group]);
 
   Future<int> scalar(String sql, Map<String, Object?> params, String column) async =>
       (await db.query(sql, params)).single.readInt(column);
@@ -85,7 +86,42 @@ void main() {
     }
     await db.execute('DELETE FROM tblGroup WHERE groupID = :id', {'id': groupId});
     await db.execute('DELETE FROM tblCompany WHERE companyID = :id', {'id': companyId});
+    for (final id in extraCompanies) {
+      await db.execute('DELETE FROM tblCompany WHERE companyID = :id', {'id': id});
+    }
     await db.close();
+  });
+
+  test('email and a second company are stored with the employee', () async {
+    final second = (await db.execute(
+      'INSERT INTO tblCompany (companyName, companyActive, companyMFD) VALUES (:n, 1, 0)',
+      {'n': '[DEV-TEST] $stamp Second'},
+    ))
+        .lastInsertId;
+    extraCompanies.add(second);
+    final created = await service().create(
+      actorId,
+      companyId,
+      CreateEmployeeRequest(
+        firstName: 'Test',
+        lastName: 'Employee E1',
+        code: 'DT${stamp}E1',
+        email: 'e1@example.com',
+        companyIds: [companyId, second],
+      ),
+    );
+
+    final user = (await db.query('SELECT userEmail FROM tblUser WHERE userID = :id', {'id': created.id})).single;
+    expect(user.readOptionalString('userEmail'), 'e1@example.com');
+    final companies = [
+      for (final row in await db.query(
+        'SELECT companyID FROM tblUserCompany WHERE userID = :id AND userCompanyActive = 1 AND userCompanyMFD = 0 '
+        'ORDER BY companyID',
+        {'id': created.id},
+      ))
+        row.readInt('companyID'),
+    ];
+    expect(companies, [companyId, second], reason: 'the path company once, plus the second');
   });
 
   test('creates the user, company and group links, and an audit entry', () async {

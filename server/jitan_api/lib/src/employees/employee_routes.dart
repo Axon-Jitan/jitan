@@ -77,6 +77,10 @@ class EmployeeRoutes {
     } on FormatException catch (e) {
       throw ApiException.badRequest(e.message);
     }
+    // Adding the employee to other companies needs the right there too.
+    for (final other in body.companyIds) {
+      if (other != id) await _authorizer.require(request, Permission.createEmployee, companyId: other);
+    }
     final created = await _employees.create(identity.userId, id, body);
     return jsonResponse(created.toJson(), statusCode: 201);
   }

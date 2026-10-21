@@ -92,7 +92,7 @@ class AddEmployeeController extends ChangeNotifier {
           firstName: input.firstName.trim(),
           lastName: input.lastName.trim(),
           code: input.code.trim(),
-          groupId: input.groupId,
+          groupIds: [?input.groupId],
           phone: input.phone.trim().isEmpty ? null : input.phone.trim(),
         ),
       );
@@ -132,7 +132,7 @@ class AddEmployeeController extends ChangeNotifier {
       return (
         error.field!,
         switch (error.field) {
-          CreateEmployeeRequest.fieldGroupId => AdminTextKeys.employeeFieldErrorInvalidType,
+          CreateEmployeeRequest.fieldGroupIds => AdminTextKeys.employeeFieldErrorInvalidType,
           CreateEmployeeRequest.fieldFirstName when input.firstName.trim().isNotEmpty =>
             AdminTextKeys.employeeFieldErrorTooLong,
           CreateEmployeeRequest.fieldLastName when input.lastName.trim().isNotEmpty =>
