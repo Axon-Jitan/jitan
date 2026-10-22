@@ -19,6 +19,7 @@ class TestServices {
       groupManagementApi: groupManagement,
       groupMembersApi: groupMembers,
       timeRecordsApi: timeRecords,
+      scheduleSourceApi: scheduleSource,
     );
   }
 
@@ -30,5 +31,6 @@ class TestServices {
   final groupManagement = FakeGroupManagementApi();
   final groupMembers = FakeGroupMembersApi();
   final timeRecords = FakeTimeRecordsApi();
+  final scheduleSource = FakeScheduleSourceApi();
   late final AdminServices services;
 }

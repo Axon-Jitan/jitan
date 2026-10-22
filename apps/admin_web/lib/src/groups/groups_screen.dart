@@ -156,7 +156,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
     GroupsLoaded(groups: []) => _state(GroupStateText(context.t(AdminTextKeys.groupsEmptyMessage))),
     GroupsLoaded(:final schedules) => switch (_controller.visibleGroups) {
       [] => _state(GroupStateText(context.t(AdminTextKeys.groupsNoMatchMessage))),
-      final groups => GroupsTable(groups: groups, schedules: schedules, onManage: _manage),
+      final groups => GroupsTable(groups: groups, schedules: schedules, onManage: _manage, onOpen: _open),
     },
   };
 

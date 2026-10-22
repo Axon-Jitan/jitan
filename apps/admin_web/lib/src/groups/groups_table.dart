@@ -10,11 +10,14 @@ import 'group_schedule_text.dart';
 /// 1340:2): name, employees, schedule, status and "⋯". A row click opens
 /// nothing in V1 (product owner, 2026-10-21: details from a row come in V2).
 class GroupsTable extends StatelessWidget {
-  const GroupsTable({super.key, required this.groups, required this.schedules, required this.onManage});
+  const GroupsTable({super.key, required this.groups, required this.schedules, required this.onManage, required this.onOpen});
 
   final List<GroupOverview> groups;
   final Map<int, GroupSchedule> schedules;
   final ValueChanged<GroupOverview> onManage;
+
+  /// A click on the row: the group's page (Figma `1455:2`).
+  final ValueChanged<GroupOverview> onOpen;
 
   /// Column widths proportional to Figma (x = 20/366/586/916/1080 in a 1120
   /// px card).
@@ -28,6 +31,7 @@ class GroupsTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = TranslationScope.of(context);
     return JitanSliverTable(
+      onRowTap: (i) => onOpen(groups[i]),
       columns: [
         JitanTableColumn(label: t.t(AdminTextKeys.groupsColumnName), flex: _flexName),
         JitanTableColumn(label: t.t(AdminTextKeys.groupsColumnEmployees), flex: _flexEmployees),

@@ -81,6 +81,7 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
                       groupsApi: services.groupManagementApi,
                       membersApi: services.groupMembersApi,
                       schedulesApi: services.schedulesApi,
+                      scheduleSourceApi: services.scheduleSourceApi,
                     ),
                   );
                 },

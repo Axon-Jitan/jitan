@@ -19,11 +19,12 @@ Future<GroupSchedule?> showScheduleDialog(
   ScheduleOptions? options,
   GroupSchedule? group,
   int? groupId,
+  bool fromGroupPage = false,
 }) => showJitanModal<GroupSchedule>(
   context,
   // A click beside the wizard must not throw away what HR entered.
   barrierDismissible: false,
-  builder: (_) => ScheduleDialog(api: api, groups: groups, options: options, group: group, groupId: groupId),
+  builder: (_) => ScheduleDialog(api: api, groups: groups, options: options, group: group, groupId: groupId, fromGroupPage: fromGroupPage),
 );
 
 /// The Create / Edit schedule wizard: Group → Working hours & break →
@@ -35,7 +36,15 @@ Future<GroupSchedule?> showScheduleDialog(
 /// 2026-10-20: work hours and break together in one pass. Also agreed: the
 /// "Mon–Fri" shortcut and dark chosen days.
 class ScheduleDialog extends StatefulWidget {
-  const ScheduleDialog({super.key, required this.api, required this.groups, this.options, this.group, this.groupId});
+  const ScheduleDialog({
+    super.key,
+    required this.api,
+    required this.groups,
+    this.options,
+    this.group,
+    this.groupId,
+    this.fromGroupPage = false,
+  });
 
   final SchedulesApi api;
   final List<GroupSchedule> groups;
@@ -46,6 +55,9 @@ class ScheduleDialog extends StatefulWidget {
 
   /// A new schedule for this group, already chosen.
   final int? groupId;
+
+  /// Opened on the group's page: the group step is skipped.
+  final bool fromGroupPage;
 
   @override
   State<ScheduleDialog> createState() => _ScheduleDialogState();
@@ -58,6 +70,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     group: widget.group,
     groupId: widget.groupId,
     options: widget.options,
+    fromGroupPage: widget.fromGroupPage,
   );
 
   late final _arrival = TextEditingController(text: _controller.arrivalTolerance);
@@ -136,10 +149,10 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
         ),
         leadingActions: [
           JitanSecondaryButton(
-            label: context.t(c.step == ScheduleStep.group ? CommonTextKeys.cancel : CommonTextKeys.back),
+            label: context.t(c.step == c.firstStep ? CommonTextKeys.cancel : CommonTextKeys.back),
             onPressed: c.submitting
                 ? null
-                : c.step == ScheduleStep.group
+                : c.step == c.firstStep
                 ? () => Navigator.of(context).pop()
                 : () {
                     _syncTolerance();

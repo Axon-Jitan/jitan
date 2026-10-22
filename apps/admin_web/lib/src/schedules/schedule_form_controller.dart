@@ -47,17 +47,24 @@ class ScheduleFormController extends ChangeNotifier {
   /// With [group], the wizard edits that group's schedule, filled in. With
   /// [groupId] only, it creates a schedule for that group, already chosen
   /// (e.g. from the group's page). With [options] already loaded, it is
-  /// ready at once.
+  /// ready at once. With [fromGroupPage], the group step is skipped: HR
+  /// opened the wizard on that group, so it starts at the working hours.
   ScheduleFormController(
     this._api, {
     required this.groups,
     GroupSchedule? group,
     ScheduleOptions? options,
     int? groupId,
+    bool fromGroupPage = false,
   }) : _groupId = group?.group.id ?? groupId,
-       _options = options == null ? const ScheduleOptionsLoading() : ScheduleOptionsLoaded(options) {
+       _options = options == null ? const ScheduleOptionsLoading() : ScheduleOptionsLoaded(options),
+       firstStep = fromGroupPage && (group != null || groupId != null) ? ScheduleStep.hours : ScheduleStep.group {
     if (group != null) editExisting();
+    _step = firstStep;
   }
+
+  /// Where the wizard starts, and where Back becomes Cancel.
+  final ScheduleStep firstStep;
 
   final SchedulesApi _api;
 
@@ -201,7 +208,7 @@ class ScheduleFormController extends ChangeNotifier {
   }
 
   void back() {
-    if (_step == ScheduleStep.group || _submitting) return;
+    if (_step == firstStep || _submitting) return;
     _step = ScheduleStep.values[_step.index - 1];
     _fieldErrors.clear();
     _failure = null;

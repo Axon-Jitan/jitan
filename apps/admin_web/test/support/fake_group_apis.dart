@@ -120,5 +120,52 @@ class FakeGroupMembersApi implements GroupMembersApi {
 GroupOverview groupOverview(int id, String name, {bool active = true, int employees = 0}) =>
     GroupOverview(id: id, name: name, isActive: active, employeeCount: employees);
 
-GroupMember member(int id, String first, String last, String code, {List<String> companies = const ['Almeco'], List<String> groups = const []}) =>
-    GroupMember(id: id, firstName: first, lastName: last, code: code, companies: companies, groups: groups);
+GroupMember member(
+  int id,
+  String first,
+  String last,
+  String code, {
+  List<String> companies = const ['Almeco'],
+  List<String> groups = const [],
+  List<int> companyIds = const [7],
+  int? hoursFromGroupId,
+  String? hoursFromGroup,
+}) => GroupMember(
+  id: id,
+  firstName: first,
+  lastName: last,
+  code: code,
+  companies: companies,
+  groups: groups,
+  companyIds: companyIds,
+  hoursFromGroupId: hoursFromGroupId,
+  hoursFromGroup: hoursFromGroup,
+);
+
+/// Stand-in for [ScheduleSourceApi]: answers at once from [groups] /
+/// [source]; [failSet] makes the next save fail.
+class FakeScheduleSourceApi implements ScheduleSourceApi {
+  List<GroupSummary> groups = const [];
+  int? source;
+  ApiClientException? failSet;
+
+  /// `get 7/1`, `set 7/1 2`.
+  final calls = <String>[];
+
+  @override
+  Future<ScheduleSourceResponse> get(int companyId, int userId) async {
+    calls.add('get $companyId/$userId');
+    return ScheduleSourceResponse(groups: groups, sourceGroupId: source);
+  }
+
+  @override
+  Future<ScheduleSourceResponse> set(int companyId, int userId, int groupId) async {
+    calls.add('set $companyId/$userId $groupId');
+    if (failSet case final failure?) {
+      failSet = null;
+      throw failure;
+    }
+    source = groupId;
+    return ScheduleSourceResponse(groups: groups, sourceGroupId: source);
+  }
+}

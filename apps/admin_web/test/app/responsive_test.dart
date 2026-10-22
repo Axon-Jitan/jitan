@@ -211,14 +211,14 @@ void main() {
           member(11, 'Fabian', 'Peeters', 'FPT', companies: ['Almeco', 'PCA'], groups: ['Blue collar', 'White collar']),
         ];
       final schedules = FakeSchedulesApi();
-      await _pump(tester, width, GroupPage(groupId: 1, groupsApi: groups, membersApi: members, schedulesApi: schedules));
+      await _pump(tester, width, GroupPage(groupId: 1, groupsApi: groups, membersApi: members, schedulesApi: schedules, scheduleSourceApi: FakeScheduleSourceApi()));
       await tester.pump();
       await tester.pump();
       schedules.succeedList([blue, white]);
       await tester.pumpAndSettle();
 
       _fitsTheWindow(tester, width, 'group page');
-      expect(find.text('Fabian Peeters · FPT'), findsOneWidget);
+      expect(find.text('Fabian Peeters'), findsOneWidget);
     });
 
     testWidgets('Employees page and Add employee, every step, at $width px', (tester) async {
@@ -313,7 +313,7 @@ void main() {
         ..byGroup[1] = [member(11, 'Fabian', 'Peeters', 'FPT')]
         ..pool.add(member(12, 'Kevin', 'De Vos', 'KDV', companies: ['PCA'], groups: ['White collar']));
       final schedules = FakeSchedulesApi();
-      await _pump(tester, width, GroupPage(groupId: 1, groupsApi: groups, membersApi: members, schedulesApi: schedules));
+      await _pump(tester, width, GroupPage(groupId: 1, groupsApi: groups, membersApi: members, schedulesApi: schedules, scheduleSourceApi: FakeScheduleSourceApi()));
       await tester.pump();
       await tester.pump();
       schedules.succeedList([blue, white]);
@@ -333,8 +333,10 @@ void main() {
       }
 
       await open('Rename', 'Rename group');
+      await tester.tap(find.byTooltip('More actions'));
+      await tester.pumpAndSettle();
       await open('Deactivate', 'Cannot deactivate group');
-      await open('+ Add employees →', 'Add employees');
+      await open('Add employees', 'Add employees');
       await open('Remove', 'Remove from group?');
     });
 

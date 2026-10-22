@@ -1,24 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../app/admin_routes.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import '../schedules/schedule_dialog.dart';
-import '../schedules/schedule_summary_text.dart';
 import 'add_employees_dialog.dart';
+import 'choose_hours_source_dialog.dart';
 import 'deactivate_group_dialog.dart';
+import 'group_hours_panel.dart';
+import 'group_member_hours.dart';
+import 'group_members_card.dart';
 import 'group_page_controller.dart';
+import 'group_summary_cards.dart';
 import 'remove_member_dialog.dart';
 import 'rename_group_dialog.dart';
 
-/// One group's page (Figma `HR / Employee groups — New group setup` 1349:6,
-/// `New group with employees` 1349:178, `Multiple groups` 1349:1688,
-/// `Different work hours` 1349:1860, `Work hours configured` 1378:4,
-/// `Inactive group` 1378:363): its employees from every company, and its
-/// work hours and break, set with the schedule wizard.
+/// One group's page (Figma `HR / Employee groups — Group page` 1455:2),
+/// opened from its row on the Groups list: summary cards, the employees from
+/// every company with where their work hours come from, and the weekly work
+/// hours and break, set with the schedule wizard. Employees in several
+/// groups without hours are pointed out, and HR chooses their group here.
 class GroupPage extends StatefulWidget {
   const GroupPage({
     super.key,
@@ -26,12 +32,14 @@ class GroupPage extends StatefulWidget {
     required this.groupsApi,
     required this.membersApi,
     required this.schedulesApi,
+    required this.scheduleSourceApi,
   });
 
   final int groupId;
   final GroupManagementApi groupsApi;
   final GroupMembersApi membersApi;
   final SchedulesApi schedulesApi;
+  final ScheduleSourceApi scheduleSourceApi;
 
   @override
   State<GroupPage> createState() => _GroupPageState();
@@ -105,9 +113,23 @@ class _GroupPageState extends State<GroupPage> {
       groups: loaded.schedules,
       group: hasOne ? schedule : null,
       groupId: hasOne ? null : loaded.group.id,
+      fromGroupPage: true,
     );
     if (saved == null || !mounted) return;
     _say(context.t(AdminTextKeys.scheduleSaved, args: {'group': saved.group.name}));
+    await _controller.load();
+  }
+
+  /// "Needs a choice": which group [member]'s hours come from.
+  Future<void> _choose(GroupOverview group, GroupMember member) async {
+    final chosen = await showChooseHoursSourceDialog(
+      context,
+      api: widget.scheduleSourceApi,
+      member: member,
+      suggestedGroupId: group.id,
+    );
+    if (chosen == null || !mounted) return;
+    _say(context.t(AdminTextKeys.groupDetailChooseSaved, args: {'name': member.displayName, 'group': chosen.name}));
     await _controller.load();
   }
 
@@ -116,150 +138,226 @@ class _GroupPageState extends State<GroupPage> {
     padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
     child: ListenableBuilder(
       listenable: _controller,
-      builder: (context, _) => switch (_controller.state) {
-        GroupPageLoading() => SizedBox(
-          height: JitanDimensions.tableStateHeight,
-          child: JitanLoadingState(label: context.t(AdminTextKeys.groupPageLoading)),
+      builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(alignment: Alignment.centerLeft, child: _back(context)),
+          const SizedBox(height: 14),
+          switch (_controller.state) {
+            GroupPageLoading() => SizedBox(
+              height: JitanDimensions.tableStateHeight,
+              child: JitanLoadingState(label: context.t(AdminTextKeys.groupPageLoading)),
+            ),
+            GroupPageFailed(:final failure) => SizedBox(height: JitanDimensions.tableStateHeight, child: _error(context, failure)),
+            final GroupPageLoaded loaded => _page(context, loaded),
+          },
+        ],
+      ),
+    ),
+  );
+
+  /// "← Groups": back to the list.
+  Widget _back(BuildContext context) => TextButton(
+    onPressed: () => context.go(AdminRoutes.groups),
+    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), minimumSize: const Size(0, 32)),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.arrow_back, size: 16, color: JitanColors.inkMuted),
+        const SizedBox(width: 6),
+        Text(
+          context.t(AdminTextKeys.groupDetailBack),
+          style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 13, color: JitanColors.inkMuted),
         ),
-        GroupPageFailed(:final failure) => SizedBox(height: JitanDimensions.tableStateHeight, child: _error(context, failure)),
-        final GroupPageLoaded loaded => _page(context, loaded),
-      },
+      ],
     ),
   );
 
   Widget _page(BuildContext context, GroupPageLoaded loaded) {
     final group = loaded.group;
+    final members = loaded.members;
+    final hasHours = configuredVariant(loaded.schedule) != null;
+    final needChoice = [
+      for (final m in members)
+        if (GroupMemberHours.of(m, group.id, groupHasHours: hasHours) == GroupMemberHours.needsChoice) m,
+    ];
+    final companies = {for (final m in members) ...m.companyIds};
+    final subtitle = members.isEmpty
+        ? context.t(AdminTextKeys.groupDetailSubtitleEmpty)
+        : context.t(
+            AdminTextKeys.groupDetailSubtitle,
+            args: {
+              'employees': context.tPlural(AdminTextKeys.groupDetailEmployeeCount, members.length),
+              'companies': context.tPlural(AdminTextKeys.groupDetailCompanyCount, companies.length),
+            },
+          );
+    final membersCard = GroupMembersCard(
+      groupId: group.id,
+      groupName: group.name,
+      members: members,
+      groupHasHours: hasHours,
+      onAdd: group.isActive ? () => _addEmployees(group) : null,
+      onRemove: (member) => _remove(group, member),
+      onChoose: (member) => _choose(group, member),
+    );
+    final hoursPanel = GroupHoursPanel(
+      schedule: loaded.schedule,
+      hasMembers: members.isNotEmpty,
+      onEdit: group.isActive ? () => _setHours(loaded) : null,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        JitanPageHeader(
-          title: group.name,
-          subtitle: context.t(AdminTextKeys.groupPageSubtitle),
-          action: Wrap(
-            spacing: 8,
-            children: [
-              TextButton(
-                onPressed: () => _rename(group),
-                child: Text(context.t(AdminTextKeys.groupPageRename), style: _action.copyWith(color: JitanColors.vermilion)),
-              ),
-              if (group.isActive)
-                TextButton(
-                  onPressed: () => _deactivate(group),
-                  child: Text(context.t(AdminTextKeys.groupPageDeactivate), style: _action.copyWith(color: JitanColors.inkMuted)),
-                )
-              else
-                TextButton(
-                  onPressed: () => _reactivate(group),
-                  child: Text(context.t(AdminTextKeys.groupPageReactivate), style: _action.copyWith(color: JitanColors.vermilion)),
-                ),
-            ],
-          ),
-        ),
+        _header(context, group, subtitle),
         if (!group.isActive) ...[
-          const SizedBox(height: 10),
-          Text(context.t(AdminTextKeys.groupPageInactive), style: JitanTextStyles.stateMessage.copyWith(color: JitanColors.ink)),
+          const SizedBox(height: 18),
+          _notice(
+            context,
+            context.t(AdminTextKeys.groupDetailInactiveText),
+            null,
+            action: context.t(AdminTextKeys.groupPageReactivate),
+            onAction: () => _reactivate(group),
+            warning: false,
+          ),
         ],
-        const SizedBox(height: 28),
-        _Section(
-          number: '01',
-          title: context.t(AdminTextKeys.groupPageEmployeesTitle),
+        const SizedBox(height: 24),
+        GroupSummaryCards(memberCount: members.length, needChoice: needChoice.length, schedule: loaded.schedule),
+        if (needChoice.isNotEmpty && group.isActive) ...[
+          const SizedBox(height: 20),
+          _notice(
+            context,
+            needChoice.length == 1
+                ? context.t(AdminTextKeys.groupDetailNoticeOne, args: {'name': needChoice.single.displayName})
+                : context.t(AdminTextKeys.groupDetailNoticeMany, args: {'n': needChoice.length}),
+            context.t(AdminTextKeys.groupDetailNoticeText),
+            action: context.t(AdminTextKeys.groupDetailNoticeAction),
+            onAction: () => _choose(group, needChoice.first),
+          ),
+        ],
+        const SizedBox(height: 20),
+        LayoutBuilder(
+          builder: (context, constraints) => constraints.maxWidth >= 1000
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [Expanded(child: membersCard), const SizedBox(width: 20), SizedBox(width: 340, child: hoursPanel)],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [membersCard, const SizedBox(height: 20), hoursPanel],
+                ),
+        ),
+      ],
+    );
+  }
+
+  /// Title with its state, the subtitle, and Rename and "···".
+  Widget _header(BuildContext context, GroupOverview group, String subtitle) {
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 14,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text(
-              context.t(loaded.members.isEmpty ? AdminTextKeys.groupPageEmployeesNone : AdminTextKeys.groupPageEmployeesText),
-              style: JitanTextStyles.stateMessage,
-            ),
-            const SizedBox(height: 14),
-            for (final (index, member) in loaded.members.indexed) _memberRow(context, group, member, index),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              // A button while the group is empty (1349:6), a link under the list (1378:4).
-              child: loaded.members.isEmpty
-                  ? JitanPrimaryButton(
-                      label: context.t(AdminTextKeys.groupPageAddEmployees),
-                      height: JitanDimensions.controlHeight,
-                      onPressed: () => _addEmployees(group),
-                    )
-                  : _link(context.t(AdminTextKeys.groupPageAddMoreEmployees), () => _addEmployees(group)),
-            ),
+            Semantics(header: true, child: Text(group.name, style: JitanTextStyles.pageTitle)),
+            if (group.isActive)
+              JitanBadge(label: context.t(AdminTextKeys.groupDetailActive))
+            else
+              JitanBadge.neutral(label: context.t(AdminTextKeys.groupDetailInactive), dot: true),
           ],
         ),
-        const SizedBox(height: 20),
-        _Section(number: '02', title: context.t(AdminTextKeys.groupPageHoursTitle), children: _hours(context, loaded)),
+        const SizedBox(height: 8),
+        Text(subtitle, style: JitanTextStyles.pageSubtitle),
       ],
     );
-  }
-
-  /// "Fabian Peeters · FPT" and Remove (1349:178).
-  Widget _memberRow(BuildContext context, GroupOverview group, GroupMember member, int index) => Container(
-    height: 48,
-    padding: const EdgeInsets.only(left: 16, right: 8),
-    color: index.isOdd ? JitanColors.tableStripe : JitanColors.surface,
-    child: Row(
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: Text('${member.displayName} · ${member.code}', style: JitanTextStyles.tableCell, overflow: TextOverflow.ellipsis),
-        ),
-        TextButton(
-          onPressed: () => _remove(group, member),
-          child: Text(context.t(AdminTextKeys.groupPageRemove), style: _action.copyWith(color: JitanColors.vermilion)),
-        ),
-      ],
-    ),
-  );
-
-  /// Section 02: why there are no hours yet, or the hours and break, with
-  /// the button that opens the schedule wizard for this group.
-  List<Widget> _hours(BuildContext context, GroupPageLoaded loaded) {
-    final t = TranslationScope.of(context);
-    final schedule = loaded.schedule;
-    final button = JitanPrimaryButton(
-      label: context.t(schedule?.variants.isNotEmpty == true ? AdminTextKeys.groupPageEditHours : AdminTextKeys.groupPageSetHours),
-      height: JitanDimensions.controlHeight,
-      onPressed: () => _setHours(loaded),
-    );
-    return switch (schedule) {
-      // 1349:6 (no employees yet) and 1349:1688 (only employees in several groups).
-      null || GroupSchedule(status: GroupScheduleStatus.noSingleGroupEmployees) => [
-        Text(
-          context.t(loaded.members.isEmpty ? AdminTextKeys.groupPageHoursNoOwn : AdminTextKeys.groupPageHoursNoSingle),
-          style: JitanTextStyles.fieldError,
-        ),
-      ],
-      GroupSchedule(status: GroupScheduleStatus.noSchedule) => [
-        Text(context.t(AdminTextKeys.groupPageHoursNone), style: JitanTextStyles.stateMessage),
-        const SizedBox(height: 14),
-        Align(alignment: Alignment.centerLeft, child: button),
-      ],
-      GroupSchedule(status: GroupScheduleStatus.employeesDiffer) => [
-        Text(context.t(AdminTextKeys.groupPageHoursDiffer), style: JitanTextStyles.fieldError),
-        const SizedBox(height: 14),
-        Align(alignment: Alignment.centerLeft, child: _link(context.t(AdminTextKeys.groupPageSetHoursLink), () => _setHours(loaded))),
-      ],
-      // "Mon–Fri 08:00–16:30 · Break 30 min" (1378:4).
-      GroupSchedule(:final variants) => [
-        Text(
-          context.t(
-            AdminTextKeys.groupPageHoursSummary,
-            args: {
-              'hours': workHoursDaysSummary(t, variants.single),
-              'minutes': variants.single.breaks.firstOrNull?.lengthMinutes ?? 0,
-            },
+        JitanOutlineButton(label: context.t(AdminTextKeys.groupPageRename), onPressed: () => _rename(group)),
+        const SizedBox(width: 10),
+        PopupMenuButton<bool>(
+          tooltip: context.t(AdminTextKeys.groupDetailMore),
+          position: PopupMenuPosition.under,
+          color: JitanColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          onSelected: (_) => group.isActive ? _deactivate(group) : _reactivate(group),
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: true,
+              child: Text(
+                context.t(group.isActive ? AdminTextKeys.groupPageDeactivate : AdminTextKeys.groupPageReactivate),
+                style: JitanTextStyles.tableCellStrong.copyWith(color: group.isActive ? JitanColors.errorStrong : JitanColors.ink),
+              ),
+            ),
+          ],
+          child: Container(
+            height: JitanDimensions.fieldHeight,
+            width: JitanDimensions.fieldHeight,
+            decoration: BoxDecoration(
+              color: JitanColors.surface,
+              borderRadius: BorderRadius.circular(JitanDimensions.inputRadius),
+              border: Border.all(color: JitanColors.inputBorder),
+            ),
+            child: const Icon(Icons.more_horiz, size: 20, color: JitanColors.ink),
           ),
-          style: JitanTextStyles.stateMessage,
         ),
-        const SizedBox(height: 14),
-        Align(alignment: Alignment.centerLeft, child: button),
       ],
-    };
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) => constraints.maxWidth >= 640
+          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: title), const SizedBox(width: 16), actions])
+          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, const SizedBox(height: 16), actions]),
+    );
   }
 
-  /// A red text action with an arrow ("+ Add employees →", "Set work hours →").
-  static Widget _link(String label, VoidCallback onPressed) => TextButton(
-    onPressed: onPressed,
-    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
-    child: Text(label, style: JitanTextStyles.inputText.copyWith(color: JitanColors.vermilion)),
-  );
+  /// The orange band ("Hanne Claes has no work hours … Choose group →"), or
+  /// the grey one of an inactive group.
+  Widget _notice(
+    BuildContext context,
+    String title,
+    String? text, {
+    required String action,
+    required VoidCallback onAction,
+    bool warning = true,
+  }) {
+    final color = warning ? JitanColors.warning : JitanColors.ink;
+    final linkColor = warning ? color : JitanColors.vermilion;
+    final link = TextButton(
+      onPressed: onAction,
+      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 32)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: Text(action, style: JitanTextStyles.tableCellStrong.copyWith(color: linkColor))),
+          const SizedBox(width: 6),
+          Icon(Icons.arrow_forward, size: 16, color: linkColor),
+        ],
+      ),
+    );
+    final words = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: JitanTextStyles.tableCellStrong.copyWith(color: color)),
+        if (text != null) ...[
+          const SizedBox(height: 2),
+          Text(text, style: JitanTextStyles.tableCell.copyWith(fontSize: 13, color: color)),
+        ],
+      ],
+    );
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+      decoration: BoxDecoration(
+        color: warning ? JitanColors.warningSurface : JitanColors.noteSurface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) => constraints.maxWidth >= 560
+            ? Row(children: [Expanded(child: words), const SizedBox(width: 12), link])
+            : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [words, const SizedBox(height: 6), link]),
+      ),
+    );
+  }
 
   Widget _error(BuildContext context, ApiClientException failure) {
     final keys = failureTextKeysFor(failure);
@@ -270,29 +368,4 @@ class _GroupPageState extends State<GroupPage> {
       onRetry: _controller.load,
     );
   }
-
-  static final _action = JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w600);
-}
-
-/// A numbered white card of the group page ("01 Employees").
-class _Section extends StatelessWidget {
-  const _Section({required this.number, required this.title, required this.children});
-
-  final String number;
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => JitanSurfaceCard(
-    radius: JitanDimensions.tableCardRadius,
-    padding: const EdgeInsets.all(24),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text('$number   $title', style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
-        const SizedBox(height: 14),
-        ...children,
-      ],
-    ),
-  );
 }
