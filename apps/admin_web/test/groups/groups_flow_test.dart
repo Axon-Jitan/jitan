@@ -77,7 +77,7 @@ void main() {
     await _pump(tester, fakes, '/groups');
 
     await _tapPrimary(tester, 'Add group');
-    expect(find.text('Set up an employee group in three steps.'), findsOneWidget);
+    expect(find.text('Set up an employee group in five steps.'), findsOneWidget);
     expect(_primary(tester, 'Continue').onPressed, isNull, reason: 'no name yet');
     await tester.enterText(find.byType(TextField).last, '  Van drivers ');
     await tester.pump();
@@ -111,10 +111,11 @@ void main() {
     fakes.schedules.succeedOptions();
     await tester.pumpAndSettle();
     expect(find.text('Working days'), findsOneWidget);
-    expect(_primary(tester, 'Create group').onPressed, isNotNull, reason: 'hours are optional: an empty step 3 is fine');
+    expect(find.text('Set hours later'), findsOneWidget, reason: 'hours are optional (1461:5)');
+    expect(_primary(tester, 'Continue').onPressed, isNull, reason: 'no hours entered yet');
     await tester.tap(find.text('Mon–Fri'));
     await tester.pump();
-    expect(_primary(tester, 'Create group').onPressed, isNull, reason: 'days chosen but no times yet');
+    expect(_primary(tester, 'Continue').onPressed, isNull, reason: 'days chosen but no times yet');
     final times = tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList();
     times[0].onChanged!('08:00');
     times[1].onChanged!('07:30');
@@ -126,6 +127,28 @@ void main() {
     expect(find.text('Enter 15, 30, 45, 60 minutes.'), findsOneWidget, reason: 'the allowed break lengths');
     await tester.enterText(find.byType(TextField).last, '30');
     await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+
+    // Step 4: attendance rules (1461:74).
+    expect(find.text('Arrival tolerance'), findsOneWidget);
+    await tester.enterText(find.descendant(of: find.byType(ScheduleMinutesField).first, matching: find.byType(TextField)), '99');
+    await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+    expect(find.textContaining('Enter 0 to'), findsOneWidget, reason: 'beyond the allowed tolerance');
+    await tester.enterText(find.descendant(of: find.byType(ScheduleMinutesField).first, matching: find.byType(TextField)), '5');
+    await tester.pump();
+    tester.widget<ScheduleRoundingField>(find.byType(ScheduleRoundingField).first).onChanged!(
+      const ScheduleRounding(intervalMinutes: 15, roundUp: true),
+    );
+    await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+
+    // Step 5: the review (1461:130).
+    expect(find.text('Review group'), findsOneWidget);
+    expect(find.text('Van drivers'), findsWidgets);
+    expect(find.text('Mon–Fri 08:00–16:30'), findsWidgets);
+    expect(find.text('Arrival 5 min · leaving 0 min'), findsOneWidget);
+    expect(find.text('Start: Up, every 15 min · Finish: No rounding'), findsOneWidget);
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Create group'));
     await tester.pump();
     await tester.pump();
@@ -134,6 +157,7 @@ void main() {
     final sent = fakes.groupManagement.created!;
     expect(sent.followEmployeeIds, [11], reason: 'Fabian uses the new hours');
     expect(sent.schedule!.breakMinutes, 30);
+    expect((sent.schedule!.workHours.arrivalToleranceMinutes, sent.schedule!.workHours.startRounding?.intervalMinutes), (5, 15));
     expect([for (final d in sent.schedule!.workHours.days) (d.start, d.finish)], List.filled(5, ('08:00', '16:30')));
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
@@ -165,6 +189,8 @@ void main() {
     times[1].onChanged!('16:30');
     await tester.enterText(find.byType(TextField).last, '30');
     await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+    await _tapPrimary(tester, 'Continue');
     await _tapPrimary(tester, 'Create group');
 
     expect(find.text('Group details'), findsWidgets, reason: 'back on step 1');
@@ -363,7 +389,7 @@ void main() {
     await tester.tap(find.text('Kevin De Vos · KDV'));
     await tester.pump();
 
-    await tester.tap(find.text('Set up an employee group in three steps.'));
+    await tester.tap(find.text('Set up an employee group in five steps.'));
     await tester.pumpAndSettle();
     expect(find.text('Kevin De Vos · KDV'), findsNWidgets(2), reason: 'still in the open list, and in the chosen list below it');
 
@@ -409,6 +435,10 @@ void main() {
     await _tapPrimary(tester, 'Continue');
     fakes.schedules.succeedOptions();
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Set hours later'));
+    await tester.pumpAndSettle();
+    expect(find.text('Set later on the group page'), findsOneWidget, reason: 'the review, without attendance rules');
+    expect(find.text('Rounding'), findsNothing);
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Create group'));
     await tester.pump();
     await tester.pump();

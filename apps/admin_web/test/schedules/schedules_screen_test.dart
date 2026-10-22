@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:admin_web/src/schedules/schedule_dialog.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:admin_web/src/schedules/schedules_screen.dart';
 import 'package:flutter/material.dart';
@@ -40,8 +43,10 @@ Future<void> _loaded(WidgetTester tester, FakeSchedulesApi api, [List<GroupSched
   await tester.pump();
 }
 
+/// The schedule wizard on its own (the page has no "Add schedule" any more;
+/// the wizard opens from "···" Edit and from a group's page).
 Future<void> _openAdd(WidgetTester tester, FakeSchedulesApi api) async {
-  await tester.tap(find.text('Add schedule'));
+  unawaited(showScheduleDialog(tester.element(find.byType(SchedulesScreen)), api: api, groups: [_blue, _white, _mixed]));
   await tester.pump();
   api.succeedOptions();
   await tester.pumpAndSettle();
@@ -117,9 +122,10 @@ void main() {
     expect(find.text('No matching schedules'), findsOneWidget);
   });
 
-  testWidgets('Add schedule, 4 steps: group, hours & break, attendance, review; one save, then the list reloads', (tester) async {
+  testWidgets('no Add schedule on the page; the wizard: group, hours & break, attendance, review; one save', (tester) async {
     final api = await _pump(tester);
     await _loaded(tester, api);
+    expect(find.text('Add schedule'), findsNothing, reason: 'hours are set on a group (product owner, 2026-10-22)');
     await _openAdd(tester, api);
 
     expect(find.text('Create schedule'), findsOneWidget);
@@ -135,7 +141,7 @@ void main() {
     await _continue(tester);
 
     // Step 3, then the review.
-    expect(find.text('Actual registrations remain unchanged; tolerance affects attendance status.'), findsOneWidget);
+    expect(find.text('Actual registrations remain unchanged; the registered time is rounded with these rules.'), findsOneWidget);
     await _continue(tester);
     expect(find.text('Review schedule'), findsOneWidget);
     expect(find.text('Mon 08:00–16:30'), findsOneWidget);
@@ -145,7 +151,6 @@ void main() {
     await tester.tap(find.text('Save schedule'));
     await tester.pump();
     await tester.pump();
-    await _loaded(tester, api, [_blue, api.writeResult!, _mixed]);
     await tester.pumpAndSettle();
 
     final (method, groupId, request as SetGroupScheduleRequest) = api.writes.single;
@@ -153,7 +158,6 @@ void main() {
     expect([for (final d in request.workHours.days) (d.dayId, d.start, d.finish)], [(11, '08:00', '16:30')]);
     expect(request.breakMinutes, 30);
     expect(find.text('Create schedule'), findsNothing);
-    expect(find.text('Schedule saved for White collar.'), findsOneWidget);
   });
 
   testWidgets('every field has an ⓘ that explains it with an example', (tester) async {

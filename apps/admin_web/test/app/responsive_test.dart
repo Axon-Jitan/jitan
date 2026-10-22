@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:convert';
 
 import 'package:admin_web/src/companies/companies_screen.dart';
@@ -10,6 +12,7 @@ import 'package:admin_web/src/groups/employee_picker.dart';
 import 'package:admin_web/src/groups/group_page.dart';
 import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
+import 'package:admin_web/src/schedules/schedule_dialog.dart';
 import 'package:admin_web/src/schedules/schedules_screen.dart';
 import 'package:admin_web/src/time_records/time_records_screen.dart';
 import 'package:flutter/material.dart';
@@ -138,7 +141,7 @@ void main() {
       await _pump(tester, width, SchedulesScreen(api: api));
       api.succeedList([blue, white]);
       await tester.pump();
-      await tester.tap(find.text('Add schedule'));
+      unawaited(showScheduleDialog(tester.element(find.byType(SchedulesScreen)), api: api, groups: [blue, white]));
       await tester.pump();
       api.succeedOptions();
       await tester.pumpAndSettle();
@@ -202,6 +205,23 @@ void main() {
       await tester.tap(find.text('Same hours every working day'));
       await tester.pumpAndSettle();
       _fitsTheWindow(tester, width, 'Create group, step 3, hours per day');
+      await tester.tap(find.text('Same hours every working day'));
+      await tester.pumpAndSettle();
+      final times = tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList();
+      times[0].onChanged!('08:00');
+      times[1].onChanged!('16:30');
+      await tester.enterText(find.byType(TextField).last, '30');
+      await tester.pump();
+      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue'));
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text('Arrival tolerance'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'Create group, step 4 attendance rules');
+      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue'));
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text('Review group'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'Create group, step 5 review');
     });
 
     testWidgets('a group page at $width px', (tester) async {

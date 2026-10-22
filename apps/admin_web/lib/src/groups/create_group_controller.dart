@@ -6,16 +6,19 @@ import '../l10n/admin_text_keys.dart';
 import '../schedules/schedule_form_controller.dart';
 import 'group_name_error.dart';
 
-/// The steps of Create group, in order.
-enum CreateGroupStep { details, employees, hours }
+/// The steps of Create group, in order (Figma 1461:5, 1461:74, 1461:130 for
+/// steps 3–5).
+enum CreateGroupStep { details, employees, hours, attendance, review }
 
-/// State of Create group (Figma `HR / Employee groups — Create group`,
-/// steps 1–3): the name, the employees from every company, and the work
-/// hours and break, sent in **one** request that the server saves in one
-/// transaction (`POST /groups`).
+/// State of Create group (Figma `HR / Employee groups — Create group`): the
+/// name, the employees from every company, the work hours and break, the
+/// attendance rules (tolerance, rounding) and a review, sent in **one**
+/// request that the server saves in one transaction (`POST /groups`). HR
+/// sets up a whole group in one pass (product owner, 2026-10-22).
 ///
-/// Employees and work hours are optional (product owner, 2026-10-21): HR
-/// may leave step 2 and step 3 empty and fill the group later. The checks
+/// Employees and work hours are optional (product owner, 2026-10-21): "Set
+/// hours later" goes from step 3 straight to the review, and the group page
+/// sets them later. The checks
 /// here only give HR quick feedback; the server checks everything again and
 /// is the authority (e.g. hours on IT's database as it is still need an
 /// employee who is in no other group, ERD_GAPS GAP-15).
@@ -62,6 +65,21 @@ class CreateGroupController extends ChangeNotifier {
   String _breakText = '';
   String get breakText => _breakText;
 
+  /// Step 4: minutes as typed, and the rounding of start and finish.
+  String arrivalTolerance = '0';
+  String leavingTolerance = '0';
+  ScheduleRounding? _startRounding, _finishRounding;
+  ScheduleRounding? get startRounding => _startRounding;
+  ScheduleRounding? get finishRounding => _finishRounding;
+
+  /// "Set hours later" was chosen: no hours, no attendance step.
+  bool _hoursLater = false;
+  bool get hoursLater => _hoursLater;
+
+  /// A text key under a tolerance field, by field ("arrival", "leaving").
+  final Map<String, String> _toleranceErrors = {};
+  Map<String, String> get toleranceErrors => Map.unmodifiable(_toleranceErrors);
+
   bool _submitting = false;
   bool get submitting => _submitting;
 
@@ -91,16 +109,32 @@ class CreateGroupController extends ChangeNotifier {
   bool get canContinue => switch (_step) {
     CreateGroupStep.details => _name.trim().isNotEmpty,
     CreateGroupStep.employees => true,
-    CreateGroupStep.hours => false,
+    CreateGroupStep.hours => _options is ScheduleOptionsLoaded && _hoursComplete && hoursErrorKey == null && breakErrorKey == null,
+    CreateGroupStep.attendance => true,
+    CreateGroupStep.review => false,
   };
 
   bool get canSubmit =>
       !_submitting &&
       switch (_step) {
         CreateGroupStep.employees => skipsHours,
-        CreateGroupStep.hours => _hoursEmpty || (_hoursComplete && hoursErrorKey == null && breakErrorKey == null),
-        CreateGroupStep.details => false,
+        CreateGroupStep.review => true,
+        _ => false,
       };
+
+  /// Whether the group is saved with work hours.
+  bool get withHours => !_hoursLater && !_hoursEmpty;
+
+  /// The hours as entered, for the review: (day id, start, finish).
+  List<(int, String, String)> get enteredHours => [
+    for (final day in _optionDays)
+      if (_dayIds.contains(day.id)) (day.id, hoursOf(day.id).start ?? '', hoursOf(day.id).finish ?? ''),
+  ];
+
+  List<ScheduleDay> get _optionDays => switch (_options) {
+    ScheduleOptionsLoaded(:final options) => options.days,
+    _ => const [],
+  };
 
   /// Nothing entered on step 3: the group is created without work hours.
   bool get _hoursEmpty =>
@@ -195,6 +229,33 @@ class CreateGroupController extends ChangeNotifier {
 
   void setBreak(String text) => _change(() => _breakText = text);
 
+  void setArrivalTolerance(String text) => _change(() {
+    arrivalTolerance = text;
+    _toleranceErrors.remove(_fieldArrival);
+  });
+
+  void setLeavingTolerance(String text) => _change(() {
+    leavingTolerance = text;
+    _toleranceErrors.remove(_fieldLeaving);
+  });
+
+  void setStartRounding(ScheduleRounding? rounding) => _change(() => _startRounding = rounding);
+
+  void setFinishRounding(ScheduleRounding? rounding) => _change(() => _finishRounding = rounding);
+
+  static const _fieldArrival = 'arrival';
+  static const _fieldLeaving = 'leaving';
+
+  /// "Set hours later" (Figma 1461:5): the group is created without hours;
+  /// the review comes next.
+  void setHoursLater() {
+    if (_submitting || _step != CreateGroupStep.hours) return;
+    _hoursLater = true;
+    _step = CreateGroupStep.review;
+    _failure = null;
+    _notify();
+  }
+
   /// Step 1 → 2 → 3; the name is checked before leaving step 1.
   void next() {
     switch (_step) {
@@ -207,8 +268,18 @@ class CreateGroupController extends ChangeNotifier {
         }
       case CreateGroupStep.employees:
         _step = CreateGroupStep.hours;
+        _hoursLater = false;
         if (!_optionsRequested) loadOptions();
       case CreateGroupStep.hours:
+        if (!canContinue) return;
+        _step = CreateGroupStep.attendance;
+      case CreateGroupStep.attendance:
+        if (!_validTolerances()) {
+          _notify();
+          return;
+        }
+        _step = CreateGroupStep.review;
+      case CreateGroupStep.review:
         return;
     }
     _failure = null;
@@ -217,7 +288,9 @@ class CreateGroupController extends ChangeNotifier {
 
   void back() {
     if (_submitting || _step == CreateGroupStep.details) return;
-    _step = CreateGroupStep.values[_step.index - 1];
+    // From the review without hours: back to the hours step.
+    _step = _step == CreateGroupStep.review && !withHours ? CreateGroupStep.hours : CreateGroupStep.values[_step.index - 1];
+    if (_step == CreateGroupStep.hours) _hoursLater = false;
     _failure = null;
     _notify();
   }
@@ -235,11 +308,31 @@ class CreateGroupController extends ChangeNotifier {
     _notify();
   }
 
-  /// Creates the group with its employees and work hours; the group as the
-  /// server stored it, or `null` when refused (shown on the step concerned).
+  /// Tolerances are whole minutes from 0 to the allowed maximum.
+  bool _validTolerances() {
+    final max = switch (_options) {
+      ScheduleOptionsLoaded(:final options) => options.maxToleranceMinutes,
+      _ => 0,
+    };
+    _toleranceErrors.clear();
+    for (final (field, text) in [(_fieldArrival, arrivalTolerance), (_fieldLeaving, leavingTolerance)]) {
+      final minutes = int.tryParse(text.trim());
+      if (minutes == null || minutes < 0 || minutes > max) _toleranceErrors[field] = AdminTextKeys.scheduleErrorTolerance;
+    }
+    return _toleranceErrors.isEmpty;
+  }
+
+  int get maxToleranceMinutes => switch (_options) {
+    ScheduleOptionsLoaded(:final options) => options.maxToleranceMinutes,
+    _ => 0,
+  };
+
+  /// Creates the group with its employees, work hours and attendance rules;
+  /// the group as the server stored it, or `null` when refused (shown on
+  /// the step concerned).
   Future<GroupOverview?> submit() async {
     final loaded = _options;
-    final withoutHours = _step == CreateGroupStep.employees || _hoursEmpty;
+    final withoutHours = _step == CreateGroupStep.employees || !withHours;
     if (!canSubmit || (!withoutHours && loaded is! ScheduleOptionsLoaded)) return null;
     _submitting = true;
     _failure = null;
@@ -261,8 +354,10 @@ class CreateGroupController extends ChangeNotifier {
                   if (_dayIds.contains(day.id))
                     WorkHoursDay(dayId: day.id, start: hoursOf(day.id).start!, finish: hoursOf(day.id).finish!),
               ],
-              arrivalToleranceMinutes: 0,
-              leavingToleranceMinutes: 0,
+              arrivalToleranceMinutes: int.parse(arrivalTolerance.trim()),
+              leavingToleranceMinutes: int.parse(leavingTolerance.trim()),
+              startRounding: _startRounding,
+              finishRounding: _finishRounding,
             ),
             breakMinutes: int.parse(_breakText.trim()),
           ),
@@ -283,9 +378,10 @@ class CreateGroupController extends ChangeNotifier {
     if (groupNameErrorKey(failure) case final key?) {
       _step = CreateGroupStep.details;
       _nameError = key;
-    } else if (_step == CreateGroupStep.hours &&
+    } else if (withHours &&
         (error?.code == ApiErrorCode.groupWithoutEmployees || error?.field == CreateGroupRequest.fieldEmployeeIds)) {
       // The hours have nobody to be kept on (IT's database as it is).
+      _step = CreateGroupStep.hours;
       _hoursFailureKey = AdminTextKeys.groupsErrorHoursNeedEmployee;
     } else {
       _failure = failure;

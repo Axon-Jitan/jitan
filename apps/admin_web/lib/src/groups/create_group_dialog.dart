@@ -29,10 +29,12 @@ Future<GroupOverview?> showCreateGroupDialog(
 );
 
 /// Figma `HR / Employee groups — Create group`: Step 1 Details (1340:160,
-/// name error 1340:836), Step 2 Employees (1352:2, list open 1354:7) and
-/// Step 3 Work hours & breaks (1377:28 empty, 1352:175 filled, 1377:290 per
-/// day, 1377:569 invalid finish). "Create group" saves all three together;
-/// employees and hours may be left empty (product owner, 2026-10-21).
+/// name error 1340:836), Step 2 Employees (1352:2, list open 1354:7), Step 3
+/// Work hours & break (1461:5 with "Set hours later"; 1377:290 per day,
+/// 1377:569 invalid finish), Step 4 Attendance rules (1461:74) and Step 5
+/// Review (1461:130). "Create group" saves everything together, so HR sets
+/// up a whole group in one pass (product owner, 2026-10-22); employees and
+/// hours may be left for later.
 class CreateGroupDialog extends StatefulWidget {
   const CreateGroupDialog({super.key, required this.groupsApi, required this.membersApi, required this.schedulesApi});
 
@@ -48,12 +50,16 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   late final _controller = CreateGroupController(groupsApi: widget.groupsApi, schedulesApi: widget.schedulesApi);
   final _name = TextEditingController();
   final _break = TextEditingController();
+  final _arrival = TextEditingController(text: '0');
+  final _leaving = TextEditingController(text: '0');
 
   @override
   void initState() {
     super.initState();
     _name.addListener(() => _controller.setName(_name.text));
     _break.addListener(() => _controller.setBreak(_break.text));
+    _arrival.addListener(() => _controller.setArrivalTolerance(_arrival.text));
+    _leaving.addListener(() => _controller.setLeavingTolerance(_leaving.text));
   }
 
   @override
@@ -61,6 +67,8 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     _controller.dispose();
     _name.dispose();
     _break.dispose();
+    _arrival.dispose();
+    _leaving.dispose();
     super.dispose();
   }
 
@@ -92,6 +100,8 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                   AdminTextKeys.groupsStepDetails,
                   AdminTextKeys.groupsStepEmployees,
                   AdminTextKeys.groupsStepHours,
+                  AdminTextKeys.groupsStepAttendance,
+                  AdminTextKeys.groupsStepReview,
                 ].indexed)
                   context.t(AdminTextKeys.scheduleStepLabel, args: {'n': index + 1, 'label': context.t(key)}),
               ],
@@ -109,6 +119,8 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                       CreateGroupStep.details => _details(context),
                       CreateGroupStep.employees => _employees(context),
                       CreateGroupStep.hours => _hours(context),
+                      CreateGroupStep.attendance => _attendance(context),
+                      CreateGroupStep.review => _review(context),
                     },
                     if (failure != null) ...[
                       const SizedBox(height: 16),
@@ -132,11 +144,29 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
           ),
         ],
         actions: [
-          if (c.step == CreateGroupStep.hours || c.skipsHours)
+          if (c.step == CreateGroupStep.review || c.skipsHours)
             JitanPrimaryButton(
               label: context.t(AdminTextKeys.groupsCreateSubmit),
               busy: busy,
               onPressed: c.canSubmit ? _submit : null,
+            )
+          else if (c.step == CreateGroupStep.hours)
+            // "Set hours later" sits next to Continue (1461:5).
+            Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                TextButton(
+                  onPressed: busy ? null : c.setHoursLater,
+                  child: Text(
+                    context.t(AdminTextKeys.groupsHoursLater),
+                    style: JitanTextStyles.buttonLabel.copyWith(color: JitanColors.ink),
+                  ),
+                ),
+                JitanPrimaryButton(label: context.t(CommonTextKeys.continueAction), onPressed: c.canContinue ? c.next : null),
+              ],
             )
           else
             JitanPrimaryButton(label: context.t(CommonTextKeys.continueAction), onPressed: c.canContinue ? c.next : null),
@@ -381,6 +411,134 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         ],
       ),
       if (c.hoursFailureKey case final key?) error(key),
+    ];
+  }
+
+  /// Step 4 (1461:74): arrival and leaving tolerance, start and finish
+  /// rounding.
+  List<Widget> _attendance(BuildContext context) {
+    final c = _controller;
+    final busy = c.submitting;
+    final intervals = switch (c.options) {
+      ScheduleOptionsLoaded(:final options) => options.roundingIntervalMinutes,
+      _ => const <int>[],
+    };
+    String? error(String field) => c.toleranceErrors[field] == null
+        ? null
+        : context.t(c.toleranceErrors[field]!, args: {'max': c.maxToleranceMinutes});
+    return [
+      ScheduleFieldColumns(
+        children: [
+          ScheduleMinutesField(
+            label: context.t(AdminTextKeys.scheduleFormArrivalTolerance),
+            info: context.t(AdminTextKeys.scheduleInfoArrival),
+            controller: _arrival,
+            unit: context.t(AdminTextKeys.scheduleFormMinutesUnit),
+            enabled: !busy,
+            errorText: error('arrival'),
+          ),
+          ScheduleMinutesField(
+            label: context.t(AdminTextKeys.scheduleFormLeavingTolerance),
+            info: context.t(AdminTextKeys.scheduleInfoLeaving),
+            controller: _leaving,
+            unit: context.t(AdminTextKeys.scheduleFormMinutesUnit),
+            enabled: !busy,
+            errorText: error('leaving'),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+      ScheduleFieldColumns(
+        children: [
+          ScheduleRoundingField(
+            label: context.t(AdminTextKeys.scheduleFormStartRounding),
+            info: context.t(AdminTextKeys.scheduleInfoStartRounding),
+            value: c.startRounding,
+            intervals: intervals,
+            onChanged: busy ? null : c.setStartRounding,
+          ),
+          ScheduleRoundingField(
+            label: context.t(AdminTextKeys.scheduleFormFinishRounding),
+            info: context.t(AdminTextKeys.scheduleInfoFinishRounding),
+            value: c.finishRounding,
+            intervals: intervals,
+            onChanged: busy ? null : c.setFinishRounding,
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      Text(context.t(AdminTextKeys.scheduleFormAttendanceNote), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
+    ];
+  }
+
+  /// Step 5 (1461:130): everything that will be saved.
+  List<Widget> _review(BuildContext context) {
+    final c = _controller;
+    final t = TranslationScope.of(context);
+    final days = switch (c.options) {
+      ScheduleOptionsLoaded(:final options) => {for (final d in options.days) d.id: d},
+      _ => const <int, ScheduleDay>{},
+    };
+    final employees = [
+      for (final e in c.selected.values)
+        e.groups.isEmpty || c.follows(e)
+            ? e.displayName
+            : context.t(AdminTextKeys.groupsReviewKeeps, args: {'name': e.displayName}),
+    ];
+    final hours = c.withHours
+        ? workHoursDaysSummary(
+            t,
+            ScheduleVariant(
+              employeeCount: 0,
+              breaks: const [],
+              workDays: [
+                for (final (id, start, finish) in c.enteredHours)
+                  if (days[id] case final day?)
+                    WorkDaySchedule(
+                      day: day,
+                      start: WorkBoundary(time: start, toleranceMinutes: 0),
+                      finish: WorkBoundary(time: finish, toleranceMinutes: 0),
+                    ),
+              ],
+            ),
+          )
+        : context.t(AdminTextKeys.groupsReviewHoursLater);
+    final rows = [
+      (AdminTextKeys.scheduleReviewGroup, c.name.trim()),
+      (AdminTextKeys.groupsReviewEmployees, employees.isEmpty ? context.t(AdminTextKeys.groupsReviewNoEmployees) : employees.join(', ')),
+      (AdminTextKeys.scheduleReviewHours, hours),
+      if (c.withHours) ...[
+        (AdminTextKeys.scheduleReviewBreak, context.t(AdminTextKeys.scheduleReviewBreakValue, args: {'minutes': c.breakText.trim()})),
+        (
+          AdminTextKeys.scheduleReviewAttendance,
+          context.t(AdminTextKeys.scheduleReviewAttendanceValue, args: {'arrival': c.arrivalTolerance.trim(), 'leaving': c.leavingTolerance.trim()}),
+        ),
+        (AdminTextKeys.scheduleReviewRounding, roundingPairText(t, c.startRounding, c.finishRounding)),
+      ],
+    ];
+    return [
+      Text(context.t(AdminTextKeys.groupsReviewTitle), style: JitanTextStyles.stateTitle),
+      const SizedBox(height: 14),
+      for (final (index, (label, value)) in rows.indexed)
+        DecoratedBox(
+          decoration: BoxDecoration(color: index.isOdd ? JitanColors.warmWhite : null, borderRadius: BorderRadius.circular(10)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 120, child: Text(context.t(label), style: JitanTextStyles.fieldLabel)),
+                Expanded(child: Text(value, style: JitanTextStyles.inputText)),
+              ],
+            ),
+          ),
+        ),
+      const SizedBox(height: 14),
+      Text(context.t(AdminTextKeys.groupsReviewNote), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
+      if (c.hoursFailureKey case final key?) ...[
+        const SizedBox(height: 10),
+        Text(context.t(key), style: JitanTextStyles.fieldError),
+      ],
     ];
   }
 

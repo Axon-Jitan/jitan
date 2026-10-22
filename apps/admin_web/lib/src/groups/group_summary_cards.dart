@@ -36,7 +36,7 @@ class GroupSummaryCards extends StatelessWidget {
         '$memberCount',
         needChoice > 0
             ? context.tPlural(AdminTextKeys.groupDetailNeedChoice, needChoice)
-            : variant == null
+            : variant == null || memberCount == 0
             ? null
             : context.t(AdminTextKeys.groupDetailAllSet),
         subColor: needChoice > 0 ? JitanColors.warning : null,

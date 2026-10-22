@@ -512,7 +512,6 @@ abstract final class AdminTextKeys {
   // Schedules (Figma HR / Schedules 1317:2 to 1333:196)
   static const scheduleTitle = 'schedule.title';
   static const scheduleListSubtitle = 'schedule.list.subtitle';
-  static const scheduleAddAction = 'schedule.add.action';
   static const scheduleSearch = 'schedule.search';
   static const scheduleFilterGroup = 'schedule.filter.group';
   static const scheduleFilterGroupAll = 'schedule.filter.group.all';
@@ -690,6 +689,15 @@ abstract final class AdminTextKeys {
   static const groupPageDeactivate = 'group.page.deactivate';
   static const groupPageReactivate = 'group.page.reactivate';
   static const groupsStepHours = 'groups.step.hours';
+  static const groupsStepAttendance = 'groups.step.attendance';
+  static const groupsStepReview = 'groups.step.review';
+  static const groupsHoursLater = 'groups.hoursLater';
+  static const groupsReviewTitle = 'groups.review.title';
+  static const groupsReviewEmployees = 'groups.review.employees';
+  static const groupsReviewNoEmployees = 'groups.review.noEmployees';
+  static const groupsReviewKeeps = 'groups.review.keeps';
+  static const groupsReviewHoursLater = 'groups.review.hoursLater';
+  static const groupsReviewNote = 'groups.review.note';
   static const groupsEmployeesField = 'groups.employees.field';
   static const groupsEmployeesHint = 'groups.employees.hint';
   static const groupsHoursUses = 'groups.hours.uses';
