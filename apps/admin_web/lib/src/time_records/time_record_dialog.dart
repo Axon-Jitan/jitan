@@ -3,21 +3,39 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/admin_text_keys.dart';
+import 'time_correction_flow.dart';
 import 'time_record_text.dart';
+import 'time_record_timeline.dart';
 
-Future<void> showTimeRecordDialog(BuildContext context, {required TimeRecordDay day}) =>
-    showJitanModal<void>(context, builder: (_) => TimeRecordDialog(day: day));
+/// Opens the day detail. Returns the correction HR chose from it ("Correct
+/// time" or "Review correction"), or `null` when HR only closed it.
+Future<TimeCorrectionStep?> showTimeRecordDialog(BuildContext context, {required TimeRecordDay day, required bool mayCorrect}) =>
+    showJitanModal<TimeCorrectionStep>(context, builder: (_) => TimeRecordDialog(day: day, mayCorrect: mayCorrect));
 
 /// Figma `HR / Time records — Day detail modal` (160:94): the day's start
-/// and finish, each with its actual registration and its rounded time.
+/// and finish, each with its actual registration and its rounded time, the
+/// detailed registration timeline, and "Correct time" (or "Review
+/// correction" while the employee's correction waits, D31).
 ///
-/// Not shown yet: "Correct time" (HR corrections, the next slice) and the
-/// detailed timeline (its absences and workplaces need geofencing). A time
-/// entered afterwards shows its reason, which HR needs to judge it (D30).
-class TimeRecordDialog extends StatelessWidget {
-  const TimeRecordDialog({super.key, required this.day});
+/// A time entered afterwards or corrected shows its reason, which HR needs to
+/// judge it (D30). The timeline holds registrations and corrections; absences
+/// and workplaces come with geofencing.
+class TimeRecordDialog extends StatefulWidget {
+  const TimeRecordDialog({super.key, required this.day, required this.mayCorrect});
 
   final TimeRecordDay day;
+
+  /// `false` hides the correction button (no company to correct it in).
+  final bool mayCorrect;
+
+  @override
+  State<TimeRecordDialog> createState() => _TimeRecordDialogState();
+}
+
+class _TimeRecordDialogState extends State<TimeRecordDialog> {
+  bool _timeline = false;
+
+  TimeRecordDay get day => widget.day;
 
   @override
   Widget build(BuildContext context) => JitanModal(
@@ -48,6 +66,49 @@ class TimeRecordDialog extends StatelessWidget {
                   );
           },
         ),
+        if (day.pending.isNotEmpty || day.nonWorkReason != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: day.pending.isNotEmpty ? JitanColors.warningSurface : JitanColors.noteSurface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              day.pending.isNotEmpty
+                  ? context.t(AdminTextKeys.timeRecordDayPending)
+                  : context.t(AdminTextKeys.timeRecordDayNonWork, args: {'reason': day.nonWorkReason!}),
+              style: JitanTextStyles.stateMessage.copyWith(
+                fontSize: 13,
+                color: day.pending.isNotEmpty ? JitanColors.warning : JitanColors.ink,
+              ),
+            ),
+          ),
+        ],
+        if (day.events.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() => _timeline = !_timeline),
+              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 36)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      context.t(_timeline ? AdminTextKeys.timeRecordDayTimelineHide : AdminTextKeys.timeRecordDayTimeline),
+                      style: JitanTextStyles.tableCell.copyWith(color: JitanColors.ink),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(_timeline ? Icons.arrow_drop_up : Icons.arrow_drop_down, size: 18, color: JitanColors.ink),
+                ],
+              ),
+            ),
+          ),
+          if (_timeline) TimeRecordTimeline(events: day.events),
+        ],
         const SizedBox(height: 20),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,6 +124,16 @@ class TimeRecordDialog extends StatelessWidget {
     ),
     actions: [
       JitanSecondaryButton(label: context.t(AdminTextKeys.timeRecordDayClose), onPressed: () => Navigator.of(context).pop()),
+      if (widget.mayCorrect)
+        day.pending.isNotEmpty
+            ? JitanPrimaryButton(
+                label: context.t(AdminTextKeys.timeRecordDayReview),
+                onPressed: () => Navigator.of(context).pop(TimeCorrectionStep.review),
+              )
+            : JitanPrimaryButton(
+                label: context.t(AdminTextKeys.timeRecordDayCorrectTime),
+                onPressed: () => Navigator.of(context).pop(TimeCorrectionStep.correct),
+              ),
     ],
   );
 
@@ -91,7 +162,14 @@ class TimeRecordDialog extends StatelessWidget {
                 : JitanTextStyles.pageTitle.copyWith(fontSize: 26),
           ),
           if (time != null) ...[
-            if (time.enteredByHand) ...[
+            if (time.correctedBy != null) ...[
+              const SizedBox(height: 6),
+              Text(context.t(AdminTextKeys.timeRecordDayCorrectedBy, args: {'reason': time.reason ?? ''}), style: muted),
+              if (time.originalLocal case final original?) ...[
+                const SizedBox(height: 2),
+                Text(context.t(AdminTextKeys.timeRecordDayOriginal, args: {'time': original}), style: muted),
+              ],
+            ] else if (time.enteredByHand) ...[
               const SizedBox(height: 6),
               Text(
                 time.reason == null || time.reason!.isEmpty

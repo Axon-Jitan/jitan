@@ -6,6 +6,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
+import 'time_correction_flow.dart';
 import 'time_record_dialog.dart';
 import 'time_record_text.dart';
 import 'time_records_controller.dart';
@@ -178,9 +179,33 @@ class _TimeRecordsScreenState extends State<TimeRecordsScreen> {
           message: context.t(AdminTextKeys.timeRecordsNoMatchMessage),
         ),
       ),
-      final days => TimeRecordsTable(days: days, onView: (day) => showTimeRecordDialog(context, day: day)),
+      final days => TimeRecordsTable(
+        days: days,
+        onView: _view,
+        onCorrect: _correct,
+        mayCorrect: (day) => _companyOf(day) != null,
+      ),
     },
   };
+
+  /// The company a correction of [day] is made in: the filter's, else the
+  /// employee's first. The server checks the right there (§28a.5).
+  int? _companyOf(TimeRecordDay day) {
+    final filter = _controller.companyId;
+    return filter != null && day.companyIds.contains(filter) ? filter : day.companyIds.firstOrNull;
+  }
+
+  Future<void> _view(TimeRecordDay day) async {
+    final step = await showTimeRecordDialog(context, day: day, mayCorrect: _companyOf(day) != null);
+    if (step != null && mounted) await _correct(day, step);
+  }
+
+  Future<void> _correct(TimeRecordDay day, TimeCorrectionStep step) async {
+    final companyId = _companyOf(day);
+    if (companyId == null) return;
+    final saved = await showTimeCorrection(context, api: widget.api, day: day, companyId: companyId, step: step);
+    if (saved && mounted) await _controller.load();
+  }
 
   Widget _error(BuildContext context, ApiClientException failure) {
     final keys = failureTextKeysFor(failure);

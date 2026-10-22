@@ -86,6 +86,10 @@ TimeRecordDay recordDay(
   TimeRecordStatus status, {
   TimeRecordTime? start,
   TimeRecordTime? finish,
+  List<TimeRecordPending> pending = const [],
+  List<TimeRecordEvent> events = const [],
+  String? nonWorkReason,
+  List<int> companyIds = const [7],
 }) => TimeRecordDay(
   employeeId: employeeId,
   firstName: first,
@@ -95,4 +99,8 @@ TimeRecordDay recordDay(
   status: status,
   start: start,
   finish: finish,
+  pending: pending,
+  events: events,
+  nonWorkReason: nonWorkReason,
+  companyIds: companyIds,
 );

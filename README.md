@@ -92,6 +92,11 @@ dart run bin/server.dart
   HR/Admin Time records, one row per employee per day with the actual and rounded first
   start and last finish and a calculated status (complete, working, missing finish, missing
   start). With `company`, that company; without, every company the viewer may see
+- `POST /companies/{c}/employees/{u}/time-records/{date}/correct` (`boundary`, local `time`
+  `HH:mm`, `reason`), `…/time-records/{date}/non-work` (`reason`),
+  `GET …/time-records/{date}/rounding?boundary=&time=` (what a time counts as after rounding),
+  `POST …/time-registrations/{id}/approve` and `…/reject` (an employee's correction, D31):
+  HR corrections, audited, answering with the day as it is now
 
 - `GET /schedules`: every active employee group with its schedules (work start/finish
   times, tolerance, rounding, breaks), taken from the employees who are only in that group;

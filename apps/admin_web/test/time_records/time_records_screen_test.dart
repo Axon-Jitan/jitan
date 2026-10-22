@@ -97,7 +97,8 @@ void main() {
     expect(find.text('Missing finish'), findsOneWidget);
     expect(find.text('Working'), findsOneWidget);
     expect(find.text('Automatic'), findsOneWidget);
-    expect(find.text('View'), findsNWidgets(3));
+    expect(find.text('View'), findsNWidgets(2));
+    expect(find.text('Fix'), findsOneWidget, reason: 'the missing finish');
   });
 
   testWidgets('the status filter narrows the loaded days; company and period reload; Reset all', (tester) async {
@@ -135,7 +136,10 @@ void main() {
 
   testWidgets('View opens the day: actual and rounded start and finish, and why a time was entered afterwards', (tester) async {
     final (api, _) = await _pump(tester);
-    api.succeed([_complete, _missing]);
+    // Without a company to correct in, a missing finish can only be viewed.
+    final missingNoCompany = recordDay(2, 'Kevin', 'De Vos', 'KDV', DateTime.utc(2026, 10, 20), TimeRecordStatus.missingFinish,
+        start: recordTime('08:03', rounded: '08:15'), companyIds: const []);
+    api.succeed([_complete, missingNoCompany]);
     await tester.pump();
 
     await tester.tap(find.text('View').first);
@@ -154,6 +158,7 @@ void main() {
     await tester.tap(find.text('View').last);
     await tester.pumpAndSettle();
     expect(find.text('Not registered'), findsOneWidget, reason: 'missing finish');
+    expect(find.text('Correct time'), findsNothing, reason: 'no company to correct it in');
   });
 
   testWidgets('empty period, and a failure with retry', (tester) async {

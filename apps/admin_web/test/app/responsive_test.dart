@@ -426,8 +426,39 @@ void main() {
           TimeRecordStatus.complete,
           start: recordTime('07:58', rounded: '08:00'),
           finish: recordTime('16:31', rounded: '16:30', method: TimeRecordMethod.manual, byHand: true, reason: 'Forgot to tap when leaving the workshop'),
+          events: const [
+            TimeRecordEvent(atLocal: '07:58', boundary: RegistrationBoundary.start, kind: TimeRecordEventKind.registered, active: true, method: TimeRecordMethod.qr),
+            TimeRecordEvent(
+              atLocal: '16:31',
+              boundary: RegistrationBoundary.finish,
+              kind: TimeRecordEventKind.correctionRequested,
+              active: false,
+              method: TimeRecordMethod.manual,
+              reason: 'Forgot to tap when leaving the workshop',
+            ),
+          ],
         ),
         recordDay(2, 'Kevin', 'De Vos', 'KDV', DateTime.utc(2026, 10, 20), TimeRecordStatus.missingFinish, start: recordTime('08:03', rounded: '08:15')),
+        recordDay(
+          4,
+          'Thomas',
+          'Vermeulen',
+          'TVM',
+          DateTime.utc(2026, 10, 19),
+          TimeRecordStatus.pendingReview,
+          start: recordTime('07:01', rounded: '07:00'),
+          finish: recordTime('15:32', rounded: '15:30'),
+          pending: [
+            TimeRecordPending(
+              id: 55,
+              boundary: RegistrationBoundary.start,
+              requested: DateTime.utc(2026, 10, 19, 5),
+              requestedLocal: '07:00',
+              reason: 'Forgot to scan immediately after arriving at the van, the scanner was not working',
+              roundedLocal: '07:00',
+            ),
+          ],
+        ),
       ]);
       await tester.pump();
       await tester.pump();
@@ -437,6 +468,47 @@ void main() {
       await tester.tap(find.text('View').first);
       await _settle(tester);
       _fitsTheWindow(tester, width, 'Time record day');
+
+      await tester.ensureVisible(find.text('View detailed registration timeline'));
+      await tester.tap(find.text('View detailed registration timeline'));
+      await tester.pump();
+      expect(find.text('Start registered · QR'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'Time record timeline');
+
+      final correct = find.widgetWithText(JitanPrimaryButton, 'Correct time');
+      await tester.ensureVisible(correct);
+      await tester.tap(correct);
+      await _settle(tester);
+      expect(find.text('Correct time record'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'Correct time record');
+      await tester.ensureVisible(find.text('Cancel'));
+      await tester.tap(find.text('Cancel'));
+      await _settle(tester);
+
+      await tester.ensureVisible(find.text('Fix').first);
+      await tester.tap(find.text('Fix').first);
+      await _settle(tester);
+      expect(find.text('Resolve missing finish'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'Resolve missing finish');
+      await tester.tap(find.text('Mark as non-work'));
+      await tester.pump();
+      _fitsTheWindow(tester, width, 'Resolve: non-work');
+      await tester.ensureVisible(find.text('Cancel'));
+      await tester.tap(find.text('Cancel'));
+      await _settle(tester);
+
+      await tester.ensureVisible(find.text('Review').first);
+      await tester.tap(find.text('Review').first);
+      await _settle(tester);
+      expect(find.text('Review correction'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'Review correction');
+      await tester.ensureVisible(find.text('Approve'));
+      await tester.tap(find.text('Approve'));
+      await tester.pump();
+      api.writeSucceeds();
+      await _settle(tester);
+      expect(find.text('Correction saved'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'Correction saved');
     });
   }
 }

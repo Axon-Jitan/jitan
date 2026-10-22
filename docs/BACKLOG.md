@@ -293,6 +293,32 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## TR-04: HR corrections (phase 3, slice 3)
+Status: `DONE` (2026-10-22)
+
+HR/Admin correct time from Time records (Figma `160:220`, `160:338`, `272:457`, `273:166`,
+`272:547`), following TIME_ENGINE_ANALYSIS D4, D7, D8, D30, D31:
+- **Correct time** (day detail → "Correct time"; "Fix" on a day without registration): HR
+  types the actual start and/or finish (workplace-local `HH:mm`); the registered time is
+  what the server's rounding makes of it, shown before saving (`…/rounding`) and never
+  edited by hand (D7). Only changed times are saved, each as a "… – corrected" row with the
+  reason and its rounded row; the previous rounded row is switched off, nothing deleted.
+- **Resolve missing start/finish** ("Fix"): set the missing time, or **Mark as non-work**
+  (every row of the day switched off, the reason kept). The reason is typed: the ERD keeps it
+  as text and has no list of reasons (Figma shows a dropdown).
+- **Review correction** ("Review"): an employee's correction counts only once HR approves it
+  (D31); **Approve** and **Reject** added to the frame. "Submitted 09:14 today" left out (not
+  sent by the server).
+- **Correction saved** after the server confirmed; the list reloads.
+- Statuses now include **Corrected**, **Pending review**, **Non-work** and **No
+  registration** (a past scheduled working day without any row, from the employee's first
+  registration on). The day detail has the **detailed registration timeline**
+  (registrations and corrections; absences and workplaces come with geofencing).
+- A correction is made in the filtered company when the employee belongs to it, else in the
+  employee's first company; the right `correctTimeRegistrations` is checked there. Every
+  write is audited in the same transaction (`time.corrected`, `time.correction.approved`,
+  `time.correction.rejected`, `time.marked_non_work`).
+
 ## TR-03: HR Time records (phase 3, slice 2)
 Status: `DONE` (2026-10-22)
 
@@ -305,10 +331,8 @@ earlier day; Missing start. Filters: company (all, each checked) · employee sea
 (this/last week, this/last month; weeks start Monday) · status · Reset all. The day detail
 shows actual and rounded start and finish and, for a time entered afterwards, its reason.
 
-Left out on purpose: **Pending review** (no review state in the ERD; Figma follows the ERD),
-**Corrected** status, "Fix"/"Review" actions and "Correct time" (TR-04, HR corrections), the
-detailed timeline (absences and workplaces need geofencing). Days without any registration
-are not listed (absence detection needs the schedules per day; later).
+Corrections, Pending review, Corrected, Non-work, No registration and the detailed timeline
+followed in TR-04.
 
 ## TR-02: Register start and finish (phase 3, slice 1)
 Status: server `DONE` (2026-10-22) · employee app screens wait for Figma (see below)

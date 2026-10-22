@@ -34,6 +34,26 @@ abstract final class TimeRecordText {
     TimeRecordMethod.manual => AdminTextKeys.timeRecordsMethodManual,
   });
 
+  static String boundary(BuildContext context, RegistrationBoundary boundary) => context.t(switch (boundary) {
+    RegistrationBoundary.start => AdminTextKeys.timeRecordBoundaryStart,
+    RegistrationBoundary.finish => AdminTextKeys.timeRecordBoundaryFinish,
+  });
+
+  /// One line of the detailed registration timeline.
+  static String event(BuildContext context, TimeRecordEvent event) {
+    final args = {
+      'boundary': boundary(context, event.boundary),
+      'method': event.method == null ? '' : method(context, event.method!),
+    };
+    return context.t(switch (event.kind) {
+      TimeRecordEventKind.registered => AdminTextKeys.timeRecordEventRegistered,
+      TimeRecordEventKind.correctionRequested => AdminTextKeys.timeRecordEventRequested,
+      TimeRecordEventKind.corrected => AdminTextKeys.timeRecordEventCorrected,
+      TimeRecordEventKind.rejected => AdminTextKeys.timeRecordEventRejected,
+      TimeRecordEventKind.nonWork => AdminTextKeys.timeRecordEventNonWork,
+    }, args: args);
+  }
+
   static String period(BuildContext context, TimeRecordPeriod period) => context.t(switch (period) {
     TimeRecordPeriod.thisWeek => AdminTextKeys.timeRecordsPeriodThisWeek,
     TimeRecordPeriod.lastWeek => AdminTextKeys.timeRecordsPeriodLastWeek,
