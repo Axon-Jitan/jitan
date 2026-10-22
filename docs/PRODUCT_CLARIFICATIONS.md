@@ -37,6 +37,29 @@ Related: [ENGINEERING_RULES.md](ENGINEERING_RULES.md) §21 (no fake success) and
 
 ---
 
+## PRODUCT-CLARIFY-TWO-SCHEDULES: Two schedules for one group
+Status: `OPEN` · after V1 (product owner, 2026-10-22: "first do what is possible since it
+is the first version")
+
+**Affects:** Create group, the group page, Schedules, rounding of registrations.
+
+**V1 (built):** a group has **one** schedule: working days with their hours (which may
+differ per day), one break length and one set of attendance rules. "Add schedule" on a
+group that already has one edits it. Teams with other hours (e.g. early and late shift)
+are separate groups; an employee in several groups chooses where their hours come from.
+
+**Wanted later:** two schedules for one group. Rounding needs exactly one start and one
+finish per employee per day, so the product must say **which schedule applies**:
+
+- **Each employee has one** (HR assigns schedule A or B): possible within the ERD (the
+  employee's `tblUserSchedule` rows), but a per-employee choice inside a group.
+- **By period of the year** (summer / winter): needs dates on a schedule; the ERD has
+  none, so an ERD gap for IT.
+- **Alternating weeks** (rotation): needs a rotation; not in the ERD, an ERD gap for IT.
+- **The employee chooses each day** when starting work.
+
+---
+
 ## PRODUCT-CLARIFY-COMPANY-LIST: What the company list columns count
 Status: `OPEN` · implemented with the interpretation below, easy to change
 
