@@ -44,6 +44,8 @@ abstract final class TimeRecordDays {
           rounded: rounded?.at,
           method: actual.method,
           enteredByHand: row.manualEntry,
+          actualLocal: _hhmm(clock.wallClockOf(row.at)),
+          roundedLocal: rounded == null ? null : _hhmm(clock.wallClockOf(rounded.at)),
           reason: row.comment,
         );
         final local = clock.wallClockOf(row.at);
@@ -83,6 +85,9 @@ abstract final class TimeRecordDays {
     });
     return days;
   }
+
+  static String _hhmm(DateTime wallClock) =>
+      '${wallClock.hour.toString().padLeft(2, '0')}:${wallClock.minute.toString().padLeft(2, '0')}';
 
   /// "Start – actual – QR" → (start, qr); `null` for any other type.
   static ({RegistrationBoundary boundary, TimeRecordMethod method})? _actual(String typeName) {

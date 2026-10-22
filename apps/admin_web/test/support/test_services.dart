@@ -5,6 +5,7 @@ import 'fake_companies_api.dart';
 import 'fake_employees_api.dart';
 import 'fake_group_apis.dart';
 import 'fake_schedules_api.dart';
+import 'fake_time_records_api.dart';
 
 /// [AdminServices] wired to fakes; the fakes stay reachable for assertions.
 class TestServices {
@@ -17,6 +18,7 @@ class TestServices {
       schedulesApi: schedules,
       groupManagementApi: groupManagement,
       groupMembersApi: groupMembers,
+      timeRecordsApi: timeRecords,
     );
   }
 
@@ -27,5 +29,6 @@ class TestServices {
   final schedules = FakeSchedulesApi();
   final groupManagement = FakeGroupManagementApi();
   final groupMembers = FakeGroupMembersApi();
+  final timeRecords = FakeTimeRecordsApi();
   late final AdminServices services;
 }

@@ -71,6 +71,7 @@ void main() {
       TimeRecordMethod.qr,
       false,
     ));
+    expect((day.start!.actualLocal, day.start!.roundedLocal), ('08:04', '08:15'), reason: 'workplace time');
     expect((day.finish!.actual, day.finish!.rounded, day.finish!.method, day.finish!.enteredByHand, day.finish!.reason), (
       DateTime.utc(2026, 10, 21, 14, 41),
       DateTime.utc(2026, 10, 21, 14, 30),

@@ -50,6 +50,8 @@ class TimeRecordTime {
     required this.rounded,
     required this.method,
     required this.enteredByHand,
+    required this.actualLocal,
+    this.roundedLocal,
     this.reason,
   });
 
@@ -59,6 +61,8 @@ class TimeRecordTime {
         rounded: json['rounded'] == null ? null : DateTime.parse(json.readString('rounded')).toUtc(),
         method: TimeRecordMethod.fromWire(json.readString('method')),
         enteredByHand: json.readBool('enteredByHand'),
+        actualLocal: json.readString('actualLocal'),
+        roundedLocal: json.readOptionalString('roundedLocal'),
         reason: json.readOptionalString('reason'),
       );
 
@@ -77,12 +81,19 @@ class TimeRecordTime {
   /// `timeRegComment`: why it was corrected.
   final String? reason;
 
+  /// [actual] and [rounded] in the workplace's local time, `HH:mm`, as the
+  /// server converts them (clients never convert times themselves).
+  final String actualLocal;
+  final String? roundedLocal;
+
   Map<String, Object?> toJson() => {
         'actualId': actualId,
         'actual': actual.toUtc().toIso8601String(),
         'rounded': rounded?.toUtc().toIso8601String(),
         'method': method.wireName,
         'enteredByHand': enteredByHand,
+        'actualLocal': actualLocal,
+        'roundedLocal': roundedLocal,
         'reason': reason,
       };
 }

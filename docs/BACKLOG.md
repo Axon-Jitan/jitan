@@ -293,6 +293,23 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## TR-03: HR Time records (phase 3, slice 2)
+Status: `DONE` (2026-10-22)
+
+`GET /time-records` and the HR/Admin page "Time records" (Figma `160:2`, day detail
+`160:94`). One row per employee per workplace-local day: the earliest actual start and latest
+actual finish, each with the rounded time stored with it (times also sent as local `HH:mm`,
+so clients never convert), the method (Automatic / QR / Employee) and a calculated status:
+Complete; **Working** for today's open day (product owner, 2026-10-22); Missing finish on an
+earlier day; Missing start. Filters: company (all, each checked) · employee search · period
+(this/last week, this/last month; weeks start Monday) · status · Reset all. The day detail
+shows actual and rounded start and finish and, for a time entered afterwards, its reason.
+
+Left out on purpose: **Pending review** (no review state in the ERD; Figma follows the ERD),
+**Corrected** status, "Fix"/"Review" actions and "Correct time" (TR-04, HR corrections), the
+detailed timeline (absences and workplaces need geofencing). Days without any registration
+are not listed (absence detection needs the schedules per day; later).
+
 ## TR-02: Register start and finish (phase 3, slice 1)
 Status: server `DONE` (2026-10-22) · employee app screens wait for Figma (see below)
 

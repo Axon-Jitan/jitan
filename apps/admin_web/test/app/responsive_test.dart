@@ -11,6 +11,7 @@ import 'package:admin_web/src/groups/group_page.dart';
 import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:admin_web/src/schedules/schedules_screen.dart';
+import 'package:admin_web/src/time_records/time_records_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_core/jitan_core.dart';
@@ -22,6 +23,7 @@ import '../support/fake_companies_api.dart';
 import '../support/fake_employees_api.dart';
 import '../support/fake_group_apis.dart';
 import '../support/fake_schedules_api.dart';
+import '../support/fake_time_records_api.dart';
 
 /// Every page and dialog works from a phone to a wide screen: nothing
 /// overflows, nothing is wider than the window.
@@ -404,6 +406,37 @@ void main() {
       await tester.pump();
       _fitsTheWindow(tester, width, 'Import done');
       expect(find.text('11 employees added to Almeco'), findsOneWidget);
+    });
+  }
+
+  // Time records: the list with every status, and the day detail.
+  for (final width in _widths) {
+    testWidgets('Time records and the day detail at $width px', (tester) async {
+      final api = FakeTimeRecordsApi();
+      final companies = FakeCompaniesApi();
+      await _pump(tester, width, TimeRecordsScreen(api: api, companiesApi: companies, today: () => DateTime(2026, 10, 22)));
+      companies.succeed([company(7, 'Almeco')]);
+      api.succeed([
+        recordDay(
+          1,
+          'Alexandra-Marie',
+          'Vandenbroucke-Verstraete',
+          'AVV',
+          DateTime.utc(2026, 10, 21),
+          TimeRecordStatus.complete,
+          start: recordTime('07:58', rounded: '08:00'),
+          finish: recordTime('16:31', rounded: '16:30', method: TimeRecordMethod.manual, byHand: true, reason: 'Forgot to tap when leaving the workshop'),
+        ),
+        recordDay(2, 'Kevin', 'De Vos', 'KDV', DateTime.utc(2026, 10, 20), TimeRecordStatus.missingFinish, start: recordTime('08:03', rounded: '08:15')),
+      ]);
+      await tester.pump();
+      await tester.pump();
+      _fitsTheWindow(tester, width, 'Time records');
+
+      await tester.ensureVisible(find.text('View').first);
+      await tester.tap(find.text('View').first);
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Time record day');
     });
   }
 }

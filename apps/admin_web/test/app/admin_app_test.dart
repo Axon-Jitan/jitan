@@ -27,7 +27,7 @@ void main() {
 
     expect(find.text('jitan.'), findsOneWidget);
     final items = tester.widgetList<JitanNavItem>(find.byType(JitanNavItem)).toList();
-    expect(items.map((i) => (i.label, i.selected)), [('Companies', true), ('Employees', false), ('Schedules', false), ('Groups', false)]);
+    expect(items.map((i) => (i.label, i.selected)), [('Companies', true), ('Employees', false), ('Schedules', false), ('Groups', false), ('Time records', false)]);
     expect(fakes.companies.calls, [''], reason: 'the page loads companies on open');
   });
 
@@ -37,8 +37,8 @@ void main() {
     await tester.pumpWidget(app(TestServices()));
     await tester.pump();
 
-    expect(find.byType(JitanNavItem), findsNWidgets(4));
-    for (final unbuilt in ['Dashboard', 'Terminals', 'Time records', 'Exceptions', 'Reports']) {
+    expect(find.byType(JitanNavItem), findsNWidgets(5));
+    for (final unbuilt in ['Dashboard', 'Terminals', 'Exceptions', 'Reports']) {
       expect(find.text(unbuilt), findsNothing, reason: unbuilt);
     }
   });
@@ -102,6 +102,6 @@ void main() {
     await tester.tap(find.byTooltip('Open navigation menu'));
     // Not pumpAndSettle: the page's loading spinner animates indefinitely.
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(JitanNavItem), findsNWidgets(4));
+    expect(find.byType(JitanNavItem), findsNWidgets(5));
   });
 }

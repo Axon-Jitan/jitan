@@ -11,6 +11,7 @@ class AdminServices {
     required this.schedulesApi,
     required this.groupManagementApi,
     required this.groupMembersApi,
+    required this.timeRecordsApi,
   });
 
   final CompaniesApi companiesApi;
@@ -20,5 +21,6 @@ class AdminServices {
   final SchedulesApi schedulesApi;
   final GroupManagementApi groupManagementApi;
   final GroupMembersApi groupMembersApi;
+  final TimeRecordsApi timeRecordsApi;
 
 }

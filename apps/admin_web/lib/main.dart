@@ -29,6 +29,7 @@ void main() {
         schedulesApi: SchedulesApi(transport),
         groupManagementApi: GroupManagementApi(transport),
         groupMembersApi: GroupMembersApi(transport),
+        timeRecordsApi: TimeRecordsApi(transport),
       ),
     ),
   );

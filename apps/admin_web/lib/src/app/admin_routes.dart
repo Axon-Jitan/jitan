@@ -8,6 +8,7 @@ abstract final class AdminRoutes {
   static const employeeImport = '$employees/import';
   static const schedules = '/schedules';
   static const groups = '/groups';
+  static const timeRecords = '/time-records';
 
   /// One group's page.
   static String group(int id) => '$groups/$id';

@@ -29,6 +29,8 @@ void main() {
                   'rounded': '2026-10-21T06:15:00.000Z',
                   'method': 'qr',
                   'enteredByHand': false,
+                  'actualLocal': '08:04',
+                  'roundedLocal': '08:15',
                   'reason': null,
                 },
                 'finish': null,

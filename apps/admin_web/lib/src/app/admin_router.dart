@@ -7,6 +7,7 @@ import '../employees/import/employee_import_screen.dart';
 import '../groups/group_page.dart';
 import '../groups/groups_screen.dart';
 import '../schedules/schedules_screen.dart';
+import '../time_records/time_records_screen.dart';
 import 'admin_routes.dart';
 import 'admin_services.dart';
 import 'admin_shell.dart';
@@ -47,6 +48,12 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
                 ),
               ),
             ],
+          ),
+          GoRoute(
+            path: AdminRoutes.timeRecords,
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: TimeRecordsScreen(api: services.timeRecordsApi, companiesApi: services.companiesApi),
+            ),
           ),
           GoRoute(
             path: AdminRoutes.schedules,

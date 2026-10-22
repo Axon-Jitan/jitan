@@ -12,6 +12,7 @@ abstract final class AdminTextKeys {
   static const navEmployees = 'nav.employees';
   static const navSchedules = 'nav.schedules';
   static const navGroups = 'nav.groups';
+  static const navTimeRecords = 'nav.timeRecords';
 
 
   static const companyTitle = 'company.title';
@@ -156,6 +157,96 @@ abstract final class AdminTextKeys {
 
   /// Argument: `{name}`.
   static const employeeRemoveSuccess = 'employee.remove.success';
+
+  // Dates (Time records)
+  static const dateMonthShort1 = 'date.month.short.1';
+  static const dateMonthLong1 = 'date.month.long.1';
+  static const dateMonthShort2 = 'date.month.short.2';
+  static const dateMonthLong2 = 'date.month.long.2';
+  static const dateMonthShort3 = 'date.month.short.3';
+  static const dateMonthLong3 = 'date.month.long.3';
+  static const dateMonthShort4 = 'date.month.short.4';
+  static const dateMonthLong4 = 'date.month.long.4';
+  static const dateMonthShort5 = 'date.month.short.5';
+  static const dateMonthLong5 = 'date.month.long.5';
+  static const dateMonthShort6 = 'date.month.short.6';
+  static const dateMonthLong6 = 'date.month.long.6';
+  static const dateMonthShort7 = 'date.month.short.7';
+  static const dateMonthLong7 = 'date.month.long.7';
+  static const dateMonthShort8 = 'date.month.short.8';
+  static const dateMonthLong8 = 'date.month.long.8';
+  static const dateMonthShort9 = 'date.month.short.9';
+  static const dateMonthLong9 = 'date.month.long.9';
+  static const dateMonthShort10 = 'date.month.short.10';
+  static const dateMonthLong10 = 'date.month.long.10';
+  static const dateMonthShort11 = 'date.month.short.11';
+  static const dateMonthLong11 = 'date.month.long.11';
+  static const dateMonthShort12 = 'date.month.short.12';
+  static const dateMonthLong12 = 'date.month.long.12';
+  static const dateWeekdayLong1 = 'date.weekday.long.1';
+  static const dateWeekdayLong2 = 'date.weekday.long.2';
+  static const dateWeekdayLong3 = 'date.weekday.long.3';
+  static const dateWeekdayLong4 = 'date.weekday.long.4';
+  static const dateWeekdayLong5 = 'date.weekday.long.5';
+  static const dateWeekdayLong6 = 'date.weekday.long.6';
+  static const dateWeekdayLong7 = 'date.weekday.long.7';
+  static const monthShort = [dateMonthShort1, dateMonthShort2, dateMonthShort3, dateMonthShort4, dateMonthShort5, dateMonthShort6, dateMonthShort7, dateMonthShort8, dateMonthShort9, dateMonthShort10, dateMonthShort11, dateMonthShort12];
+  static const monthLong = [dateMonthLong1, dateMonthLong2, dateMonthLong3, dateMonthLong4, dateMonthLong5, dateMonthLong6, dateMonthLong7, dateMonthLong8, dateMonthLong9, dateMonthLong10, dateMonthLong11, dateMonthLong12];
+  static const weekdayLong = [dateWeekdayLong1, dateWeekdayLong2, dateWeekdayLong3, dateWeekdayLong4, dateWeekdayLong5, dateWeekdayLong6, dateWeekdayLong7];
+
+  /// Arguments: `{weekday}`, `{day}`, `{month}` ("Tue 6 Oct").
+  static const dateShort = 'date.short';
+
+  /// Arguments: `{weekday}`, `{day}`, `{month}`, `{year}` ("Tuesday, 6 October 2026").
+  static const dateLong = 'date.long';
+
+  // Time records (Figma 160:2, 160:94)
+  static const timeRecordsTitle = 'timeRecords.title';
+  static const timeRecordsSubtitle = 'timeRecords.subtitle';
+  static const timeRecordsFilterCompany = 'timeRecords.filter.company';
+  static const timeRecordsFilterEmployee = 'timeRecords.filter.employee';
+  static const timeRecordsFilterEmployeeHint = 'timeRecords.filter.employee.hint';
+  static const timeRecordsFilterPeriod = 'timeRecords.filter.period';
+  static const timeRecordsFilterStatus = 'timeRecords.filter.status';
+  static const timeRecordsPeriodThisWeek = 'timeRecords.period.thisWeek';
+  static const timeRecordsPeriodLastWeek = 'timeRecords.period.lastWeek';
+  static const timeRecordsPeriodThisMonth = 'timeRecords.period.thisMonth';
+  static const timeRecordsPeriodLastMonth = 'timeRecords.period.lastMonth';
+  static const timeRecordsStatusAll = 'timeRecords.status.all';
+  static const timeRecordsStatusComplete = 'timeRecords.status.complete';
+  static const timeRecordsStatusWorking = 'timeRecords.status.working';
+  static const timeRecordsStatusMissingFinish = 'timeRecords.status.missingFinish';
+  static const timeRecordsStatusMissingStart = 'timeRecords.status.missingStart';
+  static const timeRecordsResetAll = 'timeRecords.resetAll';
+  static const timeRecordsSection = 'timeRecords.section';
+  static const timeRecordsColumnEmployee = 'timeRecords.column.employee';
+  static const timeRecordsColumnDate = 'timeRecords.column.date';
+  static const timeRecordsColumnRounded = 'timeRecords.column.rounded';
+  static const timeRecordsColumnActual = 'timeRecords.column.actual';
+  static const timeRecordsColumnMethod = 'timeRecords.column.method';
+  static const timeRecordsColumnStatus = 'timeRecords.column.status';
+  static const timeRecordsColumnAction = 'timeRecords.column.action';
+  static const timeRecordsMethodGeofence = 'timeRecords.method.geofence';
+  static const timeRecordsMethodQr = 'timeRecords.method.qr';
+  static const timeRecordsMethodManual = 'timeRecords.method.manual';
+  static const timeRecordsView = 'timeRecords.view';
+  static const timeRecordsLoading = 'timeRecords.loading';
+  static const timeRecordsEmptyTitle = 'timeRecords.empty.title';
+  static const timeRecordsEmptyMessage = 'timeRecords.empty.message';
+  static const timeRecordsNoMatchTitle = 'timeRecords.noMatch.title';
+  static const timeRecordsNoMatchMessage = 'timeRecords.noMatch.message';
+  static const timeRecordDayTitle = 'timeRecord.day.title';
+  static const timeRecordDaySubtitle = 'timeRecord.day.subtitle';
+  static const timeRecordDayDetails = 'timeRecord.day.details';
+  static const timeRecordDayStart = 'timeRecord.day.start';
+  static const timeRecordDayFinish = 'timeRecord.day.finish';
+  static const timeRecordDayActual = 'timeRecord.day.actual';
+  static const timeRecordDayRounded = 'timeRecord.day.rounded';
+  static const timeRecordDayNotRegistered = 'timeRecord.day.notRegistered';
+  static const timeRecordDayCorrected = 'timeRecord.day.corrected';
+  static const timeRecordDayEnteredAfterwards = 'timeRecord.day.enteredAfterwards';
+  static const timeRecordDayNote = 'timeRecord.day.note';
+  static const timeRecordDayClose = 'timeRecord.day.close';
 
   static const employeeAddAction = 'employee.add.action';
   static const employeeAddTitle = 'employee.add.title';
