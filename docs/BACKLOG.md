@@ -318,8 +318,9 @@ Open, for the next slices:
 - **TR-01's read side predates D9**: it reads and returns timestamps as wall clock without a
   zone. It must switch to UTC (and `from`/`to` as moments) with the Time records slice.
 - **Figma (employee app):** the manual-registration Today frames were added on 2026-10-22
-  (page 01 — Employee App), following D30: `1444:3` not started (tap **Start work**, link to
-  correct), `1436:128` working (tap **Finish work**, link "Finished earlier?"), `1436:2` /
+  (page 01 — Employee App), following D30: `1444:3` not started (personal greeting "Good
+  morning, Disan." by time of day: morning before 12:00, afternoon until 18:00, evening after,
+  first name from `/me`, no name = "Good morning."; tap **Start work**, link to correct), `1436:128` working (tap **Finish work**, link "Finished earlier?"), `1436:2` /
   `1436:43` / `1436:84` correct start (reason empty / filled / couldn't save), `1436:172`
   correct finish, `1436:213` day complete (no locations/projects card). The first day is
   Figma's `22:2` (no reason); the start-time picker (`376:2`…) is reused. Built once the
