@@ -142,6 +142,7 @@ class TimeRecordService {
       ],
       events: day.events,
       nonWorkReason: day.nonWorkReason,
+      companyIds: day.companyIds,
     );
   }
 

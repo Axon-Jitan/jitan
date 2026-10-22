@@ -265,6 +265,7 @@ class TimeRecordDay {
     this.pending = const [],
     this.events = const [],
     this.nonWorkReason,
+    this.companyIds = const [],
   });
 
   factory TimeRecordDay.fromJson(Map<String, Object?> json) => TimeRecordDay(
@@ -279,6 +280,7 @@ class TimeRecordDay {
         pending: json['pending'] == null ? const [] : json.readObjectList('pending').map(TimeRecordPending.fromJson).toList(),
         events: json['events'] == null ? const [] : json.readObjectList('events').map(TimeRecordEvent.fromJson).toList(),
         nonWorkReason: json.readOptionalString('nonWorkReason'),
+        companyIds: json['companyIds'] == null ? const [] : json.readIntList('companyIds'),
       );
 
   final int employeeId;
@@ -298,6 +300,10 @@ class TimeRecordDay {
   /// Why HR marked the day as non-work.
   final String? nonWorkReason;
 
+  /// The listed companies the employee belongs to: corrections are made in
+  /// one of them (company-scoped endpoints).
+  final List<int> companyIds;
+
   Map<String, Object?> toJson() => {
         'employeeId': employeeId,
         'firstName': firstName,
@@ -310,6 +316,7 @@ class TimeRecordDay {
         if (pending.isNotEmpty) 'pending': [for (final p in pending) p.toJson()],
         if (events.isNotEmpty) 'events': [for (final e in events) e.toJson()],
         'nonWorkReason': nonWorkReason,
+        if (companyIds.isNotEmpty) 'companyIds': companyIds,
       };
 
   /// A `yyyy-MM-dd` date as a UTC-flagged calendar day (no time zone meant).

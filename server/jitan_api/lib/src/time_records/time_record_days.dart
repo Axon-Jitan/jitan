@@ -192,6 +192,7 @@ abstract final class TimeRecordDays {
       nonWorkReason: nonWork
           ? byId.where((r) => kinds[r.id] is _Rounded && (r.comment?.isNotEmpty ?? false)).firstOrNull?.comment
           : null,
+      companyIds: employee.companyIds,
     );
   }
 
@@ -202,6 +203,7 @@ abstract final class TimeRecordDays {
     employeeCode: employee.code,
     date: date,
     status: TimeRecordStatus.noRegistration,
+    companyIds: employee.companyIds,
   );
 
   static DateTime _later(DateTime a, DateTime b) => a.isAfter(b) ? a : b;
