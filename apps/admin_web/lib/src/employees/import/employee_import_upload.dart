@@ -11,14 +11,15 @@ import 'platform/import_file_picker.dart';
 
 /// The upload card of Import employees: "Ready" (`1419:2`), "Reading file"
 /// (`1419:50`) and "File can't be used" (`1419:101`). A file can be dropped
-/// on it or chosen with the button.
+/// on it or chosen with the button, once a company is chosen ([onChoose] and
+/// [onDropped] `null` until then).
 class EmployeeImportUpload extends StatefulWidget {
   const EmployeeImportUpload({super.key, required this.state, required this.onChoose, required this.onDropped});
 
   /// [ImportWaitingForFile], [ImportReading] or [ImportUnusable].
   final EmployeeImportState state;
-  final VoidCallback onChoose;
-  final ValueChanged<ChosenImportFile> onDropped;
+  final VoidCallback? onChoose;
+  final ValueChanged<ChosenImportFile>? onDropped;
 
   @override
   State<EmployeeImportUpload> createState() => _EmployeeImportUploadState();
@@ -30,8 +31,9 @@ class _EmployeeImportUploadState extends State<EmployeeImportUpload> {
   Future<void> _drop(DropDoneDetails details) async {
     setState(() => _dragging = false);
     final file = details.files.firstOrNull;
-    if (file == null) return;
-    widget.onDropped(ChosenImportFile(name: file.name, bytes: await file.readAsBytes()));
+    final onDropped = widget.onDropped;
+    if (file == null || onDropped == null) return;
+    onDropped(ChosenImportFile(name: file.name, bytes: await file.readAsBytes()));
   }
 
   @override
@@ -67,7 +69,9 @@ class _EmployeeImportUploadState extends State<EmployeeImportUpload> {
       _ => _message(
         context,
         title: context.t(AdminTextKeys.employeeImportDropTitle),
-        line: context.t(AdminTextKeys.employeeImportDropHint, args: {'max': EmployeeImportRequest.maxRows}),
+        line: widget.onChoose == null
+            ? context.t(AdminTextKeys.employeeImportDropHintNoCompany, args: {'max': EmployeeImportRequest.maxRows})
+            : context.t(AdminTextKeys.employeeImportDropHint, args: {'max': EmployeeImportRequest.maxRows}),
         button: context.t(AdminTextKeys.employeeImportChoose),
       ),
     };
@@ -80,7 +84,7 @@ class _EmployeeImportUploadState extends State<EmployeeImportUpload> {
       radius: JitanDimensions.tableCardRadius,
       padding: const EdgeInsets.all(20),
       child: DropTarget(
-        enable: state is! ImportReading,
+        enable: state is! ImportReading && widget.onDropped != null,
         onDragEntered: (_) => setState(() => _dragging = true),
         onDragExited: (_) => setState(() => _dragging = false),
         onDragDone: _drop,

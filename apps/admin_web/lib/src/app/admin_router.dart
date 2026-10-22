@@ -42,7 +42,9 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
               GoRoute(
                 path: 'import',
                 pageBuilder: (context, state) =>
-                    NoTransitionPage(child: EmployeeImportScreen(api: services.employeesApi)),
+                    NoTransitionPage(
+                  child: EmployeeImportScreen(api: services.employeesApi, companiesApi: services.companiesApi),
+                ),
               ),
             ],
           ),

@@ -65,8 +65,11 @@ abstract final class AdminTextKeys {
   static const employeeImportAction = 'employee.import.action';
   static const employeeImportBack = 'employee.import.back';
   static const employeeImportTitle = 'employee.import.title';
-  /// Argument: `{company}`.
   static const employeeImportSubtitle = 'employee.import.subtitle';
+  static const employeeImportCompany = 'employee.import.company';
+
+  /// Argument: `{max}`.
+  static const employeeImportDropHintNoCompany = 'employee.import.drop.hintNoCompany';
   static const employeeImportDropTitle = 'employee.import.drop.title';
   /// Argument: `{max}`.
   static const employeeImportDropHint = 'employee.import.drop.hint';

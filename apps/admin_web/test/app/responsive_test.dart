@@ -357,7 +357,18 @@ void main() {
     testWidgets('Import employees, every state, at $width px', (tester) async {
       final api = FakeEmployeesApi();
       final files = <ChosenImportFile>[];
-      await _pump(tester, width, EmployeeImportScreen(api: api, chooseFile: () async => files.removeAt(0), download: (_, _, _) {}));
+      final companies = FakeCompaniesApi();
+      await _pump(
+        tester,
+        width,
+        EmployeeImportScreen(api: api, companiesApi: companies, chooseFile: () async => files.removeAt(0), download: (_, _, _) {}),
+      );
+      await tester.pump();
+      companies.succeed([company(7, 'Almeco')]);
+      await tester.pump();
+      await tester.pump();
+      _fitsTheWindow(tester, width, 'Import, no company yet');
+      tester.widget<JitanSelectField<int>>(find.byType(JitanSelectField<int>)).onChanged!(7);
       await tester.pump();
       _fitsTheWindow(tester, width, 'Import ready');
 

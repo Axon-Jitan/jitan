@@ -185,7 +185,8 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
               JitanOutlineButton(
                 label: context.t(AdminTextKeys.employeeImportAction),
                 height: JitanDimensions.controlHeight,
-                onPressed: company == null ? null : () => context.go(AdminRoutes.employeeImport),
+                // The company is chosen on the Import page; the filter is only a filter.
+                onPressed: () => context.go(AdminRoutes.employeeImport),
               ),
               JitanPrimaryButton(
                 label: context.t(AdminTextKeys.employeeAddAction),

@@ -26,6 +26,7 @@ const _csv = 'First name;Last name;Employee code;Groups;Phone\n'
 /// the ready rows, and nothing is reported before the server confirms.
 void main() {
   late FakeEmployeesApi api;
+  late FakeCompaniesApi companies;
   late List<ChosenImportFile?> nextFiles;
   late List<(String, List<int>, String)> downloads;
 
@@ -34,6 +35,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     api = FakeEmployeesApi();
+    companies = FakeCompaniesApi();
     nextFiles = [];
     downloads = [];
     final current = CurrentCompanyController()..select(company(7, 'Almeco'));
@@ -50,6 +52,7 @@ void main() {
               builder: (context, state) => Scaffold(
                 body: EmployeeImportScreen(
                   api: api,
+                  companiesApi: companies,
                   chooseFile: () async => nextFiles.removeAt(0),
                   download: (name, bytes, type) => downloads.add((name, bytes, type)),
                 ),
@@ -70,6 +73,15 @@ void main() {
       ),
     );
     await tester.pump();
+    companies.succeed([company(7, 'Almeco'), company(8, 'PCA')]);
+    await tester.pump();
+    await tester.pump();
+  }
+
+  /// "Company" on the Import page: Almeco.
+  Future<void> chooseCompany(WidgetTester tester) async {
+    tester.widget<JitanSelectField<int>>(find.byType(JitanSelectField<int>)).onChanged!(7);
+    await tester.pump();
   }
 
   Future<void> chooseFile(WidgetTester tester, String name, List<int> bytes, {String button = 'Choose file'}) async {
@@ -82,7 +94,13 @@ void main() {
     await pumpPage(tester);
 
     expect(find.text('Import employees'), findsOneWidget);
-    expect(find.text('Add many employees at once from an Excel or CSV file. They are added to Almeco.'), findsOneWidget);
+    expect(find.text('Add many employees at once from an Excel or CSV file.'), findsOneWidget);
+    expect(find.text('Company'), findsOneWidget);
+    expect(find.text('Select a company'), findsOneWidget, reason: 'the Employees filter never chooses for an import');
+    expect(find.text('Choose the company first · .xlsx or .csv · up to 500 employees'), findsOneWidget);
+    expect(tester.widget<JitanOutlineButton>(find.widgetWithText(JitanOutlineButton, 'Choose file')).onPressed, isNull);
+
+    await chooseCompany(tester);
     expect(find.text('Drop an Excel or CSV file here'), findsOneWidget);
     expect(find.text('.xlsx or .csv · up to 500 employees'), findsOneWidget);
     expect(find.text('Columns in the file'), findsOneWidget);
@@ -106,6 +124,7 @@ void main() {
 
   testWidgets('choose → reading → preview with problems → import → done', (tester) async {
     await pumpPage(tester);
+    await chooseCompany(tester);
 
     await chooseFile(tester, 'almeco.csv', utf8.encode(_csv));
 
@@ -160,6 +179,7 @@ void main() {
 
   testWidgets('a failed import keeps the preview and says why; nothing was added', (tester) async {
     await pumpPage(tester);
+    await chooseCompany(tester);
     await chooseFile(tester, 'almeco.csv', utf8.encode(_csv));
     api.checkSucceeds(const []);
     await tester.pump();
@@ -176,6 +196,7 @@ void main() {
 
   testWidgets("a file that can't be used says why; another file can be chosen", (tester) async {
     await pumpPage(tester);
+    await chooseCompany(tester);
 
     await chooseFile(tester, 'almeco.csv', utf8.encode('First name;Last name\nA;B\n'));
 
@@ -192,6 +213,7 @@ void main() {
 
   testWidgets('phone: rows as cards, buttons stacked, nothing overflows', (tester) async {
     await pumpPage(tester, size: const Size(390, 844));
+    await chooseCompany(tester);
     await chooseFile(tester, 'almeco.csv', utf8.encode(_csv));
     api.checkSucceeds(const [EmployeeImportProblem(row: 3, kind: EmployeeImportProblemKind.lastNameMissing)]);
     await tester.pump();
