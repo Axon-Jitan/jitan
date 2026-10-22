@@ -708,7 +708,7 @@ abstract final class AdminTextKeys {
   static const groupsHoursKeepCurrent = 'groups.hours.keepCurrent';
   static const groupsHoursUse = 'groups.hours.use';
   static const groupsEmployeesWillWork = 'groups.employees.willWork';
-  static const groupsEmployeesNoneWillWork = 'groups.employees.noneWillWork';
+  static const groupsEmployeesAllKeep = 'groups.employees.allKeep';
   static const groupsEmployeesRemove = 'groups.employees.remove';
   static const groupsHoursStartHint = 'groups.hours.startHint';
   static const groupsHoursFinishHint = 'groups.hours.finishHint';

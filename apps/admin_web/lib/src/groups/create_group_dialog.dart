@@ -132,7 +132,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
           ),
         ],
         actions: [
-          if (c.step == CreateGroupStep.hours)
+          if (c.step == CreateGroupStep.hours || c.skipsHours)
             JitanPrimaryButton(
               label: context.t(AdminTextKeys.groupsCreateSubmit),
               busy: busy,
@@ -232,9 +232,11 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         ),
       if (c.selected.isNotEmpty) ...[
         const SizedBox(height: 14),
-        // Employees are optional (product owner, 2026-10-21): this only warns.
-        if (c.willWorkCount == 0)
-          Text(context.t(AdminTextKeys.groupsEmployeesNoneWillWork, args: {'group': name}), style: JitanTextStyles.fieldError)
+        if (c.skipsHours)
+          Text(
+            context.t(AdminTextKeys.groupsEmployeesAllKeep, args: {'group': name}),
+            style: JitanTextStyles.stateMessage.copyWith(fontSize: 13),
+          )
         else
           Text(
             context.t(AdminTextKeys.groupsEmployeesWillWork, args: {'n': c.willWorkCount, 'total': c.selected.length, 'group': name}),

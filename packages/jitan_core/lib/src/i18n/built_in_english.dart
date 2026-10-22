@@ -922,7 +922,7 @@ const builtInEnglish = <String, String>{
   'groups.hours.keepCurrent': 'Keep current hours',
   'groups.hours.use': 'Use {group} hours',
   'groups.employees.willWork': '{n} of {total} employees will work the {group} hours.',
-  'groups.employees.noneWillWork': 'Choose at least one employee who will work the {group} hours.',
+  'groups.employees.allKeep': 'Everyone keeps their current hours, so {group} needs no work hours now. You can set them later on the group page.',
   'groups.employees.remove': 'Remove',
   'groups.hours.startHint': 'e.g. 08:00',
   'groups.hours.finishHint': 'e.g. 16:30',

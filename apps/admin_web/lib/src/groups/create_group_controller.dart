@@ -82,6 +82,12 @@ class CreateGroupController extends ChangeNotifier {
   /// "{n} of {total} employees will work the … hours."
   int get willWorkCount => _selected.values.where(follows).length;
 
+  /// Every chosen employee keeps their own hours (product owner,
+  /// 2026-10-22): nobody would work this group's hours, so step 3 is not
+  /// asked and step 2 creates the group. HR can set hours later on the
+  /// group page.
+  bool get skipsHours => _selected.isNotEmpty && willWorkCount == 0;
+
   bool get canContinue => switch (_step) {
     CreateGroupStep.details => _name.trim().isNotEmpty,
     CreateGroupStep.employees => true,
@@ -89,9 +95,12 @@ class CreateGroupController extends ChangeNotifier {
   };
 
   bool get canSubmit =>
-      _step == CreateGroupStep.hours &&
       !_submitting &&
-      (_hoursEmpty || (_hoursComplete && hoursErrorKey == null && breakErrorKey == null));
+      switch (_step) {
+        CreateGroupStep.employees => skipsHours,
+        CreateGroupStep.hours => _hoursEmpty || (_hoursComplete && hoursErrorKey == null && breakErrorKey == null),
+        CreateGroupStep.details => false,
+      };
 
   /// Nothing entered on step 3: the group is created without work hours.
   bool get _hoursEmpty =>
@@ -230,7 +239,8 @@ class CreateGroupController extends ChangeNotifier {
   /// server stored it, or `null` when refused (shown on the step concerned).
   Future<GroupOverview?> submit() async {
     final loaded = _options;
-    if (!canSubmit || loaded is! ScheduleOptionsLoaded) return null;
+    final withoutHours = _step == CreateGroupStep.employees || _hoursEmpty;
+    if (!canSubmit || (!withoutHours && loaded is! ScheduleOptionsLoaded)) return null;
     _submitting = true;
     _failure = null;
     _hoursFailureKey = null;
@@ -244,7 +254,7 @@ class CreateGroupController extends ChangeNotifier {
             for (final e in _selected.values)
               if (e.groups.isNotEmpty && _follow.contains(e.id)) e.id,
           ],
-          schedule: _hoursEmpty ? null : SetGroupScheduleRequest(
+          schedule: withoutHours || loaded is! ScheduleOptionsLoaded ? null : SetGroupScheduleRequest(
             workHours: SetWorkHoursRequest(
               days: [
                 for (final day in loaded.options.days)

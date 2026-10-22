@@ -93,10 +93,11 @@ void main() {
     await tester.tap(find.text('Fabian Peeters · FPT'));
     await tester.pump();
     expect(
-      find.text('Choose at least one employee who will work the Van drivers hours.'),
+      find.text('Everyone keeps their current hours, so Van drivers needs no work hours now. You can set them later on the group page.'),
       findsOneWidget,
-      reason: 'Fabian keeps White collar hours by default; only a warning',
+      reason: 'Fabian keeps White collar hours by default',
     );
+    expect(_primary(tester, 'Create group').onPressed, isNotNull, reason: 'no hours to ask: step 2 creates the group');
     expect(find.text('Keep White collar hours'), findsOneWidget, reason: '1405:242');
     await tester.tap(find.text('Kevin De Vos · KDV'));
     await tester.pump();
@@ -307,6 +308,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Create group'), findsWidgets, reason: 'a click outside does not close the dialog');
     expect(find.text('1 of 1 employees will work the Drivers hours.'), findsOneWidget, reason: 'nothing lost');
+  });
+
+  testWidgets('Create group where everyone keeps their hours: no work hours step', (tester) async {
+    final fakes = _fakes();
+    await _pump(tester, fakes, '/groups');
+    await _tapPrimary(tester, 'Add group');
+    await tester.enterText(find.byType(TextField).last, 'Testing');
+    await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+    await tester.tap(find.byType(EmployeePicker));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fabian Peeters · FPT'));
+    await tester.pump();
+    expect(find.text('Keep White collar hours'), findsOneWidget);
+    expect(find.widgetWithText(JitanPrimaryButton, 'Continue'), findsNothing);
+
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Create group'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Working days'), findsNothing, reason: 'step 3 never shown');
+    final sent = fakes.groupManagement.created!;
+    expect((sent.name, sent.schedule), ('Testing', null));
+    expect(sent.employeeIds, [11]);
+    expect(sent.followEmployeeIds, isEmpty, reason: 'Fabian keeps White collar hours');
   });
 
   testWidgets('Create group with only a name: employees and hours left empty', (tester) async {
