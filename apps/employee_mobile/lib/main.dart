@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
@@ -15,6 +16,8 @@ import 'src/l10n/employee_text_keys.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   registerJitanFontLicenses();
+  // A phone app held upright: the screens are designed for portrait.
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   final config = EmployeeConfig.fromEnvironment();
   if (config == null) {

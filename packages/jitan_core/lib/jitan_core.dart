@@ -5,3 +5,4 @@ export 'src/i18n/built_in_english.dart';
 export 'src/i18n/common_text_keys.dart';
 export 'src/i18n/translation_service.dart';
 export 'src/i18n/translations.dart';
+export 'src/time/running_total.dart';

@@ -88,6 +88,31 @@ void main() {
     expect(find.text('09:00 — 17:07'), findsOneWidget);
   });
 
+  testWidgets('registered today deducts the break once it has passed, as the finished day does', (tester) async {
+    await startApp(tester);
+    await tap(tester, 'Start work');
+
+    now = DateTime(2026, 10, 22, 12, 15);
+    await tester.pump(const Duration(seconds: 31));
+    expect(find.text('3h 00m'), findsOneWidget, reason: '09:00–12:15 minus the 15 min of the break passed so far');
+
+    now = DateTime(2026, 10, 22, 13);
+    await tester.pump(const Duration(seconds: 31));
+    expect(find.text('3h 30m'), findsOneWidget, reason: 'the whole 30 min break');
+  });
+
+  testWidgets('back in the foreground, the day is loaded again (e.g. after HR approved)', (tester) async {
+    await startApp(tester);
+    final before = h.server.requestsTo('/me/today').length;
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await settle(tester);
+
+    expect(h.server.requestsTo('/me/today').length, before + 1);
+  });
+
   testWidgets('forgot to start: a reason is required, Use scheduled time, then it waits for HR', (tester) async {
     now = DateTime(2026, 10, 22, 10);
     await startApp(tester);

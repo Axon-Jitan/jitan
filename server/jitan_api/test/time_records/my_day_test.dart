@@ -42,6 +42,7 @@ void main() {
       30,
       null,
     ));
+    expect((today.breakStart, today.breakFinish), ('12:00', '12:30'), reason: 'when the break is deducted during the day');
   });
 
   test('not started today after earlier days: not a first day', () async {

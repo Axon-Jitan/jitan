@@ -232,6 +232,8 @@ class FakeJitanServer {
   String? scheduledStart = '08:00';
   String? scheduledFinish = '16:30';
   int? breakMinutes = 30;
+  String? breakStart = '12:00';
+  String? breakFinish = '12:30';
 
   /// The registration bodies received, in order.
   final registrations = <Map<String, Object?>>[];
@@ -310,6 +312,8 @@ class FakeJitanServer {
       'scheduledStart': scheduledStart,
       'scheduledFinish': scheduledFinish,
       'breakMinutes': breakMinutes,
+      'breakStart': breakStart,
+      'breakFinish': breakFinish,
       'day': registrations.isEmpty
           ? null
           : {

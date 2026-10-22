@@ -12,6 +12,8 @@ class MyDay {
     this.scheduledStart,
     this.scheduledFinish,
     this.breakMinutes,
+    this.breakStart,
+    this.breakFinish,
     this.day,
     this.registeredMinutes,
   });
@@ -22,6 +24,8 @@ class MyDay {
         scheduledStart: json.readOptionalString('scheduledStart'),
         scheduledFinish: json.readOptionalString('scheduledFinish'),
         breakMinutes: json.readOptionalInt('breakMinutes'),
+        breakStart: json.readOptionalString('breakStart'),
+        breakFinish: json.readOptionalString('breakFinish'),
         day: json['day'] == null ? null : TimeRecordDay.fromJson(json.readObject('day')),
         registeredMinutes: json.readOptionalInt('registeredMinutes'),
       );
@@ -41,6 +45,12 @@ class MyDay {
   /// Today's break length (D13: deducted, never registered).
   final int? breakMinutes;
 
+  /// When the break is deducted during the day (`HH:mm`, workplace-local;
+  /// D28 places it in the middle of the day). The running "registered
+  /// today" deducts only the part of it already passed.
+  final String? breakStart;
+  final String? breakFinish;
+
   /// Today's registrations, as on HR's Time records; `null` when there are
   /// none.
   final TimeRecordDay? day;
@@ -56,6 +66,8 @@ class MyDay {
         'scheduledStart': scheduledStart,
         'scheduledFinish': scheduledFinish,
         'breakMinutes': breakMinutes,
+        'breakStart': breakStart,
+        'breakFinish': breakFinish,
         'day': day?.toJson(),
         'registeredMinutes': registeredMinutes,
       };

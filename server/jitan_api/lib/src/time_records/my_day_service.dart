@@ -63,6 +63,8 @@ class MyDayService {
       scheduledStart: start == null ? null : _hhmm(start.startHour, start.startMinute),
       scheduledFinish: finish == null ? null : _hhmm(finish.stopHour, finish.stopMinute),
       breakMinutes: breakMinutes,
+      breakStart: breakRow == null ? null : _hhmm(breakRow.startHour, breakRow.startMinute),
+      breakFinish: breakRow == null ? null : _hhmm(breakRow.stopHour, breakRow.stopMinute),
       day: day,
       registeredMinutes: day == null ? null : registeredMinutes(day, breakMinutes ?? 0),
     );

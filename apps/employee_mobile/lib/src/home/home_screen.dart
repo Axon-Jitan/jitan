@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
+import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
@@ -64,10 +65,15 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   });
 
+  /// Back in the foreground: load the day again, so a correction HR
+  /// approved meanwhile shows without pulling to refresh.
+  late final AppLifecycleListener _lifecycle = AppLifecycleListener(onResume: _today.load);
+
   @override
   void initState() {
     super.initState();
     _ticker;
+    _lifecycle;
     if (_account == null) _loadAccount();
   }
 
@@ -84,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _ticker.cancel();
+    _lifecycle.dispose();
     _today.dispose();
     super.dispose();
   }
@@ -237,7 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _working(BuildContext context, MyDay day) {
     final start = shownTime(day.day, RegistrationBoundary.start);
-    final elapsed = start.at == null ? null : _today.now().toUtc().difference(start.at!).inMinutes;
+    // Since the start, minus the part of the break already passed (D13).
+    final elapsed = start.at == null
+        ? null
+        : RunningTotal.minutes(start: start.at!, now: _today.now(), breakStart: day.breakStart, breakFinish: day.breakFinish);
     final method = day.day?.start?.method ?? TimeRecordMethod.manual;
     final light = JitanMobileTextStyles.cardText.copyWith(color: JitanColors.sidebarText);
     return _page(
@@ -263,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                elapsed == null ? '—' : TodayText.duration(context, elapsed < 0 ? 0 : elapsed),
+                elapsed == null ? '—' : TodayText.duration(context, elapsed),
                 style: JitanMobileTextStyles.displayLarge.copyWith(fontSize: 40, color: JitanColors.warmWhite),
               ),
               const SizedBox(height: 14),
