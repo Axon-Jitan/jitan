@@ -692,6 +692,9 @@ class FakeTimeRegistrationWriteRepository implements TimeRegistrationWriteReposi
   Future<void> lockUser(SqlExecutor tx, int userId) async => locked.add(userId);
 
   @override
+  Future<bool> hasAny(SqlExecutor tx, int userId) async => rows.any((r) => r.userId == userId);
+
+  @override
   Future<int?> findSame(SqlExecutor tx, int userId, int typeId, DateTime at) async => rows
       .where((r) => r.userId == userId && r.typeId == typeId && r.at == at)
       .map((r) => r.id)

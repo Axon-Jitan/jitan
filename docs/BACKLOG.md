@@ -296,9 +296,11 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 ## TR-02: Register start and finish (phase 3, slice 1)
 Status: server `DONE` (2026-10-22) · employee app screens wait for Figma (see below)
 
-`POST /me/time-registrations` (`RegisterTimeRequest`). Per TIME_ENGINE_ANALYSIS D4–D10:
-two `tblTimeReg` rows in one transaction, the **actual** time ("Start – actual – Manual",
-`timeRegManualEntry = 1`, required reason in `timeRegComment`) and the time **rounded** with
+`POST /me/time-registrations` (`RegisterTimeRequest`). Per TIME_ENGINE_ANALYSIS D4–D10 and
+D30: two `tblTimeReg` rows in one transaction, the **actual** time ("Start – actual – Manual";
+`entry` now = tapped, no reason, `timeRegManualEntry = 0`; corrected = reason required in
+`timeRegComment`, manual entry; first_day = no reason, manual entry, only before any
+registration) and the time **rounded** with
 the employee's "Work – start"/"Work – finish" schedule of that weekday and its
 `tblRoundingRule` ("Start – rounded", not a manual entry); no schedule or rule = whole-minute
 time. UTC in the database, rounding in the workplace time zone (`JITAN_TIMEZONE`, default
@@ -316,10 +318,12 @@ Open, for the next slices:
 - **TR-01's read side predates D9**: it reads and returns timestamps as wall clock without a
   zone. It must switch to UTC (and `from`/`to` as moments) with the Time records slice.
 - **Figma (employee app):** the manual-registration Today frames were added on 2026-10-22
-  (page 01 — Employee App): `1436:2` start (empty reason, Confirm disabled), `1436:43` start
-  ready, `1436:84` couldn't save, `1436:128` working (registered by hand, Finish work),
-  `1436:172` finish, `1436:213` day complete (no locations/projects card). The existing
-  start-time picker (`376:2`…) is reused. Built once the product owner approves them.
+  (page 01 — Employee App), following D30: `1444:3` not started (tap **Start work**, link to
+  correct), `1436:128` working (tap **Finish work**, link "Finished earlier?"), `1436:2` /
+  `1436:43` / `1436:84` correct start (reason empty / filled / couldn't save), `1436:172`
+  correct finish, `1436:213` day complete (no locations/projects card). The first day is
+  Figma's `22:2` (no reason); the start-time picker (`376:2`…) is reused. Built once the
+  product owner approves them.
 
 ## TR-01: Read-only time-registration foundation
 Status: `DONE` (2026-10-08) · the time engine itself waits for GAP-01, GAP-02, CLARIFY-02

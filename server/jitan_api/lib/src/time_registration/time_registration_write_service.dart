@@ -43,9 +43,14 @@ class TimeRegistrationWriteService {
 
   /// Registers [request] for [userId] and returns the stored pair.
   ///
-  /// - 400 `validation_failed` on `reason` (missing or longer than
-  ///   [RegisterTimeRequest.maxReasonLength] for a manual registration) or on
-  ///   `at` (in the future)
+  /// D30: a time tapped when it happened needs no reason and is not a manual
+  /// entry; a corrected time needs a reason and is one; the first-day time
+  /// needs no reason, is a manual entry and is allowed only while the
+  /// employee has no registration yet.
+  ///
+  /// - 400 `validation_failed` on `reason` (missing for a corrected time, or
+  ///   longer than [RegisterTimeRequest.maxReasonLength]), on `at` (in the
+  ///   future) or on `entry` (a first-day time once there are registrations)
   /// - the same request again (a retry) adds nothing and returns the pair
   ///   stored the first time; [created] is then `false`
   Future<({RegisteredTime registered, bool created})> register(int userId, RegisterTimeRequest request) async {
@@ -69,6 +74,12 @@ class TimeRegistrationWriteService {
       await _repository.lockUser(tx, userId);
 
       final existing = await _repository.findSame(tx, userId, actualType, at);
+      if (existing == null && request.entry == RegistrationEntry.firstDay && await _repository.hasAny(tx, userId)) {
+        throw const ApiException.validation(
+          RegisterTimeRequest.fieldEntry,
+          'The arrival time of the first day can only be set before anything else is registered.',
+        );
+      }
       if (existing != null) {
         final pair = await _repository.nextOfType(tx, userId, roundedType, existing);
         if (pair != null) {
@@ -90,7 +101,7 @@ class TimeRegistrationWriteService {
         userId: userId,
         typeId: actualType,
         at: at,
-        manualEntry: request.method == TimeRegistrationMethod.manual,
+        manualEntry: request.entry != RegistrationEntry.now,
         comment: reason,
       );
       // Calculated by Jitan, not entered by hand: not a manual entry.
@@ -120,11 +131,11 @@ class TimeRegistrationWriteService {
     });
   }
 
-  /// The reason, trimmed: required for a manual registration (D6).
+  /// The reason, trimmed: required for a corrected time (D30).
   static String? _reasonOf(RegisterTimeRequest request) {
     final reason = request.reason?.trim() ?? '';
-    if (request.method == TimeRegistrationMethod.manual && reason.isEmpty) {
-      throw const ApiException.validation(RegisterTimeRequest.fieldReason, 'Say why you register this time by hand.');
+    if (request.entry == RegistrationEntry.corrected && reason.isEmpty) {
+      throw const ApiException.validation(RegisterTimeRequest.fieldReason, 'Say why you correct this time.');
     }
     if (reason.runes.length > RegisterTimeRequest.maxReasonLength) {
       throw const ApiException.validation(

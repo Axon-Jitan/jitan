@@ -32,10 +32,40 @@ enum TimeRegistrationMethod {
       );
 }
 
+/// How a manual registration came in (TIME_ENGINE_ANALYSIS D30).
+enum RegistrationEntry {
+  /// Tapped when it happened ("Start work" at 08:00): no reason, not a time
+  /// entered by hand.
+  now('now'),
+
+  /// Entered afterwards because the employee forgot (at 10:00: "started
+  /// 08:00"): a reason is required.
+  corrected('corrected'),
+
+  /// "When did you arrive?" right after onboarding: no reason, only while the
+  /// employee has no registration yet.
+  firstDay('first_day');
+
+  const RegistrationEntry(this.wireName);
+
+  final String wireName;
+
+  static RegistrationEntry fromWire(String value) => values.firstWhere(
+        (e) => e.wireName == value,
+        orElse: () => throw FormatException('Unknown entry "$value".'),
+      );
+}
+
 /// Body of `POST /me/time-registrations`: the employee's own start or
 /// finish.
 class RegisterTimeRequest {
-  const RegisterTimeRequest({required this.boundary, required this.method, required this.at, this.reason});
+  const RegisterTimeRequest({
+    required this.boundary,
+    required this.method,
+    required this.entry,
+    required this.at,
+    this.reason,
+  });
 
   factory RegisterTimeRequest.fromJson(Map<String, Object?> json) {
     final at = json.readString(fieldAt);
@@ -46,6 +76,7 @@ class RegisterTimeRequest {
     return RegisterTimeRequest(
       boundary: RegistrationBoundary.fromWire(json.readString(fieldBoundary)),
       method: TimeRegistrationMethod.fromWire(json.readString(fieldMethod)),
+      entry: RegistrationEntry.fromWire(json.readString(fieldEntry)),
       at: DateTime.parse(at).toUtc(),
       reason: json.readOptionalString(fieldReason),
     );
@@ -53,25 +84,28 @@ class RegisterTimeRequest {
 
   final RegistrationBoundary boundary;
   final TimeRegistrationMethod method;
+  final RegistrationEntry entry;
 
   /// When it happened (UTC): for a manual registration the time the employee
   /// entered; queued offline registrations keep the moment they happened.
   final DateTime at;
 
-  /// Required for a manual registration (D6), at most [maxReasonLength]
-  /// characters (`tblTimeReg.timeRegComment`).
+  /// Required for a [RegistrationEntry.corrected] time (D30), at most
+  /// [maxReasonLength] characters (`tblTimeReg.timeRegComment`).
   final String? reason;
 
   static const maxReasonLength = 500;
 
   static const fieldBoundary = 'boundary';
   static const fieldMethod = 'method';
+  static const fieldEntry = 'entry';
   static const fieldAt = 'at';
   static const fieldReason = 'reason';
 
   Map<String, Object?> toJson() => {
         fieldBoundary: boundary.wireName,
         fieldMethod: method.wireName,
+        fieldEntry: entry.wireName,
         fieldAt: at.toUtc().toIso8601String(),
         fieldReason: reason,
       };

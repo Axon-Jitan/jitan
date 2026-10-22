@@ -24,6 +24,13 @@ class TimeRegistrationWriteRepository {
   Future<void> lockUser(SqlExecutor tx, int userId) =>
       tx.query('SELECT userID FROM tblUser WHERE userID = :userId FOR UPDATE', {'userId': userId});
 
+  /// Whether [userId] has any active registration.
+  Future<bool> hasAny(SqlExecutor tx, int userId) async => (await tx.query(
+        'SELECT 1 AS found FROM tblTimeReg WHERE userID = :userId AND timeRegActive = 1 AND timeRegMFD = 0 LIMIT 1',
+        {'userId': userId},
+      ))
+          .isNotEmpty;
+
   /// An active row of [userId] with [typeId] at exactly [at] (a retried
   /// request), or `null`.
   Future<int?> findSame(SqlExecutor tx, int userId, int typeId, DateTime at) async {

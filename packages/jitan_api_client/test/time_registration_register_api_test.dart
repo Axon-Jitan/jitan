@@ -29,6 +29,7 @@ void main() {
     final registered = await api.register(RegisterTimeRequest(
       boundary: RegistrationBoundary.start,
       method: TimeRegistrationMethod.manual,
+      entry: RegistrationEntry.corrected,
       at: DateTime.parse('2026-10-22T08:04:37+02:00'),
       reason: 'Forgot my phone',
     ));
@@ -38,6 +39,7 @@ void main() {
     expect(jsonDecode(sent.body), {
       'boundary': 'start',
       'method': 'manual',
+      'entry': 'corrected',
       'at': '2026-10-22T06:04:37.000Z',
       'reason': 'Forgot my phone',
     });
@@ -46,7 +48,7 @@ void main() {
 
   test('RegisterTimeRequest refuses a time without offset', () {
     expect(
-      () => RegisterTimeRequest.fromJson({'boundary': 'start', 'method': 'manual', 'at': '2026-10-22T06:04:00'}),
+      () => RegisterTimeRequest.fromJson({'boundary': 'start', 'method': 'manual', 'entry': 'now', 'at': '2026-10-22T06:04:00'}),
       throwsFormatException,
     );
   });

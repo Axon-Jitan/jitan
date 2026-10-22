@@ -93,6 +93,7 @@ void main() {
     final request = RegisterTimeRequest(
       boundary: RegistrationBoundary.start,
       method: TimeRegistrationMethod.manual,
+      entry: RegistrationEntry.corrected,
       at: DateTime.utc(2026, 10, 22, 6, 4, 37),
       reason: "[DEV-TEST] O'Brien's phone was off",
     );

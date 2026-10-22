@@ -44,8 +44,14 @@ TestApp _app({bool withSchedule = true}) {
   return app;
 }
 
-String _body({String boundary = 'start', String method = 'manual', String at = '2026-10-22T06:04:37Z', Object? reason = 'Forgot my phone'}) =>
-    jsonEncode({'boundary': boundary, 'method': method, 'at': at, 'reason': reason});
+String _body({
+  String boundary = 'start',
+  String method = 'manual',
+  String entry = 'corrected',
+  String at = '2026-10-22T06:04:37Z',
+  Object? reason = 'Forgot my phone',
+}) =>
+    jsonEncode({'boundary': boundary, 'method': method, 'entry': entry, 'at': at, 'reason': reason});
 
 Future<Map<String, Object?>> _error(TestApp app, String body) async {
   final response = await app.post(_path, body);
@@ -131,7 +137,29 @@ void main() {
     expect(app.audit.events, hasLength(1));
   });
 
-  test('a manual registration needs a reason of at most 500 characters', () async {
+  test('D30: tapped when it happens needs no reason and is not a manual entry', () async {
+    final app = _app();
+
+    final response = await app.post(_path, _body(entry: 'now', reason: null));
+
+    expect(response.statusCode, 201);
+    final actual = app.timeRegistrationWrites.rows.first;
+    expect((actual.manualEntry, actual.comment), (false, null));
+  });
+
+  test('D30: the first-day arrival needs no reason, is a manual entry, and only while nothing is registered', () async {
+    final app = _app();
+
+    final first = await app.post(_path, _body(entry: 'first_day', reason: null));
+    expect(first.statusCode, 201);
+    expect(app.timeRegistrationWrites.rows.first.manualEntry, isTrue);
+
+    final again = await _error(app, _body(entry: 'first_day', at: '2026-10-22T06:30:00Z', reason: null));
+    expect(again, containsPair('status', 400));
+    expect(again, containsPair('field', 'entry'));
+  });
+
+  test('D30: a corrected time needs a reason of at most 500 characters', () async {
     for (final reason in [null, '   ', 'x' * (RegisterTimeRequest.maxReasonLength + 1)]) {
       final app = _app();
       final error = await _error(app, _body(reason: reason));
@@ -156,6 +184,7 @@ void main() {
       _body(at: '2026-10-22T06:04:00'),
       _body(boundary: 'pause'),
       _body(method: 'geofence'),
+      _body(entry: 'later'),
     ]) {
       expect((await app.post(_path, body)).statusCode, 400, reason: body);
     }
