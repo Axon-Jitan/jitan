@@ -88,6 +88,17 @@ class GroupMemberRepository {
     return byUser;
   }
 
+  /// The names of [groupIds].
+  Future<Map<int, String>> groupNames(List<int> groupIds) async {
+    if (groupIds.isEmpty) return const {};
+    final ids = SqlInList('g', groupIds);
+    final rows = await _executor.query(
+      'SELECT groupID, groupName FROM tblGroup WHERE groupID IN (${ids.placeholders}) AND groupMFD = 0',
+      ids.params,
+    );
+    return {for (final row in rows) row.readInt('groupID'): row.readString('groupName')};
+  }
+
   /// Whether [groupId] exists and is not deleted; `null` when it does not,
   /// otherwise whether it is active.
   Future<bool?> groupIsActive(int groupId) async {

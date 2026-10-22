@@ -45,9 +45,30 @@ class GroupMemberService {
   static const maxIds = 100;
   static const _deadlockAttempts = 3;
 
+  /// [groupId]'s members, each with the group their work hours come from
+  /// (EmployeeScheduleSync.currentSource), so the group page can show who
+  /// works its hours and who still needs HR's choice.
   Future<List<GroupMember>> members(int groupId, {required Future<bool> Function(int companyId) mayView}) async {
     await _requireGroup(groupId);
-    return _withDetails(await _members.members(groupId), mayView);
+    final members = await _withDetails(await _members.members(groupId), mayView);
+    final sources = await _transactions.transaction(
+      (tx) async => {for (final m in members) m.id: await _scheduleSync.currentSource(tx, m.id)},
+    );
+    final names = await _members.groupNames([...sources.values.whereType<int>().toSet()]);
+    return [
+      for (final m in members)
+        GroupMember(
+          id: m.id,
+          firstName: m.firstName,
+          lastName: m.lastName,
+          code: m.code,
+          companies: m.companies,
+          companyIds: m.companyIds,
+          groups: m.groups,
+          hoursFromGroupId: sources[m.id],
+          hoursFromGroup: names[sources[m.id]],
+        ),
+    ];
   }
 
   /// Employees not yet in [groupId] that HR may add, matching [search];
@@ -188,6 +209,7 @@ class GroupMemberService {
             lastName: row.lastName,
             code: row.code,
             companies: [for (final (_, name) in companies[row.userId] ?? const <(int, String)>[]) name],
+            companyIds: [for (final (id, _) in companies[row.userId] ?? const <(int, String)>[]) id],
             groups: groups[row.userId] ?? const [],
           ),
     ];

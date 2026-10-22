@@ -12,6 +12,9 @@ class GroupMember {
     required this.groups,
     this.firstName,
     this.lastName,
+    this.companyIds = const [],
+    this.hoursFromGroupId,
+    this.hoursFromGroup,
   });
 
   factory GroupMember.fromJson(Map<String, Object?> json) => GroupMember(
@@ -21,6 +24,9 @@ class GroupMember {
         code: json.readString('code'),
         companies: json.readStringList('companies'),
         groups: json.readStringList('groups'),
+        companyIds: json['companyIds'] == null ? const [] : json.readIntList('companyIds'),
+        hoursFromGroupId: json.readOptionalInt('hoursFromGroupId'),
+        hoursFromGroup: json.readOptionalString('hoursFromGroup'),
       );
 
   /// `tblUser.userID`.
@@ -40,6 +46,15 @@ class GroupMember {
   /// for a member).
   final List<String> groups;
 
+  /// The ids of [companies], in the same order: company-scoped actions
+  /// such as "Schedules come from" are made in one of them.
+  final List<int> companyIds;
+
+  /// The group the employee's work hours come from (members only); `null`
+  /// without hours, or when they are not exactly one group's (HR chooses).
+  final int? hoursFromGroupId;
+  final String? hoursFromGroup;
+
   String get displayName => [firstName, lastName].whereType<String>().where((s) => s.isNotEmpty).join(' ');
 
   Map<String, Object?> toJson() => {
@@ -49,6 +64,9 @@ class GroupMember {
         'code': code,
         'companies': companies,
         'groups': groups,
+        if (companyIds.isNotEmpty) 'companyIds': companyIds,
+        'hoursFromGroupId': hoursFromGroupId,
+        'hoursFromGroup': hoursFromGroup,
       };
 }
 

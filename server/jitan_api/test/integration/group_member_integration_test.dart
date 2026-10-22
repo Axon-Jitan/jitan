@@ -133,6 +133,8 @@ void main() {
 
     expect([for (final m in members) m.id], [users['A'], users['B'], users['C']]);
     expect(members.first.groups, ['$prefix Drivers']);
+    expect(members.first.companyIds, isNotEmpty, reason: 'for company-scoped actions such as Schedules come from');
+    expect([for (final m in members) m.hoursFromGroupId], [null, null, null], reason: 'the group has no work hours');
     for (final key in ['A', 'B', 'C']) {
       expect(await audited('employee.group.assigned', users[key]!), 1, reason: key);
     }
