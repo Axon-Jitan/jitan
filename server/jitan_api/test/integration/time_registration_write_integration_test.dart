@@ -2,6 +2,7 @@
 library;
 
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/time_records/my_day_service.dart';
 import 'package:jitan_api/src/time_records/time_record_service.dart';
 import 'package:jitan_api/src/time_records/time_correction_service.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
@@ -151,6 +152,37 @@ void main() {
       ('Start – actual – Manual', DateTime.utc(2026, 10, 22, 6, 4, 37), false),
       ('Start – rounded', DateTime.utc(2026, 10, 22, 6, 15), false),
     ]);
+  });
+
+  test('the employee sees the day on the phone (GET /me/today): working, from the schedule', () async {
+    final clock = WorkplaceClock('Europe/Brussels');
+    final now = DateTime.utc(2026, 10, 22, 12);
+    final myDay = MyDayService(
+      days: TimeRecordService(
+        records: TimeRecordRepository(db),
+        employees: EmployeeRepository(db),
+        companies: CompanyRepository(db),
+        clock: clock,
+        schedules: ScheduleRepository(db),
+        rounding: RegistrationRounding(ScheduleRepository(db)),
+        now: () => now,
+      ),
+      records: TimeRecordRepository(db),
+      schedules: ScheduleRepository(db),
+      clock: clock,
+      now: () => now,
+    );
+
+    final today = await myDay.today(userId);
+
+    expect((today.date, today.firstDay, today.scheduledStart, today.day!.status, today.day!.start!.actualLocal), (
+      DateTime.utc(2026, 10, 22),
+      false,
+      '08:00',
+      TimeRecordStatus.working,
+      '08:04',
+    ));
+    expect(today.registeredMinutes, isNull, reason: 'not finished');
   });
 
   test('HR corrects the start: corrected + rounded rows; the old rounded row switched off, kept; non-work switches all off', () async {

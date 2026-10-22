@@ -52,4 +52,51 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('today GETs the day of the signed-in employee and decodes it', () async {
+    late http.Request sent;
+    final api = TimeRegistrationsApi(ApiTransport(
+      baseUri: Uri.parse('http://api.test/'),
+      httpClient: MockClient((request) async {
+        sent = request;
+        return http.Response(
+          jsonEncode({
+            'date': '2026-10-22',
+            'firstDay': false,
+            'scheduledStart': '08:00',
+            'scheduledFinish': '16:30',
+            'breakMinutes': 30,
+            'day': {
+              'employeeId': 1,
+              'employeeCode': '',
+              'date': '2026-10-22',
+              'status': 'working',
+              'start': {
+                'actualId': 5,
+                'actual': '2026-10-22T06:04:00.000Z',
+                'rounded': '2026-10-22T06:04:00.000Z',
+                'method': 'manual',
+                'enteredByHand': false,
+                'actualLocal': '08:04',
+                'roundedLocal': '08:04',
+              },
+            },
+            'registeredMinutes': null,
+          }),
+          200,
+        );
+      }),
+    ));
+
+    final today = await api.today();
+
+    expect((sent.method, sent.url.path), ('GET', '/me/today'));
+    expect((today.date, today.scheduledStart, today.breakMinutes, today.day!.status, today.day!.start!.actualLocal), (
+      DateTime.utc(2026, 10, 22),
+      '08:00',
+      30,
+      TimeRecordStatus.working,
+      '08:04',
+    ));
+  });
 }

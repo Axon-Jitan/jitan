@@ -54,6 +54,7 @@ import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
 import 'package:jitan_api/src/time_registration/time_registration_service.dart';
+import 'package:jitan_api/src/time_records/my_day_service.dart';
 import 'package:jitan_api/src/time_records/time_correction_service.dart';
 import 'package:jitan_api/src/time_records/time_record_repository.dart';
 import 'package:jitan_api/src/time_records/time_record_routes.dart';
@@ -309,6 +310,12 @@ Future<void> main() async {
         records: TimeRecordRepository(db),
         days: timeRecordService,
         rounding: RegistrationRounding(ScheduleRepository(db)),
+        clock: workplaceClock,
+      ),
+      MyDayService(
+        days: timeRecordService,
+        records: TimeRecordRepository(db),
+        schedules: ScheduleRepository(db),
         clock: workplaceClock,
       ),
     ),

@@ -39,6 +39,17 @@ class TimeRegistrationsApi {
     }
   }
 
+  /// The signed-in employee's day (`GET /me/today`): schedule, today's
+  /// registrations as HR sees them, and the registered total once finished.
+  Future<MyDay> today() async {
+    final json = await _transport.getJson('me/today');
+    try {
+      return MyDay.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Today: ${e.message}');
+    }
+  }
+
   Future<TimeRegistrationPage> _page(String path, DateTime from, DateTime to, int? limit, String? cursor) async {
     final json = await _transport.getJson(
       path,

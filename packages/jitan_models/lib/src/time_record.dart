@@ -273,7 +273,7 @@ class TimeRecordDay {
         firstName: json.readOptionalString('firstName'),
         lastName: json.readOptionalString('lastName'),
         employeeCode: json.readString('employeeCode'),
-        date: _calendarDate(json.readString('date')),
+        date: parseDate(json.readString('date')),
         status: TimeRecordStatus.fromWire(json.readString('status')),
         start: json['start'] == null ? null : TimeRecordTime.fromJson(json.readObject('start')),
         finish: json['finish'] == null ? null : TimeRecordTime.fromJson(json.readObject('finish')),
@@ -320,7 +320,7 @@ class TimeRecordDay {
       };
 
   /// A `yyyy-MM-dd` date as a UTC-flagged calendar day (no time zone meant).
-  static DateTime _calendarDate(String text) {
+  static DateTime parseDate(String text) {
     final d = DateTime.parse(text);
     return DateTime.utc(d.year, d.month, d.day);
   }

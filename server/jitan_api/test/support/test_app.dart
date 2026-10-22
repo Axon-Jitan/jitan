@@ -35,6 +35,7 @@ import 'package:jitan_api/src/schedules/schedule_service.dart';
 import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
+import 'package:jitan_api/src/time_records/my_day_service.dart';
 import 'package:jitan_api/src/time_records/time_correction_service.dart';
 import 'package:jitan_api/src/time_records/time_record_routes.dart';
 import 'package:jitan_api/src/time_records/time_record_service.dart';
@@ -172,7 +173,7 @@ class TestApp {
         scheduleService,
         scheduleEditing,
       ),
-      timeRecords: TimeRecordRoutes(Authorizer(permissions), timeRecordService, timeCorrections),
+      timeRecords: TimeRecordRoutes(Authorizer(permissions), timeRecordService, timeCorrections, myDays),
       me: MeRoutes(
         users,
         AccountService(
@@ -210,6 +211,13 @@ class TestApp {
     clock: WorkplaceClock('Europe/Brussels'),
     schedules: schedules,
     rounding: RegistrationRounding(schedules),
+    now: () => now,
+  );
+  late final myDays = MyDayService(
+    days: timeRecordService,
+    records: timeRecords,
+    schedules: schedules,
+    clock: WorkplaceClock('Europe/Brussels'),
     now: () => now,
   );
   late final timeCorrections = TimeCorrectionService(
