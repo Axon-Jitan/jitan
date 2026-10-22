@@ -5,10 +5,11 @@ import '../theme/jitan_text_styles.dart';
 
 /// A form-level error (not tied to one field), e.g. "Can't reach Jitan".
 class JitanInlineError extends StatelessWidget {
-  const JitanInlineError({super.key, required this.title, required this.message});
+  const JitanInlineError({super.key, required this.title, this.message});
 
   final String title;
-  final String message;
+  /// A second line; `null` when the title says it all.
+  final String? message;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -24,8 +25,10 @@ class JitanInlineError extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: JitanTextStyles.stateTitle.copyWith(fontSize: 15, color: JitanColors.error)),
-                const SizedBox(height: 2),
-                Text(message, style: JitanTextStyles.stateMessage),
+                if (message != null) ...[
+                  const SizedBox(height: 2),
+                  Text(message!, style: JitanTextStyles.stateMessage),
+                ],
               ],
             ),
           ),

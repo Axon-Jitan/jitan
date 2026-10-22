@@ -25,6 +25,7 @@ export 'src/components/jitan_select_field.dart';
 export 'src/components/jitan_sliver_table.dart';
 export 'src/components/jitan_status_label.dart';
 export 'src/components/jitan_status_pill.dart';
+export 'src/components/jitan_success_modal.dart';
 export 'src/components/jitan_surface_card.dart';
 export 'src/components/jitan_tab_bar.dart';
 export 'src/components/jitan_text_field.dart';

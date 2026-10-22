@@ -20,6 +20,7 @@ class JitanTextField extends StatelessWidget {
     this.autofocus = false,
     this.maxLength,
     this.inputFormatters = const [],
+    this.maxLines = 1,
   });
 
   final String label;
@@ -41,6 +42,9 @@ class JitanTextField extends StatelessWidget {
   /// Arrange or limit what is typed (e.g. a phone number's grouping).
   final List<TextInputFormatter> inputFormatters;
 
+  /// More than 1 makes a text area (e.g. a reason); Enter then adds a line.
+  final int maxLines;
+
   @override
   Widget build(BuildContext context) => JitanFieldLabel(
         label: label,
@@ -48,8 +52,10 @@ class JitanTextField extends StatelessWidget {
           controller: controller,
           enabled: enabled,
           autofocus: autofocus,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
+          keyboardType: keyboardType ?? (maxLines > 1 ? TextInputType.multiline : null),
+          textInputAction: maxLines > 1 ? TextInputAction.newline : textInputAction,
+          maxLines: maxLines,
+          minLines: maxLines > 1 ? maxLines : null,
           onSubmitted: onSubmitted,
           inputFormatters: [...inputFormatters, if (maxLength case final max?) LengthLimitingTextInputFormatter(max)],
           style: JitanTextStyles.inputText,
