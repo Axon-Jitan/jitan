@@ -73,7 +73,7 @@ class JitanDataTable extends StatelessWidget {
                 color: rowColor?.call(i) ?? (i.isOdd ? JitanColors.tableStripe : JitanColors.surface),
                 child: onRowTap == null
                     ? JitanTableRow(columns: columns, cells: rows[i])
-                    : _TappableRow(
+                    : JitanTappableRow(
                         onTap: () => onRowTap!(i),
                         child: JitanTableRow(columns: columns, cells: rows[i]),
                       ),
@@ -106,8 +106,9 @@ class JitanDataTable extends StatelessWidget {
   }
 }
 
-class _TappableRow extends StatelessWidget {
-  const _TappableRow({required this.onTap, required this.child});
+/// A table row that opens something: hover highlight, keyboard focusable.
+class JitanTappableRow extends StatelessWidget {
+  const JitanTappableRow({super.key, required this.onTap, required this.child});
 
   final VoidCallback onTap;
   final Widget child;

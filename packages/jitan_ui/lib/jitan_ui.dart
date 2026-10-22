@@ -2,6 +2,7 @@
 /// (`00 — Foundations`, `05 — Components`, shared screen patterns).
 library;
 
+export 'src/components/jitan_badge.dart';
 export 'src/components/jitan_data_table.dart';
 export 'src/components/jitan_detail_grid.dart';
 export 'src/components/jitan_empty_state.dart';
