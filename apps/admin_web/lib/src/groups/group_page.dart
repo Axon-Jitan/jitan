@@ -13,6 +13,7 @@ import 'add_employees_dialog.dart';
 import 'choose_hours_source_dialog.dart';
 import 'deactivate_group_dialog.dart';
 import 'group_hours_panel.dart';
+import 'group_hours_setup_card.dart';
 import 'group_member_hours.dart';
 import 'group_members_card.dart';
 import 'group_page_controller.dart';
@@ -221,7 +222,16 @@ class _GroupPageState extends State<GroupPage> {
           ),
         ],
         const SizedBox(height: 24),
-        GroupSummaryCards(memberCount: members.length, needChoice: needChoice.length, schedule: loaded.schedule),
+        // With hours: the summary cards. Without: one calm card that offers
+        // to set them, instead of four cards that all say "Not set".
+        if (hasHours)
+          GroupSummaryCards(memberCount: members.length, needChoice: needChoice.length, schedule: loaded.schedule)
+        else
+          GroupHoursSetupCard(
+            schedule: loaded.schedule,
+            hasMembers: members.isNotEmpty,
+            onSet: group.isActive ? () => _setHours(loaded) : null,
+          ),
         if (needChoice.isNotEmpty && group.isActive) ...[
           const SizedBox(height: 20),
           _notice(
@@ -235,17 +245,20 @@ class _GroupPageState extends State<GroupPage> {
           ),
         ],
         const SizedBox(height: 20),
-        LayoutBuilder(
-          builder: (context, constraints) => constraints.maxWidth >= 1000
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [Expanded(child: membersCard), const SizedBox(width: 20), SizedBox(width: 340, child: hoursPanel)],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [membersCard, const SizedBox(height: 20), hoursPanel],
-                ),
-        ),
+        if (!hasHours)
+          membersCard
+        else
+          LayoutBuilder(
+            builder: (context, constraints) => constraints.maxWidth >= 1000
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [Expanded(child: membersCard), const SizedBox(width: 20), SizedBox(width: 340, child: hoursPanel)],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [membersCard, const SizedBox(height: 20), hoursPanel],
+                  ),
+          ),
       ],
     );
   }

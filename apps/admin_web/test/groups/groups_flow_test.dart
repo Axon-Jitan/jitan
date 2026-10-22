@@ -162,7 +162,8 @@ void main() {
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
     expect(find.text('Group Van drivers created.'), findsOneWidget);
-    expect(find.text('Work hours & break'), findsOneWidget, reason: 'on the group page now');
+    expect(find.text('Employee groups'), findsOneWidget, reason: 'back on the list, not the group page');
+    expect(fakes.groupManagement.calls.where((c) => c == 'overview'), hasLength(2), reason: 'the list reloads');
   });
 
   testWidgets('a duplicate name found at the save is shown under the name, on step 1', (tester) async {
@@ -213,7 +214,7 @@ void main() {
     await tester.pump();
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
-    expect(find.text('Work hours & break'), findsOneWidget, reason: 'on the group page');
+    expect(find.widgetWithText(JitanOutlineButton, 'Rename'), findsOneWidget, reason: 'on the group page');
     await tester.tap(find.text('Groups').last, warnIfMissed: false);
     await tester.pumpAndSettle();
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/groups');

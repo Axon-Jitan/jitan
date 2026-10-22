@@ -54,8 +54,10 @@ class _GroupsScreenState extends State<GroupsScreen> {
       schedulesApi: widget.schedulesApi,
     );
     if (created == null || !mounted) return;
+    // Back on the list with the new group in it (product owner, 2026-10-22);
+    // its row opens the group's page.
     _say(context.t(AdminTextKeys.groupsCreated, args: {'group': created.name}));
-    _open(created);
+    await _controller.load();
   }
 
   Future<void> _manage(GroupOverview group) async {

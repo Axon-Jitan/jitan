@@ -767,6 +767,8 @@ abstract final class AdminTextKeys {
   static const groupDetailNoMatch = 'group.detail.noMatch';
   static const groupDetailCount = 'group.detail.count';
   static const groupDetailHoursPanel = 'group.detail.hoursPanel';
+  static const groupDetailSetupTitle = 'group.detail.setup.title';
+  static const groupDetailSetupDiffer = 'group.detail.setup.differ';
   static const groupDetailDayOff = 'group.detail.dayOff';
   static const groupDetailBreakRow = 'group.detail.breakRow';
   static const groupDetailBreakValue = 'group.detail.breakValue';

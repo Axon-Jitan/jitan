@@ -1023,6 +1023,8 @@ const builtInEnglish = <String, String>{
   'group.detail.count.one': '{n} employee',
   'group.detail.count.other': '{n} employees',
   'group.detail.hoursPanel': 'Work hours & break',
+  'group.detail.setup.title': 'No work hours yet',
+  'group.detail.setup.differ': 'Different work hours',
   'group.detail.dayOff': 'Day off',
   'group.detail.breakRow': 'Break',
   'group.detail.breakValue': '{minutes} min, deducted',
