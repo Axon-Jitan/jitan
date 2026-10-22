@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
@@ -133,11 +132,4 @@ class GroupHoursPanel extends StatelessWidget {
       ],
     ),
   );
-}
-
-/// "No rounding" when neither boundary rounds or both round alike;
-/// otherwise "Start Up · 15 min · finish No rounding".
-String roundingPairText(Translations t, ScheduleRounding? start, ScheduleRounding? finish) {
-  final s = roundingText(t, start), f = roundingText(t, finish);
-  return s == f ? s : t.t(AdminTextKeys.groupDetailRoundingValue, args: {'start': s, 'finish': f});
 }

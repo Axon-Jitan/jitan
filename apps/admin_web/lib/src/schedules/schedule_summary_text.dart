@@ -24,6 +24,14 @@ String roundingText(Translations t, ScheduleRounding? rounding) => switch (round
   ScheduleRounding(:final intervalMinutes) => t.t(AdminTextKeys.scheduleRoundingDown, args: {'minutes': intervalMinutes}),
 };
 
+/// The rounding of a day's start and finish in one phrase: "No rounding"
+/// or "Up, every 15 min" when both round alike, otherwise "Start: Up, every
+/// 15 min · Finish: No rounding".
+String roundingPairText(Translations t, ScheduleRounding? start, ScheduleRounding? finish) {
+  final s = roundingText(t, start), f = roundingText(t, finish);
+  return s == f ? s : t.t(AdminTextKeys.scheduleSummaryRounding, args: {'start': s, 'finish': f});
+}
+
 /// "Mon–Fri 08:00–16:30" (the list's "Days & hours", Figma 1359:2). Days
 /// with the same hours are joined; consecutive days become a range.
 String workHoursDaysSummary(Translations t, ScheduleVariant variant) {
@@ -50,10 +58,7 @@ String workHoursSummary(Translations t, ScheduleVariant variant) {
   final tolerance = arrival == leaving
       ? t.t(AdminTextKeys.scheduleSummaryTolerance, args: {'minutes': arrival})
       : t.t(AdminTextKeys.scheduleSummaryToleranceSplit, args: {'arrival': arrival, 'leaving': leaving});
-  final rounding = t.t(
-    AdminTextKeys.scheduleSummaryRounding,
-    args: {'start': roundingText(t, first.start!.rounding), 'finish': roundingText(t, first.finish!.rounding)},
-  );
+  final rounding = roundingPairText(t, first.start!.rounding, first.finish!.rounding);
   return '$hours · $tolerance · $rounding';
 }
 

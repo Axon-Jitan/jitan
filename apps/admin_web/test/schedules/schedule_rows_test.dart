@@ -67,7 +67,7 @@ void main() {
 
       expect(
         workHoursSummary(t, variant),
-        'Mon–Thu 08:00–16:30, Fri 08:00–12:00 · ±5 min · start Up · 15 min, finish Down · 15 min',
+        'Mon–Thu 08:00–16:30, Fri 08:00–12:00 · ±5 min · Start: Up, every 15 min · Finish: Down, every 15 min',
       );
     });
 
@@ -85,7 +85,7 @@ void main() {
         breaks: const [],
       );
 
-      expect(workHoursSummary(t, variant), 'Mon, Wed 07:00–15:00 · +10 / −0 min · start No rounding, finish No rounding');
+      expect(workHoursSummary(t, variant), 'Mon, Wed 07:00–15:00 · +10 / −0 min · No rounding');
     });
 
     test('breaks', () {

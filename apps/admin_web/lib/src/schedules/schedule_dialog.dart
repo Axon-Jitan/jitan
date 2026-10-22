@@ -391,10 +391,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
       ),
       (
         AdminTextKeys.scheduleReviewRounding,
-        context.t(
-          AdminTextKeys.scheduleSummaryRounding,
-          args: {'start': roundingText(t, c.startRounding), 'finish': roundingText(t, c.finishRounding)},
-        ),
+        roundingPairText(t, c.startRounding, c.finishRounding),
       ),
     ];
     return [

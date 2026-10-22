@@ -761,7 +761,6 @@ abstract final class AdminTextKeys {
   static const groupDetailToleranceRow = 'group.detail.toleranceRow';
   static const groupDetailToleranceValue = 'group.detail.toleranceValue';
   static const groupDetailRoundingRow = 'group.detail.roundingRow';
-  static const groupDetailRoundingValue = 'group.detail.roundingValue';
   static const groupDetailHoursEmptyText = 'group.detail.hoursEmptyText';
   static const groupDetailHoursNoSingleText = 'group.detail.hoursNoSingleText';
   static const groupDetailHoursDifferText = 'group.detail.hoursDifferText';

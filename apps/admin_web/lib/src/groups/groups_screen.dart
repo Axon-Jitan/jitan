@@ -116,13 +116,18 @@ class _GroupsScreenState extends State<GroupsScreen> {
   );
 
   Widget _toolbar(BuildContext context) {
-    final search = JitanSearchField(
-      clearTooltip: context.t(CommonTextKeys.searchClear),
-      outlined: true,
-      hintText: context.t(AdminTextKeys.groupsSearch),
-      onChanged: _controller.updateSearch,
+    // Labelled like the other list pages (Employees, Schedules, Time records).
+    final search = JitanFieldLabel(
+      label: context.t(CommonTextKeys.searchLabel),
+      child: JitanSearchField(
+        clearTooltip: context.t(CommonTextKeys.searchClear),
+        outlined: true,
+        hintText: context.t(AdminTextKeys.groupsSearch),
+        onChanged: _controller.updateSearch,
+      ),
     );
     final status = JitanSelectField<GroupStatusFilter?>(
+      label: context.t(AdminTextKeys.scheduleFilterStatus),
       value: _controller.status,
       options: [
         JitanSelectOption(value: null, label: context.t(AdminTextKeys.groupsFilterAll)),
