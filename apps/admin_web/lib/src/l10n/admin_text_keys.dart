@@ -511,6 +511,7 @@ abstract final class AdminTextKeys {
 
   // Schedules (Figma HR / Schedules 1317:2 to 1333:196)
   static const scheduleTitle = 'schedule.title';
+  static const scheduleAddAction = 'schedule.add.action';
   static const scheduleListSubtitle = 'schedule.list.subtitle';
   static const scheduleSearch = 'schedule.search';
   static const scheduleFilterGroup = 'schedule.filter.group';

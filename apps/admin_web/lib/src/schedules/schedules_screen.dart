@@ -19,9 +19,10 @@ import 'schedules_table.dart';
 /// HR/Admin "Schedules" page (Figma `HR / Schedules — One row per group`
 /// 1458:2; `Empty list` 1320:173, `Loading list` 1320:300, `List error`
 /// 1320:427): the overview of every group's work hours, break and rounding.
-/// A row opens the group's page, where its schedule is managed; "···" also
-/// offers Edit schedule. There is no "Add schedule": hours are set when a
-/// group is created, or on its page (product owner, 2026-10-22).
+/// A row opens the group's page; "Add schedule" and "···" Edit schedule open
+/// the schedule wizard here too, so HR/Admin can set a group's hours from
+/// this page as well as in Create group and on the group's page (product
+/// owner, 2026-10-22).
 ///
 /// Schedules are global, not company-scoped. Status is Active or "Different
 /// hours" (a switched-off schedule is no longer listed).
@@ -97,11 +98,15 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Overview only (product owner, 2026-10-22): hours are set when a
-          // group is created and changed on the group's page.
           JitanPageHeader(
             title: context.t(AdminTextKeys.scheduleTitle),
             subtitle: context.t(AdminTextKeys.scheduleListSubtitle),
+            action: JitanPrimaryButton(
+              label: context.t(AdminTextKeys.scheduleAddAction),
+              icon: Icons.add,
+              height: JitanDimensions.controlHeight,
+              onPressed: _controller.state is SchedulesLoaded ? _open : null,
+            ),
           ),
           const SizedBox(height: JitanDimensions.headerToToolbar),
           _toolbar(context),

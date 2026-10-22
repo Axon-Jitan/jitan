@@ -122,11 +122,13 @@ void main() {
     expect(find.text('No matching schedules'), findsOneWidget);
   });
 
-  testWidgets('no Add schedule on the page; the wizard: group, hours & break, attendance, review; one save', (tester) async {
+  testWidgets('Add schedule: group, hours & break, attendance, review; one save, then the list reloads', (tester) async {
     final api = await _pump(tester);
     await _loaded(tester, api);
-    expect(find.text('Add schedule'), findsNothing, reason: 'hours are set on a group (product owner, 2026-10-22)');
-    await _openAdd(tester, api);
+    await tester.tap(find.text('Add schedule'));
+    await tester.pump();
+    api.succeedOptions();
+    await tester.pumpAndSettle();
 
     expect(find.text('Create schedule'), findsOneWidget);
     for (final step in ['1 Group', '2 Working hours & break', '3 Attendance rules', '4 Review']) {
@@ -151,6 +153,7 @@ void main() {
     await tester.tap(find.text('Save schedule'));
     await tester.pump();
     await tester.pump();
+    await _loaded(tester, api, [_blue, api.writeResult!, _mixed]);
     await tester.pumpAndSettle();
 
     final (method, groupId, request as SetGroupScheduleRequest) = api.writes.single;
@@ -158,6 +161,7 @@ void main() {
     expect([for (final d in request.workHours.days) (d.dayId, d.start, d.finish)], [(11, '08:00', '16:30')]);
     expect(request.breakMinutes, 30);
     expect(find.text('Create schedule'), findsNothing);
+    expect(find.text('Schedule saved for White collar.'), findsOneWidget);
   });
 
   testWidgets('every field has an ⓘ that explains it with an example', (tester) async {
