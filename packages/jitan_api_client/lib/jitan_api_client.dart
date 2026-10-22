@@ -16,4 +16,5 @@ export 'src/onboarding_api.dart';
 export 'src/recovery_api.dart';
 export 'src/schedule_source_api.dart';
 export 'src/schedules_api.dart';
+export 'src/time_records_api.dart';
 export 'src/time_registrations_api.dart';

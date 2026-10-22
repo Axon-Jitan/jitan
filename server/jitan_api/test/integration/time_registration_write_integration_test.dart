@@ -3,6 +3,7 @@ library;
 
 import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
+import 'package:jitan_api/src/time_records/time_record_repository.dart';
 import 'package:jitan_api/src/time_registration/registration_rounding.dart';
 import 'package:jitan_api/src/time_registration/time_registration_write_service.dart';
 import 'package:jitan_api/src/time_registration/workplace_clock.dart';
@@ -131,5 +132,21 @@ void main() {
     expect(retry.created, isFalse);
     expect((retry.registered.actualId, retry.registered.roundedId), (registered.actualId, registered.roundedId));
     expect(await db.query('SELECT timeRegID FROM tblTimeReg WHERE userID = :u', {'u': userId}), hasLength(2));
+
+    // Time records reads them back as UTC, within the period only.
+    final read = await TimeRecordRepository(db).registrationsOf(
+      [userId],
+      DateTime.utc(2026, 10, 21, 22),
+      DateTime.utc(2026, 10, 22, 22),
+    );
+    expect(
+      await TimeRecordRepository(db).registrationsOf([userId], DateTime.utc(2026, 10, 22, 7), DateTime.utc(2026, 10, 22, 22)),
+      isEmpty,
+      reason: 'outside the period',
+    );
+    expect(read.map((r) => (r.typeName, r.at, r.manualEntry)), [
+      ('Start – actual – Manual', DateTime.utc(2026, 10, 22, 6, 4, 37), true),
+      ('Start – rounded', DateTime.utc(2026, 10, 22, 6, 15), false),
+    ]);
   });
 }

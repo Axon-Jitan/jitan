@@ -15,6 +15,7 @@ import 'languages/language_routes.dart';
 import 'onboarding/onboarding_routes.dart';
 import 'recovery/recovery_routes.dart';
 import 'schedules/schedule_routes.dart';
+import 'time_records/time_record_routes.dart';
 import 'time_registration/time_registration_routes.dart';
 import 'users/me_routes.dart';
 
@@ -44,6 +45,7 @@ Handler buildApp({
   required MeRoutes me,
   required TimeRegistrationRoutes timeRegistrations,
   required ScheduleRoutes schedules,
+  required TimeRecordRoutes timeRecords,
   List<Middleware> authentication = const [],
 }) {
   final apiRoutes = Router(notFoundHandler: _notFound)
@@ -54,7 +56,8 @@ Handler buildApp({
     ..mount('/', languages.authenticatedRouter.call)
     ..mount('/', me.router.call)
     ..mount('/', timeRegistrations.router.call)
-    ..mount('/', schedules.router.call);
+    ..mount('/', schedules.router.call)
+    ..mount('/', timeRecords.router.call);
 
   var api = const Pipeline();
   for (final middleware in authentication) {

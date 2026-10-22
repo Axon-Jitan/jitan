@@ -59,6 +59,21 @@ class DbRow {
     return parsed;
   }
 
+  /// Reads a MySQL `DATETIME` stored in UTC (registrations, TIME_ENGINE_ANALYSIS
+  /// D9) as a UTC [DateTime].
+  DateTime readUtcDateTime(String column) {
+    final wallClock = readOptionalDateTime(column) ?? (throw _unexpected(column, 'NULL', 'a DATETIME'));
+    return DateTime.utc(
+      wallClock.year,
+      wallClock.month,
+      wallClock.day,
+      wallClock.hour,
+      wallClock.minute,
+      wallClock.second,
+      wallClock.millisecond,
+    );
+  }
+
   Object? _raw(String column) {
     if (!_values.containsKey(column)) {
       throw StateError('Result has no column "$column". Columns: ${_values.keys.join(', ')}');

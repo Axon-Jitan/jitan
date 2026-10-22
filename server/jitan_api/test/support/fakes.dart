@@ -1,3 +1,4 @@
+import 'package:jitan_api/src/time_records/time_record_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_write_repository.dart';
 import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
 import 'package:jitan_api/src/auth/credential_repository.dart';
@@ -720,3 +721,21 @@ class FakeTimeRegistrationWriteRepository implements TimeRegistrationWriteReposi
     return id;
   }
 }
+
+/// Registrations for Time records, in memory.
+class FakeTimeRecordRepository implements TimeRecordRepository {
+  List<RegistrationRow> rows = [];
+
+  /// (userIds, from, to) of every read.
+  final reads = <(List<int>, DateTime, DateTime)>[];
+
+  @override
+  Future<List<RegistrationRow>> registrationsOf(List<int> userIds, DateTime fromUtc, DateTime toUtc) async {
+    reads.add((userIds, fromUtc, toUtc));
+    return [
+      for (final r in rows)
+        if (userIds.contains(r.userId) && !r.at.isBefore(fromUtc) && r.at.isBefore(toUtc)) r,
+    ];
+  }
+}
+

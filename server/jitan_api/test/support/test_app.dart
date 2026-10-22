@@ -35,6 +35,8 @@ import 'package:jitan_api/src/schedules/schedule_service.dart';
 import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
+import 'package:jitan_api/src/time_records/time_record_routes.dart';
+import 'package:jitan_api/src/time_records/time_record_service.dart';
 import 'package:jitan_api/src/time_registration/registration_rounding.dart';
 import 'package:jitan_api/src/time_registration/time_registration_write_service.dart';
 import 'package:jitan_api/src/time_registration/workplace_clock.dart';
@@ -169,6 +171,16 @@ class TestApp {
         scheduleService,
         scheduleEditing,
       ),
+      timeRecords: TimeRecordRoutes(
+        Authorizer(permissions),
+        TimeRecordService(
+          records: timeRecords,
+          employees: employees,
+          companies: companies,
+          clock: WorkplaceClock('Europe/Brussels'),
+          now: () => now,
+        ),
+      ),
       me: MeRoutes(
         users,
         AccountService(
@@ -198,6 +210,7 @@ class TestApp {
   final groups = FakeGroupRepository();
   final schedules = FakeScheduleRepository();
   final timeRegistrationWrites = FakeTimeRegistrationWriteRepository();
+  final timeRecords = FakeTimeRecordRepository();
   final scheduleSync = FakeEmployeeScheduleSync();
   late final scheduleService = ScheduleService(schedules: schedules, groups: groups);
   final audit = FakeAuditLog();
