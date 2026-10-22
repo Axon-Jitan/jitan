@@ -35,6 +35,9 @@ import 'package:jitan_api/src/schedules/schedule_service.dart';
 import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
+import 'package:jitan_api/src/time_registration/registration_rounding.dart';
+import 'package:jitan_api/src/time_registration/time_registration_write_service.dart';
+import 'package:jitan_api/src/time_registration/workplace_clock.dart';
 import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
 import 'package:jitan_api/src/time_registration/time_registration_service.dart';
 import 'package:jitan_api/src/auth/password_hasher.dart';
@@ -152,6 +155,14 @@ class TestApp {
           companies: companies,
           executor: unusedExecutor,
         ),
+        TimeRegistrationWriteService(
+          transactions: transactions,
+          rounding: RegistrationRounding(schedules),
+          clock: WorkplaceClock('Europe/Brussels'),
+          repository: timeRegistrationWrites,
+          audit: audit,
+          now: () => now,
+        ),
       ),
       schedules: ScheduleRoutes(
         Authorizer(permissions),
@@ -186,6 +197,7 @@ class TestApp {
   final assignments = FakeEmployeeAssignmentRepository();
   final groups = FakeGroupRepository();
   final schedules = FakeScheduleRepository();
+  final timeRegistrationWrites = FakeTimeRegistrationWriteRepository();
   final scheduleSync = FakeEmployeeScheduleSync();
   late final scheduleService = ScheduleService(schedules: schedules, groups: groups);
   final audit = FakeAuditLog();

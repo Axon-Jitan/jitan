@@ -293,6 +293,32 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## TR-02: Register start and finish (phase 3, slice 1)
+Status: server `DONE` (2026-10-22) · employee app screens wait for Figma (see below)
+
+`POST /me/time-registrations` (`RegisterTimeRequest`). Per TIME_ENGINE_ANALYSIS D4–D10:
+two `tblTimeReg` rows in one transaction, the **actual** time ("Start – actual – Manual",
+`timeRegManualEntry = 1`, required reason in `timeRegComment`) and the time **rounded** with
+the employee's "Work – start"/"Work – finish" schedule of that weekday and its
+`tblRoundingRule` ("Start – rounded", not a manual entry); no schedule or rule = whole-minute
+time. UTC in the database, rounding in the workplace time zone (`JITAN_TIMEZONE`, default
+Europe/Brussels, DST via the IANA database). Audited `time.registered` with `timeRegID` and
+`timeRegTypeID`. Idempotent: the same user, type and moment again returns the stored pair
+(200) under a user-row lock. A time more than 2 minutes in the future is refused; two
+schedules of one kind on one day, two rules on one schedule or an unknown interval is a
+configuration error, never a guess. Client: `TimeRegistrationsApi.register`.
+
+Open, for the next slices:
+- Only **manual** is accepted: QR comes with the terminals (GAP-09), geofence with phase 4,
+  through the same request.
+- Every start and finish is rounded; rounding only the day's first start and last finish
+  (D22) matters once activities can be switched (IT's projects update).
+- **TR-01's read side predates D9**: it reads and returns timestamps as wall clock without a
+  zone. It must switch to UTC (and `from`/`to` as moments) with the Time records slice.
+- **Figma (employee app):** Today has no finish action, no reason field for a manual time
+  (D6), and its Working card needs projects (IT) and geofencing (phase 4). A designer brief
+  is needed before the app screens are built.
+
 ## TR-01: Read-only time-registration foundation
 Status: `DONE` (2026-10-08) · the time engine itself waits for GAP-01, GAP-02, CLARIFY-02
 

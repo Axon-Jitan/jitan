@@ -84,6 +84,10 @@ dart run bin/server.dart
 - `GET /companies/{id}/employees/{userId}/time-registrations` and
   `GET /me/time-registrations` (`from`, `to`, `limit`, `cursor`): the read-only
   `tblTimeReg` stream (staged; no app screen yet)
+- `POST /me/time-registrations` (`RegisterTimeRequest`: `boundary` start/finish, `method`
+  manual, `at` a UTC moment, required `reason`): the employee's own start or finish, stored
+  as the actual time and the time rounded with their schedule for that weekday (two rows,
+  one audited transaction). A retry returns the stored pair; nothing is duplicated
 
 - `GET /schedules`: every active employee group with its schedules (work start/finish
   times, tolerance, rounding, breaks), taken from the employees who are only in that group;
@@ -104,6 +108,10 @@ one is generated per start, so tokens don't survive a restart) and optionally
 `JITAN_SESSION_LIFETIME_DAYS` (default 30). Password hashing is Argon2id; tune it with
 `JITAN_ARGON2_MEMORY_KIB`, `JITAN_ARGON2_ITERATIONS`, `JITAN_ARGON2_PARALLELISM` after
 measuring on the server with `tool/bench_argon2.dart` (compile it for realistic numbers).
+
+**Time zone.** Registrations are stored in UTC and compared with schedules in the workplace's
+local time: `JITAN_TIMEZONE` (IANA name, default `Europe/Brussels`). An unknown name stops
+the server at startup.
 
 **Development identity.** Sign-in for HR/Admin isn't built yet. With `JITAN_ENV=development`, set
 `JITAN_DEV_USER_ID` to an active `tblUser.userID`; every request then acts as that user. A

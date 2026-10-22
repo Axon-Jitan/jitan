@@ -1,3 +1,4 @@
+import 'package:jitan_api/src/time_registration/time_registration_write_repository.dart';
 import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
 import 'package:jitan_api/src/auth/credential_repository.dart';
 import 'package:jitan_api/src/audit/audit_event.dart';
@@ -668,3 +669,51 @@ class FixedPermissionEvaluator implements PermissionEvaluator {
 
 CompanySummary company(int id, String name, {bool active = true, int employees = 0}) =>
     CompanySummary(id: id, name: name, isActive: active, employeeCount: employees, lastUpdatedAt: null);
+
+/// `tblTimeReg` in memory, with the reference registration types.
+class FakeTimeRegistrationWriteRepository implements TimeRegistrationWriteRepository {
+  /// timeRegTypeName → id (the reference rows, D5b).
+  Map<String, int> types = {
+    'Start – actual – Manual': 4,
+    'Finish – actual – Manual': 7,
+    'Start – rounded': 8,
+    'Finish – rounded': 9,
+  };
+
+  /// Every row written, in order.
+  final rows = <({int id, int userId, int typeId, DateTime at, bool manualEntry, String? comment})>[];
+  final locked = <int>[];
+  var _nextId = 1;
+
+  @override
+  Future<int?> typeId(SqlExecutor tx, String name) async => types[name];
+
+  @override
+  Future<void> lockUser(SqlExecutor tx, int userId) async => locked.add(userId);
+
+  @override
+  Future<int?> findSame(SqlExecutor tx, int userId, int typeId, DateTime at) async => rows
+      .where((r) => r.userId == userId && r.typeId == typeId && r.at == at)
+      .map((r) => r.id)
+      .firstOrNull;
+
+  @override
+  Future<({int id, DateTime at})?> nextOfType(SqlExecutor tx, int userId, int typeId, int afterId) async => rows
+      .where((r) => r.userId == userId && r.typeId == typeId && r.id > afterId)
+      .map((r) => (id: r.id, at: r.at))
+      .firstOrNull;
+
+  @override
+  Future<int> insert(
+    SqlExecutor tx, {
+    required int userId,
+    required int typeId,
+    required DateTime at,
+    required bool manualEntry,
+    String? comment,
+  }) async {
+    final id = _nextId++;
+    rows.add((id: id, userId: userId, typeId: typeId, at: at, manualEntry: manualEntry, comment: comment));
+    return id;
+  }
+}

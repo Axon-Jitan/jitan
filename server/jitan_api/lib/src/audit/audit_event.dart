@@ -11,6 +11,10 @@ enum AuditEventType {
   /// list; nothing is deleted.
   employeeRemoved('employee.removed'),
 
+  /// The employee registered a start or finish (the actual row; its rounded
+  /// row is written in the same transaction).
+  timeRegistered('time.registered'),
+
   /// HR/Admin generated a temporary onboarding QR (stored nowhere in MySQL;
   /// only the fact is logged).
   onboardingQrGenerated('employee.onboarding_qr.generated'),
@@ -97,6 +101,8 @@ enum EventLogReference {
   day('dayID'),
   roundingRule('roundingRuleID'),
   scheduleRoundingRule('scheduleRoundingRuleID'),
+  timeReg('timeRegID'),
+  timeRegType('timeRegTypeID'),
 
   /// PROPOSAL (ERD_GAPS GAP-15): exists only in the local database; written
   /// only with `JITAN_DEV_GROUP_SCHEDULES=true`.

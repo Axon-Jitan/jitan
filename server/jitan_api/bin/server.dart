@@ -54,6 +54,9 @@ import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
 import 'package:jitan_api/src/time_registration/time_registration_service.dart';
+import 'package:jitan_api/src/time_registration/registration_rounding.dart';
+import 'package:jitan_api/src/time_registration/time_registration_write_service.dart';
+import 'package:jitan_api/src/time_registration/workplace_clock.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
 import 'package:jitan_api/src/schedules/schedule_editing_service.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
@@ -76,9 +79,11 @@ Future<void> main() async {
   final AppConfig config;
   final SecurityContext? httpsContext;
   final Database db;
+  final WorkplaceClock workplaceClock;
   try {
     config = AppConfig.fromSources(ConfigSources.load(Platform.environment));
     httpsContext = config.listener.securityContext();
+    workplaceClock = WorkplaceClock(config.timeZone);
     db = Database.connect(config.database);
   } on ConfigException catch (e) {
     _log.severe('Refusing to start: ${e.message}');
@@ -88,6 +93,7 @@ Future<void> main() async {
 
   _log.info('Environment: ${config.environment.name}');
   _log.info('Database: ${config.database}');
+  _log.info('Workplace time zone: ${workplaceClock.name}');
   if (!config.database.secure) {
     _log.warning('The database connection is not encrypted (development only).');
   } else if (!config.database.verifiesCertificate) {
@@ -269,6 +275,11 @@ Future<void> main() async {
         employees: EmployeeRepository(db),
         companies: companyRepository,
         executor: db,
+      ),
+      TimeRegistrationWriteService(
+        transactions: db,
+        rounding: RegistrationRounding(ScheduleRepository(db)),
+        clock: workplaceClock,
       ),
     ),
     schedules: ScheduleRoutes(

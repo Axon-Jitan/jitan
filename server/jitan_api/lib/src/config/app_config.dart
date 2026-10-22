@@ -22,6 +22,7 @@ class AppConfig {
     required this.sessionSecret,
     required this.sessionLifetime,
     required this.passwordHashing,
+    this.timeZone = defaultTimeZone,
   });
 
   /// The configuration from one map of settings (tests and tools).
@@ -71,6 +72,7 @@ class AppConfig {
       sessionSecret: _sessionSecret(sources, environment),
       sessionLifetime: Duration(days: _optionalPositiveInt(sources, 'JITAN_SESSION_LIFETIME_DAYS') ?? 30),
       passwordHashing: _passwordHashing(sources),
+      timeZone: sources.value(['JITAN_TIMEZONE']) ?? defaultTimeZone,
     );
   }
 
@@ -176,6 +178,13 @@ class AppConfig {
 
   /// Argon2id parameters for new password hashes.
   final Argon2idParameters passwordHashing;
+
+  /// The workplace time zone (IANA name, `JITAN_TIMEZONE`): registrations are
+  /// stored in UTC and compared with schedules in this local time
+  /// (TIME_ENGINE_ANALYSIS D9). Checked when the server starts.
+  final String timeZone;
+
+  static const defaultTimeZone = 'Europe/Brussels';
 
   static String _required(ConfigSources sources, List<String> keys) =>
       sources.value(keys) ?? (throw ConfigException('${keys.join(' or ')} is required.'));
