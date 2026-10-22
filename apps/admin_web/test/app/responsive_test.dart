@@ -121,7 +121,7 @@ void main() {
       await tester.pump();
 
       _fitsTheWindow(tester, width, 'Schedules');
-      expect(find.text('Blue collar · Work hours'), findsOneWidget);
+      expect(find.text('Blue collar'), findsWidgets);
     });
 
     testWidgets('Companies page at $width px', (tester) async {
@@ -350,7 +350,7 @@ void main() {
       await tester.tap(find.byTooltip('Schedule actions').first);
       await tester.pumpAndSettle();
       _fitsTheWindow(tester, width, 'Manage schedules');
-      await tester.tap(find.text('Remove schedule'));
+      await tester.tap(find.text('Remove break'));
       await tester.pumpAndSettle();
       _fitsTheWindow(tester, width, 'Remove schedule?');
     });

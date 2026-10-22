@@ -10,7 +10,7 @@ void main() {
   final t = Translations.english();
 
   group('rows', () {
-    test('a configured group has a Work hours and a Break row; groups without a schedule have none', () {
+    test('one row per group with a schedule (1458:2); groups without a schedule have none', () {
       final rows = scheduleRowsOf([
         groupSchedule(1, 'Blue collar', work: workDays([1, 2, 3, 4, 5], '08:00', '16:30'), breakDays: breaks([1, 2, 3, 4, 5], '12:00', 30)),
         groupSchedule(2, 'White collar', work: workDays([1], '09:00', '17:00')),
@@ -18,10 +18,9 @@ void main() {
         groupSchedule(4, 'Mixed only', status: GroupScheduleStatus.noSingleGroupEmployees),
       ]);
 
-      expect([for (final r in rows) (r.group.name, r.kind, r.status)], [
-        ('Blue collar', ScheduleKind.workHours, ScheduleRowStatus.active),
-        ('Blue collar', ScheduleKind.breaks, ScheduleRowStatus.active),
-        ('White collar', ScheduleKind.workHours, ScheduleRowStatus.active),
+      expect([for (final r in rows) (r.group.name, r.hasWorkHours, r.hasBreaks, r.status)], [
+        ('Blue collar', true, true, ScheduleRowStatus.active),
+        ('White collar', true, false, ScheduleRowStatus.active),
       ]);
     });
 
@@ -47,13 +46,12 @@ void main() {
         groupSchedule(1, 'Blue collar', work: workDays([1], '08:00', '16:30'), breakDays: breaks([1], '12:00', 30)),
         groupSchedule(2, 'White collar', work: workDays([1], '09:00', '17:00')),
       ]);
-      List<String> names(ScheduleFilter f) => [for (final r in rows.where(f.matches)) '${r.group.name}/${r.kind.name}'];
+      List<String> names(ScheduleFilter f) => [for (final r in rows.where(f.matches)) r.group.name];
 
-      expect(names(const ScheduleFilter(search: 'BLUE')), ['Blue collar/workHours', 'Blue collar/breaks']);
-      expect(names(const ScheduleFilter(kind: ScheduleKind.workHours)), ['Blue collar/workHours', 'White collar/workHours']);
-      expect(names(const ScheduleFilter(groupId: 2)), ['White collar/workHours']);
-      expect(names(const ScheduleFilter(groupId: 2, kind: ScheduleKind.breaks)), isEmpty);
-      expect(names(const ScheduleFilter(status: ScheduleRowStatus.employeesDiffer)), isEmpty);
+      expect(names(const ScheduleFilter(search: 'BLUE')), ['Blue collar']);
+      expect(names(const ScheduleFilter(groupId: 2)), ['White collar']);
+      expect(names(const ScheduleFilter(groupId: 2, status: ScheduleRowStatus.employeesDiffer)), isEmpty);
+      expect(names(const ScheduleFilter(status: ScheduleRowStatus.active)), ['Blue collar', 'White collar']);
     });
   });
 

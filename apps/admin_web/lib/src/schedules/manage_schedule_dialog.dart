@@ -11,7 +11,8 @@ Future<ScheduleRowAction?> showManageScheduleDialog(BuildContext context, {requi
     showJitanModal<ScheduleRowAction>(context, builder: (_) => ManageScheduleDialog(row: row));
 
 /// Figma `HR / Schedules — Manage actions` (1359:2): the row's "···" opens
-/// this choice of Edit schedule or Remove schedule.
+/// this choice. With one row per group (1458:2) it offers the group's page,
+/// Edit schedule, and removing the work hours or the break on their own.
 class ManageScheduleDialog extends StatelessWidget {
   const ManageScheduleDialog({super.key, required this.row});
 
@@ -19,27 +20,43 @@ class ManageScheduleDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final kind = context.t(row.kind == ScheduleKind.workHours ? AdminTextKeys.scheduleKindWorkHours : AdminTextKeys.scheduleKindBreaks);
     return JitanModal(
       width: 480,
       title: context.t(AdminTextKeys.scheduleManageTitle),
-      subtitle: context.t(AdminTextKeys.scheduleRowName, args: {'group': row.group.name, 'kind': kind}),
+      subtitle: row.group.name,
       onClose: () => Navigator.of(context).pop(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Choice(
+            title: context.t(AdminTextKeys.scheduleManageOpen),
+            text: context.t(AdminTextKeys.scheduleManageOpenText),
+            onTap: () => Navigator.of(context).pop(ScheduleRowAction.openGroup),
+          ),
+          const Divider(height: 1, color: JitanColors.inputBorder),
+          _Choice(
             title: context.t(AdminTextKeys.scheduleManageEdit),
             text: context.t(AdminTextKeys.scheduleManageEditWhole),
             onTap: () => Navigator.of(context).pop(ScheduleRowAction.edit),
           ),
-          const Divider(height: 1, color: JitanColors.inputBorder),
-          _Choice(
-            title: context.t(AdminTextKeys.scheduleManageRemove),
-            text: context.t(AdminTextKeys.scheduleManageRemoveText),
-            destructive: true,
-            onTap: () => Navigator.of(context).pop(ScheduleRowAction.deactivate),
-          ),
+          if (row.hasWorkHours) ...[
+            const Divider(height: 1, color: JitanColors.inputBorder),
+            _Choice(
+              title: context.t(AdminTextKeys.scheduleManageRemoveWorkHours),
+              text: context.t(AdminTextKeys.scheduleManageRemoveWorkHoursText),
+              destructive: true,
+              onTap: () => Navigator.of(context).pop(ScheduleRowAction.removeWorkHours),
+            ),
+          ],
+          if (row.hasBreaks) ...[
+            const Divider(height: 1, color: JitanColors.inputBorder),
+            _Choice(
+              title: context.t(AdminTextKeys.scheduleManageRemoveBreak),
+              text: context.t(AdminTextKeys.scheduleManageRemoveBreakText),
+              destructive: true,
+              onTap: () => Navigator.of(context).pop(ScheduleRowAction.removeBreaks),
+            ),
+          ],
         ],
       ),
     );

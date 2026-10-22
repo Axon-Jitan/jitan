@@ -305,6 +305,21 @@ void main() {
     expect(find.text('Kevin De Vos'), findsOneWidget);
   });
 
+  testWidgets('Schedules: a row opens the group page, where its hours are managed (1458:2)', (tester) async {
+    final fakes = _fakes();
+    await _pump(tester, fakes, '/schedules');
+
+    expect(find.text('Mon–Fri 08:00–16:30'), findsWidgets);
+    await tester.tap(find.text('Blue collar').last);
+    await tester.pump();
+    await tester.pump();
+    fakes.schedules.succeedList([_blue, _white, _drivers]);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Work hours & break'), findsOneWidget, reason: 'the group page');
+    expect(find.widgetWithText(JitanPrimaryButton, 'Edit work hours'), findsOneWidget);
+  });
+
   testWidgets('an empty group asks to confirm; an inactive group says so and offers Reactivate group', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups');

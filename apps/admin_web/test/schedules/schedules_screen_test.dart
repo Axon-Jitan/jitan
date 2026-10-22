@@ -80,21 +80,19 @@ Future<void> _fillHours(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('loading, then one row per group and kind with its days and hours', (tester) async {
+  testWidgets('loading, then one row per group (1458:2): days and hours, break, rounding', (tester) async {
     final api = await _pump(tester);
     expect(find.text('Loading schedules…'), findsOneWidget);
 
     await _loaded(tester, api);
 
-    expect(find.text('Group schedules'), findsOneWidget);
-    for (final header in ['Group · Type', 'Days & hours', 'Actions']) {
-      expect(find.text(header), findsOneWidget, reason: header);
+    for (final header in ['Group', 'Days & hours', 'Break', 'Rounding', 'Status']) {
+      expect(find.text(header), findsWidgets, reason: header);
     }
-    expect(find.text('Blue collar · Work hours'), findsOneWidget);
-    expect(find.text('Blue collar · Break'), findsOneWidget);
+    expect(find.text('Blue collar'), findsWidgets);
     expect(find.text('Mon–Fri 08:00–16:30'), findsOneWidget);
-    expect(find.text('Mon–Fri · 30 min'), findsOneWidget);
-    expect(find.textContaining('White collar ·'), findsNothing, reason: 'no schedule, no row');
+    expect(find.text('30 min'), findsOneWidget);
+    expect(find.text('1 group with a schedule'), findsOneWidget, reason: 'White collar has none, no row');
   });
 
   testWidgets('empty state when no group has a schedule', (tester) async {
@@ -293,10 +291,12 @@ void main() {
     final api = await _pump(tester);
     await _loaded(tester, api);
 
-    await tester.tap(find.byTooltip('Schedule actions').at(1));
+    await tester.tap(find.byTooltip('Schedule actions').first);
     await tester.pumpAndSettle();
     expect(find.text('Manage schedules'), findsOneWidget);
-    await tester.tap(find.text('Remove schedule'));
+    expect(find.text('Open group'), findsOneWidget);
+    expect(find.text('Remove work hours'), findsOneWidget);
+    await tester.tap(find.text('Remove break'));
     await tester.pumpAndSettle();
     expect(find.text('Remove schedule?'), findsOneWidget);
     expect(find.text('Employees in Blue collar will no longer get these breaks.'), findsOneWidget);

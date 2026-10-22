@@ -14,10 +14,11 @@ Future<bool> showDeactivateScheduleDialog(
   BuildContext context, {
   required SchedulesController controller,
   required ScheduleRow row,
+  required ScheduleKind kind,
 }) async =>
     await showJitanModal<bool>(
       context,
-      builder: (_) => DeactivateScheduleDialog(controller: controller, row: row),
+      builder: (_) => DeactivateScheduleDialog(controller: controller, row: row, kind: kind),
     ) ??
     false;
 
@@ -25,10 +26,13 @@ Future<bool> showDeactivateScheduleDialog(
 /// are switched off and kept (Active = 0, MFD = 1), and every change is in
 /// `tblEventLog`; registrations already made keep their times.
 class DeactivateScheduleDialog extends StatefulWidget {
-  const DeactivateScheduleDialog({super.key, required this.controller, required this.row});
+  const DeactivateScheduleDialog({super.key, required this.controller, required this.row, required this.kind});
 
   final SchedulesController controller;
   final ScheduleRow row;
+
+  /// The work hours or the break.
+  final ScheduleKind kind;
 
   @override
   State<DeactivateScheduleDialog> createState() => _DeactivateScheduleDialogState();
@@ -43,7 +47,7 @@ class _DeactivateScheduleDialogState extends State<DeactivateScheduleDialog> {
       _busy = true;
       _failure = null;
     });
-    final failure = await widget.controller.deactivate(widget.row);
+    final failure = await widget.controller.deactivate(widget.row, widget.kind);
     if (!mounted) return;
     if (failure == null) {
       Navigator.of(context).pop(true);
@@ -67,7 +71,7 @@ class _DeactivateScheduleDialogState extends State<DeactivateScheduleDialog> {
         children: [
           Text(
             context.t(
-              widget.row.kind == ScheduleKind.workHours
+              widget.kind == ScheduleKind.workHours
                   ? AdminTextKeys.scheduleDeactivateWorkHours
                   : AdminTextKeys.scheduleDeactivateBreaks,
               args: {'group': group},

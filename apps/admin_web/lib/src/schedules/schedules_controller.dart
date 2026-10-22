@@ -85,11 +85,12 @@ class SchedulesController extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
-  /// Switches the [row]'s schedule off for the group's employees; the
-  /// failure, or `null` once the server confirmed (the list then reloads).
-  Future<ApiClientException?> deactivate(ScheduleRow row) async {
+  /// Switches [row]'s work hours or break ([kind]) off for the group's
+  /// employees; the failure, or `null` once the server confirmed (the list
+  /// then reloads).
+  Future<ApiClientException?> deactivate(ScheduleRow row, ScheduleKind kind) async {
     try {
-      switch (row.kind) {
+      switch (kind) {
         case ScheduleKind.workHours:
           await _api.removeWorkHours(row.group.id);
         case ScheduleKind.breaks:

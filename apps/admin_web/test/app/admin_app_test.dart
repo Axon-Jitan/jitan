@@ -53,7 +53,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Manage time registration, breaks and rounding.'), findsOneWidget);
+    expect(find.text('Work hours, breaks and rounding of every employee group.'), findsOneWidget);
     expect(services.schedules.listCalls, 1);
   });
 

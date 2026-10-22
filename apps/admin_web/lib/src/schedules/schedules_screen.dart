@@ -4,6 +4,9 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import 'package:go_router/go_router.dart';
+
+import '../app/admin_routes.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'deactivate_schedule_dialog.dart';
@@ -13,15 +16,14 @@ import 'schedule_rows.dart';
 import 'schedules_controller.dart';
 import 'schedules_table.dart';
 
-/// HR/Admin "Schedules" page (Figma `HR / Schedules — Saved confirmation`
-/// 1318:198, `Empty list` 1320:173, `Loading list` 1320:300, `List error`
-/// 1320:427).
+/// HR/Admin "Schedules" page (Figma `HR / Schedules — One row per group`
+/// 1458:2; `Empty list` 1320:173, `Loading list` 1320:300, `List error`
+/// 1320:427): the overview of every group's work hours, break and rounding.
+/// A row opens the group's page, where its schedule is managed; "Add
+/// schedule" and "···" open the same schedule wizard.
 ///
-/// Schedules are global, not company-scoped. Differences from Figma, on
-/// purpose: there are no "Rounding" or "Short exit" rows (rounding is part
-/// of a group's work hours; short exit is not in the ERD), every row names
-/// its group (no "All"), and Status is Active or "Different hours" (a
-/// switched-off schedule is no longer listed).
+/// Schedules are global, not company-scoped. Status is Active or "Different
+/// hours" (a switched-off schedule is no longer listed).
 class SchedulesScreen extends StatefulWidget {
   const SchedulesScreen({super.key, required this.api});
 
@@ -61,15 +63,25 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     )?.showSnackBar(SnackBar(content: Text(context.t(AdminTextKeys.scheduleSaved, args: {'group': saved.group.name}))));
   }
 
-  /// "···": Manage schedules (Figma 1359:2), then Edit or Remove.
+  void _openGroup(ScheduleRow row) => context.go(AdminRoutes.group(row.group.id));
+
+  /// "···": Manage schedules (Figma 1359:2): the group's page, Edit, or
+  /// removing the work hours or the break.
   Future<void> _manage(ScheduleRow row) async {
     final action = await showManageScheduleDialog(context, row: row);
     if (action == null || !mounted) return;
     switch (action) {
+      case ScheduleRowAction.openGroup:
+        _openGroup(row);
       case ScheduleRowAction.edit:
         await _open(group: row.schedule);
-      case ScheduleRowAction.deactivate:
-        final done = await showDeactivateScheduleDialog(context, controller: _controller, row: row);
+      case ScheduleRowAction.removeWorkHours || ScheduleRowAction.removeBreaks:
+        final done = await showDeactivateScheduleDialog(
+          context,
+          controller: _controller,
+          row: row,
+          kind: action == ScheduleRowAction.removeWorkHours ? ScheduleKind.workHours : ScheduleKind.breaks,
+        );
         if (!done || !mounted) return;
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
           SnackBar(content: Text(context.t(AdminTextKeys.scheduleDeactivated, args: {'group': row.group.name}))),
@@ -97,8 +109,6 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
           const SizedBox(height: JitanDimensions.headerToToolbar),
           _toolbar(context),
           const SizedBox(height: JitanDimensions.toolbarToTable),
-          Text(context.t(AdminTextKeys.scheduleListHeading), style: JitanTextStyles.stateTitle.copyWith(fontSize: 17)),
-          const SizedBox(height: JitanDimensions.toolbarToTable),
         ],
       ),
     ),
@@ -116,20 +126,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         outlined: true,
         hintText: context.t(AdminTextKeys.scheduleSearch),
         onChanged: (text) => update(
-          ScheduleFilter(search: text.trim(), kind: filter.kind, groupId: filter.groupId, status: filter.status),
+          ScheduleFilter(search: text.trim(), groupId: filter.groupId, status: filter.status),
         ),
       ),
-    );
-    final type = JitanSelectField<ScheduleKind?>(
-      label: context.t(AdminTextKeys.scheduleFilterType),
-      value: filter.kind,
-      options: [
-        JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterTypeAll)),
-        JitanSelectOption(value: ScheduleKind.workHours, label: context.t(AdminTextKeys.scheduleKindWorkHours)),
-        JitanSelectOption(value: ScheduleKind.breaks, label: context.t(AdminTextKeys.scheduleKindBreaks)),
-      ],
-      onChanged: (kind) =>
-          update(ScheduleFilter(search: filter.search, kind: kind, groupId: filter.groupId, status: filter.status)),
     );
     final group = JitanSelectField<int?>(
       label: context.t(AdminTextKeys.scheduleFilterGroup),
@@ -139,7 +138,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         for (final MapEntry(:key, :value) in groups.entries) JitanSelectOption(value: key, label: value),
       ],
       onChanged: (id) =>
-          update(ScheduleFilter(search: filter.search, kind: filter.kind, groupId: id, status: filter.status)),
+          update(ScheduleFilter(search: filter.search, groupId: id, status: filter.status)),
     );
     final status = JitanSelectField<ScheduleRowStatus?>(
       label: context.t(AdminTextKeys.scheduleFilterStatus),
@@ -153,17 +152,15 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         ),
       ],
       onChanged: (status) =>
-          update(ScheduleFilter(search: filter.search, kind: filter.kind, groupId: filter.groupId, status: status)),
+          update(ScheduleFilter(search: filter.search, groupId: filter.groupId, status: status)),
     );
-    // Wide enough: the fields share the full width (Figma's 420 : 150 : 150 :
-    // 250), so the last one ends exactly under "Add schedule". Narrower: they
-    // keep those widths and wrap.
-    const widths = (search: JitanDimensions.filterSearchWidth, type: 150.0, group: 150.0, status: 250.0);
+    // As Figma 1458:2: Search 420, Group 200, Status 220; on a narrow
+    // window they wrap, the search on its own line.
+    const widths = (search: JitanDimensions.filterSearchWidth, group: 200.0, status: 220.0);
     const gap = 16.0;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final total = widths.search + widths.type + widths.group + widths.status + 3 * gap;
-        if (constraints.maxWidth < total) {
+        if (constraints.maxWidth < widths.search + widths.group + widths.status + 2 * gap) {
           final half = (constraints.maxWidth - 14) / 2;
           return Wrap(
             spacing: 14,
@@ -171,22 +168,19 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
             crossAxisAlignment: WrapCrossAlignment.end,
             children: [
               SizedBox(width: constraints.maxWidth, child: search),
-              SizedBox(width: half, child: type),
               SizedBox(width: half, child: group),
-              SizedBox(width: constraints.maxWidth, child: status),
+              SizedBox(width: half, child: status),
             ],
           );
         }
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Expanded(flex: widths.search.round(), child: search),
+            SizedBox(width: widths.search, child: search),
             const SizedBox(width: gap),
-            Expanded(flex: widths.type.round(), child: type),
+            SizedBox(width: widths.group, child: group),
             const SizedBox(width: gap),
-            Expanded(flex: widths.group.round(), child: group),
-            const SizedBox(width: gap),
-            Expanded(flex: widths.status.round(), child: status),
+            SizedBox(width: widths.status, child: status),
           ],
         );
       },
@@ -209,7 +203,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
           message: context.t(AdminTextKeys.scheduleNoMatchMessage),
         ),
       ),
-      final rows => SchedulesTable(rows: rows, onManage: _manage),
+      final rows => SchedulesTable(rows: rows, onManage: _manage, onOpen: _openGroup),
     },
   };
 
