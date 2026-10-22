@@ -14,6 +14,9 @@ abstract final class TimeRegTypeNames {
   /// employee's schedule.
   static String rounded(RegistrationBoundary boundary) => '${_boundary(boundary)} – rounded';
 
+  /// "Start – corrected" / "Finish – corrected": HR's corrected time (D7).
+  static String corrected(RegistrationBoundary boundary) => '${_boundary(boundary)} – corrected';
+
   static String _boundary(RegistrationBoundary boundary) => switch (boundary) {
     RegistrationBoundary.start => 'Start',
     RegistrationBoundary.finish => 'Finish',

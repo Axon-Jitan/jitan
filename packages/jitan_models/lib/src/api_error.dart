@@ -60,6 +60,9 @@ abstract final class ApiErrorCode {
   /// checked against them: set the work hours first.
   static const scheduleEmployeesDiffer = 'schedule_employees_differ';
 
+  /// "Mark as non-work" on a day with no counted time (409, D31, GAP-16).
+  static const nothingToMarkNonWork = 'nothing_to_mark_non_work';
+
   static const unauthenticated = 'unauthenticated';
   static const forbidden = 'forbidden';
   static const notFound = 'not_found';

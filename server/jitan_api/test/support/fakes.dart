@@ -1,3 +1,4 @@
+import 'package:jitan_api/src/time_records/time_correction_repository.dart';
 import 'package:jitan_api/src/time_records/time_record_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_write_repository.dart';
 import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
@@ -722,20 +723,106 @@ class FakeTimeRegistrationWriteRepository implements TimeRegistrationWriteReposi
   }
 }
 
-/// Registrations for Time records, in memory.
+/// `tblTimeReg` for Time records, in memory: read, written and switched off
+/// through [writes] and [switches], like the real table.
 class FakeTimeRecordRepository implements TimeRecordRepository {
   List<RegistrationRow> rows = [];
 
   /// (userIds, from, to) of every read.
   final reads = <(List<int>, DateTime, DateTime)>[];
 
+  late final writes = FakeTimeRecordWrites(this);
+  late final switches = FakeTimeRecordSwitches(this);
+
   @override
-  Future<List<RegistrationRow>> registrationsOf(List<int> userIds, DateTime fromUtc, DateTime toUtc) async {
+  Future<List<RegistrationRow>> registrationsOf(
+    List<int> userIds,
+    DateTime fromUtc,
+    DateTime toUtc, {
+    SqlExecutor? executor,
+  }) async {
     reads.add((userIds, fromUtc, toUtc));
     return [
       for (final r in rows)
         if (userIds.contains(r.userId) && !r.at.isBefore(fromUtc) && r.at.isBefore(toUtc)) r,
     ];
   }
+
+  @override
+  Future<RegistrationRow?> registrationOf(SqlExecutor executor, int userId, int id) async =>
+      rows.where((r) => r.id == id && r.userId == userId).firstOrNull;
+
+  @override
+  Future<Map<int, DateTime>> firstRegistrations(List<int> userIds) async {
+    final first = <int, DateTime>{};
+    for (final r in rows) {
+      if (!userIds.contains(r.userId)) continue;
+      final current = first[r.userId];
+      if (current == null || r.at.isBefore(current)) first[r.userId] = r.at;
+    }
+    return first;
+  }
+
+  int get nextId => rows.isEmpty ? 1000 : rows.map((r) => r.id).reduce((a, b) => a > b ? a : b) + 1;
 }
 
+/// Inserts into [FakeTimeRecordRepository.rows] by type name.
+class FakeTimeRecordWrites implements TimeRegistrationWriteRepository {
+  FakeTimeRecordWrites(this._store);
+
+  final FakeTimeRecordRepository _store;
+  static const _types = {
+    'Start – actual – Manual': 4,
+    'Finish – actual – Manual': 7,
+    'Start – rounded': 8,
+    'Finish – rounded': 9,
+    'Start – corrected': 10,
+    'Finish – corrected': 11,
+  };
+  final locked = <int>[];
+
+  @override
+  Future<int?> typeId(SqlExecutor tx, String name) async => _types[name];
+
+  @override
+  Future<void> lockUser(SqlExecutor tx, int userId) async => locked.add(userId);
+
+  @override
+  Future<int> insert(
+    SqlExecutor tx, {
+    required int userId,
+    required int typeId,
+    required DateTime at,
+    required bool manualEntry,
+    String? comment,
+  }) async {
+    final id = _store.nextId;
+    final name = _types.entries.firstWhere((e) => e.value == typeId).key;
+    _store.rows = [
+      ..._store.rows,
+      (id: id, userId: userId, typeName: name, at: at, manualEntry: manualEntry, comment: comment, active: true),
+    ];
+    return id;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError('${invocation.memberName}');
+}
+
+/// Switches rows of [FakeTimeRecordRepository.rows] off.
+class FakeTimeRecordSwitches implements TimeCorrectionRepository {
+  FakeTimeRecordSwitches(this._store);
+
+  final FakeTimeRecordRepository _store;
+
+  @override
+  Future<void> switchOff(SqlExecutor tx, List<int> ids, DateTime now, {String? comment}) async {
+    _store.rows = [
+      for (final r in _store.rows)
+        if (ids.contains(r.id) && r.active)
+          (id: r.id, userId: r.userId, typeName: r.typeName, at: r.at, manualEntry: r.manualEntry, comment: r.comment ?? comment, active: false)
+        else
+          r,
+    ];
+  }
+}

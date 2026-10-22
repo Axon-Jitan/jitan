@@ -29,4 +29,45 @@ class TimeRecordsApi {
       throw ApiClientException.invalidResponse(200, 'Time records: ${e.message}');
     }
   }
+
+  /// HR corrects or adds [request.boundary] of [date] for [userId] (rounded
+  /// by the server). Returns the day as it is now.
+  Future<TimeRecordDay?> correct(int companyId, int userId, DateTime date, CorrectTimeRequest request) =>
+      _day('companies/$companyId/employees/$userId/time-records/${TimeRecordDay.dateText(date)}/correct', request.toJson());
+
+  /// What local [time] (`HH:mm`) on [date] would count as after rounding.
+  Future<String> previewRounding(int companyId, int userId, DateTime date, RegistrationBoundary boundary, String time) async {
+    final json = await _transport.getJson(
+      'companies/$companyId/employees/$userId/time-records/${TimeRecordDay.dateText(date)}/rounding',
+      query: {'boundary': boundary.wireName, 'time': time},
+    );
+    try {
+      return json.readString('rounded');
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Rounding preview: ${e.message}');
+    }
+  }
+
+  /// HR marks [date] as non-work; the day's registrations are switched off.
+  Future<TimeRecordDay?> markNonWork(int companyId, int userId, DateTime date, String reason) => _day(
+    'companies/$companyId/employees/$userId/time-records/${TimeRecordDay.dateText(date)}/non-work',
+    MarkNonWorkRequest(reason: reason).toJson(),
+  );
+
+  /// HR approves the employee's correction [registrationId]: it now counts.
+  Future<TimeRecordDay?> approve(int companyId, int userId, int registrationId) =>
+      _day('companies/$companyId/employees/$userId/time-registrations/$registrationId/approve', const {});
+
+  /// HR rejects the employee's correction [registrationId].
+  Future<TimeRecordDay?> reject(int companyId, int userId, int registrationId) =>
+      _day('companies/$companyId/employees/$userId/time-registrations/$registrationId/reject', const {});
+
+  Future<TimeRecordDay?> _day(String path, Map<String, Object?> body) async {
+    final json = await _transport.postJson(path, body);
+    try {
+      return TimeRecordList.fromJson(json).days.firstOrNull;
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Time record: ${e.message}');
+    }
+  }
 }

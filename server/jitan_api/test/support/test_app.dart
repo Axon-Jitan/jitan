@@ -35,6 +35,7 @@ import 'package:jitan_api/src/schedules/schedule_service.dart';
 import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
+import 'package:jitan_api/src/time_records/time_correction_service.dart';
 import 'package:jitan_api/src/time_records/time_record_routes.dart';
 import 'package:jitan_api/src/time_records/time_record_service.dart';
 import 'package:jitan_api/src/time_registration/registration_rounding.dart';
@@ -171,16 +172,7 @@ class TestApp {
         scheduleService,
         scheduleEditing,
       ),
-      timeRecords: TimeRecordRoutes(
-        Authorizer(permissions),
-        TimeRecordService(
-          records: timeRecords,
-          employees: employees,
-          companies: companies,
-          clock: WorkplaceClock('Europe/Brussels'),
-          now: () => now,
-        ),
-      ),
+      timeRecords: TimeRecordRoutes(Authorizer(permissions), timeRecordService, timeCorrections),
       me: MeRoutes(
         users,
         AccountService(
@@ -211,6 +203,28 @@ class TestApp {
   final schedules = FakeScheduleRepository();
   final timeRegistrationWrites = FakeTimeRegistrationWriteRepository();
   final timeRecords = FakeTimeRecordRepository();
+  late final timeRecordService = TimeRecordService(
+    records: timeRecords,
+    employees: employees,
+    companies: companies,
+    clock: WorkplaceClock('Europe/Brussels'),
+    schedules: schedules,
+    rounding: RegistrationRounding(schedules),
+    now: () => now,
+  );
+  late final timeCorrections = TimeCorrectionService(
+    transactions: transactions,
+    employees: employees,
+    companies: companies,
+    records: timeRecords,
+    days: timeRecordService,
+    rounding: RegistrationRounding(schedules),
+    clock: WorkplaceClock('Europe/Brussels'),
+    writes: timeRecords.writes,
+    switches: timeRecords.switches,
+    audit: audit,
+    now: () => now,
+  );
   final scheduleSync = FakeEmployeeScheduleSync();
   late final scheduleService = ScheduleService(schedules: schedules, groups: groups);
   final audit = FakeAuditLog();

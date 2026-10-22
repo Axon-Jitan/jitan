@@ -74,6 +74,13 @@ class TimeRegistrationWriteService {
       await _repository.lockUser(tx, userId);
 
       final existing = await _repository.findSame(tx, userId, actualType, at);
+      final pending = request.entry == RegistrationEntry.corrected;
+      if (existing != null && pending) {
+        return (
+          registered: RegisteredTime(boundary: request.boundary, actualId: existing, actualAt: at),
+          created: false,
+        );
+      }
       if (existing == null && request.entry == RegistrationEntry.firstDay && await _repository.hasAny(tx, userId)) {
         throw const ApiException.validation(
           RegisterTimeRequest.fieldEntry,
@@ -104,6 +111,25 @@ class TimeRegistrationWriteService {
         manualEntry: request.entry != RegistrationEntry.now,
         comment: reason,
       );
+      // D31: a correction waits for HR; it gets its rounded row when approved.
+      if (pending) {
+        await _audit.record(
+          tx,
+          AuditEvent(
+            type: AuditEventType.timeCorrectionRequested,
+            actorUserId: userId,
+            references: {
+              EventLogReference.user: userId,
+              EventLogReference.timeReg: actualId,
+              EventLogReference.timeRegType: actualType,
+            },
+          ),
+        );
+        return (
+          registered: RegisteredTime(boundary: request.boundary, actualId: actualId, actualAt: at),
+          created: true,
+        );
+      }
       // Calculated by Jitan, not entered by hand: not a manual entry.
       final roundedId = await _repository.insert(tx, userId: userId, typeId: roundedType, at: rounded, manualEntry: false);
       await _audit.record(

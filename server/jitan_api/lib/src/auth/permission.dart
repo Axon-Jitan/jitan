@@ -46,6 +46,10 @@ enum Permission {
   /// (company-scoped, through the employee's membership).
   viewTimeRegistrations,
 
+  /// Correct an employee's times, approve or reject their corrections, and
+  /// mark a day as non-work (company-scoped, through the membership).
+  correctTimeRegistrations,
+
   /// Add, rename, deactivate and reactivate employee groups (`tblGroup`).
   /// Groups are universal across companies, so not company-scoped.
   manageGroups,

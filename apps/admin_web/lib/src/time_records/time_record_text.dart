@@ -10,16 +10,22 @@ import 'time_records_controller.dart';
 abstract final class TimeRecordText {
   static String status(BuildContext context, TimeRecordStatus status) => context.t(switch (status) {
     TimeRecordStatus.complete => AdminTextKeys.timeRecordsStatusComplete,
+    TimeRecordStatus.corrected => AdminTextKeys.timeRecordsStatusCorrected,
+    TimeRecordStatus.pendingReview => AdminTextKeys.timeRecordsStatusPendingReview,
+    TimeRecordStatus.nonWork => AdminTextKeys.timeRecordsStatusNonWork,
+    TimeRecordStatus.noRegistration => AdminTextKeys.timeRecordsStatusNoRegistration,
     TimeRecordStatus.working => AdminTextKeys.timeRecordsStatusWorking,
     TimeRecordStatus.missingFinish => AdminTextKeys.timeRecordsStatusMissingFinish,
     TimeRecordStatus.missingStart => AdminTextKeys.timeRecordsStatusMissingStart,
   });
 
-  /// Complete in success green, problems in warning orange, Working neutral.
+  /// As Figma 160:2: Complete green, Corrected blue, problems and Pending
+  /// review orange; Working, Non-work and No registration neutral.
   static Color statusColor(TimeRecordStatus status) => switch (status) {
     TimeRecordStatus.complete => JitanColors.success,
-    TimeRecordStatus.working => JitanColors.inkMuted,
-    TimeRecordStatus.missingFinish || TimeRecordStatus.missingStart => JitanColors.warning,
+    TimeRecordStatus.corrected => JitanColors.info,
+    TimeRecordStatus.missingFinish || TimeRecordStatus.missingStart || TimeRecordStatus.pendingReview => JitanColors.warning,
+    TimeRecordStatus.working || TimeRecordStatus.nonWork || TimeRecordStatus.noRegistration => JitanColors.inkMuted,
   };
 
   static String method(BuildContext context, TimeRecordMethod method) => context.t(switch (method) {

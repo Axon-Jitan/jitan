@@ -15,6 +15,21 @@ enum AuditEventType {
   /// row is written in the same transaction).
   timeRegistered('time.registered'),
 
+  /// The employee corrected a time; it waits for HR (D31).
+  timeCorrectionRequested('time.correction.requested'),
+
+  /// HR approved the employee's correction: it now counts (D31).
+  timeCorrectionApproved('time.correction.approved'),
+
+  /// HR rejected the employee's correction: it is switched off (D31).
+  timeCorrectionRejected('time.correction.rejected'),
+
+  /// HR corrected or added a start or finish (D7, D8).
+  timeCorrected('time.corrected'),
+
+  /// HR marked a day as non-work: its registrations are switched off.
+  timeMarkedNonWork('time.marked_non_work'),
+
   /// HR/Admin generated a temporary onboarding QR (stored nowhere in MySQL;
   /// only the fact is logged).
   onboardingQrGenerated('employee.onboarding_qr.generated'),

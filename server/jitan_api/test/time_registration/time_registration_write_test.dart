@@ -47,9 +47,9 @@ TestApp _app({bool withSchedule = true}) {
 String _body({
   String boundary = 'start',
   String method = 'manual',
-  String entry = 'corrected',
+  String entry = 'now',
   String at = '2026-10-22T06:04:37Z',
-  Object? reason = 'Forgot my phone',
+  Object? reason,
 }) =>
     jsonEncode({'boundary': boundary, 'method': method, 'entry': entry, 'at': at, 'reason': reason});
 
@@ -75,8 +75,8 @@ void main() {
       9,
       4,
       DateTime.utc(2026, 10, 22, 6, 4, 37),
-      true,
-      'Forgot my phone',
+      false,
+      null,
     ));
     expect((rounded.typeId, rounded.at, rounded.manualEntry, rounded.comment), (8, DateTime.utc(2026, 10, 22, 6, 15), false, null));
     expect((registered.actualId, registered.roundedId), (actual.id, rounded.id));
@@ -137,6 +137,24 @@ void main() {
     expect(app.audit.events, hasLength(1));
   });
 
+  test('D31: a corrected time waits for HR: only its actual row, no rounded row, audited as a request', () async {
+    final app = _app();
+
+    final response = await app.post(_path, _body(entry: 'corrected', reason: 'Forgot my phone'));
+
+    expect(response.statusCode, 201);
+    final registered = RegisteredTime.fromJson(await jsonBody(response));
+    expect((registered.isPending, registered.roundedAt), (true, null));
+    final actual = app.timeRegistrationWrites.rows.single;
+    expect((actual.typeId, actual.manualEntry, actual.comment), (4, true, 'Forgot my phone'));
+    expect(app.audit.events.single.type, AuditEventType.timeCorrectionRequested);
+
+    final again = await app.post(_path, _body(entry: 'corrected', reason: 'Forgot my phone'));
+    expect(again.statusCode, 200, reason: 'a retry adds nothing');
+    expect(RegisteredTime.fromJson(await jsonBody(again)).actualId, actual.id);
+    expect(app.timeRegistrationWrites.rows, hasLength(1));
+  });
+
   test('D30: tapped when it happens needs no reason and is not a manual entry', () async {
     final app = _app();
 
@@ -162,7 +180,7 @@ void main() {
   test('D30: a corrected time needs a reason of at most 500 characters', () async {
     for (final reason in [null, '   ', 'x' * (RegisterTimeRequest.maxReasonLength + 1)]) {
       final app = _app();
-      final error = await _error(app, _body(reason: reason));
+      final error = await _error(app, _body(entry: 'corrected', reason: reason));
       expect(error, containsPair('status', 400), reason: '$reason');
       expect(error, containsPair('field', 'reason'));
       expect(app.timeRegistrationWrites.rows, isEmpty);

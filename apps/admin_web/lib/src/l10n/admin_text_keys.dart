@@ -217,6 +217,10 @@ abstract final class AdminTextKeys {
   static const timeRecordsStatusWorking = 'timeRecords.status.working';
   static const timeRecordsStatusMissingFinish = 'timeRecords.status.missingFinish';
   static const timeRecordsStatusMissingStart = 'timeRecords.status.missingStart';
+  static const timeRecordsStatusCorrected = 'timeRecords.status.corrected';
+  static const timeRecordsStatusPendingReview = 'timeRecords.status.pendingReview';
+  static const timeRecordsStatusNonWork = 'timeRecords.status.nonWork';
+  static const timeRecordsStatusNoRegistration = 'timeRecords.status.noRegistration';
   static const timeRecordsResetAll = 'timeRecords.resetAll';
   static const timeRecordsSection = 'timeRecords.section';
   static const timeRecordsColumnEmployee = 'timeRecords.column.employee';

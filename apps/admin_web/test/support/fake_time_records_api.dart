@@ -21,6 +21,48 @@ class FakeTimeRecordsApi implements TimeRecordsApi {
   void succeed(List<TimeRecordDay> days) => _pending.last.complete(days);
 
   void fail(ApiClientException failure) => _pending.last.completeError(failure);
+
+  /// Every write, e.g. `correct 7/1 2026-10-22 finish 16:22 Forgot`,
+  /// `approve 7/1 55`, `nonWork 7/1 2026-10-22 Holiday`.
+  final writes = <String>[];
+  final _pendingWrites = <Completer<TimeRecordDay?>>[];
+
+  Future<TimeRecordDay?> _write(String what) {
+    writes.add(what);
+    final completer = Completer<TimeRecordDay?>();
+    _pendingWrites.add(completer);
+    return completer.future;
+  }
+
+  void writeSucceeds([TimeRecordDay? day]) => _pendingWrites.last.complete(day);
+
+  void writeFails(ApiClientException failure) => _pendingWrites.last.completeError(failure);
+
+  @override
+  Future<TimeRecordDay?> correct(int companyId, int userId, DateTime date, CorrectTimeRequest request) =>
+      _write('correct $companyId/$userId ${TimeRecordDay.dateText(date)} ${request.boundary.wireName} ${request.time} ${request.reason}');
+
+  @override
+  Future<TimeRecordDay?> markNonWork(int companyId, int userId, DateTime date, String reason) =>
+      _write('nonWork $companyId/$userId ${TimeRecordDay.dateText(date)} $reason');
+
+  @override
+  Future<TimeRecordDay?> approve(int companyId, int userId, int registrationId) =>
+      _write('approve $companyId/$userId $registrationId');
+
+  @override
+  Future<TimeRecordDay?> reject(int companyId, int userId, int registrationId) =>
+      _write('reject $companyId/$userId $registrationId');
+
+  /// Answers every preview with [previewAnswer].
+  String previewAnswer = '08:15';
+  final previews = <String>[];
+
+  @override
+  Future<String> previewRounding(int companyId, int userId, DateTime date, RegistrationBoundary boundary, String time) async {
+    previews.add('${boundary.wireName} $time');
+    return previewAnswer;
+  }
 }
 
 TimeRecordTime recordTime(String actual, {String? rounded, TimeRecordMethod method = TimeRecordMethod.qr, bool byHand = false, String? reason}) =>

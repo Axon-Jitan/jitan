@@ -54,6 +54,7 @@ import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_routes.dart';
 import 'package:jitan_api/src/time_registration/time_registration_service.dart';
+import 'package:jitan_api/src/time_records/time_correction_service.dart';
 import 'package:jitan_api/src/time_records/time_record_repository.dart';
 import 'package:jitan_api/src/time_records/time_record_routes.dart';
 import 'package:jitan_api/src/time_records/time_record_service.dart';
@@ -184,6 +185,14 @@ Future<void> main() async {
     transactions: db,
   );
 
+  final timeRecordService = TimeRecordService(
+    records: TimeRecordRepository(db),
+    employees: EmployeeRepository(db),
+    companies: companyRepository,
+    clock: workplaceClock,
+    schedules: ScheduleRepository(db),
+    rounding: RegistrationRounding(ScheduleRepository(db)),
+  );
   final employeeService = EmployeeService(
     employees: EmployeeRepository(db),
     companies: companyRepository,
@@ -292,10 +301,14 @@ Future<void> main() async {
     ),
     timeRecords: TimeRecordRoutes(
       authorizer,
-      TimeRecordService(
-        records: TimeRecordRepository(db),
+      timeRecordService,
+      TimeCorrectionService(
+        transactions: db,
         employees: EmployeeRepository(db),
         companies: companyRepository,
+        records: TimeRecordRepository(db),
+        days: timeRecordService,
+        rounding: RegistrationRounding(ScheduleRepository(db)),
         clock: workplaceClock,
       ),
     ),

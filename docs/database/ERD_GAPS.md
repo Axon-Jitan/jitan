@@ -358,6 +358,21 @@ else changes.
 
 # Clarifications
 
+## GAP-16: Absence and leave days
+**Status:** `OPEN` · ERD GAP — requires clarification with IT (2026-10-22)
+
+1. **Requirement:** Time records lists a scheduled working day on which an employee
+   registered nothing ("No registration"). HR must be able to say why (holiday, sick, day off)
+   so the day stops looking like a problem, as "Mark as non-work" does for a day with
+   registrations (Figma `273:166`).
+2. **Considered:** `tblTimeReg` (every row is a start or finish at a moment; a day without one
+   has no row to carry the mark), `tblTimeRegType`, `tblSchedule` / `tblUserSchedule` (the
+   plan, not what happened), `tblEventLog` (an audit trail, not a record of absences).
+3. **Missing:** a place for an absence or leave day per employee: the employee, the date (or
+   range), the kind (holiday, sick, …), the reason, who recorded it.
+4. **Until then:** such a day shows a neutral **No registration**; HR can add start and finish
+   times if the employee did work. Nothing else is stored.
+
 ## CLARIFY-01: Password and PIN hashing · `OPEN` · IT CLARIFICATION, blocks production auth only
 
 **Implementation:** Argon2id (RFC 9106) via `PasswordHasher`, stored as the standard PHC

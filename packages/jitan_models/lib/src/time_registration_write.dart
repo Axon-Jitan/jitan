@@ -111,37 +111,41 @@ class RegisterTimeRequest {
       };
 }
 
-/// Response of `POST /me/time-registrations`: the two rows stored (D4), the
+/// Response of `POST /me/time-registrations`: the rows stored (D4), the
 /// actual time (never changed) and the time rounded with the employee's
-/// schedule, both UTC.
+/// schedule, both UTC. A corrected time waits for HR (D31): it has no
+/// rounded row yet ([isPending]).
 class RegisteredTime {
   const RegisteredTime({
     required this.boundary,
     required this.actualId,
     required this.actualAt,
-    required this.roundedId,
-    required this.roundedAt,
+    this.roundedId,
+    this.roundedAt,
   });
 
   factory RegisteredTime.fromJson(Map<String, Object?> json) => RegisteredTime(
         boundary: RegistrationBoundary.fromWire(json.readString('boundary')),
         actualId: json.readInt('actualId'),
         actualAt: DateTime.parse(json.readString('actualAt')).toUtc(),
-        roundedId: json.readInt('roundedId'),
-        roundedAt: DateTime.parse(json.readString('roundedAt')).toUtc(),
+        roundedId: json.readOptionalInt('roundedId'),
+        roundedAt: json['roundedAt'] == null ? null : DateTime.parse(json.readString('roundedAt')).toUtc(),
       );
 
   final RegistrationBoundary boundary;
   final int actualId;
   final DateTime actualAt;
-  final int roundedId;
-  final DateTime roundedAt;
+  final int? roundedId;
+  final DateTime? roundedAt;
+
+  /// A correction waiting for HR's approval: it does not count yet.
+  bool get isPending => roundedId == null;
 
   Map<String, Object?> toJson() => {
         'boundary': boundary.wireName,
         'actualId': actualId,
         'actualAt': actualAt.toUtc().toIso8601String(),
         'roundedId': roundedId,
-        'roundedAt': roundedAt.toUtc().toIso8601String(),
+        'roundedAt': roundedAt?.toUtc().toIso8601String(),
       };
 }

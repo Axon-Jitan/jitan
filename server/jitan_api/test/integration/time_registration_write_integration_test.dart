@@ -2,6 +2,10 @@
 library;
 
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/time_records/time_record_service.dart';
+import 'package:jitan_api/src/time_records/time_correction_service.dart';
+import 'package:jitan_api/src/employees/employee_repository.dart';
+import 'package:jitan_api/src/companies/company_repository.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
 import 'package:jitan_api/src/time_records/time_record_repository.dart';
 import 'package:jitan_api/src/time_registration/registration_rounding.dart';
@@ -94,9 +98,8 @@ void main() {
     final request = RegisterTimeRequest(
       boundary: RegistrationBoundary.start,
       method: TimeRegistrationMethod.manual,
-      entry: RegistrationEntry.corrected,
+      entry: RegistrationEntry.now,
       at: DateTime.utc(2026, 10, 22, 6, 4, 37),
-      reason: "[DEV-TEST] O'Brien's phone was off",
     );
 
     final (:registered, :created) = await service.register(userId, request);
@@ -119,7 +122,7 @@ void main() {
           r.readOptionalInt('addressID'),
         ),
     ], [
-      ('Start – actual – Manual', '2026-10-22 06:04:37.000', true, "[DEV-TEST] O'Brien's phone was off", null),
+      ('Start – actual – Manual', '2026-10-22 06:04:37.000', false, null, null),
       ('Start – rounded', '2026-10-22 06:15:00.000', false, null, null),
     ]);
     final audited = await db.query(
@@ -145,8 +148,80 @@ void main() {
       reason: 'outside the period',
     );
     expect(read.map((r) => (r.typeName, r.at, r.manualEntry)), [
-      ('Start – actual – Manual', DateTime.utc(2026, 10, 22, 6, 4, 37), true),
+      ('Start – actual – Manual', DateTime.utc(2026, 10, 22, 6, 4, 37), false),
       ('Start – rounded', DateTime.utc(2026, 10, 22, 6, 15), false),
     ]);
+  });
+
+  test('HR corrects the start: corrected + rounded rows; the old rounded row switched off, kept; non-work switches all off', () async {
+    final companyId = (await db.execute(
+      'INSERT INTO tblCompany (companyName, companyActive, companyMFD) VALUES (:n, 1, 0)',
+      {'n': '[DEV-TEST] $stamp Registrations'},
+    ))
+        .lastInsertId;
+    await db.execute(
+      'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)',
+      {'u': userId, 'c': companyId},
+    );
+    final rounding = RegistrationRounding(ScheduleRepository(db));
+    final clock = WorkplaceClock('Europe/Brussels');
+    final days = TimeRecordService(
+      records: TimeRecordRepository(db),
+      employees: EmployeeRepository(db),
+      companies: CompanyRepository(db),
+      clock: clock,
+      schedules: ScheduleRepository(db),
+      rounding: rounding,
+      now: () => DateTime.utc(2026, 10, 23, 12),
+    );
+    final corrections = TimeCorrectionService(
+      transactions: db,
+      employees: EmployeeRepository(db),
+      companies: CompanyRepository(db),
+      records: TimeRecordRepository(db),
+      days: days,
+      rounding: rounding,
+      clock: clock,
+      now: () => DateTime.utc(2026, 10, 23, 12),
+    );
+
+    final day = await corrections.correct(
+      userId,
+      companyId,
+      userId,
+      '2026-10-22',
+      CorrectTimeRequest(boundary: RegistrationBoundary.start, time: '07:58', reason: "[DEV-TEST] It's the gate log"),
+    );
+
+    expect((day!.status, day.start!.actualLocal, day.start!.roundedLocal, day.start!.originalLocal), (
+      TimeRecordStatus.missingFinish,
+      '07:58',
+      '08:00',
+      '08:04',
+    ));
+    final rows = await db.query(
+      'SELECT t.timeRegTypeName, tr.timeRegActive, tr.timeRegWhenModified FROM tblTimeReg tr '
+      'JOIN tblTimeRegType t ON t.timeRegTypeID = tr.timeRegTypeID WHERE tr.userID = :u ORDER BY tr.timeRegID',
+      {'u': userId},
+    );
+    expect([for (final r in rows) (r.readString('timeRegTypeName'), r.readBool('timeRegActive'))], [
+      ('Start – actual – Manual', true),
+      ('Start – rounded', false),
+      ('Start – corrected', true),
+      ('Start – rounded', true),
+    ]);
+    expect(rows[1].readOptionalDateTime('timeRegWhenModified'), isNotNull);
+
+    final nonWork = await corrections.markNonWork(userId, companyId, userId, '2026-10-22', '[DEV-TEST] Holiday');
+    expect((nonWork!.status, nonWork.nonWorkReason), (TimeRecordStatus.nonWork, '[DEV-TEST] Holiday'));
+    expect(await db.query('SELECT 1 FROM tblTimeReg WHERE userID = :u AND timeRegActive = 1', {'u': userId}), isEmpty);
+
+    await db.execute('DELETE FROM tblUserCompany WHERE userID = :u AND companyID = :c', {'u': userId, 'c': companyId});
+    final logs = await db.query('SELECT eventLogID FROM tblEventLog WHERE companyID = :c', {'c': companyId});
+    for (final log in logs) {
+      await db.execute('DELETE FROM tblEventLogEventType WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
+      await db.execute('DELETE FROM tblEventLog WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
+    }
+    await db.execute('DELETE FROM tblCompany WHERE companyID = :c', {'c': companyId});
   });
 }

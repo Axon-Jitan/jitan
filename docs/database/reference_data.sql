@@ -121,11 +121,14 @@ SELECT e.name FROM (
   UNION ALL SELECT 'schedule.deactivated'
   UNION ALL SELECT 'employee.removed'
   UNION ALL SELECT 'time.registered'
+  UNION ALL SELECT 'time.correction.requested'
+  UNION ALL SELECT 'time.correction.approved'
+  UNION ALL SELECT 'time.correction.rejected'
+  UNION ALL SELECT 'time.corrected'
+  UNION ALL SELECT 'time.marked_non_work'
 ) e WHERE NOT EXISTS (SELECT 1 FROM tblEventType x WHERE x.eventTypeName = e.name);
 
 -- ---------- Not proposed yet -----------------------------------------
 -- tblAppModules, tblFunction, tblAppModulesCredGroup: what each role may
 -- open and do (CLARIFY-10/11).
 -- tblLocationType: not used by any decided feature yet.
--- Event types for time corrections: added together with the code that
--- writes them.

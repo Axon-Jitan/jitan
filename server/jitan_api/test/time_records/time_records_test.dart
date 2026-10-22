@@ -1,4 +1,5 @@
 import 'package:jitan_api/src/auth/permission.dart';
+import 'package:jitan_api/src/time_records/time_record_repository.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
@@ -20,13 +21,14 @@ final _kevin = _employee(2, 'Kevin', 'De Vos', 'KDV');
 final _pca = _employee(3, 'Pia', 'Claes', 'PCL');
 
 var _id = 0;
-({int id, int userId, String typeName, DateTime at, bool manualEntry, String? comment}) _row(
+RegistrationRow _row(
   int userId,
   String type,
   DateTime at, {
   bool manual = false,
   String? comment,
-}) => (id: ++_id, userId: userId, typeName: type, at: at, manualEntry: manual, comment: comment);
+  bool active = true,
+}) => (id: ++_id, userId: userId, typeName: type, at: at, manualEntry: manual, comment: comment, active: active);
 
 /// "Today" is Thursday 22 October 2026, 15:00 in Brussels (UTC+2).
 TestApp _app({bool allow = true}) {
@@ -52,7 +54,7 @@ void main() {
     app.timeRecords.rows = [
       _row(1, 'Start – actual – QR', DateTime.utc(2026, 10, 21, 6, 4)),
       _row(1, 'Start – rounded', DateTime.utc(2026, 10, 21, 6, 15)),
-      _row(1, 'Finish – actual – Manual', DateTime.utc(2026, 10, 21, 14, 41), manual: true, comment: 'Forgot to tap'),
+      _row(1, 'Finish – actual – Manual', DateTime.utc(2026, 10, 21, 14, 41)),
       _row(1, 'Finish – rounded', DateTime.utc(2026, 10, 21, 14, 30)),
     ];
 
@@ -76,9 +78,13 @@ void main() {
       DateTime.utc(2026, 10, 21, 14, 41),
       DateTime.utc(2026, 10, 21, 14, 30),
       TimeRecordMethod.manual,
-      true,
-      'Forgot to tap',
+      false,
+      null,
     ));
+    expect([for (final e in day.events) (e.atLocal, e.kind, e.method)], [
+      ('08:04', TimeRecordEventKind.registered, TimeRecordMethod.qr),
+      ('16:41', TimeRecordEventKind.registered, TimeRecordMethod.manual),
+    ], reason: 'the timeline: every start and finish of the day');
   });
 
   test('only a start: working today, missing finish on an earlier day; only a finish: missing start', () async {
