@@ -7,9 +7,9 @@ import '../l10n/admin_text_keys.dart';
 import 'current_company.dart';
 
 /// "Current company" (Figma `HR / Employees — Company switcher open`
-/// 1401:2, `No company selected` 1401:121): the company HR works in, chosen
-/// from every non-deleted company. Nothing is chosen for HR (§20: never
-/// silently pick the first company).
+/// 1401:2, `No company selected` 1401:121): a filter of the Employees list
+/// (product owner, 2026-10-21), one non-deleted company or "All companies".
+/// Nothing is chosen for HR (§20: never silently pick the first company).
 class CompanySwitcher extends StatefulWidget {
   const CompanySwitcher({super.key, required this.companiesApi});
 
@@ -43,11 +43,14 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
   Widget build(BuildContext context) {
     final current = CurrentCompanyScope.of(context);
     final companies = _companies ?? const <CompanySummary>[];
-    return JitanSelectField<int>(
+    return JitanSelectField<int?>(
       label: context.t(AdminTextKeys.employeeFilterCompany),
-      hintText: context.t(_failed ? AdminTextKeys.employeeFilterCompanyFailed : AdminTextKeys.employeeFilterCompanyHint),
+      hintText: context.t(_failed ? AdminTextKeys.employeeFilterCompanyFailed : AdminTextKeys.employeeFilterCompanyAll),
       value: current.company?.id,
-      options: [for (final company in companies) JitanSelectOption(value: company.id, label: company.name)],
+      options: [
+        if (_companies != null) JitanSelectOption(value: null, label: context.t(AdminTextKeys.employeeFilterCompanyAll)),
+        for (final company in companies) JitanSelectOption(value: company.id, label: company.name),
+      ],
       onChanged: _failed
           ? (_) => _load()
           : _companies == null

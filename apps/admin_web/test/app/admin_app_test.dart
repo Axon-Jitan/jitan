@@ -77,7 +77,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Current company'), findsOneWidget);
-    expect(find.text('Select a company'), findsOneWidget, reason: 'the filter stays empty');
+    expect(find.text('All companies'), findsOneWidget, reason: 'the filter shows every company');
     expect(services.employees.calls, [(-1, '')]);
   });
 

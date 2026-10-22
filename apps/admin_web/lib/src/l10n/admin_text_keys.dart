@@ -164,6 +164,7 @@ abstract final class AdminTextKeys {
   static const employeeFilterStatusAll = 'employee.filter.status.all';
   static const employeeFilterCompany = 'employee.filter.company';
   static const employeeFilterCompanyHint = 'employee.filter.company.hint';
+  static const employeeFilterCompanyAll = 'employee.filter.company.all';
   static const employeeFilterCompanyFailed = 'employee.filter.company.failed';
   static const employeeSection = 'employee.section';
   static const employeeNoCompany = 'employee.noCompany';

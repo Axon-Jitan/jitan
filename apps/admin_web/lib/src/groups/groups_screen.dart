@@ -117,7 +117,12 @@ class _GroupsScreenState extends State<GroupsScreen> {
   );
 
   Widget _toolbar(BuildContext context) {
-    final search = JitanSearchField(outlined: true, hintText: context.t(AdminTextKeys.groupsSearch), onChanged: _controller.updateSearch);
+    final search = JitanSearchField(
+      clearTooltip: context.t(CommonTextKeys.searchClear),
+      outlined: true,
+      hintText: context.t(AdminTextKeys.groupsSearch),
+      onChanged: _controller.updateSearch,
+    );
     final status = JitanSelectField<GroupStatusFilter?>(
       value: _controller.status,
       options: [
@@ -129,7 +134,10 @@ class _GroupsScreenState extends State<GroupsScreen> {
     );
     return LayoutBuilder(
       builder: (context, constraints) => constraints.maxWidth < JitanDimensions.phoneBreakpoint
-          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [search, const SizedBox(height: 14), status])
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [search, const SizedBox(height: 14), status],
+            )
           : Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [

@@ -16,6 +16,7 @@ abstract final class CommonTextKeys {
 
   /// The label above a list page's search field.
   static const searchLabel = 'common.search.label';
+  static const searchClear = 'common.search.clear';
   static const valueUnavailable = 'common.value.unavailable';
 
   static const statusActive = 'common.status.active';

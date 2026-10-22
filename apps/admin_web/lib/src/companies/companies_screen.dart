@@ -50,6 +50,7 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
             child: JitanFieldLabel(
               label: context.t(CommonTextKeys.searchLabel),
               child: JitanSearchField(
+                clearTooltip: context.t(CommonTextKeys.searchClear),
                 outlined: true,
                 hintText: context.t(AdminTextKeys.companySearch),
                 onChanged: _controller.updateSearch,

@@ -56,9 +56,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     if (saved == null || !mounted) return;
     await _controller.load();
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(context.t(AdminTextKeys.scheduleSaved, args: {'group': saved.group.name}))),
-    );
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(context.t(AdminTextKeys.scheduleSaved, args: {'group': saved.group.name}))));
   }
 
   /// "···": Manage schedules (Figma 1359:2), then Edit or Remove.
@@ -120,6 +120,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     final search = JitanFieldLabel(
       label: context.t(CommonTextKeys.searchLabel),
       child: JitanSearchField(
+        clearTooltip: context.t(CommonTextKeys.searchClear),
         outlined: true,
         hintText: context.t(AdminTextKeys.scheduleSearch),
         onChanged: (text) => update(
@@ -135,9 +136,8 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         JitanSelectOption(value: ScheduleKind.workHours, label: context.t(AdminTextKeys.scheduleKindWorkHours)),
         JitanSelectOption(value: ScheduleKind.breaks, label: context.t(AdminTextKeys.scheduleKindBreaks)),
       ],
-      onChanged: (kind) => update(
-        ScheduleFilter(search: filter.search, kind: kind, groupId: filter.groupId, status: filter.status),
-      ),
+      onChanged: (kind) =>
+          update(ScheduleFilter(search: filter.search, kind: kind, groupId: filter.groupId, status: filter.status)),
     );
     final group = JitanSelectField<int?>(
       label: context.t(AdminTextKeys.scheduleFilterGroup),
@@ -146,9 +146,8 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterGroupAll)),
         for (final MapEntry(:key, :value) in groups.entries) JitanSelectOption(value: key, label: value),
       ],
-      onChanged: (id) => update(
-        ScheduleFilter(search: filter.search, kind: filter.kind, groupId: id, status: filter.status),
-      ),
+      onChanged: (id) =>
+          update(ScheduleFilter(search: filter.search, kind: filter.kind, groupId: id, status: filter.status)),
     );
     final status = JitanSelectField<ScheduleRowStatus?>(
       label: context.t(AdminTextKeys.scheduleFilterStatus),
@@ -161,9 +160,8 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
           label: context.t(AdminTextKeys.scheduleStatusDiffer),
         ),
       ],
-      onChanged: (status) => update(
-        ScheduleFilter(search: filter.search, kind: filter.kind, groupId: filter.groupId, status: status),
-      ),
+      onChanged: (status) =>
+          update(ScheduleFilter(search: filter.search, kind: filter.kind, groupId: filter.groupId, status: status)),
     );
     // Wide enough: the fields share the full width (Figma's 420 : 150 : 150 :
     // 250), so the last one ends exactly under "Add schedule". Narrower: they

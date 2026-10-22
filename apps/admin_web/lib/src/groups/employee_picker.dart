@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
@@ -113,6 +114,7 @@ class _EmployeePickerState extends State<EmployeePicker> {
     final field = Listener(
       onPointerDown: (_) => _openList(),
       child: JitanSearchField(
+        clearTooltip: context.t(CommonTextKeys.searchClear),
         outlined: true,
         hintText: context.t(widget.hintKey),
         onChanged: (text) {
@@ -124,27 +126,31 @@ class _EmployeePickerState extends State<EmployeePicker> {
     if (!widget.dropdown) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [field, const SizedBox(height: 12), SizedBox(height: 280, child: _list(context))],
+        children: [
+          field,
+          const SizedBox(height: 12),
+          SizedBox(height: 280, child: _list(context)),
+        ],
       );
     }
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          field,
-          if (_open) ...[
-            const SizedBox(height: 6),
-            Container(
-              height: 214,
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: JitanColors.surface,
-                borderRadius: BorderRadius.circular(JitanDimensions.inputRadius),
-                border: Border.all(color: JitanColors.inputBorder),
-              ),
-              child: _list(context),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        field,
+        if (_open) ...[
+          const SizedBox(height: 6),
+          Container(
+            height: 214,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: JitanColors.surface,
+              borderRadius: BorderRadius.circular(JitanDimensions.inputRadius),
+              border: Border.all(color: JitanColors.inputBorder),
             ),
-          ],
+            child: _list(context),
+          ),
         ],
+      ],
     );
   }
 

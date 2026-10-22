@@ -15,6 +15,7 @@ final _almeco = company(7, 'Almeco');
 final _pca = company(8, 'PCA');
 
 late FakeGroupsApi _groups;
+late FakeCompaniesApi _companies;
 
 Future<(FakeEmployeesApi, CurrentCompanyController)> _pump(WidgetTester tester, {CompanySummary? selected}) async {
   tester.view.physicalSize = const Size(1440, 1024);
@@ -23,6 +24,7 @@ Future<(FakeEmployeesApi, CurrentCompanyController)> _pump(WidgetTester tester, 
 
   final api = FakeEmployeesApi();
   _groups = FakeGroupsApi();
+  _companies = FakeCompaniesApi();
   final current = CurrentCompanyController()..select(selected);
   addTearDown(current.dispose);
   await tester.pumpWidget(
@@ -33,7 +35,7 @@ Future<(FakeEmployeesApi, CurrentCompanyController)> _pump(WidgetTester tester, 
         child: MaterialApp(
           theme: JitanTheme.light(),
           home: Scaffold(
-            body: EmployeesScreen(api: api, groupsApi: _groups, companiesApi: FakeCompaniesApi(), schedulesApi: FakeSchedulesApi()),
+            body: EmployeesScreen(api: api, groupsApi: _groups, companiesApi: _companies, schedulesApi: FakeSchedulesApi()),
           ),
         ),
       ),
@@ -212,6 +214,40 @@ void main() {
     await tester.pump();
 
     expect(tester.getRect(find.text('Manage your workforce and employee onboarding')).top, lessThan(title.top));
+  });
+
+  testWidgets('Current company can go back to All companies', (tester) async {
+    final (api, current) = await _pump(tester, selected: _almeco);
+    _companies.succeed([_almeco, _pca]);
+    api.succeed(const []);
+    await tester.pump();
+    expect(api.calls, [(7, '')]);
+
+    await tester.tap(find.text('Almeco'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All companies').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(current.company, isNull);
+    expect(api.calls.last, (-1, ''), reason: 'every company again');
+  });
+
+  testWidgets('the search × clears the search and reloads the full list', (tester) async {
+    final (api, _) = await _pump(tester, selected: _almeco);
+    api.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW')]);
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), 'dis');
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(api.calls.last, (7, 'dis'));
+    api.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW')]);
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Clear search'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(api.calls.last, (7, ''));
+    expect(find.byTooltip('Clear search'), findsNothing, reason: 'only while there is text');
   });
 
   testWidgets('the row "⋯": Remove employee asks first, then hides them once the server confirms', (tester) async {

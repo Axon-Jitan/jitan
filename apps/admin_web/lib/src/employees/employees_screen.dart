@@ -51,6 +51,13 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
 
   /// The list has scrolled under the fixed title and filters.
   var _listScrolled = false;
+
+  /// The search text, owned here so it survives any rebuild of the toolbar.
+  final _searchText = TextEditingController();
+
+  /// Keeps the title and filters (their open menus, focus and text) when
+  /// the page switches between a fixed header and one scroll (window height).
+  final _topKey = GlobalKey();
   String _search = '';
   EmployeeStatusFilter? _status;
 
@@ -70,6 +77,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   @override
   void dispose() {
     _controller?.dispose();
+    _searchText.dispose();
     super.dispose();
   }
 
@@ -164,6 +172,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final controller = _controller;
     final padding = JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width);
     final top = Column(
+      key: _topKey,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         JitanPageHeader(
@@ -205,8 +214,10 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         // place and only the list scrolls, its heading row pinned. On a phone
         // or a short window they would leave too little room for the list,
         // so there the whole page scrolls.
-        final fixedTop =
-            constraints.maxWidth >= JitanDimensions.phoneBreakpoint && constraints.maxHeight >= _fixedTopMinHeight;
+        // Decided from the window, which stays the same while a field gains
+        // or loses focus (the page's own height may briefly change then).
+        final window = MediaQuery.sizeOf(context);
+        final fixedTop = constraints.maxWidth >= JitanDimensions.phoneBreakpoint && window.height >= _fixedTopMinHeight;
         if (!fixedTop) {
           return CustomScrollView(
             slivers: [
@@ -262,6 +273,8 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final search = JitanFieldLabel(
       label: context.t(CommonTextKeys.searchLabel),
       child: JitanSearchField(
+        controller: _searchText,
+        clearTooltip: context.t(CommonTextKeys.searchClear),
         outlined: true,
         hintText: context.t(AdminTextKeys.employeeSearch),
         onChanged: (text) {
