@@ -293,6 +293,28 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## TR-05: Employee app Today (phase 3, slice 4)
+Status: `DONE` (2026-10-22)
+
+The employee registers start and finish on the phone (Figma `1444:3`, `1436:128`,
+`1436:2`/`43`/`84`, `1436:172`, `1436:213`, first day `22:2`, greeting `1452:2`):
+- `GET /me/today` (`MyDay`): today's schedule (start, finish, break), today's day exactly as
+  HR's Time records builds it, `firstDay` (never registered), and the registered time of a
+  finished day: rounded finish − rounded start − break (D4, D13), none while a correction
+  waits for HR (D31). No permission: acts only on the signed-in user.
+- **Today**: personal greeting by the phone's time of day; **Start work** / **Finish work**
+  (entry `now`); "Forgot to start?" / "Finished earlier?" open the correction screen
+  (reason required, "Use scheduled time", waits for HR, shown as "Waiting for HR approval" /
+  "WAITING FOR HR"); the day complete with the server's total. A time still to come is
+  refused on the phone and by the server; a failed save shows the red note and Try again.
+- **First day**: right after onboarding (no registration yet) the app asks "When did you
+  arrive?", set from the schedule, with no reason (D30).
+
+Different from Figma, on purpose: the navigation bar shows Home and Profile only (Period
+and QR have no screens yet, rule §31); 22:2's "BRANCH MOUSCRON" chip is left out (no
+workplace before geofencing). Not built: offline queueing (PRODUCT_CLARIFICATIONS, offline),
+QR and geofence registration.
+
 ## TR-04: HR corrections (phase 3, slice 3)
 Status: `DONE` (2026-10-22)
 
@@ -335,7 +357,7 @@ Corrections, Pending review, Corrected, Non-work, No registration and the detail
 followed in TR-04.
 
 ## TR-02: Register start and finish (phase 3, slice 1)
-Status: server `DONE` (2026-10-22) · employee app screens wait for Figma (see below)
+Status: `DONE` (2026-10-22): server, and the employee app Today screens (TR-05)
 
 `POST /me/time-registrations` (`RegisterTimeRequest`). Per TIME_ENGINE_ANALYSIS D4–D10 and
 D30: two `tblTimeReg` rows in one transaction, the **actual** time ("Start – actual – Manual";
@@ -364,8 +386,7 @@ Open, for the next slices:
   first name from `/me`, no name = "Good morning."; tap **Start work**, link to correct), `1436:128` working (tap **Finish work**, link "Finished earlier?"), `1436:2` /
   `1436:43` / `1436:84` correct start (reason empty / filled / couldn't save), `1436:172`
   correct finish, `1436:213` day complete (no locations/projects card). The first day is
-  Figma's `22:2` (no reason); the start-time picker (`376:2`…) is reused. Built once the
-  product owner approves them.
+  Figma's `22:2` (no reason); the start-time picker (`376:2`…) is reused. Built in TR-05.
 
 ## TR-01: Read-only time-registration foundation
 Status: `DONE` (2026-10-08) · the time engine itself waits for GAP-01, GAP-02, CLARIFY-02

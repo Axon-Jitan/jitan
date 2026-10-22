@@ -55,6 +55,7 @@ void main() {
           authApi: AuthApi(transport),
           languagesApi: languages,
           meApi: MeApi(transport),
+          timeRegistrationsApi: TimeRegistrationsApi(transport),
           translationService: TranslationService(languages),
           session: session,
           settings: DeviceSettings(store),

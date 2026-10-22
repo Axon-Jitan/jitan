@@ -56,9 +56,10 @@ void main() {
     await tapText(tester, 'Continue');
   }
 
-  testWidgets('scan → confirm → method → permissions → language → password → Ready → Home, no sign-in', (
+  testWidgets('scan → confirm → method → permissions → language → password → Ready → first day, no sign-in', (
     tester,
   ) async {
+    h.server.firstDay = true;
     await onboardUpToPassword(tester);
     expect(find.text('Set this later'), findsNothing, reason: 'the password is mandatory');
 
@@ -67,8 +68,21 @@ void main() {
     expect(h.store.values['session.token'], h.server.issuedTokens.single);
 
     await tapText(tester, 'Start Jitan');
-    expect(find.text('Hello, Disan'), findsOneWidget);
-    expect(find.byType(TextField), findsNothing, reason: 'no second sign-in screen');
+    expect(h.server.requestsTo('/auth/sign-in'), isEmpty, reason: 'no second sign-in');
+
+    // Onboarded at HR mid-morning: "When did you arrive?", from the schedule,
+    // with no reason (D30 first day).
+    expect(find.text('When did you arrive?'), findsOneWidget);
+    expect(find.text('Set your start time for today.'), findsOneWidget);
+    expect(find.text('REASON'), findsNothing);
+    expect(find.text('Scheduled start'), findsOneWidget);
+    final fields = tester.widgetList<TextField>(find.byType(TextField)).map((f) => f.controller!.text);
+    expect(fields, ['08', '00'], reason: 'set from the schedule');
+    await tapText(tester, 'Confirm start time');
+
+    expect(h.server.registrations.single, containsPair('entry', 'first_day'));
+    expect(h.server.registrations.single['at'], DateTime(2026, 10, 22, 8).toUtc().toIso8601String());
+    expect(find.text('You’re working.'), findsOneWidget);
   });
 
   testWidgets('a mismatched confirmation shows the Figma message and sends nothing', (tester) async {
@@ -212,7 +226,7 @@ void main() {
 
       await startApp(tester);
 
-      expect(find.text('Hello, Disan'), findsOneWidget);
+      expect(find.text('Good morning, Disan.'), findsOneWidget);
       expect(h.server.requestsTo('/me').single.headers['authorization'], 'Bearer stored-token');
     });
 

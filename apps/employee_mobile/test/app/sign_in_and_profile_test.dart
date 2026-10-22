@@ -56,7 +56,7 @@ void main() {
 
       await signIn(tester);
 
-      expect(find.text('Hello, Disan'), findsOneWidget);
+      expect(find.text('Good morning, Disan.'), findsOneWidget);
       final token = h.store.values['session.token'];
       expect(h.server.issuedTokens, contains(token));
       final body = jsonDecode(h.server.requestsTo('/auth/sign-in').single.body) as Map;
@@ -76,7 +76,7 @@ void main() {
 
       await tapText(tester, 'Try again');
       await signIn(tester);
-      expect(find.text('Hello, Disan'), findsOneWidget);
+      expect(find.text('Good morning, Disan.'), findsOneWidget);
     });
 
     testWidgets('inactive or MFD account: "Account unavailable"', (tester) async {
@@ -99,7 +99,7 @@ void main() {
       expect(h.server.password, _password);
 
       await tapText(tester, 'Try again');
-      expect(find.text('Hello, Disan'), findsOneWidget);
+      expect(find.text('Good morning, Disan.'), findsOneWidget);
     });
 
     testWidgets('a first-time employee goes back to onboarding from sign-in', (tester) async {
@@ -159,7 +159,7 @@ void main() {
     Future<void> openPasswordScreen(WidgetTester tester) async {
       await startApp(tester);
       await signIn(tester);
-      await tap(tester, find.byTooltip('Profile'));
+      await tap(tester, find.text('Profile'));
       expect(find.text('SBW'), findsOneWidget);
       await tapText(tester, 'Password & web login');
       await tap(tester, find.widgetWithText(FilledButton, 'Change password'));
@@ -214,7 +214,7 @@ void main() {
     testWidgets('sign out asks first, then opens sign-in; the session is gone', (tester) async {
       await startApp(tester);
       await signIn(tester);
-      await tap(tester, find.byTooltip('Profile'));
+      await tap(tester, find.text('Profile'));
 
       await tap(tester, find.widgetWithText(TextButton, 'Sign out'));
       expect(find.text('Sign out of Jitan?'), findsOneWidget);
@@ -291,7 +291,7 @@ void main() {
       expect(find.text('Your Terminal QR stays the same'), findsOneWidget);
       await setNewPassword(tester, 'my new password');
 
-      expect(find.text('Hello, Disan'), findsOneWidget, reason: 'straight to Home');
+      expect(find.text('Good morning, Disan.'), findsOneWidget, reason: 'straight to Home');
       expect(h.server.password, 'my new password');
       final newToken = h.store.values['session.token'];
       expect(newToken, isNot(oldToken));
@@ -307,10 +307,10 @@ void main() {
       await openRecovery(tester);
       await tap(tester, find.byKey(fakeCameraKey));
       await setNewPassword(tester, 'my new password');
-      expect(find.text('Hello, Disan'), findsOneWidget);
+      expect(find.text('Good morning, Disan.'), findsOneWidget);
 
       // Sign out, then try the same QR again.
-      await tap(tester, find.byTooltip('Profile'));
+      await tap(tester, find.text('Profile'));
       await tap(tester, find.widgetWithText(TextButton, 'Sign out'));
       await tap(tester, find.widgetWithText(FilledButton, 'Sign out'));
       await tap(tester, find.widgetWithText(FilledButton, 'Scan QR to recover account'));
@@ -364,7 +364,7 @@ void main() {
       expect(find.text('Can’t reach Jitan'), findsOneWidget);
 
       await tapText(tester, 'Try again');
-      expect(find.text('Hello, Disan'), findsOneWidget);
+      expect(find.text('Good morning, Disan.'), findsOneWidget);
       expect(h.server.password, 'my new password');
     });
   });

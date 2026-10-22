@@ -34,6 +34,7 @@ void main() {
         authApi: AuthApi(transport),
         languagesApi: languagesApi,
         meApi: MeApi(transport),
+        timeRegistrationsApi: TimeRegistrationsApi(transport),
         translationService: TranslationService(languagesApi),
         session: session,
         settings: const DeviceSettings(store),

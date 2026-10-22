@@ -14,11 +14,13 @@ class EmployeeServices {
     required this.authApi,
     required this.languagesApi,
     required this.meApi,
+    required this.timeRegistrationsApi,
     required this.translationService,
     required this.session,
     required this.settings,
     required this.permissions,
     this.qrScannerView = cameraQrScannerView,
+    this.clock = DateTime.now,
   });
 
   final OnboardingApi onboardingApi;
@@ -26,10 +28,14 @@ class EmployeeServices {
   final AuthApi authApi;
   final LanguagesApi languagesApi;
   final MeApi meApi;
+  final TimeRegistrationsApi timeRegistrationsApi;
   final TranslationService translationService;
   final SessionManager session;
   final DeviceSettings settings;
   final PermissionsGateway permissions;
   /// Embedded camera of "Scan your onboarding QR" and "Recover account".
   final QrScannerView qrScannerView;
+
+  /// The phone's clock (the greeting, registrations made now).
+  final DateTime Function() clock;
 }

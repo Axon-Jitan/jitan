@@ -87,6 +87,8 @@ class FakeJitanServer {
       '/auth/sign-in' => _signIn(request),
       '/me/password' => _changePassword(request),
       '/me/language' => _json({'languageCode': null}),
+      '/me/today' => _today(request),
+      '/me/time-registrations' => _register(request),
       _ => _error(404, 'not_found'),
     };
   });
@@ -221,6 +223,108 @@ class FakeJitanServer {
     return _session();
   }
 
+  // Today (GET /me/today, POST /me/time-registrations), with the server's
+  // rules: a corrected time waits for HR (D31); a finished day's registered
+  // time is finish − start − break (D13). No rounding in this schedule.
+
+  /// The employee never registered: "When did you arrive?" (first day).
+  bool firstDay = false;
+  String? scheduledStart = '08:00';
+  String? scheduledFinish = '16:30';
+  int? breakMinutes = 30;
+
+  /// The registration bodies received, in order.
+  final registrations = <Map<String, Object?>>[];
+
+  /// The next registration is refused with this error code (e.g.
+  /// `validation_failed`).
+  String? refuseNextRegistration;
+
+  http.Response _register(http.Request request) {
+    if (!_authorized(request)) return _error(401, 'unauthenticated');
+    if (refuseNextRegistration case final code?) {
+      refuseNextRegistration = null;
+      return _error(400, code);
+    }
+    final body = (jsonDecode(request.body) as Map).cast<String, Object?>();
+    registrations.add(body);
+    firstDay = false;
+    final corrected = body['entry'] == 'corrected';
+    return http.Response(
+      jsonEncode({
+        'boundary': body['boundary'],
+        'actualId': registrations.length * 2,
+        'actualAt': body['at'],
+        'roundedId': corrected ? null : registrations.length * 2 + 1,
+        'roundedAt': corrected ? null : body['at'],
+      }),
+      201,
+    );
+  }
+
+  http.Response _today(http.Request request) {
+    if (!_authorized(request)) return _error(401, 'unauthenticated');
+    String local(DateTime at) =>
+        '${at.toLocal().hour.toString().padLeft(2, '0')}:${at.toLocal().minute.toString().padLeft(2, '0')}';
+    final times = <String, Map<String, Object?>>{};
+    final pending = <Map<String, Object?>>[];
+    for (final (i, r) in registrations.indexed) {
+      final at = DateTime.parse(r['at']! as String);
+      if (r['entry'] == 'corrected') {
+        pending.add({
+          'id': i + 1,
+          'boundary': r['boundary'],
+          'requested': at.toIso8601String(),
+          'requestedLocal': local(at),
+          'reason': r['reason'],
+        });
+      } else {
+        times[r['boundary']! as String] = {
+          'actualId': i + 1,
+          'actual': at.toIso8601String(),
+          'rounded': at.toIso8601String(),
+          'method': 'manual',
+          'enteredByHand': false,
+          'actualLocal': local(at),
+          'roundedLocal': local(at),
+        };
+      }
+    }
+    final start = times['start'];
+    final finish = times['finish'];
+    final status = pending.isNotEmpty
+        ? 'pending_review'
+        : start != null && finish != null
+        ? 'complete'
+        : start != null
+        ? 'working'
+        : 'missing_start';
+    int? minutes;
+    if (start != null && finish != null && pending.isEmpty) {
+      minutes = DateTime.parse(finish['rounded']! as String).difference(DateTime.parse(start['rounded']! as String)).inMinutes -
+          (breakMinutes ?? 0);
+    }
+    return _json({
+      'date': '2026-10-22',
+      'firstDay': firstDay,
+      'scheduledStart': scheduledStart,
+      'scheduledFinish': scheduledFinish,
+      'breakMinutes': breakMinutes,
+      'day': registrations.isEmpty
+          ? null
+          : {
+              'employeeId': 1,
+              'employeeCode': '',
+              'date': '2026-10-22',
+              'status': status,
+              'start': start,
+              'finish': finish,
+              'pending': pending,
+            },
+      'registeredMinutes': minutes,
+    });
+  }
+
   static http.Response _json(Object body) =>
       http.Response(jsonEncode(body), 200, headers: {'content-type': 'application/json; charset=utf-8'});
 
@@ -289,6 +393,9 @@ class TestHarness {
       authApi: AuthApi(transport),
       languagesApi: languagesApi,
       meApi: MeApi(transport),
+      timeRegistrationsApi: TimeRegistrationsApi(transport),
+      // 09:00 on Thursday 22 October 2026 unless a test says otherwise.
+      clock: clock ?? () => DateTime(2026, 10, 22, 9),
       translationService: TranslationService(languagesApi),
       session: session,
       settings: DeviceSettings(store),

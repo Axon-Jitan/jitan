@@ -176,6 +176,8 @@ class _EmployeeAppState extends State<EmployeeApp> {
           _Phase.signedIn => HomeScreen(
             key: ValueKey(_account),
             meApi: _services.meApi,
+            timeRegistrationsApi: _services.timeRegistrationsApi,
+            clock: _services.clock,
             initialAccount: _account,
             onSessionEnded: _signOut,
             profileFor: _profileFor,
