@@ -27,15 +27,15 @@ class SchedulesTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = TranslationScope.of(context);
-    return JitanDataTable(
-      maxHeight: JitanDimensions.tableMaxHeight,
+    return JitanSliverTable(
       columns: [
         JitanTableColumn(label: t.t(AdminTextKeys.scheduleColumnName), flex: _flexName),
         JitanTableColumn(label: t.t(AdminTextKeys.scheduleColumnDaysHours), flex: _flexDaysHours),
         JitanTableColumn(label: t.t(AdminTextKeys.scheduleColumnStatus), flex: _flexStatus),
         JitanTableColumn(label: t.t(AdminTextKeys.scheduleColumnActions), flex: _flexActions, align: JitanColumnAlign.end),
       ],
-      rows: [for (final row in rows) _cells(t, row)],
+      rowCount: rows.length,
+      cells: (i) => _cells(t, rows[i]),
     );
   }
 

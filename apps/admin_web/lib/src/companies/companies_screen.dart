@@ -33,9 +33,8 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
-    child: Column(
+  Widget build(BuildContext context) => JitanListPage(
+    top: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         JitanPageHeader(
@@ -59,19 +58,9 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
           ),
         ),
         const SizedBox(height: JitanDimensions.toolbarToTable),
-        JitanSurfaceCard(
-          radius: JitanDimensions.tableCardRadius,
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 150),
-            alignment: Alignment.topCenter,
-            child: ListenableBuilder(
-              listenable: _controller,
-              builder: (context, _) => _content(context, _controller.state),
-            ),
-          ),
-        ),
       ],
     ),
+    list: [ListenableBuilder(listenable: _controller, builder: (context, _) => _content(context, _controller.state))],
   );
 
   Widget _content(BuildContext context, CompaniesState state) => switch (state) {
@@ -102,5 +91,5 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
     );
   }
 
-  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableStateHeight, child: child);
+  static Widget _centered(Widget child) => JitanTableStateSliver(child: child);
 }

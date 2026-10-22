@@ -78,9 +78,8 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
-    child: ListenableBuilder(
+  Widget build(BuildContext context) => JitanListPage(
+    top: ListenableBuilder(
       listenable: _controller,
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,17 +99,10 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
           const SizedBox(height: JitanDimensions.toolbarToTable),
           Text(context.t(AdminTextKeys.scheduleListHeading), style: JitanTextStyles.stateTitle.copyWith(fontSize: 17)),
           const SizedBox(height: JitanDimensions.toolbarToTable),
-          JitanSurfaceCard(
-            radius: JitanDimensions.tableCardRadius,
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 150),
-              alignment: Alignment.topCenter,
-              child: _content(context),
-            ),
-          ),
         ],
       ),
     ),
+    list: [ListenableBuilder(listenable: _controller, builder: (context, _) => _content(context))],
   );
 
   Widget _toolbar(BuildContext context) {
@@ -231,5 +223,5 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     );
   }
 
-  static Widget _centered(Widget child) => SizedBox(height: JitanDimensions.tableStateHeight, child: child);
+  static Widget _centered(Widget child) => JitanTableStateSliver(child: child);
 }

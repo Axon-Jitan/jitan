@@ -23,10 +23,8 @@ import '../schedules/schedule_summary_text.dart';
 /// A row click opens nothing in V1 (product owner, 2026-10-21: details from
 /// a row come in V2; BACKLOG EMP-DETAILS-V2).
 ///
-/// A sliver: the page scrolls once, the heading row stays in view while its
-/// rows pass (pinned), and rows are built only as they come into view. Below
-/// [_minWidth] it is one card that scrolls sideways instead. Under it, the
-/// results footer (Figma `1399:10`: "4 employees displayed", "Showing 4 of
+/// A [JitanSliverTable] (pinned heading, rows built as they come into view),
+/// with the results footer (Figma `1399:10`: "4 employees displayed", "Showing 4 of
 /// 124").
 class EmployeesTable extends StatelessWidget {
   const EmployeesTable({super.key, required this.employees, required this.total, required this.onManage});
@@ -49,53 +47,14 @@ class EmployeesTable extends StatelessWidget {
   static const _flexStatus = 106;
   static const _flexActions = 80;
 
-  /// Narrower than this, the columns would squash: the table scrolls sideways.
-  static const _minWidth = 760.0;
-  static const _radius = Radius.circular(JitanDimensions.tableCardRadius);
-
   @override
   Widget build(BuildContext context) {
     final t = TranslationScope.of(context);
-    final columns = _columns(t);
-    final footer = _footer(context);
-    return SliverLayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.crossAxisExtent < _minWidth) {
-          return SliverToBoxAdapter(
-            child: JitanSurfaceCard(
-              radius: JitanDimensions.tableCardRadius,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  JitanDataTable(columns: columns, rows: [for (final employee in employees) _cells(t, employee)]),
-                  footer,
-                ],
-              ),
-            ),
-          );
-        }
-        return SliverMainAxisGroup(
-          slivers: [
-            SliverPersistentHeader(pinned: true, delegate: _PinnedHeading(columns)),
-            SliverList.builder(
-              itemCount: employees.length,
-              itemBuilder: (context, i) => ColoredBox(
-                color: i.isOdd ? JitanColors.tableStripe : JitanColors.surface,
-                child: JitanTableRow(columns: columns, cells: _cells(t, employees[i])),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  color: JitanColors.surface,
-                  borderRadius: BorderRadius.only(bottomLeft: _radius, bottomRight: _radius),
-                ),
-                child: footer,
-              ),
-            ),
-          ],
-        );
-      },
+    return JitanSliverTable(
+      columns: _columns(t),
+      rowCount: employees.length,
+      cells: (i) => _cells(t, employees[i]),
+      footer: _footer(context),
     );
   }
 
@@ -179,38 +138,4 @@ class EmployeesTable extends StatelessWidget {
     ].whereType<String>().map((part) => part.trim()).where((part) => part.isNotEmpty);
     return parts.isEmpty ? null : parts.join(' ');
   }
-}
-
-/// The table's heading row as a pinned sliver header, drawn as the top of
-/// the table card.
-class _PinnedHeading extends SliverPersistentHeaderDelegate {
-  const _PinnedHeading(this.columns);
-
-  final List<JitanTableColumn> columns;
-
-  @override
-  double get minExtent => JitanDimensions.tableHeaderHeight;
-
-  @override
-  double get maxExtent => JitanDimensions.tableHeaderHeight;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => DecoratedBox(
-    // A soft shadow while rows pass beneath it.
-    decoration: BoxDecoration(
-      borderRadius: const BorderRadius.only(topLeft: EmployeesTable._radius, topRight: EmployeesTable._radius),
-      boxShadow: [
-        if (overlapsContent || shrinkOffset > 0)
-          BoxShadow(color: JitanColors.ink.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 3)),
-      ],
-    ),
-    child: ClipRRect(
-      borderRadius: const BorderRadius.only(topLeft: EmployeesTable._radius, topRight: EmployeesTable._radius),
-      child: JitanTableHeaderRow(columns: columns),
-    ),
-  );
-
-  @override
-  bool shouldRebuild(_PinnedHeading old) =>
-      old.columns.map((c) => c.label).join() != columns.map((c) => c.label).join();
 }

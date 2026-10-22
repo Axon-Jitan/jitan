@@ -10,12 +10,7 @@ import 'group_schedule_text.dart';
 /// 1340:2): name, employees, schedule, status and "⋯". A row click opens
 /// nothing in V1 (product owner, 2026-10-21: details from a row come in V2).
 class GroupsTable extends StatelessWidget {
-  const GroupsTable({
-    super.key,
-    required this.groups,
-    required this.schedules,
-    required this.onManage,
-  });
+  const GroupsTable({super.key, required this.groups, required this.schedules, required this.onManage});
 
   final List<GroupOverview> groups;
   final Map<int, GroupSchedule> schedules;
@@ -32,28 +27,32 @@ class GroupsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = TranslationScope.of(context);
-    return JitanDataTable(
-      maxHeight: JitanDimensions.tableMaxHeight,
+    return JitanSliverTable(
       columns: [
         JitanTableColumn(label: t.t(AdminTextKeys.groupsColumnName), flex: _flexName),
         JitanTableColumn(label: t.t(AdminTextKeys.groupsColumnEmployees), flex: _flexEmployees),
         JitanTableColumn(label: t.t(AdminTextKeys.groupsColumnSchedule), flex: _flexSchedule),
         JitanTableColumn(label: t.t(AdminTextKeys.groupsColumnStatus), flex: _flexStatus),
-        JitanTableColumn(label: t.t(AdminTextKeys.groupsColumnActions), flex: _flexActions, align: JitanColumnAlign.end),
+        JitanTableColumn(
+          label: t.t(AdminTextKeys.groupsColumnActions),
+          flex: _flexActions,
+          align: JitanColumnAlign.end,
+        ),
       ],
-      rows: [
-        for (final group in groups)
-          [
-            Text(group.name, style: JitanTextStyles.tableCellStrong),
-            Text('${group.employeeCount}', style: JitanTextStyles.tableCell),
-            Text(groupScheduleText(t, schedules[group.id]), style: JitanTextStyles.tableCell),
-            JitanStatusLabel(
-              label: t.t(group.isActive ? CommonTextKeys.statusActive : CommonTextKeys.statusInactive),
-              isPositive: group.isActive,
-            ),
-            JitanRowActionsButton(tooltip: t.t(AdminTextKeys.groupsActionsMenu), onPressed: () => onManage(group)),
-          ],
-      ],
+      rowCount: groups.length,
+      cells: (i) {
+        final group = groups[i];
+        return [
+          Text(group.name, style: JitanTextStyles.tableCellStrong),
+          Text('${group.employeeCount}', style: JitanTextStyles.tableCell),
+          Text(groupScheduleText(t, schedules[group.id]), style: JitanTextStyles.tableCell),
+          JitanStatusLabel(
+            label: t.t(group.isActive ? CommonTextKeys.statusActive : CommonTextKeys.statusInactive),
+            isPositive: group.isActive,
+          ),
+          JitanRowActionsButton(tooltip: t.t(AdminTextKeys.groupsActionsMenu), onPressed: () => onManage(group)),
+        ];
+      },
     );
   }
 }

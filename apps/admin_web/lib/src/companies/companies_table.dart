@@ -6,7 +6,8 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../common/relative_date_text.dart';
 import '../l10n/admin_text_keys.dart';
 
-/// The companies table from Figma `Admin / Companies` (`153:61`).
+/// The companies table from Figma `Admin / Companies` (`153:61`), as a
+/// [JitanSliverTable] (pinned heading, rows built as they come into view).
 ///
 /// "Locations" has no data source yet (ERD GAP-03: no company → address
 /// relationship) and shows an explicit placeholder rather than a number.
@@ -29,8 +30,7 @@ class CompaniesTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = TranslationScope.of(context);
-    return JitanDataTable(
-      maxHeight: JitanDimensions.tableMaxHeight,
+    return JitanSliverTable(
       columns: [
         JitanTableColumn(label: t.t(AdminTextKeys.companyColumnName), flex: _flexCompany),
         JitanTableColumn(label: t.t(AdminTextKeys.companyColumnEmployees), flex: _flexEmployees),
@@ -38,7 +38,8 @@ class CompaniesTable extends StatelessWidget {
         JitanTableColumn(label: t.t(AdminTextKeys.companyColumnStatus), flex: _flexStatus),
         JitanTableColumn(label: t.t(AdminTextKeys.companyColumnLastUpdated), flex: _flexLastUpdated),
       ],
-      rows: [for (final company in companies) _cells(t, company)],
+      rowCount: companies.length,
+      cells: (i) => _cells(t, companies[i]),
     );
   }
 

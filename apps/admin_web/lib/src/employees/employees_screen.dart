@@ -49,15 +49,9 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   CompanySummary? _company;
   var _started = false;
 
-  /// The list has scrolled under the fixed title and filters.
-  var _listScrolled = false;
-
   /// The search text, owned here so it survives any rebuild of the toolbar.
   final _searchText = TextEditingController();
 
-  /// Keeps the title and filters (their open menus, focus and text) when
-  /// the page switches between a fixed header and one scroll (window height).
-  final _topKey = GlobalKey();
   String _search = '';
   EmployeeStatusFilter? _status;
 
@@ -170,9 +164,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   Widget build(BuildContext context) {
     final company = _company;
     final controller = _controller;
-    final padding = JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width);
     final top = Column(
-      key: _topKey,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         JitanPageHeader(
@@ -205,70 +197,14 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         const SizedBox(height: 16),
       ],
     );
-    final list = [
-      if (controller != null)
-        ListenableBuilder(listenable: controller, builder: (context, _) => _content(context, company, controller)),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // As in Linear, Notion or Stripe: title, actions and filters stay in
-        // place and only the list scrolls, its heading row pinned. On a phone
-        // or a short window they would leave too little room for the list,
-        // so there the whole page scrolls.
-        // Decided from the window, which stays the same while a field gains
-        // or loses focus (the page's own height may briefly change then).
-        final window = MediaQuery.sizeOf(context);
-        final fixedTop = constraints.maxWidth >= JitanDimensions.phoneBreakpoint && window.height >= _fixedTopMinHeight;
-        if (!fixedTop) {
-          return CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: padding,
-                sliver: SliverMainAxisGroup(
-                  slivers: [
-                    SliverToBoxAdapter(child: top),
-                    ...list,
-                  ],
-                ),
-              ),
-            ],
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(padding: padding.copyWith(bottom: 0), child: top),
-            // A soft line once rows pass under the fixed part.
-            AnimatedOpacity(
-              opacity: _listScrolled ? 1 : 0,
-              duration: const Duration(milliseconds: 150),
-              child: Container(height: 1, color: JitanColors.inputBorder),
-            ),
-            Expanded(
-              child: NotificationListener<ScrollUpdateNotification>(
-                onNotification: (notification) {
-                  final scrolled = notification.metrics.pixels > 0;
-                  if (notification.depth == 0 && scrolled != _listScrolled) setState(() => _listScrolled = scrolled);
-                  return false;
-                },
-                child: CustomScrollView(
-                  slivers: [
-                    SliverPadding(
-                      padding: padding.copyWith(top: 0),
-                      sliver: SliverMainAxisGroup(slivers: list),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+    return JitanListPage(
+      top: top,
+      list: [
+        if (controller != null)
+          ListenableBuilder(listenable: controller, builder: (context, _) => _content(context, company, controller)),
+      ],
     );
   }
-
-  /// Below this window height the title and filters scroll with the list.
-  static const _fixedTopMinHeight = 640.0;
 
   Widget _toolbar(BuildContext context) {
     final search = JitanFieldLabel(
@@ -355,11 +291,5 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     );
   }
 
-  /// A loading, empty or error state in the table card.
-  static Widget _centered(Widget child) => SliverToBoxAdapter(
-    child: JitanSurfaceCard(
-      radius: JitanDimensions.tableCardRadius,
-      child: SizedBox(height: JitanDimensions.tableStateHeight, child: child),
-    ),
-  );
+  static Widget _centered(Widget child) => JitanTableStateSliver(child: child);
 }

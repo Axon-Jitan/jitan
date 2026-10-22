@@ -90,9 +90,8 @@ class _GroupsScreenState extends State<GroupsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: JitanDimensions.pagePadding(MediaQuery.sizeOf(context).width),
-    child: ListenableBuilder(
+  Widget build(BuildContext context) => JitanListPage(
+    top: ListenableBuilder(
       listenable: _controller,
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,10 +109,10 @@ class _GroupsScreenState extends State<GroupsScreen> {
           const SizedBox(height: JitanDimensions.headerToToolbar),
           _toolbar(context),
           const SizedBox(height: JitanDimensions.toolbarToTable),
-          _content(context),
         ],
       ),
     ),
+    list: [ListenableBuilder(listenable: _controller, builder: (context, _) => _content(context))],
   );
 
   Widget _toolbar(BuildContext context) {
@@ -157,12 +156,11 @@ class _GroupsScreenState extends State<GroupsScreen> {
     GroupsLoaded(groups: []) => _state(GroupStateText(context.t(AdminTextKeys.groupsEmptyMessage))),
     GroupsLoaded(:final schedules) => switch (_controller.visibleGroups) {
       [] => _state(GroupStateText(context.t(AdminTextKeys.groupsNoMatchMessage))),
-      final groups => JitanSurfaceCard(
-        radius: JitanDimensions.tableCardRadius,
-        child: GroupsTable(groups: groups, schedules: schedules, onManage: _manage),
-      ),
+      final groups => GroupsTable(groups: groups, schedules: schedules, onManage: _manage),
     },
   };
 
-  static Widget _state(Widget child) => Padding(padding: const EdgeInsets.only(top: 20), child: child);
+  static Widget _state(Widget child) => SliverToBoxAdapter(
+    child: Padding(padding: const EdgeInsets.only(top: 20), child: child),
+  );
 }
