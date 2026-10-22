@@ -35,6 +35,7 @@ void main() {
   late int ruleId;
   late int scheduleRuleId;
   late TimeRegistrationWriteService service;
+  int? companyIdForCleanup;
 
   Future<int> id(String sql, Map<String, Object?> params, String column) async =>
       (await db.query(sql, params)).single.readInt(column);
@@ -81,7 +82,10 @@ void main() {
   });
 
   tearDownAll(() async {
-    final logs = await db.query('SELECT eventLogID FROM tblEventLog WHERE userIDTarget = :u OR userIDInit = :u', {'u': userId});
+    final logs = await db.query(
+      'SELECT eventLogID FROM tblEventLog WHERE userIDTarget = :u OR userIDInit = :u OR companyID = :c',
+      {'u': userId, 'c': companyIdForCleanup ?? 0},
+    );
     for (final log in logs) {
       await db.execute('DELETE FROM tblEventLogEventType WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
       await db.execute('DELETE FROM tblEventLog WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
@@ -91,6 +95,10 @@ void main() {
     await db.execute('DELETE FROM tblRoundingRule WHERE roundingRuleID = :id', {'id': ruleId});
     await db.execute('DELETE FROM tblUserSchedule WHERE userScheduleID = :id', {'id': userScheduleId});
     await db.execute('DELETE FROM tblSchedule WHERE scheduleID = :id', {'id': scheduleId});
+    await db.execute('DELETE FROM tblUserCompany WHERE userID = :u', {'u': userId});
+    if (companyIdForCleanup case final c?) {
+      await db.execute('DELETE FROM tblCompany WHERE companyID = :c', {'c': c});
+    }
     await db.execute('DELETE FROM tblUser WHERE userID = :u', {'u': userId});
     await db.close();
   });
@@ -186,7 +194,7 @@ void main() {
   });
 
   test('HR corrects the start: corrected + rounded rows; the old rounded row switched off, kept; non-work switches all off', () async {
-    final companyId = (await db.execute(
+    final companyId = companyIdForCleanup = (await db.execute(
       'INSERT INTO tblCompany (companyName, companyActive, companyMFD) VALUES (:n, 1, 0)',
       {'n': '[DEV-TEST] $stamp Registrations'},
     ))
