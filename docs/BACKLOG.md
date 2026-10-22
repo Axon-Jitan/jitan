@@ -315,9 +315,11 @@ Open, for the next slices:
   (D22) matters once activities can be switched (IT's projects update).
 - **TR-01's read side predates D9**: it reads and returns timestamps as wall clock without a
   zone. It must switch to UTC (and `from`/`to` as moments) with the Time records slice.
-- **Figma (employee app):** Today has no finish action, no reason field for a manual time
-  (D6), and its Working card needs projects (IT) and geofencing (phase 4). A designer brief
-  is needed before the app screens are built.
+- **Figma (employee app):** the manual-registration Today frames were added on 2026-10-22
+  (page 01 — Employee App): `1436:2` start (empty reason, Confirm disabled), `1436:43` start
+  ready, `1436:84` couldn't save, `1436:128` working (registered by hand, Finish work),
+  `1436:172` finish, `1436:213` day complete (no locations/projects card). The existing
+  start-time picker (`376:2`…) is reused. Built once the product owner approves them.
 
 ## TR-01: Read-only time-registration foundation
 Status: `DONE` (2026-10-08) · the time engine itself waits for GAP-01, GAP-02, CLARIFY-02
