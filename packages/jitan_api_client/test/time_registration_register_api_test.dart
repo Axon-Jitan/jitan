@@ -99,4 +99,31 @@ void main() {
       '08:04',
     ));
   });
+
+  test('period GETs the days of the signed-in employee in a range', () async {
+    late http.Request sent;
+    final api = TimeRegistrationsApi(ApiTransport(
+      baseUri: Uri.parse('http://api.test/'),
+      httpClient: MockClient((request) async {
+        sent = request;
+        return http.Response(
+          jsonEncode({
+            'from': '2026-10-19',
+            'to': '2026-10-20',
+            'days': [
+              {'date': '2026-10-19', 'plannedMinutes': 480, 'registeredMinutes': 450},
+              {'date': '2026-10-20', 'plannedMinutes': 480},
+            ],
+          }),
+          200,
+        );
+      }),
+    ));
+
+    final period = await api.period(from: DateTime.utc(2026, 10, 19), to: DateTime.utc(2026, 10, 20));
+
+    expect(sent.url.path, '/me/period');
+    expect(sent.url.queryParameters, {'from': '2026-10-19', 'to': '2026-10-20'});
+    expect((period.days.length, period.plannedMinutes, period.registeredMinutes), (2, 960, 450));
+  });
 }

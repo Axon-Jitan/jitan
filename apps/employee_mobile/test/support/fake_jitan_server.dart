@@ -88,6 +88,7 @@ class FakeJitanServer {
       '/me/password' => _changePassword(request),
       '/me/language' => _json({'languageCode': null}),
       '/me/today' => _today(request),
+      '/me/period' => _period(request),
       '/me/time-registrations' => _register(request),
       _ => _error(404, 'not_found'),
     };
@@ -264,6 +265,40 @@ class FakeJitanServer {
     );
   }
 
+  /// Days other than today (22 October 2026), by `yyyy-MM-dd`: the day's
+  /// JSON and its registered minutes.
+  final pastDays = <String, (Map<String, Object?>, int?)>{};
+
+  /// Planned Monday to Friday from the schedule; today from [_today];
+  /// other days from [pastDays].
+  http.Response _period(http.Request request) {
+    if (!_authorized(request)) return _error(401, 'unauthenticated');
+    final from = DateTime.parse(request.url.queryParameters['from']!);
+    final to = DateTime.parse(request.url.queryParameters['to']!);
+    int? planned;
+    if (scheduledStart != null && scheduledFinish != null) {
+      int m(String t) => int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3));
+      planned = m(scheduledFinish!) - m(scheduledStart!) - (breakMinutes ?? 0);
+    }
+    final today = jsonDecode(_today(request).body) as Map<String, Object?>;
+    String text(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    return _json({
+      'from': text(from),
+      'to': text(to),
+      'days': [
+        for (var d = from; !d.isAfter(to); d = DateTime(d.year, d.month, d.day + 1))
+          {
+            'date': text(d),
+            'scheduledStart': d.weekday <= 5 ? scheduledStart : null,
+            'scheduledFinish': d.weekday <= 5 ? scheduledFinish : null,
+            'plannedMinutes': d.weekday <= 5 ? planned : null,
+            if (text(d) == '2026-10-22') ...{'day': today['day'], 'registeredMinutes': today['registeredMinutes']}
+            else if (pastDays[text(d)] case (final day, final minutes)) ...{'day': day, 'registeredMinutes': minutes},
+          },
+      ],
+    });
+  }
+
   http.Response _today(http.Request request) {
     if (!_authorized(request)) return _error(401, 'unauthenticated');
     String local(DateTime at) =>
@@ -324,6 +359,17 @@ class FakeJitanServer {
               'start': start,
               'finish': finish,
               'pending': pending,
+              'events': [
+                for (final r in registrations)
+                  {
+                    'atLocal': local(DateTime.parse(r['at']! as String)),
+                    'boundary': r['boundary'],
+                    'kind': r['entry'] == 'corrected' ? 'correction_requested' : 'registered',
+                    'active': true,
+                    'method': 'manual',
+                    'reason': r['reason'],
+                  },
+              ],
             },
       'registeredMinutes': minutes,
     });

@@ -30,9 +30,11 @@ import 'time_record_service.dart';
 /// The writes need `correctTimeRegistrations` in company `c` and answer with
 /// the day as it is now (`{"days": [day]}`, or no day when nothing is left).
 ///
-/// - `GET /me/today`: the signed-in employee's own day (`MyDay`). Acts only
-///   on the signed-in user, so it needs no permission. Consumer: the
-///   Employee App "Today" screens.
+/// - `GET /me/today`: the signed-in employee's own day (`MyDay`), and
+///   `GET /me/period?from=yyyy-MM-dd&to=yyyy-MM-dd` their days with planned
+///   and registered time (`MyPeriod`). Both act only on the signed-in user,
+///   so they need no permission. Consumers: the Employee App "Today" and
+///   "Period" screens.
 class TimeRecordRoutes {
   const TimeRecordRoutes(this._authorizer, this._records, this._corrections, this._myDay);
 
@@ -46,6 +48,10 @@ class TimeRecordRoutes {
   Router get router => Router()
     ..get('/time-records', _list)
     ..get('/me/today', (Request r) async => jsonResponse((await _myDay.today(r.identity.userId)).toJson()))
+    ..get('/me/period', (Request r) async {
+      final query = r.url.queryParameters;
+      return jsonResponse((await _myDay.period(r.identity.userId, query['from'], query['to'])).toJson());
+    })
     ..post('$_employee/time-records/<date>/correct', _correct)
     ..post('$_employee/time-records/<date>/non-work', _nonWork)
     ..get('$_employee/time-records/<date>/rounding', _preview)

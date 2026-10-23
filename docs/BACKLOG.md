@@ -293,6 +293,26 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## TR-06: Employee app Period (phase 3, slice 5)
+Status: `DONE` (2026-10-23)
+
+The employee's own time on the phone (Figma `35:57` this day, `48:2` week, `48:49` month,
+`398:6` view menu, `99:56` day details, `99:121` no activity, `100:2` missing end time):
+- `GET /me/period?from=&to=` (`MyPeriod`, at most 62 days): every day as on HR's Time records,
+  planned minutes from the schedule (work window − break) and registered minutes of finished
+  days (rounded finish − rounded start − break). No permission: the signed-in user only.
+- **Period** tab in the bar (Home · Period · Profile). This day: registered so far and today's
+  timeline. This week: total, a bar per day, daily records. This month: planned and
+  registered, a calendar with dots (worked, planned, needs attention, today).
+- **Day details**: registered time, status, planned/actual times, timeline, previous/next
+  day (not past today). A past day with a missing start, finish or both offers to add it
+  with a comment; it is sent as a correction and waits for HR (D30, D31).
+
+Different from Figma, on purpose: no QR tab yet (no screen); the timeline holds
+registrations and corrections only (workplace events need geofencing, phase 4); "Daily
+breakdown" / "Weekly breakdown" left out (projects wait for IT); the missing-time sheet
+does not quote a rounded start (a correction is rounded when HR approves it).
+
 ## TR-05: Employee app Today (phase 3, slice 4)
 Status: `DONE` (2026-10-22)
 

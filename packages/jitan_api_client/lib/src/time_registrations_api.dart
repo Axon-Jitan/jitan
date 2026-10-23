@@ -50,6 +50,21 @@ class TimeRegistrationsApi {
     }
   }
 
+  /// The signed-in employee's days from [from] to [to] (calendar days,
+  /// both inclusive, `GET /me/period`): each day as HR sees it, with the
+  /// planned and registered time.
+  Future<MyPeriod> period({required DateTime from, required DateTime to}) async {
+    final json = await _transport.getJson(
+      'me/period',
+      query: {'from': TimeRecordDay.dateText(from), 'to': TimeRecordDay.dateText(to)},
+    );
+    try {
+      return MyPeriod.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Period: ${e.message}');
+    }
+  }
+
   Future<TimeRegistrationPage> _page(String path, DateTime from, DateTime to, int? limit, String? cursor) async {
     final json = await _transport.getJson(
       path,

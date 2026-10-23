@@ -20,6 +20,7 @@ export 'src/schedule.dart';
 export 'src/schedule_requests.dart';
 export 'src/temporary_qr.dart';
 export 'src/my_day.dart';
+export 'src/my_period.dart';
 export 'src/time_record.dart';
 export 'src/time_registration.dart';
 export 'src/time_registration_write.dart';

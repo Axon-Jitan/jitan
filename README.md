@@ -90,6 +90,8 @@ dart run bin/server.dart
   one audited transaction). A retry returns the stored pair; nothing is duplicated
 - `GET /me/today`: the signed-in employee's day for the app's Today screen (schedule, the
   day as on Time records, first-day flag, registered time once finished)
+- `GET /me/period?from=&to=` (local dates, at most 62 days): the signed-in employee's days
+  for Period, each with planned and registered minutes
 - `GET /time-records?from=&to=&company=&search=` (local dates `yyyy-MM-dd`, at most 62 days):
   HR/Admin Time records, one row per employee per day with the actual and rounded first
   start and last finish and a calculated status (complete, working, missing finish, missing

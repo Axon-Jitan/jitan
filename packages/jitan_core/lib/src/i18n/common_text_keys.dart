@@ -41,4 +41,11 @@ abstract final class CommonTextKeys {
   static const errorNotFoundMessage = 'common.error.notFound.message';
   static const errorUnexpectedTitle = 'common.error.unexpected.title';
   static const errorUnexpectedMessage = 'common.error.unexpected.message';
+
+  /// Month and weekday names (index 0 = January / Monday), shared by every
+  /// app so a translation covers them all.
+  static const monthShort = ['date.month.short.1', 'date.month.short.2', 'date.month.short.3', 'date.month.short.4', 'date.month.short.5', 'date.month.short.6', 'date.month.short.7', 'date.month.short.8', 'date.month.short.9', 'date.month.short.10', 'date.month.short.11', 'date.month.short.12'];
+  static const monthLong = ['date.month.long.1', 'date.month.long.2', 'date.month.long.3', 'date.month.long.4', 'date.month.long.5', 'date.month.long.6', 'date.month.long.7', 'date.month.long.8', 'date.month.long.9', 'date.month.long.10', 'date.month.long.11', 'date.month.long.12'];
+  static const weekdayLong = ['date.weekday.long.1', 'date.weekday.long.2', 'date.weekday.long.3', 'date.weekday.long.4', 'date.weekday.long.5', 'date.weekday.long.6', 'date.weekday.long.7'];
+  static const weekdayShort = ['date.weekday.short.1', 'date.weekday.short.2', 'date.weekday.short.3', 'date.weekday.short.4', 'date.weekday.short.5', 'date.weekday.short.6', 'date.weekday.short.7'];
 }

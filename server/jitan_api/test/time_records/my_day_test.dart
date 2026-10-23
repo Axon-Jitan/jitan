@@ -114,6 +114,50 @@ void main() {
     expect((today.day, today.firstDay), (null, true));
   });
 
+  group('period (GET /me/period)', () {
+    Future<MyPeriod> period(TestApp app, String from, String to) async {
+      final response = await app.get('/me/period?from=$from&to=$to');
+      expect(response.statusCode, 200);
+      return MyPeriod.fromJson(await jsonBody(response));
+    }
+
+    test('every day of the week, planned from the schedule, registered once finished', () async {
+      final app = _app()..now = DateTime.utc(2026, 10, 23, 11);
+      app.schedules.days = const [(id: 4, name: 'Thursday'), (id: 5, name: 'Friday')];
+      app.schedules.userSchedules = [
+        for (final day in [4, 5])
+          for (final (id, type, sh, sm, eh, em) in [
+            (10 + day, 'Work – start', 8, 0, 16, 30),
+            (20 + day, 'Work – finish', 8, 0, 16, 30),
+            (30 + day, 'Break', 12, 0, 12, 30),
+          ])
+            (userId: 1, scheduleId: id, typeName: type, dayId: day, startHour: sh, startMinute: sm, stopHour: eh, stopMinute: em, marginMinutes: 0),
+      ];
+      app.timeRecords.rows = [
+        _row(1, 'Start – actual – Manual', DateTime.utc(2026, 10, 22, 6)),
+        _row(1, 'Start – rounded', DateTime.utc(2026, 10, 22, 6)),
+        _row(1, 'Finish – actual – Manual', DateTime.utc(2026, 10, 22, 14)),
+        _row(1, 'Finish – rounded', DateTime.utc(2026, 10, 22, 14)),
+      ];
+
+      final week = await period(app, '2026-10-19', '2026-10-25');
+
+      expect(week.days, hasLength(7));
+      expect([for (final d in week.days) d.plannedMinutes], [null, null, null, 480, 480, null, null], reason: 'Thu, Fri: 8h30 − 30 min');
+      expect(week.days[3].registeredMinutes, 7 * 60 + 30, reason: 'Thursday 08:00–16:00 minus the break');
+      expect(week.days[3].day!.status, TimeRecordStatus.complete);
+      expect((week.plannedMinutes, week.registeredMinutes), (960, 450));
+      expect(week.days[4].day, isNull, reason: 'today, nothing registered yet');
+    });
+
+    test('400 for a malformed, reversed or too long period', () async {
+      final app = _app();
+      expect((await app.get('/me/period?from=2026-10-19')).statusCode, 400);
+      expect((await app.get('/me/period?from=2026-10-25&to=2026-10-19')).statusCode, 400);
+      expect((await app.get('/me/period?from=2026-01-01&to=2026-12-31')).statusCode, 400);
+    });
+  });
+
   test('401 without an identity', () async {
     final app = TestApp(devUserId: null);
     expect((await app.get('/me/today')).statusCode, 401);
