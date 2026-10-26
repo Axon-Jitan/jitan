@@ -9,6 +9,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/employee_text_keys.dart';
 import '../period/period_screen.dart';
 import '../profile/profile_screens.dart';
+import '../qr/my_qr_screen.dart';
 import '../today/time_entry_screen.dart';
 import '../today/today_controller.dart';
 import '../today/today_text.dart';
@@ -22,9 +23,8 @@ import '../widgets/mobile_widgets.dart';
 /// A 401 means the session is no longer valid (expired, password changed,
 /// account disabled): [onSessionEnded] signs the device out.
 ///
-/// The navigation bar switches between Home and Period (Figma 48:2) and
-/// opens Profile. Different from Figma, on purpose: there is no QR tab yet;
-/// it comes with its own screen (rule §31: no button without a destination).
+/// The navigation bar switches between Home, Period (Figma 48:2) and My QR
+/// (50:67), and opens Profile.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -100,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
     context,
   ).push(MaterialPageRoute<void>(builder: (_) => ProfileScreen(profile: widget.profileFor(_account))));
 
-  /// Home (0) or Period (1).
+  /// Home (0), Period (1) or My QR (2).
   int _tab = 0;
 
   void _select(int tab) {
@@ -114,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
     items: [
       EmployeeNavItem(icon: Icons.home_outlined, label: context.t(EmployeeTextKeys.navHome), selected: _tab == 0, onTap: () => _select(0)),
       EmployeeNavItem(icon: Icons.schedule, label: context.t(EmployeeTextKeys.navPeriod), selected: _tab == 1, onTap: () => _select(1)),
+      EmployeeNavItem(icon: Icons.qr_code_2, label: context.t(EmployeeTextKeys.navQr), selected: _tab == 2, onTap: () => _select(2)),
       EmployeeNavItem(icon: Icons.person_outline, label: context.t(EmployeeTextKeys.navProfile), onTap: _openProfile),
     ],
   );
@@ -132,14 +133,16 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 
   @override
-  Widget build(BuildContext context) => _tab == 1
-      ? PeriodScreen(
-          api: widget.timeRegistrationsApi,
-          onSessionEnded: widget.onSessionEnded,
-          clock: widget.clock,
-          bottomBar: _navBar(context),
-        )
-      : _home(context);
+  Widget build(BuildContext context) => switch (_tab) {
+    1 => PeriodScreen(
+      api: widget.timeRegistrationsApi,
+      onSessionEnded: widget.onSessionEnded,
+      clock: widget.clock,
+      bottomBar: _navBar(context),
+    ),
+    2 => MyQrScreen(meApi: widget.meApi, account: _account, onSessionEnded: widget.onSessionEnded, bottomBar: _navBar(context)),
+    _ => _home(context),
+  };
 
   Widget _home(BuildContext context) => ListenableBuilder(
     listenable: _today,

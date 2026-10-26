@@ -19,6 +19,7 @@ export 'src/phone_numbers.dart';
 export 'src/schedule.dart';
 export 'src/schedule_requests.dart';
 export 'src/temporary_qr.dart';
+export 'src/terminal_qr.dart';
 export 'src/my_day.dart';
 export 'src/my_period.dart';
 export 'src/time_record.dart';

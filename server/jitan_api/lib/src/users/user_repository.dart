@@ -19,6 +19,17 @@ class UserRepository {
     return rows.isNotEmpty;
   }
 
+  /// The Terminal QR (`userQRcode`) of an active, non-deleted user; `null`
+  /// when there is none. A credential: never logged.
+  Future<String?> terminalQr(int userId) async {
+    final rows = await _db.query(
+      'SELECT userQRcode FROM tblUser WHERE userID = :userId AND userActive = 1 AND userMFD = 0',
+      {'userId': userId},
+    );
+    final value = rows.isEmpty ? null : rows.first.readOptionalString('userQRcode');
+    return value == null || value.isEmpty ? null : value;
+  }
+
   /// The stored password hash of an active, non-deleted user; `null` when the
   /// user cannot sign in (unknown, inactive, deleted, or no password).
   /// Used only to check session tokens; never returned or logged.

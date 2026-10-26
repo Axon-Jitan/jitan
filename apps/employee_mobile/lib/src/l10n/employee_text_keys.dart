@@ -258,6 +258,15 @@ abstract final class EmployeeTextKeys {
   static const periodSheetCommentHint = 'period.sheet.commentHint';
   static const periodSheetSave = 'period.sheet.save';
   static const periodSheetTimeOrder = 'period.sheet.timeOrder';
+  // My QR (Figma 50:67)
+  static const navQr = 'nav.qr';
+  static const qrTitle = 'qr.title';
+  static const qrText = 'qr.text';
+  static const qrCaption = 'qr.caption';
+  static const qrReady = 'qr.ready';
+  static const qrSemantics = 'qr.semantics';
+  static const qrLoadFailed = 'qr.loadFailed';
+  static const qrNone = 'qr.none';
   static const navHome = 'nav.home';
   static const navProfile = 'nav.profile';
 

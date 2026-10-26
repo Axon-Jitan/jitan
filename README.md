@@ -92,6 +92,8 @@ dart run bin/server.dart
   day as on Time records, first-day flag, registered time once finished)
 - `GET /me/period?from=&to=` (local dates, at most 62 days): the signed-in employee's days
   for Period, each with planned and registered minutes
+- `GET /me/terminal-qr`: the signed-in employee's permanent Terminal QR (`tblUser.userQRcode`)
+  for My QR; `cache-control: no-store`, 404 when the employee has none
 - `GET /time-records?from=&to=&company=&search=` (local dates `yyyy-MM-dd`, at most 62 days):
   HR/Admin Time records, one row per employee per day with the actual and rounded first
   start and last finish and a calculated status (complete, working, missing finish, missing

@@ -555,6 +555,12 @@ class FakeUserRepository implements UserRepository {
   Future<String?> activePasswordHash(int userId) async =>
       activeUserIds.contains(userId) ? passwordHashes[userId] : null;
 
+  /// userId → Terminal QR.
+  final terminalQrs = <int, String>{};
+
+  @override
+  Future<String?> terminalQr(int userId) async => activeUserIds.contains(userId) ? terminalQrs[userId] : null;
+
   @override
   Future<EmployeeAccount?> account(int userId) async {
     final user = onboarding?.users.values.where((u) => u.userId == userId).firstOrNull;

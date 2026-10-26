@@ -24,6 +24,17 @@ class MeApi {
     }
   }
 
+  /// My QR: the employee's Terminal QR (`GET /me/terminal-qr`). Show it
+  /// only as a QR; never log or store it.
+  Future<TerminalQr> terminalQr() async {
+    final json = await _transport.getJson('me/terminal-qr');
+    try {
+      return TerminalQr.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Terminal QR: ${e.message}');
+    }
+  }
+
   Future<EmployeeAccount> me() async {
     final json = await _transport.getJson('me');
     try {

@@ -293,6 +293,19 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## TR-07: Employee app My QR (phase 3, slice 6)
+Status: `DONE` (2026-10-26)
+
+The employee's Terminal QR on the phone (Figma `50:67`):
+- `GET /me/terminal-qr` (`TerminalQr`): the signed-in user's permanent `tblUser.userQRcode`,
+  sent with `cache-control: no-store`; 404 when none is stored. No permission: the signed-in
+  user only. Never logged; `TerminalQr.toString` hides the value.
+- **QR** tab in the bar (Home · Period · QR · Profile): name, "Employee QR", the code and
+  "Ready to scan". Fetched each time it opens, never stored on the phone, shown only as a QR.
+  No QR stored: says so; a failed load offers Try again.
+
+The Terminal QR never onboards or recovers an account (temporary QRs do, QR-TEMP).
+
 ## TR-06: Employee app Period (phase 3, slice 5)
 Status: `DONE` (2026-10-23)
 
@@ -308,7 +321,7 @@ The employee's own time on the phone (Figma `35:57` this day, `48:2` week, `48:4
   day (not past today). A past day with a missing start, finish or both offers to add it
   with a comment; it is sent as a correction and waits for HR (D30, D31).
 
-Different from Figma, on purpose: no QR tab yet (no screen); the timeline holds
+Different from Figma, on purpose: the timeline holds
 registrations and corrections only (workplace events need geofencing, phase 4); "Daily
 breakdown" / "Weekly breakdown" left out (projects wait for IT); the missing-time sheet
 does not quote a rounded start (a correction is rounded when HR approves it).

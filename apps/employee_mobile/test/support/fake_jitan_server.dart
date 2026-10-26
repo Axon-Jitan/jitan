@@ -20,6 +20,7 @@ const recoveryQr = 'recovery-qr.BBBBBBBBBBBBBBBB.sig';
 /// The employee's permanent Terminal QR: it must never onboard or recover.
 const terminalQr = 'terminal-qr-CCCCCCCCCCCCCCCC';
 
+
 /// Tap target of the fake embedded camera ([TestHarness]).
 const fakeCameraKey = ValueKey('fake-camera');
 
@@ -89,6 +90,11 @@ class FakeJitanServer {
       '/me/language' => _json({'languageCode': null}),
       '/me/today' => _today(request),
       '/me/period' => _period(request),
+      '/me/terminal-qr' => !_authorized(request)
+          ? _error(401, 'unauthenticated')
+          : myTerminalQr == null
+          ? _error(404, 'not_found')
+          : _json({'qrCode': myTerminalQr}),
       '/me/time-registrations' => _register(request),
       _ => _error(404, 'not_found'),
     };
@@ -227,6 +233,9 @@ class FakeJitanServer {
   // Today (GET /me/today, POST /me/time-registrations), with the server's
   // rules: a corrected time waits for HR (D31); a finished day's registered
   // time is finish − start − break (D13). No rounding in this schedule.
+
+  /// The employee's Terminal QR (My QR); `null` = the account has none.
+  String? myTerminalQr = terminalQr;
 
   /// The employee never registered: "When did you arrive?" (first day).
   bool firstDay = false;

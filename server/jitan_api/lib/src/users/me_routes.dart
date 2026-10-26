@@ -16,6 +16,8 @@ import 'user_repository.dart';
 /// - `GET /me`: the account
 /// - `POST /me/password` with a `ChangePasswordRequest`: new password; the
 ///   response is a new session for this device (all others end)
+/// - `GET /me/terminal-qr`: the employee's Terminal QR (`TerminalQr`, My QR)
+///   with `cache-control: no-store`; 404 when the account has none
 class MeRoutes {
   const MeRoutes(this._users, this._accounts);
 
@@ -24,7 +26,14 @@ class MeRoutes {
 
   Router get router => Router()
     ..get('/me', _me)
-    ..post('/me/password', _changePassword);
+    ..post('/me/password', _changePassword)
+    ..get('/me/terminal-qr', _terminalQr);
+
+  Future<Response> _terminalQr(Request request) async {
+    final qrCode = await _users.terminalQr(request.identity.userId) ??
+        (throw const ApiException.notFound('This account has no Terminal QR.'));
+    return jsonResponse(TerminalQr(qrCode: qrCode).toJson()).change(headers: const {'cache-control': 'no-store'});
+  }
 
   Future<Response> _changePassword(Request request) async {
     final ChangePasswordRequest body;
