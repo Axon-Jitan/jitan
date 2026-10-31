@@ -1,5 +1,7 @@
 import 'package:jitan_api_client/jitan_api_client.dart';
 
+import '../locations/location_map.dart';
+
 /// The API clients and build options the HR/Admin pages need, passed down
 /// from `main` in one value.
 class AdminServices {
@@ -13,6 +15,8 @@ class AdminServices {
     required this.groupMembersApi,
     required this.timeRecordsApi,
     required this.scheduleSourceApi,
+    required this.locationsApi,
+    this.locationMaps,
   });
 
   final CompaniesApi companiesApi;
@@ -26,5 +30,8 @@ class AdminServices {
 
   /// "Schedules come from" for employees in several groups.
   final ScheduleSourceApi scheduleSourceApi;
+  final LocationsApi locationsApi;
 
+  /// The Locations map; `null` when the build has no Mapbox token.
+  final LocationMaps? locationMaps;
 }

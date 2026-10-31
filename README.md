@@ -164,6 +164,7 @@ flutter run -d chrome --web-port 5000 \
 Company-scoped pages such as Employees use the company chosen in their "Current company"
 field.
 
+`JITAN_MAPBOX_TOKEN` (optional, a Mapbox public token) turns on the map on Locations.
 `JITAN_API_BASE_URL` is required. Without it the app shows a configuration error instead
 of guessing. The API must list the web origin in `JITAN_CORS_ORIGINS`
 (`.env.example` has `http://localhost:5000`).

@@ -11,6 +11,7 @@ import 'package:admin_web/src/employees/import/platform/import_file_picker.dart'
 import 'package:admin_web/src/groups/employee_picker.dart';
 import 'package:admin_web/src/groups/group_page.dart';
 import 'package:admin_web/src/groups/groups_screen.dart';
+import 'package:admin_web/src/locations/locations_screen.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:admin_web/src/schedules/schedule_dialog.dart';
 import 'package:admin_web/src/schedules/schedules_screen.dart';
@@ -25,6 +26,7 @@ import '../support/fake_assignments_api.dart';
 import '../support/fake_companies_api.dart';
 import '../support/fake_employees_api.dart';
 import '../support/fake_group_apis.dart';
+import '../support/fake_locations.dart';
 import '../support/fake_schedules_api.dart';
 import '../support/fake_time_records_api.dart';
 
@@ -117,6 +119,35 @@ void main() {
   final white = groupSchedule(2, 'White collar', status: GroupScheduleStatus.noSchedule);
 
   for (final width in _widths) {
+    testWidgets('Locations page and its dialogs at $width px', (tester) async {
+      final api = FakeLocationsApi()..locations.addAll([location(1, 'Almeco office'), location(2, 'Old depot', active: false)]);
+      await _pump(tester, width, LocationsScreen(api: api, maps: fakeLocationMaps()));
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Locations');
+
+      await tester.tap(find.text('Add location').first);
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Add location');
+      await tester.ensureVisible(find.text('Cancel'));
+      await _settle(tester);
+      await tester.tap(find.text('Cancel'));
+      await _settle(tester);
+
+      await tester.tap(find.text('Almeco office'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Edit location');
+      await tester.ensureVisible(find.text('Deactivate'));
+      await tester.tap(find.text('Deactivate'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Deactivate location');
+    });
+
+    testWidgets('empty Locations page at $width px', (tester) async {
+      await _pump(tester, width, LocationsScreen(api: FakeLocationsApi(), maps: fakeLocationMaps()));
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'empty Locations');
+    });
+
     testWidgets('Schedules page at $width px', (tester) async {
       final api = FakeSchedulesApi();
       await _pump(tester, width, SchedulesScreen(api: api));

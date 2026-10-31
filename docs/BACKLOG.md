@@ -293,6 +293,28 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## LOC-01: HR Locations (phase 4, slice 1)
+Status: `DONE` (2026-10-31), except the real map, which needs a Mapbox token
+
+HR manages the places where Jitan recognises employees (Figma `1465:2` list, `1465:177`
+empty, `1465:301` add, `1465:482` name in use, `1465:664` edit, `1465:846` deactivate,
+`1466:2` phone), designed by us and approved by the product owner on 2026-10-31:
+- A location is a `tblAddress` row with one `tblGeofence` through `tblGeofenceAddress`.
+  One shared list until IT links addresses to companies (GAP-03, D36).
+- `GET/POST /locations`, `PUT /locations/{id}`, `POST /locations/{id}/deactivate|reactivate`.
+  Audited in one transaction (`location.created`, `.changed`, `.deactivated`, `.reactivated`).
+- **Map (product owner, 2026-10-31): Mapbox.** Build with `--dart-define=JITAN_MAPBOX_TOKEN=pk.…`,
+  a public token limited to Jitan's web addresses in Mapbox; never in the repository. Without
+  it the page says the map is not set up, and a new location can't be placed.
+- The typed address goes to Mapbox Geocoding to start the pin near the entrance. HR then drags
+  the pin or clicks the map; from then on the address no longer moves it.
+
+Different from Figma, on purpose: "Click the map to place the pin" appears before any pin
+exists (no frame for that moment); the Mapbox attribution line is required by Mapbox.
+
+To check before production: that Mapbox's terms allow keeping the pin's coordinates when the
+pin started from a geocoding result, and Mapbox's cost and data terms with IT.
+
 ## TR-07: Employee app My QR (phase 3, slice 6)
 Status: `DONE` (2026-10-26)
 

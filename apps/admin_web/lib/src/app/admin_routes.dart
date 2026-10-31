@@ -6,6 +6,7 @@ abstract final class AdminRoutes {
 
   /// Import employees, opened from Employees.
   static const employeeImport = '$employees/import';
+  static const locations = '/locations';
   static const schedules = '/schedules';
   static const groups = '/groups';
   static const timeRecords = '/time-records';

@@ -7,6 +7,7 @@ import 'src/app/admin_bootstrap.dart';
 import 'src/app/admin_services.dart';
 import 'src/app/configuration_error_app.dart';
 import 'src/config/admin_web_config.dart';
+import 'src/locations/location_map.dart';
 
 void main() {
   registerJitanFontLicenses();
@@ -31,6 +32,11 @@ void main() {
         groupMembersApi: GroupMembersApi(transport),
         timeRecordsApi: TimeRecordsApi(transport),
         scheduleSourceApi: ScheduleSourceApi(transport),
+        locationsApi: LocationsApi(transport),
+        locationMaps: switch (config.mapboxToken) {
+          null => null,
+          final token => LocationMaps.mapbox(token),
+        },
       ),
     ),
   );
