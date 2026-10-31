@@ -46,6 +46,7 @@ void main() {
         languagesApi: languagesApi,
         meApi: MeApi(transport),
         timeRegistrationsApi: TimeRegistrationsApi(transport),
+        activityApi: ActivityApi(transport),
         locationsApi: locationsApi,
         presence: presence,
         reminder: reminder,

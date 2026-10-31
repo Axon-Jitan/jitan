@@ -95,6 +95,7 @@ class FakeJitanServer {
       '/me/password' => _changePassword(request),
       '/me/language' => _json({'languageCode': null}),
       '/me/today' => _today(request),
+      '/me/activity' => _json(MyActivity.disabled.toJson()),
       '/me/period' => _period(request),
       '/me/locations' => !_authorized(request)
           ? _error(401, 'unauthenticated')
@@ -499,6 +500,7 @@ class TestHarness {
       languagesApi: languagesApi,
       meApi: MeApi(transport),
       timeRegistrationsApi: TimeRegistrationsApi(transport),
+      activityApi: ActivityApi(transport),
       locationsApi: LocationsApi(transport),
       presence: WorkplacePresence(store),
       reminder: reminder,

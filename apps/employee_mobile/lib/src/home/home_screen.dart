@@ -6,6 +6,11 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../activity/activity_controller.dart';
+import '../activity/company_picker.dart';
+import '../activity/current_project_card.dart';
+import '../activity/my_projects_screen.dart';
+import '../activity/switch_activity_screen.dart';
 import '../geofencing/away_reminder.dart';
 import '../geofencing/workplace_presence.dart';
 import '../l10n/employee_text_keys.dart';
@@ -32,6 +37,7 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.meApi,
     required this.timeRegistrationsApi,
+    required this.activityApi,
     required this.presence,
     required this.reminder,
     required this.onSessionEnded,
@@ -44,6 +50,7 @@ class HomeScreen extends StatefulWidget {
 
   final MeApi meApi;
   final TimeRegistrationsApi timeRegistrationsApi;
+  final ActivityApi activityApi;
   final WorkplacePresence presence;
   final AwayReminder reminder;
   final VoidCallback onSessionEnded;
@@ -76,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     onSessionEnded: widget.onSessionEnded,
     clock: widget.clock,
   )..load();
+  late final _activity = ActivityController(widget.activityApi, clock: widget.clock)..load();
 
   /// Moves "Registered today" and the greeting on while the screen is open.
   late final Timer _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -88,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
     onResume: () async {
       await widget.onReturn?.call();
       await _today.load();
+      await _activity.load();
     },
   );
 
@@ -118,6 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _ticker.cancel();
     _lifecycle.dispose();
     _today.dispose();
+    _activity.dispose();
     super.dispose();
   }
 
@@ -132,7 +142,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (tab == _tab) return;
     setState(() => _tab = tab);
     // Back on Home: what changed in Period (a time added) shows at once.
-    if (tab == 0) _today.load();
+    if (tab == 0) {
+      _today.load();
+      _activity.load();
+    }
   }
 
   Widget _navBar(BuildContext context) => EmployeeNavBar(
@@ -169,8 +182,16 @@ class _HomeScreenState extends State<HomeScreen> {
     _ => _home(context),
   };
 
+  Future<void> _openSwitch() => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => SwitchActivityScreen(controller: _activity)));
+
+  Future<void> _openProjects() => Navigator.of(context).push(
+    MaterialPageRoute<void>(builder: (_) => MyProjectsScreen(projects: _activity.activity.projects)),
+  );
+
   Widget _home(BuildContext context) => ListenableBuilder(
-    listenable: _today,
+    listenable: Listenable.merge([_today, _activity]),
     builder: (context, _) => switch (_today.state) {
       TodayLoading() => _page(context, children: const [
         SizedBox(height: 120),
@@ -211,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 
   /// Logo, scrollable content, then the link, the main button and the bar.
-  Widget _page(BuildContext context, {required List<Widget> children, Widget? link, Widget? button}) => Scaffold(
+  Widget _page(BuildContext context, {required List<Widget> children, Widget? link, Widget? button, Widget? corner}) => Scaffold(
     backgroundColor: JitanColors.warmWhite,
     body: SafeArea(
       child: Padding(
@@ -227,7 +248,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [const JitanWordmark(), const SizedBox(height: 40), ...children],
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [const JitanWordmark(), ?corner],
+                      ),
+                      const SizedBox(height: 40),
+                      ...children,
+                    ],
                   ),
                 ),
               ),
@@ -440,6 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final light = JitanMobileTextStyles.cardText.copyWith(color: JitanColors.sidebarText);
     return _page(
       context,
+      corner: _activity.showsCompanies ? CompanyPicker(controller: _activity) : null,
       children: [
         _title(context.t(EmployeeTextKeys.todayWorkingTitle)),
         const SizedBox(height: 14),
@@ -470,6 +499,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 18),
+        if (_activity.showsCard) ...[
+          CurrentProjectCard(
+            activity: _activity.activity.current,
+            onSwitch: _openSwitch,
+            onProjects: _openProjects,
+          ),
+          const SizedBox(height: 18),
+        ],
         TodayCard(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
           child: Column(

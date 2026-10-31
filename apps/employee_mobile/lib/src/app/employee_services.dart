@@ -18,6 +18,7 @@ class EmployeeServices {
     required this.languagesApi,
     required this.meApi,
     required this.timeRegistrationsApi,
+    required this.activityApi,
     required this.locationsApi,
     required this.automaticRegistration,
     required this.presence,
@@ -36,6 +37,7 @@ class EmployeeServices {
   final LanguagesApi languagesApi;
   final MeApi meApi;
   final TimeRegistrationsApi timeRegistrationsApi;
+  final ActivityApi activityApi;
   final LocationsApi locationsApi;
 
   /// Turns detection on or off when the app opens.

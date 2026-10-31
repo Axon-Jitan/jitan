@@ -181,6 +181,7 @@ class _EmployeeAppState extends State<EmployeeApp> {
             key: ValueKey(_account),
             meApi: _services.meApi,
             timeRegistrationsApi: _services.timeRegistrationsApi,
+            activityApi: _services.activityApi,
             presence: _services.presence,
             reminder: _services.reminder,
             onReady: _services.automaticRegistration.start,

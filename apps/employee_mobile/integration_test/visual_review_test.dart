@@ -59,6 +59,7 @@ void main() {
           languagesApi: languages,
           meApi: MeApi(transport),
           timeRegistrationsApi: TimeRegistrationsApi(transport),
+          activityApi: ActivityApi(transport),
           locationsApi: LocationsApi(transport),
           presence: WorkplacePresence(store),
           reminder: FakeAwayReminder(),
