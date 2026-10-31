@@ -740,6 +740,14 @@ Reports
 
 ## 31. Dashboard
 
+Built 2026-10-31 with what Jitan can calculate (Figma `1470:2`): companies, employees,
+locations, registered against planned hours, today (working now, finished, not started),
+employees by company, attendance, needs attention, and a period picker. Temporarily away,
+terminals, onboarding progress, recent activity and system health are left out until
+there is data for them. On time means the actual start and finish are within the
+schedule's tolerances; a day both late and left early counts once, as late; days with no
+schedule aren't counted. Past periods compare with today's schedules, as Reports does.
+
 - companies
 - employees
 - terminals
@@ -1011,7 +1019,7 @@ Server work of the phase may start while that happens.
 | 8 | **Projects and transport**: client projects (in-house and on site) and internal projects, default company and project, switching project in the app, transport as an activity (not working time), kilometres calculated from addresses, projects from SAP, project report, kilometres by client agreement | **IT**: projects and default company in the ERD, SAP connection | Waits for IT |
 | 9 | **Terminals and visitors**: workshop, front-desk and van terminals (scan, start, switch project, finish), visitors at the front desk, terminal pairing and management | **IT**: terminals and visitors in the ERD | Waits for IT |
 | 10 | **HR/Admin sign-in and permissions**: sign-in for the HR web app, production permission check over credential groups (HR and Admin have the same rights in V1, access to all companies) | — | **Done** (2026-10-31): sign-in (AUTH-02), and IT gives access in its own tables |
-| 11 | **Dashboard, Employee Web, iOS** | Phases 5–10 | To do |
+| 11 | **Dashboard, Employee Web, iOS** | Phases 5–10 | Dashboard **done** (2026-10-31); Employee Web and iOS to do |
 | 12 | **Before production**: security checklist (database certificate check, no unencrypted database connection, sign-in attempt limit), verification against IT's database, QA, Linux deployment following IT's configuration contract (DEPLOY-01) | IT's database and server | To do. IT's VM already runs the network-test executable (2026-10-16) |
 
 The **core time engine, rounding and audit trail** receive the most careful testing.

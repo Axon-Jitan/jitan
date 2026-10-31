@@ -29,6 +29,7 @@ import 'package:jitan_api/src/languages/language_service.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_api/src/locations/location_routes.dart';
 import 'package:jitan_api/src/locations/location_service.dart';
+import 'package:jitan_api/src/reports/dashboard_service.dart';
 import 'package:jitan_api/src/reports/report_routes.dart';
 import 'package:jitan_api/src/reports/report_service.dart';
 import 'package:jitan_api/src/time_records/week_plans.dart';
@@ -192,6 +193,15 @@ class TestApp {
           plans: WeekPlans(schedules),
           employees: employees,
           companies: companies,
+          clock: WorkplaceClock('Europe/Brussels'),
+          now: () => now,
+        ),
+        DashboardService(
+          days: timeRecordService,
+          plans: WeekPlans(schedules),
+          employees: employees,
+          companies: companies,
+          locations: LocationService(locations: locations, audit: audit, transactions: transactions, executor: UnusedExecutor()),
           clock: WorkplaceClock('Europe/Brussels'),
           now: () => now,
         ),

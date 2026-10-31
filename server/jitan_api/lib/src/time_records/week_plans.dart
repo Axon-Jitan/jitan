@@ -2,7 +2,17 @@ import '../schedules/schedule_names.dart';
 import '../schedules/schedule_repository.dart';
 
 /// One weekday of an employee's schedule: the work window and the break.
-typedef DayPlan = ({String? start, String? finish, String? breakStart, String? breakFinish, int? breakMinutes});
+typedef DayPlan = ({
+  String? start,
+  String? finish,
+  String? breakStart,
+  String? breakFinish,
+  int? breakMinutes,
+
+  /// Arrival and leaving tolerance in minutes (D11b).
+  int startMargin,
+  int finishMargin,
+});
 
 /// Employees' schedules by ISO weekday (1 = Monday … 7 = Sunday), as the
 /// phone's Today and Period and HR's reports read them.
@@ -48,6 +58,8 @@ class WeekPlans {
       breakMinutes: breakRow == null
           ? null
           : (breakRow.stopHour * 60 + breakRow.stopMinute) - (breakRow.startHour * 60 + breakRow.startMinute),
+      startMargin: start?.marginMinutes ?? 0,
+      finishMargin: finish?.marginMinutes ?? 0,
     );
   }
 

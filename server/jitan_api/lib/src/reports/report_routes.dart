@@ -6,6 +6,7 @@ import '../auth/permission.dart';
 import '../auth/request_identity.dart';
 import '../http/json_response.dart';
 import '../http/path_id.dart';
+import 'dashboard_service.dart';
 import 'report_service.dart';
 
 /// HR/Admin reports. Consumer: the Reports page (`apps/admin_web`).
@@ -14,13 +15,31 @@ import 'report_service.dart';
 ///   `company`, that company only (the right is checked there); without,
 ///   every company where the viewer may see reports, each checked on its own
 ///   (ENGINEERING_RULES §28a.5).
+/// - `GET /dashboard?from=yyyy-MM-dd&to=yyyy-MM-dd`: today, the totals and the
+///   period, for every company where the viewer may see reports. Consumer:
+///   the Dashboard page.
 class ReportRoutes {
-  const ReportRoutes(this._authorizer, this._reports);
+  const ReportRoutes(this._authorizer, this._reports, this._dashboard);
 
   final Authorizer _authorizer;
   final ReportService _reports;
+  final DashboardService _dashboard;
 
-  Router get router => Router()..get('/reports/hours', _hours);
+  Router get router => Router()
+    ..get('/reports/hours', _hours)
+    ..get('/dashboard', _overview);
+
+  Future<Response> _overview(Request request) async {
+    // 401 without an identity, even when there is no company to check.
+    request.identity;
+    final query = request.url.queryParameters;
+    final dashboard = await _dashboard.dashboard(
+      from: query['from'],
+      to: query['to'],
+      mayView: (id) => _authorizer.may(request, Permission.viewReports, companyId: id),
+    );
+    return jsonResponse(dashboard.toJson());
+  }
 
   Future<Response> _hours(Request request) async {
     // 401 without an identity, even when there is no company to check.

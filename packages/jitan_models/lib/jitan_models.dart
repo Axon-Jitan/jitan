@@ -6,6 +6,7 @@ export 'src/auth.dart';
 export 'src/company_summary.dart';
 export 'src/create_employee_request.dart';
 export 'src/create_group_request.dart';
+export 'src/dashboard.dart';
 export 'src/employee_assignments.dart';
 export 'src/employee_details.dart';
 export 'src/employee_import.dart';

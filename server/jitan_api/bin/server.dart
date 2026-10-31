@@ -41,6 +41,7 @@ import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
+import 'package:jitan_api/src/reports/dashboard_service.dart';
 import 'package:jitan_api/src/reports/report_routes.dart';
 import 'package:jitan_api/src/reports/report_service.dart';
 import 'package:jitan_api/src/time_records/week_plans.dart';
@@ -193,6 +194,13 @@ Future<void> main() async {
     transactions: db,
   );
 
+  final locationService = LocationService(
+    locations: const LocationRepository(),
+    audit: const AuditLogRepository(),
+    transactions: db,
+    executor: db,
+  );
+
   final timeRecordService = TimeRecordService(
     records: TimeRecordRepository(db),
     employees: EmployeeRepository(db),
@@ -255,15 +263,7 @@ Future<void> main() async {
       ),
     ),
     languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db), languageChanges)),
-    locations: LocationRoutes(
-      authorizer,
-      LocationService(
-        locations: const LocationRepository(),
-        audit: const AuditLogRepository(),
-        transactions: db,
-        executor: db,
-      ),
-    ),
+    locations: LocationRoutes(authorizer, locationService),
     onboarding: OnboardingRoutes(
       OnboardingService(
         onboarding: const OnboardingRepository(),
@@ -342,6 +342,14 @@ Future<void> main() async {
         plans: WeekPlans(ScheduleRepository(db)),
         employees: EmployeeRepository(db),
         companies: companyRepository,
+        clock: workplaceClock,
+      ),
+      DashboardService(
+        days: timeRecordService,
+        plans: WeekPlans(ScheduleRepository(db)),
+        employees: EmployeeRepository(db),
+        companies: companyRepository,
+        locations: locationService,
         clock: workplaceClock,
       ),
     ),
