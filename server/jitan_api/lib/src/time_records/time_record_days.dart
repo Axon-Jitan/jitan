@@ -24,6 +24,10 @@ import 'time_record_repository.dart';
 /// pending review · corrected / complete · working (today) · missing finish
 /// · missing start. A past scheduled working day without any row, from the
 /// employee's first registration on, is **no registration**.
+///
+/// Activity rows (D37) say what the time counted for and nothing about the
+/// day: they stay out of all of the above, and only give the transport
+/// minutes. Without "travel is work" for the employee, those aren't work (D39).
 abstract final class TimeRecordDays {
   static List<TimeRecordDay> build({
     required List<RegistrationRow> rows,
@@ -34,19 +38,33 @@ abstract final class TimeRecordDays {
     Map<int, DateTime> firstRegistrations = const {},
     DateTime? from,
     DateTime? to,
+    Set<int> travelIsWork = const {},
   }) {
     final byUserDay = <int, Map<DateTime, List<RegistrationRow>>>{};
+    final activities = <(int, DateTime), List<RegistrationRow>>{};
     for (final row in rows) {
       final local = clock.wallClockOf(row.at);
       final date = DateTime.utc(local.year, local.month, local.day);
-      byUserDay.putIfAbsent(row.userId, () => {}).putIfAbsent(date, () => []).add(row);
+      if (row.typeName.startsWith(_activityPrefix)) {
+        activities.putIfAbsent((row.userId, date), () => []).add(row);
+      } else {
+        byUserDay.putIfAbsent(row.userId, () => {}).putIfAbsent(date, () => []).add(row);
+      }
     }
 
     final days = <TimeRecordDay>[];
     for (final employee in employees.values) {
       final userDays = byUserDay[employee.id] ?? const {};
       for (final MapEntry(key: date, value: dayRows) in userDays.entries) {
-        final day = _day(employee, date, dayRows, clock, today);
+        final day = _day(
+          employee,
+          date,
+          dayRows,
+          clock,
+          today,
+          activities[(employee.id, date)] ?? const [],
+          travelIsWork.contains(employee.id),
+        );
         if (day != null) days.add(day);
       }
       // Scheduled working days without any registration.
@@ -73,7 +91,15 @@ abstract final class TimeRecordDays {
     return days;
   }
 
-  static TimeRecordDay? _day(EmployeeSummary employee, DateTime date, List<RegistrationRow> rows, WorkplaceClock clock, DateTime today) {
+  static TimeRecordDay? _day(
+    EmployeeSummary employee,
+    DateTime date,
+    List<RegistrationRow> rows,
+    WorkplaceClock clock,
+    DateTime today,
+    List<RegistrationRow> activities,
+    bool travelIsWork,
+  ) {
     final byId = [...rows]..sort((a, b) => a.id.compareTo(b.id));
     final kinds = {for (final r in byId) r.id: _kind(r)};
     String local(DateTime utc) => _hhmm(clock.wallClockOf(utc));
@@ -206,7 +232,30 @@ abstract final class TimeRecordDays {
           : null,
       companyIds: employee.companyIds,
       awayMinutes: _awayMinutes(moments),
+      transportMinutes: _transportMinutes(activities, moments),
+      travelIsWork: travelIsWork,
     );
+  }
+
+  /// Every finished transport: until the next activity or the day's finish.
+  static int _transportMinutes(List<RegistrationRow> activities, List<_Moment> moments) {
+    final rows = [
+      for (final row in activities)
+        if (row.active) row,
+    ]..sort((a, b) => a.at.compareTo(b.at));
+    final finishes = [
+      for (final moment in moments)
+        if (moment.boundary == RegistrationBoundary.finish) moment.at,
+    ];
+    var minutes = 0;
+    for (final (i, row) in rows.indexed) {
+      if (row.typeName != _transportType) continue;
+      final next = i + 1 < rows.length ? rows[i + 1].at : null;
+      final finish = finishes.where((at) => at.isAfter(row.at)).firstOrNull;
+      final end = next == null || (finish != null && finish.isBefore(next)) ? finish : next;
+      if (end != null) minutes += end.difference(row.at).inMinutes;
+    }
+    return minutes;
   }
 
   /// Every start and finish that counts, by time; a finish first at the same
@@ -258,6 +307,8 @@ abstract final class TimeRecordDays {
   static String _hhmm(DateTime wallClock) =>
       '${wallClock.hour.toString().padLeft(2, '0')}:${wallClock.minute.toString().padLeft(2, '0')}';
 
+  static const _activityPrefix = 'Activity – ';
+  static const _transportType = 'Activity – Transport';
   static final _actualType = RegExp(r'^(Start|Finish) – actual – (Geofence|QR|Manual)$');
   static final _otherType = RegExp(r'^(Start|Finish) – (rounded|corrected)$');
 

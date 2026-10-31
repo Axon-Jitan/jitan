@@ -23,6 +23,7 @@ class TimeRecordService {
     required this._clock,
     required this._schedules,
     required this._rounding,
+    this._travelIsWork,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -32,6 +33,10 @@ class TimeRecordService {
   final WorkplaceClock _clock;
   final ScheduleRepository _schedules;
   final RegistrationRounding _rounding;
+
+  /// Those of the given employees whose travel counts as work (D39); `null`
+  /// on a database without the proposed tables.
+  final Future<Set<int>> Function(List<int> userIds)? _travelIsWork;
   final DateTime Function() _now;
 
   static final _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
@@ -90,6 +95,7 @@ class TimeRecordService {
       firstRegistrations: await _records.firstRegistrations(ids),
       from: first,
       to: last,
+      travelIsWork: await _travelIsWork?.call(ids) ?? const {},
     );
     return [for (final day in days) day.pending.isEmpty ? day : await _withPreview(day)];
   }

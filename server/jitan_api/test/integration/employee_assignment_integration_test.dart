@@ -146,6 +146,7 @@ void main() {
       await db.execute('DELETE FROM tblUser WHERE userID = :id', {'id': id});
     }
     for (final id in eventTypeIds) {
+      await db.execute('DELETE FROM tblEventLogEventType WHERE eventTypeID = :id', {'id': id});
       await db.execute('DELETE FROM tblEventType WHERE eventTypeID = :id', {'id': id});
     }
     for (final id in languageIds.values) {

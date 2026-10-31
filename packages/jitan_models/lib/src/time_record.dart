@@ -267,6 +267,8 @@ class TimeRecordDay {
     this.nonWorkReason,
     this.companyIds = const [],
     this.awayMinutes = 0,
+    this.transportMinutes = 0,
+    this.travelIsWork = false,
   });
 
   factory TimeRecordDay.fromJson(Map<String, Object?> json) => TimeRecordDay(
@@ -283,6 +285,8 @@ class TimeRecordDay {
         nonWorkReason: json.readOptionalString('nonWorkReason'),
         companyIds: json['companyIds'] == null ? const [] : json.readIntList('companyIds'),
         awayMinutes: json.readOptionalInt('awayMinutes') ?? 0,
+        transportMinutes: json.readOptionalInt('transportMinutes') ?? 0,
+        travelIsWork: json['travelIsWork'] == true,
       );
 
   final int employeeId;
@@ -310,6 +314,12 @@ class TimeRecordDay {
   /// is not work (D34). When there are any, they replace the automatic break.
   final int awayMinutes;
 
+  /// Minutes of finished transport this day (D22).
+  final int transportMinutes;
+
+  /// Transport counts as work for this employee (D39).
+  final bool travelIsWork;
+
   Map<String, Object?> toJson() => {
         'employeeId': employeeId,
         'firstName': firstName,
@@ -324,6 +334,8 @@ class TimeRecordDay {
         'nonWorkReason': nonWorkReason,
         if (companyIds.isNotEmpty) 'companyIds': companyIds,
         if (awayMinutes > 0) 'awayMinutes': awayMinutes,
+        if (transportMinutes > 0) 'transportMinutes': transportMinutes,
+        if (travelIsWork) 'travelIsWork': true,
       };
 
   /// A `yyyy-MM-dd` date as a UTC-flagged calendar day (no time zone meant).

@@ -100,6 +100,33 @@ class ActivityRepository {
       ),
   ];
 
+  /// Those of [userIds] with a group whose travel is work (D39). The list
+  /// holds only numbers from the server, each a bound placeholder.
+  Future<Set<int>> travelIsWork(SqlExecutor executor, List<int> userIds) async {
+    if (userIds.isEmpty) return const {};
+    final names = [for (var i = 0; i < userIds.length; i++) ':u$i'];
+    final rows = await executor.query(
+      'SELECT DISTINCT ug.userID FROM tblUserGroup ug '
+      'JOIN tblGroup g ON g.groupID = ug.groupID AND g.groupTravelIsWork = 1 AND g.groupMFD = 0 '
+      'WHERE ug.userID IN (${names.join(', ')}) AND ${MembershipFilters.activeGroup('ug')}',
+      {for (var i = 0; i < userIds.length; i++) 'u$i': userIds[i]},
+    );
+    return {for (final row in rows) row.readInt('userID')};
+  }
+
+  /// `null` when there is no such group.
+  Future<bool?> groupTravel(SqlExecutor executor, int groupId) async {
+    final rows = await executor.query('SELECT groupTravelIsWork FROM tblGroup WHERE groupID = :id AND groupMFD = 0', {
+      'id': groupId,
+    });
+    return rows.isEmpty ? null : rows.first.readBool('groupTravelIsWork');
+  }
+
+  Future<void> setGroupTravel(SqlExecutor tx, int groupId, {required bool travelIsWork}) async => tx.execute(
+    'UPDATE tblGroup SET groupTravelIsWork = :value WHERE groupID = :id',
+    {'id': groupId, 'value': travelIsWork ? 1 : 0},
+  );
+
   /// Adds an activity row; `timeRegManualEntry = 0`, it is what happened.
   Future<int> insert(
     SqlExecutor tx, {

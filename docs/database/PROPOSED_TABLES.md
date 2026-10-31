@@ -41,6 +41,7 @@ temporary QR codes.
 | Column | Purpose | Gap / decision |
 |---|---|---|
 | `tblUserCompany.userCompanyDefault` | An employee's default company | D16 |
+| `tblGroup.groupTravelIsWork` | Whether this group's travel counts as working time (White collar yes, Blue collar no) | D39 |
 | `tblTimeReg.companyID` | Which company an activity counts for, for people in several companies | GAP-03, D16 |
 | `tblTimeReg.projectID` | Which project an activity belongs to | D16, D19 |
 | `tblTimeReg.terminalID` | Which terminal took the scan | GAP-09 |

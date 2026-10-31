@@ -208,6 +208,9 @@ Future<void> main() async {
     executor: db,
   );
 
+  // Off on a database without the proposed tables (PROPOSED_TABLES.md):
+  // registering starts and finishes works the same either way.
+  final hasActivities = await const ActivityRepository().available(db);
   final timeRecordService = TimeRecordService(
     records: TimeRecordRepository(db),
     employees: EmployeeRepository(db),
@@ -215,6 +218,7 @@ Future<void> main() async {
     clock: workplaceClock,
     schedules: ScheduleRepository(db),
     rounding: RegistrationRounding(ScheduleRepository(db)),
+    travelIsWork: hasActivities ? (ids) => const ActivityRepository().travelIsWork(db, ids) : null,
   );
   final myDayService = MyDayService(
     days: timeRecordService,
@@ -222,9 +226,7 @@ Future<void> main() async {
     plans: WeekPlans(ScheduleRepository(db)),
     clock: workplaceClock,
   );
-  // Off on a database without the proposed tables (PROPOSED_TABLES.md):
-  // registering starts and finishes works the same either way.
-  final activityService = await const ActivityRepository().available(db)
+  final activityService = hasActivities
       ? ActivityService(
           activities: const ActivityRepository(),
           writes: const TimeRegistrationWriteRepository(),
@@ -350,7 +352,7 @@ Future<void> main() async {
         onDayStart: activityService?.dayStarted,
       ),
     ),
-    activities: ActivityRoutes(activityService),
+    activities: ActivityRoutes(authorizer, activityService),
     schedules: ScheduleRoutes(
       authorizer,
       scheduleService,

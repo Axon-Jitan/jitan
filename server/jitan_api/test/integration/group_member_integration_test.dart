@@ -105,6 +105,7 @@ void main() {
       await db.execute('DELETE FROM tblCompany WHERE companyID = :c', {'c': id});
     }
     for (final id in createdEventTypes) {
+      await db.execute('DELETE FROM tblEventLogEventType WHERE eventTypeID = :t', {'t': id});
       await db.execute('DELETE FROM tblEventType WHERE eventTypeID = :t', {'t': id});
     }
     await db.close();

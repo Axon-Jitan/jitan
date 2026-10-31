@@ -55,6 +55,7 @@ class ActivityService {
     return MyActivity(
       enabled: true,
       current: current,
+      breakdown: await _breakdown(userId),
       projects: [for (final p in projects) p.project],
       companies: companies,
     );
@@ -114,6 +115,64 @@ class ActivityService {
       );
     });
     return mine(userId);
+  }
+
+  /// Whether [groupId]'s travel counts as work (D39); 404 for no such group.
+  Future<GroupTravel> groupTravel(int groupId) async => GroupTravel(
+    available: true,
+    travelIsWork: await _activities.groupTravel(_executor, groupId) ?? (throw _noGroup()),
+  );
+
+  /// Changes it, audited; nothing happens when it is already so.
+  Future<GroupTravel> setGroupTravel(int actorUserId, int groupId, {required bool travelIsWork}) async {
+    await _transactions.transaction((tx) async {
+      final current = await _activities.groupTravel(tx, groupId) ?? (throw _noGroup());
+      if (current == travelIsWork) return;
+      await _activities.setGroupTravel(tx, groupId, travelIsWork: travelIsWork);
+      await _audit.record(
+        tx,
+        AuditEvent(
+          type: AuditEventType.groupTravelChanged,
+          actorUserId: actorUserId,
+          references: {EventLogReference.group: groupId},
+        ),
+      );
+    });
+    return GroupTravel(available: true, travelIsWork: travelIsWork);
+  }
+
+  static ApiException _noGroup() => const ApiException.notFound('No such group.');
+
+  /// Today's activities, each until the next one, the finish or now.
+  Future<ActivityBreakdown> _breakdown(int userId) async {
+    final (from, to) = _todayBounds();
+    final rows = await _activities.between(_executor, userId, from, to);
+    final finish = (await _myDay.today(userId)).day?.finish?.actual;
+    final now = _now().toUtc();
+    final last = finish != null && finish.isBefore(now) ? finish : now;
+    var client = 0, internal = 0, other = 0, transport = 0, trips = 0;
+    for (final (i, row) in rows.indexed) {
+      final end = i + 1 < rows.length ? rows[i + 1].at : last;
+      final minutes = end.isAfter(row.at) ? end.difference(row.at).inMinutes : 0;
+      switch (_kindOf(row.typeName)) {
+        case ActivityKind.clientOnSite || ActivityKind.clientInHouse:
+          client += minutes;
+        case ActivityKind.internal:
+          internal += minutes;
+        case ActivityKind.work:
+          other += minutes;
+        case ActivityKind.transport:
+          transport += minutes;
+          if (i == 0 || _kindOf(rows[i - 1].typeName) != ActivityKind.transport) trips++;
+      }
+    }
+    return ActivityBreakdown(
+      clientMinutes: client,
+      internalMinutes: internal,
+      otherMinutes: other,
+      transportMinutes: transport,
+      trips: trips,
+    );
   }
 
   /// Stores what the day starts on, in the transaction of the start. Nothing

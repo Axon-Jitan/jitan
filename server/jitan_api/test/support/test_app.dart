@@ -190,7 +190,7 @@ class TestApp {
         scheduleEditing,
       ),
       timeRecords: TimeRecordRoutes(Authorizer(permissions), timeRecordService, timeCorrections, myDays),
-      activities: const ActivityRoutes(null),
+      activities: ActivityRoutes(Authorizer(permissions), null),
       projects: ProjectRoutes(
         Authorizer(permissions),
         ProjectService(

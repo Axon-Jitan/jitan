@@ -297,6 +297,49 @@ void main() {
     }
   });
 
+  onlyWithTables('D39: a group decides whether travel counts, and it is audited once', () async {
+    final user = await newUser();
+    final group = (await db.execute(
+      'INSERT INTO tblGroup (groupName, groupActive, groupMFD) VALUES (:n, 1, 0)',
+      {'n': '$prefix group'},
+    )).lastInsertId;
+    await db.execute(
+      'INSERT INTO tblUserGroup (userID, groupID, userGroupActive, userGroupMFD) VALUES (:u, :g, 1, 0)',
+      {'u': user, 'g': group},
+    );
+    const repository = ActivityRepository();
+
+    expect((await activities.groupTravel(group)).travelIsWork, isFalse);
+    expect(await repository.travelIsWork(db, [user]), isEmpty);
+
+    await activities.setGroupTravel(user, group, travelIsWork: true);
+    await activities.setGroupTravel(user, group, travelIsWork: true);
+
+    expect(await repository.travelIsWork(db, [user]), {user});
+    final audit = await db.query('SELECT COUNT(*) AS n FROM tblEventLog WHERE groupID = :g', {'g': group});
+    expect(audit.single.readInt('n'), 1);
+
+    await db.execute('DELETE t FROM tblEventLogEventType t JOIN tblEventLog e ON e.eventLogID = t.eventLogID WHERE e.groupID = :g', {'g': group});
+    await db.execute('DELETE FROM tblEventLog WHERE groupID = :g', {'g': group});
+    await db.execute('DELETE FROM tblUserGroup WHERE groupID = :g', {'g': group});
+    await db.execute('DELETE FROM tblGroup WHERE groupID = :g', {'g': group});
+  });
+
+  onlyWithTables('today shows what the day went on', () async {
+    final user = await newUser();
+    final project = await newProject(internalType);
+    await assign(user, project);
+    await start(user, moment(120));
+
+    await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60), projectId: project));
+    final mine = await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(30), projectId: project));
+
+    expect(mine.breakdown.internalMinutes, inInclusiveRange(89, 90));
+    expect(mine.breakdown.transportMinutes, inInclusiveRange(29, 31));
+    expect(mine.breakdown.trips, 1);
+    expect(mine.breakdown.isMixed, isTrue);
+  });
+
   onlyWithTables('the default company is the marked one, and a switch of company lasts for the day', () async {
     final user = await newUser(isDefault: true);
     await db.execute(

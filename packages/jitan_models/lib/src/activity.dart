@@ -96,16 +96,74 @@ class CurrentActivity {
   };
 }
 
+/// How today has gone so far (Figma "Today's breakdown"), in minutes.
+class ActivityBreakdown {
+  const ActivityBreakdown({
+    this.clientMinutes = 0,
+    this.internalMinutes = 0,
+    this.otherMinutes = 0,
+    this.transportMinutes = 0,
+    this.trips = 0,
+  });
+
+  factory ActivityBreakdown.fromJson(Map<String, Object?> json) => ActivityBreakdown(
+    clientMinutes: json.readInt('clientMinutes'),
+    internalMinutes: json.readInt('internalMinutes'),
+    otherMinutes: json.readInt('otherMinutes'),
+    transportMinutes: json.readInt('transportMinutes'),
+    trips: json.readInt('trips'),
+  );
+
+  final int clientMinutes;
+  final int internalMinutes;
+  final int otherMinutes;
+  final int transportMinutes;
+  final int trips;
+
+  /// More than one kind of work: worth showing.
+  bool get isMixed =>
+      [clientMinutes, internalMinutes, otherMinutes, transportMinutes].where((minutes) => minutes > 0).length > 1;
+
+  Map<String, Object?> toJson() => {
+    'clientMinutes': clientMinutes,
+    'internalMinutes': internalMinutes,
+    'otherMinutes': otherMinutes,
+    'transportMinutes': transportMinutes,
+    'trips': trips,
+  };
+}
+
+/// `GET /groups/{id}/travel`. [available] is `false` on a database without
+/// the proposed tables: the group page then shows no switch.
+class GroupTravel {
+  const GroupTravel({required this.available, required this.travelIsWork});
+
+  factory GroupTravel.fromJson(Map<String, Object?> json) =>
+      GroupTravel(available: json.readBool('available'), travelIsWork: json.readBool('travelIsWork'));
+
+  final bool available;
+  final bool travelIsWork;
+
+  Map<String, Object?> toJson() => {'available': available, 'travelIsWork': travelIsWork};
+}
+
 /// `GET /me/activity`. [enabled] is `false` on a database without the proposed
 /// tables: the app then shows no project card.
 class MyActivity {
-  const MyActivity({required this.enabled, required this.projects, required this.companies, this.current});
+  const MyActivity({
+    required this.enabled,
+    required this.projects,
+    required this.companies,
+    this.current,
+    this.breakdown = const ActivityBreakdown(),
+  });
 
   factory MyActivity.fromJson(Map<String, Object?> json) => MyActivity(
     enabled: json.readBool('enabled'),
     current: json['current'] == null ? null : CurrentActivity.fromJson(json.readObject('current')),
     projects: json.readObjectList('projects').map(MyProject.fromJson).toList(),
     companies: json.readObjectList('companies').map(MyCompany.fromJson).toList(),
+    breakdown: ActivityBreakdown.fromJson(json.readObject('breakdown')),
   );
 
   static const disabled = MyActivity(enabled: false, projects: [], companies: []);
@@ -116,12 +174,14 @@ class MyActivity {
   /// Assigned now, and the ones worked on before.
   final List<MyProject> projects;
   final List<MyCompany> companies;
+  final ActivityBreakdown breakdown;
 
   Map<String, Object?> toJson() => {
     'enabled': enabled,
     'current': current?.toJson(),
     'projects': [for (final p in projects) p.toJson()],
     'companies': [for (final c in companies) c.toJson()],
+    'breakdown': breakdown.toJson(),
   };
 }
 

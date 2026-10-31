@@ -20,6 +20,9 @@ CREATE TABLE tblCompanyAddress (
 
 ALTER TABLE tblUserCompany ADD COLUMN userCompanyDefault TINYINT(1) NOT NULL DEFAULT 0;
 
+-- Whether an employee group's travel is working time (D39).
+ALTER TABLE tblGroup ADD COLUMN groupTravelIsWork TINYINT(1) NOT NULL DEFAULT 0;
+
 -- ── Projects (D16, D17, D21, D26, D27) ─────
 
 CREATE TABLE tblProjectType (

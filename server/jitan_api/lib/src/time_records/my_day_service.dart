@@ -87,7 +87,8 @@ class MyDayService {
     final finish = day.finish?.rounded;
     if (start == null || finish == null || day.pending.isNotEmpty) return null;
     final worked = finish.difference(start).inMinutes - (day.awayMinutes > 0 ? day.awayMinutes : breakMinutes);
-    return worked < 0 ? 0 : worked;
+    final counted = worked - (day.travelIsWork ? 0 : day.transportMinutes);
+    return counted < 0 ? 0 : counted;
   }
 
   /// The employee's schedule by ISO weekday (1 = Monday … 7 = Sunday).

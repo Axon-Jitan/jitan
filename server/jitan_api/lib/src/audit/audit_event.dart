@@ -87,6 +87,9 @@ enum AuditEventType {
   /// HR/Admin reactivated an employee group.
   groupReactivated('group.reactivated'),
 
+  /// HR/Admin changed whether a group's travel counts as work (D39).
+  groupTravelChanged('group.travel.changed'),
+
   /// HR/Admin saved a group's work hours or breaks: one event per new
   /// `tblSchedule` row (with its type, day, group and rounding rule).
   scheduleCreated('schedule.created'),

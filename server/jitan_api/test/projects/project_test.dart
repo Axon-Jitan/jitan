@@ -133,6 +133,16 @@ void main() {
     expect(response.statusCode, 404);
   });
 
+  test('without the proposed tables a group has no travel switch', () async {
+    final (app, _) = await _app();
+
+    final travel = GroupTravel.fromJson(await jsonBody(await app.get('/groups/1/travel')));
+    final response = await _put(app, '/groups/1/travel', const GroupTravel(available: true, travelIsWork: true).toJson());
+
+    expect(travel.available, isFalse);
+    expect(response.statusCode, 404);
+  });
+
   test('edits a project and audits it', () async {
     final (app, _) = await _app();
     final id = await _add(app, _internal);
