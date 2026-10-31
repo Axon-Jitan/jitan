@@ -150,6 +150,7 @@ void main() {
       await _pump(tester, width, ReportsScreen(api: api, companiesApi: FakeCompaniesApi(), today: () => DateTime(2026, 10, 23)));
       await tester.pumpAndSettle();
       _fitsTheWindow(tester, width, 'Reports');
+      expect(find.text('Difference'), findsNWidgets(width < JitanDimensions.phoneBreakpoint ? 1 : 2), reason: 'a phone keeps the table simple');
 
       await tester.tap(find.textContaining('Fabian Peeters'));
       await _settle(tester);

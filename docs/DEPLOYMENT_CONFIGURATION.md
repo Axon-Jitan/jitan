@@ -181,6 +181,10 @@ Nginx must send this header on the HR web's pages. HR stays signed in for 30 day
 in the browser's local storage, which any script on the page can read, so only Jitan's own scripts
 may run. Replace the address in `connect-src` if the API is not on the same site.
 
+The browser console shows one blocked request for a Roboto font from `fonts.gstatic.com`.
+This is expected: Flutter always tries it, the page uses Inter, and the policy keeps visitors
+from being sent to Google. Do not open `connect-src` for it.
+
 ```nginx
 add_header Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://api.mapbox.com; font-src 'self' data:; connect-src 'self' https://api.mapbox.com; worker-src 'self' blob:; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'" always;
 ```

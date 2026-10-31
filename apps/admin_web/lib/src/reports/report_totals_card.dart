@@ -5,7 +5,8 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 import 'report_text.dart';
 
-/// One quiet card with the month's four numbers (Figma `1467:2`).
+/// One quiet card with the month's four numbers (Figma `1467:2`, phone
+/// `1482:2`).
 class ReportTotalsCard extends StatelessWidget {
   const ReportTotalsCard({super.key, required this.employees});
 
@@ -44,7 +45,10 @@ class ReportTotalsCard extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: 16,
-                  children: [for (final value in items) item(value)],
+                  children: [
+                    for (final pair in [items.sublist(0, 2), items.sublist(2)])
+                      Row(children: [for (final value in pair) Expanded(child: item(value))]),
+                  ],
                 )
               : IntrinsicHeight(
                   child: Row(
