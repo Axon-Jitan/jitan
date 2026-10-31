@@ -293,6 +293,22 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## AUTH-02: HR/Admin sign-in (phase 10)
+Status: `DONE` (2026-10-31) for the web; production permissions wait for CLARIFY-10/11
+
+Sign-in in front of the whole HR web (Figma `1469:2` sign in, `1469:22` wrong password, `1469:44`
+no access, `1469:53` signed-in user), designed by us and approved on 2026-10-31.
+- `POST /auth/sign-in` as on the phone: generic failures, nothing says whether the code exists.
+- **Stays signed in for the session's 30 days** (product owner, 2026-10-31), in the browser's local
+  storage, so also on a shared PC until Sign out. A 401 anywhere ends it and shows sign-in.
+- **No access** comes from the server's own 403 on `GET /companies`, never from a role name
+  (rule §18). The production evaluator (CLARIFY-10/11) plugs in behind it: until then a real
+  server refuses everyone, so **HR can't go live before IT answers**.
+- Forgot password: HR/Admin-assisted, like employees; recovery finishes in the phone app.
+
+Before production (SEC-01): a sign-in attempt limit, and a Content-Security-Policy, because local
+storage is readable by any script on the page.
+
 ## REP-01: Monthly hours report (phase 7)
 Status: `DONE` (2026-10-31)
 

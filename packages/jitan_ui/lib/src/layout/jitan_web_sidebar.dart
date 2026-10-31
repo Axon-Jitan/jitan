@@ -13,6 +13,7 @@ class JitanWebSidebar extends StatelessWidget {
     required this.selectedPath,
     required this.onNavigate,
     this.roleCaption,
+    this.footer,
   });
 
   final List<JitanNavDestination> destinations;
@@ -21,6 +22,9 @@ class JitanWebSidebar extends StatelessWidget {
 
   /// e.g. "ADMIN" / "HR". Omitted when unknown; never guessed.
   final String? roleCaption;
+
+  /// At the bottom, e.g. who is signed in.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -49,7 +53,9 @@ class JitanWebSidebar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 32),
-                Padding(
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: JitanDimensions.sidebarHorizontalPadding),
                   child: Column(
                     children: [
@@ -64,6 +70,9 @@ class JitanWebSidebar extends StatelessWidget {
                     ],
                   ),
                 ),
+                  ),
+                ),
+                ?footer,
               ],
             ),
           ),

@@ -238,7 +238,7 @@ named so it can be found:
 
 | Item | Replace with | Blocked on |
 |---|---|---|
-| `DevelopmentIdentityMiddleware` | `TokenAuthenticationMiddleware` (exists; runs first) once the HR/Admin web has a sign-in screen | AUTH-02 |
+| `DevelopmentIdentityMiddleware` | Nothing: sign-in exists, so run the API without `JITAN_DEV_USER_ID`. Only for curl in development | remove before production |
 | `DevelopmentPermissionEvaluator` / `UnconfiguredPermissionEvaluator` | evaluator over `tblCredGroup`/`tblAppModulesCredGroup`/`tblFunction` | CLARIFY-10, -11 |
 | Sidebar role caption omitted | signed-in user's credential group from a `/me` endpoint | CLARIFY-11 |
 | Cleartext `http://` in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`) | HTTPS API; release builds already refuse cleartext | production hosting |

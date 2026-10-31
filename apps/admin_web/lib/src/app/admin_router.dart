@@ -1,6 +1,10 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:jitan_ui/jitan_ui.dart';
 
+import '../auth/admin_session.dart';
+import '../auth/no_access_screen.dart';
+import '../auth/sign_in_screen.dart';
 import '../companies/companies_screen.dart';
 import '../employees/employees_screen.dart';
 import '../employees/import/employee_import_screen.dart';
@@ -14,16 +18,50 @@ import 'admin_routes.dart';
 import 'admin_services.dart';
 import 'admin_shell.dart';
 
+/// Nothing opens without a session. The page asked for travels along in
+/// `from`, so a link or a reload lands on it after sign-in.
+String? _redirect(AdminSession session, GoRouterState state) {
+  const gates = {AdminRoutes.checking, AdminRoutes.signIn, AdminRoutes.noAccess};
+  final path = state.matchedLocation;
+  final from = gates.contains(path) ? state.uri.queryParameters['from'] : state.uri.toString();
+  String gate(String route) {
+    if (path == route) return route;
+    return from == null ? route : Uri(path: route, queryParameters: {'from': from}).toString();
+  }
+
+  return switch (session.status) {
+    AdminSessionStatus.checking when path != AdminRoutes.checking => gate(AdminRoutes.checking),
+    AdminSessionStatus.signedOut when path != AdminRoutes.signIn => gate(AdminRoutes.signIn),
+    AdminSessionStatus.noAccess when path != AdminRoutes.noAccess => gate(AdminRoutes.noAccess),
+    AdminSessionStatus.signedIn when gates.contains(path) || path == '/' =>
+      from != null && from.startsWith('/') && from != '/' ? from : AdminRoutes.companies,
+    _ => null,
+  };
+}
+
 /// URL routing for the HR/Admin app. Unknown paths go to Companies.
 GoRouter buildAdminRouter({required AdminServices services, String? initialLocation}) {
   AdminShell shell(String location, Widget child) =>
-      AdminShell(location: location, companiesApi: services.companiesApi, child: child);
+      AdminShell(location: location, companiesApi: services.companiesApi, session: services.session, child: child);
 
   return GoRouter(
     initialLocation: initialLocation ?? AdminRoutes.companies,
-    redirect: (context, state) => state.matchedLocation == '/' ? AdminRoutes.companies : null,
+    refreshListenable: services.session,
+    redirect: (context, state) => _redirect(services.session, state),
     errorBuilder: (context, state) => shell(AdminRoutes.companies, CompaniesScreen(api: services.companiesApi)),
     routes: [
+      GoRoute(
+        path: AdminRoutes.checking,
+        builder: (context, state) => const ColoredBox(color: JitanColors.warmWhite),
+      ),
+      GoRoute(
+        path: AdminRoutes.signIn,
+        builder: (context, state) => SignInScreen(session: services.session),
+      ),
+      GoRoute(
+        path: AdminRoutes.noAccess,
+        builder: (context, state) => NoAccessScreen(session: services.session),
+      ),
       ShellRoute(
         builder: (context, state, child) => shell(state.matchedLocation, child),
         routes: [

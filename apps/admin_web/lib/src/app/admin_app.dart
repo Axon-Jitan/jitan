@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../auth/admin_session.dart';
 import '../company_context/current_company.dart';
 import '../l10n/admin_text_keys.dart';
 import 'admin_router.dart';
@@ -25,6 +26,13 @@ class AdminApp extends StatefulWidget {
 class _AdminAppState extends State<AdminApp> {
   late final GoRouter _router = buildAdminRouter(services: widget.services, initialLocation: widget.initialLocation);
   late final CurrentCompanyController _currentCompany = widget.currentCompany ?? CurrentCompanyController();
+
+  @override
+  void initState() {
+    super.initState();
+    final session = widget.services.session;
+    if (session.status == AdminSessionStatus.checking) session.restore();
+  }
 
   @override
   void dispose() {

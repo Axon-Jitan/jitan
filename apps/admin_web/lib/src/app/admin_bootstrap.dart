@@ -29,6 +29,13 @@ class _AdminBootstrapState extends State<AdminBootstrap> {
   void initState() {
     super.initState();
     _loadUserLanguage();
+    widget.services.session.addListener(_loadUserLanguage);
+  }
+
+  @override
+  void dispose() {
+    widget.services.session.removeListener(_loadUserLanguage);
+    super.dispose();
   }
 
   Future<void> _loadUserLanguage() async {

@@ -1,6 +1,9 @@
 import 'package:admin_web/src/app/admin_services.dart';
+import 'package:admin_web/src/auth/admin_session.dart';
+import 'package:admin_web/src/auth/platform/session_store.dart';
 
 import 'fake_assignments_api.dart';
+import 'fake_auth.dart';
 import 'fake_companies_api.dart';
 import 'fake_employees_api.dart';
 import 'fake_group_apis.dart';
@@ -11,7 +14,7 @@ import 'fake_time_records_api.dart';
 
 /// [AdminServices] wired to fakes; the fakes stay reachable for assertions.
 class TestServices {
-  TestServices() {
+  TestServices({AdminSession? session}) {
     services = AdminServices(
       companiesApi: companies,
       employeesApi: employees,
@@ -24,6 +27,14 @@ class TestServices {
       scheduleSourceApi: scheduleSource,
       locationsApi: locations,
       reportsApi: reports,
+      session: session ??
+          AdminSession.signedIn(
+            auth: FakeAuthApi(),
+            me: FakeMeApi(),
+            companies: AllCompaniesApi(),
+            store: MemorySessionStore(),
+            account: testAccount,
+          ),
       locationMaps: maps,
     );
   }
