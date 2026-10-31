@@ -1,6 +1,7 @@
 /// Shared Jitan models used by the API server and all Flutter clients.
 library;
 
+export 'src/activity.dart';
 export 'src/api_error.dart';
 export 'src/auth.dart';
 export 'src/company_summary.dart';

@@ -127,8 +127,8 @@ class ProjectRepository {
   };
 
   Future<int> addLink(SqlExecutor tx, int userId, int projectId) async => (await tx.execute(
-    'INSERT INTO tblUserProject (userID, projectID, userProjectDefault, userProjectActive, userProjectMFD) '
-    'VALUES (:user, :project, 0, 1, 0)',
+    'INSERT INTO tblUserProject (userID, projectID, userProjectActive, userProjectMFD) '
+    'VALUES (:user, :project, 1, 0)',
     {'user': userId, 'project': projectId},
   )).lastInsertId;
 

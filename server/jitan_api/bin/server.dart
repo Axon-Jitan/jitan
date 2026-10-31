@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:jitan_api/src/app.dart';
+import 'package:jitan_api/src/activities/activity_repository.dart';
+import 'package:jitan_api/src/activities/activity_routes.dart';
+import 'package:jitan_api/src/activities/activity_service.dart';
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/auth/authorizer.dart';
 import 'package:jitan_api/src/auth/development_identity_middleware.dart';
@@ -71,6 +74,7 @@ import 'package:jitan_api/src/time_records/time_record_repository.dart';
 import 'package:jitan_api/src/time_records/time_record_routes.dart';
 import 'package:jitan_api/src/time_records/time_record_service.dart';
 import 'package:jitan_api/src/time_registration/registration_rounding.dart';
+import 'package:jitan_api/src/time_registration/time_registration_write_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_write_service.dart';
 import 'package:jitan_api/src/time_registration/workplace_clock.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
@@ -212,6 +216,25 @@ Future<void> main() async {
     schedules: ScheduleRepository(db),
     rounding: RegistrationRounding(ScheduleRepository(db)),
   );
+  final myDayService = MyDayService(
+    days: timeRecordService,
+    records: TimeRecordRepository(db),
+    plans: WeekPlans(ScheduleRepository(db)),
+    clock: workplaceClock,
+  );
+  // Off on a database without the proposed tables (PROPOSED_TABLES.md):
+  // registering starts and finishes works the same either way.
+  final activityService = await const ActivityRepository().available(db)
+      ? ActivityService(
+          activities: const ActivityRepository(),
+          writes: const TimeRegistrationWriteRepository(),
+          myDay: myDayService,
+          audit: const AuditLogRepository(),
+          transactions: db,
+          executor: db,
+          clock: workplaceClock,
+        )
+      : null;
   final employeeService = EmployeeService(
     employees: EmployeeRepository(db),
     companies: companyRepository,
@@ -324,8 +347,10 @@ Future<void> main() async {
         transactions: db,
         rounding: RegistrationRounding(ScheduleRepository(db)),
         clock: workplaceClock,
+        onDayStart: activityService?.dayStarted,
       ),
     ),
+    activities: ActivityRoutes(activityService),
     schedules: ScheduleRoutes(
       authorizer,
       scheduleService,
@@ -343,12 +368,7 @@ Future<void> main() async {
         rounding: RegistrationRounding(ScheduleRepository(db)),
         clock: workplaceClock,
       ),
-      MyDayService(
-        days: timeRecordService,
-        records: TimeRecordRepository(db),
-        plans: WeekPlans(ScheduleRepository(db)),
-        clock: workplaceClock,
-      ),
+      myDayService,
     ),
     reports: ReportRoutes(
       authorizer,

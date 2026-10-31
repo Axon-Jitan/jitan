@@ -2,6 +2,7 @@ import 'package:logging/logging.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
+import 'activities/activity_routes.dart';
 import 'auth/sign_in_routes.dart';
 import 'companies/company_routes.dart';
 import 'employees/employee_assignment_routes.dart';
@@ -44,6 +45,7 @@ Handler buildApp({
   required LanguageRoutes languages,
   required LocationRoutes locations,
   required ProjectRoutes projects,
+  required ActivityRoutes activities,
   required ReportRoutes reports,
   required OnboardingRoutes onboarding,
   required RecoveryRoutes recovery,
@@ -61,6 +63,7 @@ Handler buildApp({
     ..mount('/', groups.router.call)
     ..mount('/', locations.router.call)
     ..mount('/', projects.router.call)
+    ..mount('/', activities.router.call)
     ..mount('/', reports.router.call)
     ..mount('/', languages.authenticatedRouter.call)
     ..mount('/', me.router.call)

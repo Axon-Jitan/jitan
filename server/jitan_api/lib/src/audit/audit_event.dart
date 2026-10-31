@@ -121,7 +121,10 @@ enum AuditEventType {
   projectEmployeeAssigned('project.employee.assigned'),
 
   /// HR/Admin took an employee off a project.
-  projectEmployeeUnassigned('project.employee.unassigned');
+  projectEmployeeUnassigned('project.employee.unassigned'),
+
+  /// The employee switched activity, project or company; the day goes on.
+  activitySwitched('time.activity.switched');
 
   const AuditEventType(this.typeName);
 

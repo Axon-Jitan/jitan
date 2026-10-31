@@ -51,6 +51,9 @@ abstract final class ApiErrorCode {
   /// ignoring upper/lower case.
   static const duplicateGroupName = 'duplicate_group_name';
 
+  /// An activity can only be switched while the day is running.
+  static const workdayNotRunning = 'workday_not_running';
+
   /// Another location (active or inactive) already has this name.
   static const duplicateLocationName = 'duplicate_location_name';
 

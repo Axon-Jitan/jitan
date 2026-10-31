@@ -123,6 +123,16 @@ void main() {
     });
   });
 
+  test('without the proposed tables the app is told, and a switch is refused', () async {
+    final (app, _) = await _app();
+
+    final mine = MyActivity.fromJson(await jsonBody(await app.get('/me/activity')));
+    final response = await _post(app, '/me/activity', {'kind': 'work', 'at': '2026-10-22T06:00:00Z'});
+
+    expect(mine.enabled, isFalse);
+    expect(response.statusCode, 404);
+  });
+
   test('edits a project and audits it', () async {
     final (app, _) = await _app();
     final id = await _add(app, _internal);

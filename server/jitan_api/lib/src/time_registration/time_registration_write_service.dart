@@ -18,9 +18,9 @@ import 'workplace_clock.dart';
 /// **rounded** with the employee's schedule for that weekday ("Start –
 /// rounded"), both UTC. Rounding is done in the workplace's local time.
 ///
-/// Every start and finish is rounded with the day's rule. Rounding only the
-/// day's first start and last finish (D22) matters once activities can be
-/// switched, which comes with IT's projects update (D16, D19).
+/// Every start and finish is rounded with the day's rule. Switching activity
+/// adds no start or finish (D37), so only the day's first start and last
+/// finish are rounded (D22).
 class TimeRegistrationWriteService {
   TimeRegistrationWriteService({
     required this._transactions,
@@ -29,6 +29,7 @@ class TimeRegistrationWriteService {
     this._repository = const TimeRegistrationWriteRepository(),
     this._audit = const AuditLogRepository(),
     this._locations = const LocationRepository(),
+    this._onDayStart,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -38,6 +39,10 @@ class TimeRegistrationWriteService {
   final TimeRegistrationWriteRepository _repository;
   final AuditLogRepository _audit;
   final LocationRepository _locations;
+
+  /// Stores what the day starts on (D37), in the same transaction; `null` on
+  /// a database without the proposed tables.
+  final Future<void> Function(SqlExecutor tx, int userId, DateTime at)? _onDayStart;
   final DateTime Function() _now;
 
   /// How far ahead of the server's clock a time may be (a phone's clock may
@@ -174,6 +179,7 @@ class TimeRegistrationWriteService {
           },
         ),
       );
+      if (request.boundary == RegistrationBoundary.start) await _onDayStart?.call(tx, userId, at);
       return (
         registered: RegisteredTime(
           boundary: request.boundary,

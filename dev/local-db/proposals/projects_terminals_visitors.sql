@@ -72,7 +72,6 @@ CREATE TABLE tblUserProject (
   userProjectID      INT NOT NULL AUTO_INCREMENT,
   userID             INT NOT NULL,
   projectID          INT NOT NULL,
-  userProjectDefault TINYINT(1) NOT NULL DEFAULT 0,
   userProjectActive  TINYINT(1) NOT NULL DEFAULT 1,
   userProjectMFD     TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (userProjectID),
@@ -156,4 +155,6 @@ INSERT INTO tblProjectType (projectTypeName) VALUES ('Client'), ('Internal');
 INSERT INTO tblProjectStatus (projectStatusName) VALUES ('Planned'), ('Active'), ('Completed');
 INSERT INTO tblProjectAgreement (projectAgreementName) VALUES ('Charge the customer'), ('Pay the employee'), ('Both');
 INSERT INTO tblTerminalType (terminalTypeName) VALUES ('Office'), ('Vehicle');
-INSERT INTO tblTimeRegType (timeRegTypeName) VALUES ('Transport – start'), ('Transport – finish');
+INSERT INTO tblTimeRegType (timeRegTypeName) VALUES
+  ('Activity – Work'), ('Activity – Client on site'), ('Activity – Client in-house'),
+  ('Activity – Internal'), ('Activity – Transport');

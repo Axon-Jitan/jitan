@@ -5,7 +5,8 @@ exist in IT's database. The product owner decided on 2026-10-31 to build on them
 and ask IT to add them. SQL: [projects_terminals_visitors.sql](../../dev/local-db/proposals/projects_terminals_visitors.sql).
 
 **Status: not yet sent to IT.** They exist only in the local development database.
-Features using them will not work against IT's database until IT has added them. If IT
+Features using them are off on IT's database until IT has added them; registering
+starts and finishes keeps working there, because the server checks at startup. If IT
 prefers another structure, Jitan changes to match.
 
 ## Questions for IT
@@ -24,7 +25,7 @@ prefers another structure, Jitan changes to match.
 |---|---|---|---|
 | `tblCompanyAddress` | Links an address to a company | Nothing links an address to a company | GAP-03, D36 |
 | `tblProject` | A client or internal project of a company: name, reference, status, dates, description, client address, kilometre agreement | No project concept exists | D16, D17, D21, D26 |
-| `tblUserProject` | Who is assigned to a project, and each person's default project | No link between employees and projects | D16, D27 |
+| `tblUserProject` | Who is assigned to a project | No link between employees and projects | D16, D27 |
 | `tblProjectType` | Lookup: Client, Internal | Lookup values are read from the database, not hardcoded | D17 |
 | `tblProjectStatus` | Lookup: Planned, Active, Completed | Same | Figma `647:3452` |
 | `tblProjectAgreement` | Lookup: who gets the kilometres (charge the customer, pay the employee, both) | Same | D26 |
@@ -40,8 +41,8 @@ temporary QR codes.
 | Column | Purpose | Gap / decision |
 |---|---|---|
 | `tblUserCompany.userCompanyDefault` | An employee's default company | D16 |
-| `tblTimeReg.companyID` | Which company a registration counts for, for people in several companies | GAP-03, D16 |
-| `tblTimeReg.projectID` | Which project a registration belongs to | D16, D19 |
+| `tblTimeReg.companyID` | Which company an activity counts for, for people in several companies | GAP-03, D16 |
+| `tblTimeReg.projectID` | Which project an activity belongs to | D16, D19 |
 | `tblTimeReg.terminalID` | Which terminal took the scan | GAP-09 |
 | `tblEventLog.projectID`, `userProjectID`, `terminalID`, `visitorID` | Audit of changes to these, like the existing ID columns | Rule 6 |
 
@@ -49,7 +50,7 @@ temporary QR codes.
 
 | Table | Rows | Why |
 |---|---|---|
-| `tblTimeRegType` | `Transport – start`, `Transport – finish` | Transport is recorded but is not working time (D22) |
+| `tblTimeRegType` | `Activity – Work`, `Activity – Client on site`, `Activity – Client in-house`, `Activity – Internal`, `Activity – Transport` | One row per switch, so Start and Finish rows stay as they are (D37). Transport is recorded but is not working time (D22) |
 | `tblEventType` | Event names for the new changes, added as they are built | Audit |
 
 ## Already proposed
