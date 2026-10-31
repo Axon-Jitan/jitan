@@ -1,4 +1,5 @@
 import 'package:jitan_models/jitan_models.dart' as jitan;
+import 'package:logging/logging.dart';
 import 'package:native_geofence/native_geofence.dart';
 
 import 'geofence_background.dart';
@@ -41,8 +42,19 @@ class NativeLocationWatcher implements LocationWatcher {
       active.location.latitude == wanted.location.latitude &&
       active.location.longitude == wanted.location.longitude;
 
+  /// The phone can refuse (Google Location Accuracy off, too many
+  /// geofences). The employee can still register by hand; showing this on
+  /// Profile / Location permission (Figma 94:23) is LOC-02.
   @override
   Future<void> watch(List<jitan.Location> locations) async {
+    try {
+      await _watch(locations);
+    } on NativeGeofenceException catch (e) {
+      Logger('geofencing').warning('The phone refused the geofences: ${e.code.name}');
+    }
+  }
+
+  Future<void> _watch(List<jitan.Location> locations) async {
     await NativeGeofenceManager.instance.initialize();
     final wanted = {for (final location in locations) idOf(location.id): _geofence(location)};
     final active = await NativeGeofenceManager.instance.getRegisteredGeofences();

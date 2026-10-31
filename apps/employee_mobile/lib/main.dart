@@ -12,6 +12,7 @@ import 'src/device/permissions_gateway.dart';
 import 'src/device/secure_store.dart';
 import 'src/device/session_manager.dart';
 import 'src/geofencing/automatic_registration.dart';
+import 'src/geofencing/geofence_event_handler.dart';
 import 'src/geofencing/location_watcher.dart';
 import 'src/geofencing/workplace_presence.dart';
 import 'src/l10n/employee_text_keys.dart';
@@ -51,6 +52,7 @@ void main() {
           locations: locationsApi,
           watcher: const NativeLocationWatcher(),
           presence: presence,
+          events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: presence),
         ),
         translationService: TranslationService(languagesApi),
         session: session,

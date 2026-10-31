@@ -1145,6 +1145,7 @@ const builtInEnglish = <String, String>{
   'profile.method.current': 'Current',
   'profile.method.note': 'Changing your method won’t affect existing time records.',
   'profile.method.save': 'Save changes',
+  'today.workday.startedAutomatically': 'Started automatically',
   'today.away.title': 'You’re temporarily away.',
   'today.away.text': 'You left {place} recently. Your workday is still open.',
   'today.away.textNoName': 'You left your workplace recently. Your workday is still open.',

@@ -182,6 +182,7 @@ class _EmployeeAppState extends State<EmployeeApp> {
             timeRegistrationsApi: _services.timeRegistrationsApi,
             presence: _services.presence,
             onReady: _services.automaticRegistration.start,
+            onReturn: _services.automaticRegistration.catchUp,
             clock: _services.clock,
             initialAccount: _account,
             onSessionEnded: _signOut,

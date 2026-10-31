@@ -19,6 +19,9 @@ enum GeofenceChange { entered, stayed, left }
 ///   entering.
 /// - Left: only remembered, while the day runs. Leaving is not a finish.
 ///
+/// Android may deliver "stayed" late or not at all, so [catchUp] (the app
+/// opens) and leaving apply the same rule from the stored moment of entering.
+///
 /// A start that can't be sent is lost here and the Today screen still offers
 /// Start work; queueing waits for PRODUCT-CLARIFY-OFFLINE.
 class GeofenceEventHandler {
@@ -43,6 +46,14 @@ class GeofenceEventHandler {
     await _presence.clearAway();
   }
 
+  /// Registers an arrival whose "stayed" event never came.
+  Future<void> catchUp() async {
+    final entered = await _presence.lastEntered();
+    if (entered != null && _longEnough(entered.at)) await _stayed(entered.addressId);
+  }
+
+  bool _longEnough(DateTime enteredAt) => _clock().difference(enteredAt) >= arrivalDelay;
+
   Future<void> _stayed(int addressId) async {
     final at = await _presence.enteredAt(addressId) ?? _clock().subtract(arrivalDelay);
     await _presence.clearEntered();
@@ -62,6 +73,8 @@ class GeofenceEventHandler {
   }
 
   Future<void> _left(int addressId) async {
+    final entered = await _presence.enteredAt(addressId);
+    if (entered != null && _longEnough(entered)) await _stayed(addressId);
     await _presence.clearEntered();
     final now = _clock();
     try {

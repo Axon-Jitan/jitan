@@ -142,6 +142,7 @@ abstract final class EmployeeTextKeys {
   static const todayBreak = 'today.break';
   static const todayForgotStart = 'today.forgotStart';
   static const todayStartWork = 'today.startWork';
+  static const todayWorkdayStartedAutomatically = 'today.workday.startedAutomatically';
   static const todayAwayTitle = 'today.away.title';
   static const todayAwayText = 'today.away.text';
   static const todayAwayTextNoName = 'today.away.textNoName';

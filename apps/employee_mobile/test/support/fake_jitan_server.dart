@@ -6,6 +6,7 @@ import 'package:employee_mobile/src/device/permissions_gateway.dart';
 import 'package:employee_mobile/src/device/secure_store.dart';
 import 'package:employee_mobile/src/device/session_manager.dart';
 import 'package:employee_mobile/src/geofencing/automatic_registration.dart';
+import 'package:employee_mobile/src/geofencing/geofence_event_handler.dart';
 import 'package:employee_mobile/src/geofencing/location_watcher.dart';
 import 'package:employee_mobile/src/geofencing/workplace_presence.dart';
 import 'package:flutter/material.dart';
@@ -489,6 +490,7 @@ class TestHarness {
         locations: LocationsApi(transport),
         watcher: const NoLocationWatcher(),
         presence: WorkplacePresence(store),
+        events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: WorkplacePresence(store)),
       ),
       // 09:00 on Thursday 22 October 2026 unless a test says otherwise.
       clock: clock ?? () => DateTime(2026, 10, 22, 9),

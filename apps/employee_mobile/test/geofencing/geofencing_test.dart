@@ -57,6 +57,37 @@ void main() {
       expect(sent['at'], DateTime(2026, 10, 22, 8).toUtc().toIso8601String());
     });
 
+    test('no stayed event: the app opening registers it, at the moment of entering', () async {
+      await handler.handle(GeofenceChange.entered, 7);
+      now = now.add(const Duration(hours: 1));
+
+      await handler.catchUp();
+      await handler.catchUp();
+
+      final sent = h.server.registrations.single;
+      expect(sent['at'], DateTime(2026, 10, 22, 8).toUtc().toIso8601String());
+    });
+
+    test('the app opening too soon registers nothing yet', () async {
+      await handler.handle(GeofenceChange.entered, 7);
+      now = now.add(const Duration(minutes: 4));
+
+      await handler.catchUp();
+
+      expect(h.server.registrations, isEmpty);
+      expect(await presence.lastEntered(), isNotNull);
+    });
+
+    test('no stayed event: leaving after five minutes registers the start, then away', () async {
+      await handler.handle(GeofenceChange.entered, 7);
+      now = DateTime(2026, 10, 22, 12);
+
+      await handler.handle(GeofenceChange.left, 7);
+
+      expect(h.server.registrations.single['boundary'], 'start');
+      expect(await presence.away(), isNotNull);
+    });
+
     test('entering and leaving at once registers nothing', () async {
       await handler.handle(GeofenceChange.entered, 7);
       await handler.handle(GeofenceChange.left, 7);
@@ -101,6 +132,7 @@ void main() {
         locations: h.services.locationsApi,
         watcher: watcher,
         presence: presence,
+        events: handler,
       );
     });
 

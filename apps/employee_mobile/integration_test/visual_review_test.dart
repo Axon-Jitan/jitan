@@ -14,6 +14,7 @@ import 'package:employee_mobile/src/app/employee_services.dart';
 import 'package:employee_mobile/src/device/device_settings.dart';
 import 'package:employee_mobile/src/device/session_manager.dart';
 import 'package:employee_mobile/src/geofencing/automatic_registration.dart';
+import 'package:employee_mobile/src/geofencing/geofence_event_handler.dart';
 import 'package:employee_mobile/src/geofencing/workplace_presence.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,6 +67,7 @@ void main() {
             locations: LocationsApi(transport),
             watcher: const NoLocationWatcher(),
             presence: WorkplacePresence(store),
+            events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: WorkplacePresence(store)),
           ),
           translationService: TranslationService(languages),
           session: session,

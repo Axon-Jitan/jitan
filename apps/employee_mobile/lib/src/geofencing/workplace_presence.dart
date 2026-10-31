@@ -40,12 +40,18 @@ class WorkplacePresence {
   Future<void> entered(int addressId, DateTime at) =>
       _store.write(_enteredKey, jsonEncode({'addressId': addressId, 'at': at.toUtc().toIso8601String()}));
 
-  /// When the phone entered [addressId]; `null` if it did not see it.
-  Future<DateTime?> enteredAt(int addressId) async {
+  /// The location entered and not yet registered or left, and when.
+  Future<({int addressId, DateTime at})?> lastEntered() async {
     final stored = await _store.read(_enteredKey);
     if (stored == null) return null;
     final json = jsonDecode(stored) as Map<String, Object?>;
-    return json['addressId'] == addressId ? DateTime.parse(json['at']! as String) : null;
+    return (addressId: json['addressId']! as int, at: DateTime.parse(json['at']! as String));
+  }
+
+  /// When the phone entered [addressId]; `null` if it did not see it.
+  Future<DateTime?> enteredAt(int addressId) async {
+    final entered = await lastEntered();
+    return entered?.addressId == addressId ? entered!.at : null;
   }
 
   Future<void> clearEntered() => _store.delete(_enteredKey);

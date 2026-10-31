@@ -35,6 +35,7 @@ class HomeScreen extends StatefulWidget {
     required this.onSessionEnded,
     required this.profileFor,
     this.onReady,
+    this.onReturn,
     this.initialAccount,
     this.clock,
   });
@@ -46,6 +47,9 @@ class HomeScreen extends StatefulWidget {
 
   /// Called once when the employee arrives here: turns on detection.
   final Future<void> Function()? onReady;
+
+  /// Called when the app comes back to the foreground, before the day loads.
+  final Future<void> Function()? onReturn;
 
   /// What the Profile screens need, for the account as known so far.
   final ProfileContext Function(EmployeeAccount? account) profileFor;
@@ -76,7 +80,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Back in the foreground: load the day again, so a correction HR
   /// approved meanwhile shows without pulling to refresh.
-  late final AppLifecycleListener _lifecycle = AppLifecycleListener(onResume: _today.load);
+  late final AppLifecycleListener _lifecycle = AppLifecycleListener(
+    onResume: () async {
+      await widget.onReturn?.call();
+      await _today.load();
+    },
+  );
 
   @override
   void initState() {
@@ -84,7 +93,10 @@ class _HomeScreenState extends State<HomeScreen> {
     _ticker;
     _lifecycle;
     if (_account == null) _loadAccount();
-    widget.onReady?.call();
+    widget.onReady?.call().then((_) {
+      // An arrival may have been registered; a failed load keeps its message.
+      if (mounted && _today.state is TodayLoaded) _today.load();
+    });
   }
 
   Future<void> _loadAccount() async {
@@ -390,7 +402,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(color: start.pending ? JitanColors.warning : JitanColors.success, shape: BoxShape.circle),
                 ),
                 title: context.t(EmployeeTextKeys.todayWorkdayStarted),
-                detail: context.t(start.pending ? EmployeeTextKeys.todayWorkdayWaitingForHr : EmployeeTextKeys.todayWorkdayStartedInApp),
+                detail: context.t(switch ((start.pending, method)) {
+                  (true, _) => EmployeeTextKeys.todayWorkdayWaitingForHr,
+                  (_, TimeRecordMethod.geofence) => EmployeeTextKeys.todayWorkdayStartedAutomatically,
+                  _ => EmployeeTextKeys.todayWorkdayStartedInApp,
+                }),
                 time: start.local,
               ),
               if (day.scheduledFinish case final finish?) ...[
