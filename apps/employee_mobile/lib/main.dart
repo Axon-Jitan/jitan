@@ -11,6 +11,9 @@ import 'src/device/device_settings.dart';
 import 'src/device/permissions_gateway.dart';
 import 'src/device/secure_store.dart';
 import 'src/device/session_manager.dart';
+import 'src/geofencing/automatic_registration.dart';
+import 'src/geofencing/location_watcher.dart';
+import 'src/geofencing/workplace_presence.dart';
 import 'src/l10n/employee_text_keys.dart';
 
 void main() {
@@ -29,6 +32,8 @@ void main() {
   final session = SessionManager(store);
   final transport = ApiTransport(baseUri: config.apiBaseUri, accessToken: () => session.accessToken);
   final languagesApi = LanguagesApi(transport);
+  final locationsApi = LocationsApi(transport);
+  const presence = WorkplacePresence(store);
   runApp(
     EmployeeApp(
       services: EmployeeServices(
@@ -38,6 +43,15 @@ void main() {
         languagesApi: languagesApi,
         meApi: MeApi(transport),
         timeRegistrationsApi: TimeRegistrationsApi(transport),
+        locationsApi: locationsApi,
+        presence: presence,
+        automaticRegistration: AutomaticRegistration(
+          settings: const DeviceSettings(store),
+          permissions: const PlatformPermissionsGateway(),
+          locations: locationsApi,
+          watcher: const NativeLocationWatcher(),
+          presence: presence,
+        ),
         translationService: TranslationService(languagesApi),
         session: session,
         settings: const DeviceSettings(store),

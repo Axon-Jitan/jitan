@@ -148,6 +148,9 @@ class _EmployeeAppState extends State<EmployeeApp> {
     account: account,
     meApi: _services.meApi,
     session: _services.session,
+    settings: _services.settings,
+    permissions: _services.permissions,
+    onMethodChanged: _services.automaticRegistration.start,
     onSignOut: _signOut,
     onSessionEnded: _signOut,
   );
@@ -177,6 +180,8 @@ class _EmployeeAppState extends State<EmployeeApp> {
             key: ValueKey(_account),
             meApi: _services.meApi,
             timeRegistrationsApi: _services.timeRegistrationsApi,
+            presence: _services.presence,
+            onReady: _services.automaticRegistration.start,
             clock: _services.clock,
             initialAccount: _account,
             onSessionEnded: _signOut,

@@ -6,6 +6,7 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../geofencing/workplace_presence.dart';
 import '../l10n/employee_text_keys.dart';
 import '../period/period_screen.dart';
 import '../profile/profile_screens.dart';
@@ -30,15 +31,21 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.meApi,
     required this.timeRegistrationsApi,
+    required this.presence,
     required this.onSessionEnded,
     required this.profileFor,
+    this.onReady,
     this.initialAccount,
     this.clock,
   });
 
   final MeApi meApi;
   final TimeRegistrationsApi timeRegistrationsApi;
+  final WorkplacePresence presence;
   final VoidCallback onSessionEnded;
+
+  /// Called once when the employee arrives here: turns on detection.
+  final Future<void> Function()? onReady;
 
   /// What the Profile screens need, for the account as known so far.
   final ProfileContext Function(EmployeeAccount? account) profileFor;
@@ -57,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late EmployeeAccount? _account = widget.initialAccount;
   late final _today = TodayController(
     widget.timeRegistrationsApi,
+    presence: widget.presence,
     onSessionEnded: widget.onSessionEnded,
     clock: widget.clock,
   )..load();
@@ -76,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _ticker;
     _lifecycle;
     if (_account == null) _loadAccount();
+    widget.onReady?.call();
   }
 
   Future<void> _loadAccount() async {
@@ -172,7 +181,10 @@ class _HomeScreenState extends State<HomeScreen> {
           bottomBar: _navBar(context),
         ),
         TodayPhase.notStarted => _notStarted(context, day),
-        TodayPhase.working => _working(context, day),
+        TodayPhase.working => switch (_today.away) {
+          final away? => _away(context, away),
+          null => _working(context, day),
+        },
         TodayPhase.complete => _complete(context, day),
       },
     },
@@ -265,6 +277,64 @@ class _HomeScreenState extends State<HomeScreen> {
       onPressed: () => _today.registerNow(RegistrationBoundary.start),
     ),
   );
+
+  /// Figma 19:52. Registers nothing: the day just keeps running (D32).
+  Widget _away(BuildContext context, AwayFromWorkplace away) {
+    final minutes = _today.now().difference(away.leftAt).inMinutes.clamp(0, 24 * 60);
+    final left = away.leftAt.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return _page(
+      context,
+      children: [
+        _title(context.t(EmployeeTextKeys.todayAwayTitle)),
+        const SizedBox(height: 10),
+        Text(
+          away.name == null
+              ? context.t(EmployeeTextKeys.todayAwayTextNoName)
+              : context.t(EmployeeTextKeys.todayAwayText, args: {'place': away.name!}),
+          style: JitanMobileTextStyles.body,
+        ),
+        const SizedBox(height: 26),
+        TodayChip(label: context.t(EmployeeTextKeys.todayAwayChip), filled: true, color: JitanColors.warning),
+        const SizedBox(height: 18),
+        TodayCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.t(EmployeeTextKeys.todayAwayMinutes, args: {'minutes': minutes}),
+                style: JitanMobileTextStyles.displayLarge.copyWith(fontSize: 40),
+              ),
+              Text(context.t(EmployeeTextKeys.todayAwayLabel), style: JitanMobileTextStyles.cardText),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      context.t(EmployeeTextKeys.todayAwayLeftAt, args: {'time': '${two(left.hour)}:${two(left.minute)}'}),
+                      style: JitanMobileTextStyles.cardTitleSmall,
+                    ),
+                  ),
+                  Text(context.t(EmployeeTextKeys.todayAwayNoAction), style: JitanMobileTextStyles.cardText),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        TodayCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.t(EmployeeTextKeys.todayAwayKeepTitle), style: JitanMobileTextStyles.cardTitleSmall),
+              const SizedBox(height: 8),
+              Text(context.t(EmployeeTextKeys.todayAwayKeepText), style: JitanMobileTextStyles.cardText),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _working(BuildContext context, MyDay day) {
     final start = shownTime(day.day, RegistrationBoundary.start);

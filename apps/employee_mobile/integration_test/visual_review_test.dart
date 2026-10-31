@@ -13,6 +13,8 @@ import 'package:employee_mobile/src/app/employee_app.dart';
 import 'package:employee_mobile/src/app/employee_services.dart';
 import 'package:employee_mobile/src/device/device_settings.dart';
 import 'package:employee_mobile/src/device/session_manager.dart';
+import 'package:employee_mobile/src/geofencing/automatic_registration.dart';
+import 'package:employee_mobile/src/geofencing/workplace_presence.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -56,6 +58,15 @@ void main() {
           languagesApi: languages,
           meApi: MeApi(transport),
           timeRegistrationsApi: TimeRegistrationsApi(transport),
+          locationsApi: LocationsApi(transport),
+          presence: WorkplacePresence(store),
+          automaticRegistration: AutomaticRegistration(
+            settings: DeviceSettings(store),
+            permissions: FakePermissions(),
+            locations: LocationsApi(transport),
+            watcher: const NoLocationWatcher(),
+            presence: WorkplacePresence(store),
+          ),
           translationService: TranslationService(languages),
           session: session,
           settings: DeviceSettings(store),

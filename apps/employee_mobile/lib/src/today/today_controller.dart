@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
+import '../geofencing/workplace_presence.dart';
+
 /// Which "Today" screen the day calls for.
 enum TodayPhase {
   /// Never registered: "When did you arrive?" right after onboarding (22:2).
@@ -45,15 +47,20 @@ class TodayFailed extends TodayState {
 /// Offline queueing is not built yet (PRODUCT_CLARIFICATIONS, offline): a
 /// registration that can't reach the server fails visibly and is not kept.
 class TodayController extends ChangeNotifier {
-  TodayController(this._api, {required this.onSessionEnded, DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  TodayController(this._api, {required this._presence, required this.onSessionEnded, DateTime Function()? clock})
+    : _clock = clock ?? DateTime.now;
 
   final TimeRegistrationsApi _api;
+  final WorkplacePresence _presence;
   final DateTime Function() _clock;
 
   /// A 401: the session is no longer valid.
   final VoidCallback onSessionEnded;
 
   TodayState state = const TodayLoading();
+
+  /// Left a location while the day runs (D32); `null` otherwise.
+  AwayFromWorkplace? away;
 
   /// "Start work" / "Finish work" is being sent.
   bool busy = false;
@@ -78,12 +85,23 @@ class TodayController extends ChangeNotifier {
 
   Future<void> load() async {
     try {
-      _set(TodayLoaded(await _api.today()));
+      final day = await _api.today();
+      away = await _awayOn(day);
+      _set(TodayLoaded(day));
     } on ApiClientException catch (e) {
       if (e.statusCode == 401) return onSessionEnded();
       // Keep showing the day already loaded; only a first load fails.
       if (state is! TodayLoaded) _set(TodayFailed(e));
     }
+  }
+
+  /// Being away only means something while the day runs; a finished day
+  /// forgets it.
+  Future<AwayFromWorkplace?> _awayOn(MyDay day) async {
+    final remembered = await _presence.away();
+    if (remembered == null || phaseOf(day) == TodayPhase.working) return remembered;
+    await _presence.clearAway();
+    return null;
   }
 
   Future<void> retry() async {

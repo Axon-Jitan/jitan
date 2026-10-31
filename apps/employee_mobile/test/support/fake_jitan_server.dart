@@ -5,11 +5,15 @@ import 'package:employee_mobile/src/device/device_settings.dart';
 import 'package:employee_mobile/src/device/permissions_gateway.dart';
 import 'package:employee_mobile/src/device/secure_store.dart';
 import 'package:employee_mobile/src/device/session_manager.dart';
+import 'package:employee_mobile/src/geofencing/automatic_registration.dart';
+import 'package:employee_mobile/src/geofencing/location_watcher.dart';
+import 'package:employee_mobile/src/geofencing/workplace_presence.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
+import 'package:jitan_models/jitan_models.dart';
 
 /// A temporary onboarding QR HR/Admin generated for the employee.
 const testQr = 'onboarding-qr.AAAAAAAAAAAAAAAA.sig';
@@ -90,6 +94,9 @@ class FakeJitanServer {
       '/me/language' => _json({'languageCode': null}),
       '/me/today' => _today(request),
       '/me/period' => _period(request),
+      '/me/locations' => !_authorized(request)
+          ? _error(401, 'unauthenticated')
+          : _json(LocationListResponse(locations: locations).toJson()),
       '/me/terminal-qr' => !_authorized(request)
           ? _error(401, 'unauthenticated')
           : myTerminalQr == null
@@ -236,6 +243,9 @@ class FakeJitanServer {
 
   /// The employee's Terminal QR (My QR); `null` = the account has none.
   String? myTerminalQr = terminalQr;
+
+  /// `GET /me/locations`.
+  List<Location> locations = const [];
 
   /// The employee never registered: "When did you arrive?" (first day).
   bool firstDay = false;
@@ -418,15 +428,33 @@ class MemorySecureStore implements SecureStore {
   Future<void> delete(String key) async => values.remove(key);
 }
 
+/// No device here: detection does nothing in the app's tests.
+class NoLocationWatcher implements LocationWatcher {
+  const NoLocationWatcher();
+
+  @override
+  Future<void> watch(List<Location> locations) async {}
+
+  @override
+  Future<void> stop() async {}
+}
+
 class FakePermissions implements PermissionsGateway {
   bool grantLocation = true;
   bool grantNotifications = true;
+  bool backgroundLocationGranted = true;
   final asked = <String>[];
 
   @override
   Future<bool> requestLocation() async {
     asked.add('location');
     return grantLocation;
+  }
+
+  @override
+  Future<bool> requestBackgroundLocation() async {
+    asked.add('background location');
+    return backgroundLocationGranted;
   }
 
   @override
@@ -453,6 +481,15 @@ class TestHarness {
       languagesApi: languagesApi,
       meApi: MeApi(transport),
       timeRegistrationsApi: TimeRegistrationsApi(transport),
+      locationsApi: LocationsApi(transport),
+      presence: WorkplacePresence(store),
+      automaticRegistration: AutomaticRegistration(
+        settings: DeviceSettings(store),
+        permissions: permissions,
+        locations: LocationsApi(transport),
+        watcher: const NoLocationWatcher(),
+        presence: WorkplacePresence(store),
+      ),
       // 09:00 on Thursday 22 October 2026 unless a test says otherwise.
       clock: clock ?? () => DateTime(2026, 10, 22, 9),
       translationService: TranslationService(languagesApi),

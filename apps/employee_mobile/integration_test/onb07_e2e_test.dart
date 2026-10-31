@@ -20,12 +20,16 @@ import 'package:employee_mobile/src/device/device_settings.dart';
 import 'package:employee_mobile/src/device/permissions_gateway.dart';
 import 'package:employee_mobile/src/device/secure_store.dart';
 import 'package:employee_mobile/src/device/session_manager.dart';
+import 'package:employee_mobile/src/geofencing/automatic_registration.dart';
+import 'package:employee_mobile/src/geofencing/workplace_presence.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:integration_test/integration_test.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
+
+import '../test/support/fake_jitan_server.dart' show NoLocationWatcher;
 
 // Seed fixtures (dev/local-db/seed.sql): permanent Terminal QRs. They must
 // never onboard or recover an account.
@@ -35,6 +39,9 @@ const _kevinTerminalQr = 'MvrbloqIf-j151FU_94120bzpkqi4K6o';
 class _GrantAll implements PermissionsGateway {
   @override
   Future<bool> requestLocation() async => true;
+
+  @override
+  Future<bool> requestBackgroundLocation() async => true;
 
   @override
   Future<bool> requestNotifications() async => true;
@@ -66,6 +73,15 @@ void main() {
       languagesApi: languages,
       meApi: MeApi(transport),
       timeRegistrationsApi: TimeRegistrationsApi(transport),
+      locationsApi: LocationsApi(transport),
+      presence: WorkplacePresence(store),
+      automaticRegistration: AutomaticRegistration(
+        settings: DeviceSettings(store),
+        permissions: _GrantAll(),
+        locations: LocationsApi(transport),
+        watcher: const NoLocationWatcher(),
+        presence: WorkplacePresence(store),
+      ),
       translationService: TranslationService(languages),
       session: session,
       settings: const DeviceSettings(store),

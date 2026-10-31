@@ -5,10 +5,13 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../auth/password_rules.dart';
+import '../device/device_settings.dart';
+import '../device/permissions_gateway.dart';
 import '../device/session_manager.dart';
 import '../l10n/employee_text_keys.dart';
 import '../widgets/mobile_widgets.dart';
 import 'change_password_controller.dart';
+import 'registration_method_screen.dart';
 
 /// What the profile screens need from the app.
 class ProfileContext {
@@ -16,6 +19,9 @@ class ProfileContext {
     required this.account,
     required this.meApi,
     required this.session,
+    required this.settings,
+    required this.permissions,
+    required this.onMethodChanged,
     required this.onSignOut,
     required this.onSessionEnded,
   });
@@ -23,6 +29,11 @@ class ProfileContext {
   final EmployeeAccount? account;
   final MeApi meApi;
   final SessionManager session;
+  final DeviceSettings settings;
+  final PermissionsGateway permissions;
+
+  /// The registration method changed: detection follows it.
+  final Future<void> Function() onMethodChanged;
 
   /// Confirmed "Sign out".
   final VoidCallback onSignOut;
@@ -32,8 +43,8 @@ class ProfileContext {
 }
 
 /// Back arrow + title + subtitle of the Profile sub-screens.
-class _SubHeader extends StatelessWidget {
-  const _SubHeader({required this.title, this.text});
+class ProfileSubHeader extends StatelessWidget {
+  const ProfileSubHeader({super.key, required this.title, this.text});
 
   final String title;
   final String? text;
@@ -199,6 +210,19 @@ class ProfileScreen extends StatelessWidget {
             MaterialPageRoute<void>(builder: (_) => PasswordWebLoginScreen(profile: profile)),
           ),
         ),
+        const SizedBox(height: 10),
+        _ProfileRow(
+          label: context.t(EmployeeTextKeys.profileMethodTitle),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => RegistrationMethodScreen(
+                settings: profile.settings,
+                permissions: profile.permissions,
+                onChanged: profile.onMethodChanged,
+              ),
+            ),
+          ),
+        ),
         const SizedBox(height: 28),
         Align(
           alignment: Alignment.centerLeft,
@@ -236,7 +260,7 @@ class PasswordWebLoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Page(
     children: [
-      _SubHeader(
+      ProfileSubHeader(
         title: context.t(EmployeeTextKeys.passwordScreenTitle),
         text: context.t(EmployeeTextKeys.passwordScreenText),
       ),
@@ -439,7 +463,7 @@ class SignOutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Page(
     children: [
-      _SubHeader(title: context.t(EmployeeTextKeys.signOutTitle)),
+      ProfileSubHeader(title: context.t(EmployeeTextKeys.signOutTitle)),
       const SizedBox(height: 130),
       Container(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
