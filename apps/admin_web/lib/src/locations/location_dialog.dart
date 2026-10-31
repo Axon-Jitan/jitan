@@ -144,103 +144,107 @@ class _LocationDialogState extends State<LocationDialog> {
     final enabled = !_form.busy;
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 32, 28, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              context.t(editing ? AdminTextKeys.locationEditTitle : AdminTextKeys.locationAddTitle),
-              style: JitanTextStyles.modalTitle,
+      // Tab follows the form's order: reading order mixes up the short fields.
+      child: FocusTraversalGroup(
+        policy: WidgetOrderTraversalPolicy(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              header: true,
+              child: Text(
+                context.t(editing ? AdminTextKeys.locationEditTitle : AdminTextKeys.locationAddTitle),
+                style: JitanTextStyles.modalTitle,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            context.t(editing ? AdminTextKeys.locationEditSubtitle : AdminTextKeys.locationAddSubtitle),
-            style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
-          ),
-          const SizedBox(height: 24),
-          JitanTextField(
-            label: context.t(AdminTextKeys.locationFieldName),
-            controller: _form.name,
-            enabled: enabled,
-            autofocus: !editing,
-            hintText: context.t(AdminTextKeys.locationFieldNameHint),
-            maxLength: LocationRequest.maxNameLength,
-            errorText: _form.nameError == null ? null : context.t(_form.nameError!),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: JitanTextField(
-                  label: context.t(AdminTextKeys.locationFieldStreet),
-                  controller: _form.street,
-                  enabled: enabled,
-                  maxLength: LocationRequest.maxStreetLength,
-                  errorText: _form.streetError == null ? null : context.t(_form.streetError!),
-                ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 72,
-                child: JitanTextField(
-                  label: context.t(AdminTextKeys.locationFieldNumber),
-                  controller: _form.number,
-                  enabled: enabled,
-                  maxLength: LocationRequest.maxNumberLength,
-                ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 64,
-                child: JitanTextField(
-                  label: context.t(AdminTextKeys.locationFieldBox),
-                  controller: _form.box,
-                  enabled: enabled,
-                  maxLength: LocationRequest.maxBoxLength,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 104,
-                child: JitanTextField(
-                  label: context.t(AdminTextKeys.locationFieldPostcode),
-                  controller: _form.zipcode,
-                  enabled: enabled,
-                  maxLength: LocationRequest.maxZipcodeLength,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: JitanTextField(
-                  label: context.t(AdminTextKeys.locationFieldCity),
-                  controller: _form.city,
-                  enabled: enabled,
-                  maxLength: LocationRequest.maxCityLength,
-                  onSubmitted: (_) {
-                    if (_form.canSave) _save();
-                  },
-                ),
-              ),
-            ],
-          ),
-          if (_form.failure case final failure?) ...[
+            const SizedBox(height: 4),
+            Text(
+              context.t(editing ? AdminTextKeys.locationEditSubtitle : AdminTextKeys.locationAddSubtitle),
+              style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
+            ),
+            const SizedBox(height: 24),
+            JitanTextField(
+              label: context.t(AdminTextKeys.locationFieldName),
+              controller: _form.name,
+              enabled: enabled,
+              autofocus: !editing,
+              hintText: context.t(AdminTextKeys.locationFieldNameHint),
+              maxLength: LocationRequest.maxNameLength,
+              errorText: _form.nameError == null ? null : context.t(_form.nameError!),
+            ),
             const SizedBox(height: 16),
-            Builder(
-              builder: (context) {
-                final keys = failureTextKeysFor(failure);
-                return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
-              },
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: JitanTextField(
+                    label: context.t(AdminTextKeys.locationFieldStreet),
+                    controller: _form.street,
+                    enabled: enabled,
+                    maxLength: LocationRequest.maxStreetLength,
+                    errorText: _form.streetError == null ? null : context.t(_form.streetError!),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 72,
+                  child: JitanTextField(
+                    label: context.t(AdminTextKeys.locationFieldNumber),
+                    controller: _form.number,
+                    enabled: enabled,
+                    maxLength: LocationRequest.maxNumberLength,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 64,
+                  child: JitanTextField(
+                    label: context.t(AdminTextKeys.locationFieldBox),
+                    controller: _form.box,
+                    enabled: enabled,
+                    maxLength: LocationRequest.maxBoxLength,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 104,
+                  child: JitanTextField(
+                    label: context.t(AdminTextKeys.locationFieldPostcode),
+                    controller: _form.zipcode,
+                    enabled: enabled,
+                    maxLength: LocationRequest.maxZipcodeLength,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: JitanTextField(
+                    label: context.t(AdminTextKeys.locationFieldCity),
+                    controller: _form.city,
+                    enabled: enabled,
+                    maxLength: LocationRequest.maxCityLength,
+                    onSubmitted: (_) {
+                      if (_form.canSave) _save();
+                    },
+                  ),
+                ),
+              ],
+            ),
+            if (_form.failure case final failure?) ...[
+              const SizedBox(height: 16),
+              Builder(
+                builder: (context) {
+                  final keys = failureTextKeysFor(failure);
+                  return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
+                },
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

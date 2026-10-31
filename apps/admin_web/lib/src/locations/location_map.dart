@@ -83,7 +83,11 @@ class _LocationMapState extends State<LocationMap> {
         initialCenter: point ?? _startCentre,
         initialZoom: point == null ? _startZoom : _pinZoom,
         backgroundColor: JitanColors.warmWhite,
-        interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+        // The keyboard stays with the form: the map would take the focus on opening.
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+          keyboardOptions: KeyboardOptions.disabled(),
+        ),
         onMapReady: () => _ready = true,
         onTap: (_, at) => _place(at),
       ),

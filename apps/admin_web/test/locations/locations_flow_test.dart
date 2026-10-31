@@ -2,6 +2,7 @@ import 'package:admin_web/src/app/admin_app.dart';
 import 'package:admin_web/src/locations/address_geocoder.dart';
 import 'package:admin_web/src/locations/locations_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -127,6 +128,22 @@ void main() {
     expect((sent.name, sent.number, sent.radiusMeters, sent.point.latitude), ('Almeco office', '12', 50, 50.75));
     expect(find.text('Almeco office added.'), findsOneWidget);
     expect(find.text('2 locations'), findsOneWidget);
+  });
+
+  testWidgets('the keyboard starts on Name, and Tab follows the form', (tester) async {
+    final fakes = TestServices();
+    fakes.locations.locations.add(location(1, 'PCA workshop'));
+    await _pump(tester, fakes);
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add location'));
+    await tester.pumpAndSettle();
+
+    final order = <bool>[];
+    for (final label in ['Name', 'Street', 'Number', 'Box', 'Postcode', 'City']) {
+      order.add(tester.state<EditableTextState>(find.descendant(of: _field(label), matching: find.byType(EditableText))).widget.focusNode.hasFocus);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+    }
+    expect(order, everyElement(isTrue));
   });
 
   testWidgets('a name in use is shown on the field and the dialog stays', (tester) async {
