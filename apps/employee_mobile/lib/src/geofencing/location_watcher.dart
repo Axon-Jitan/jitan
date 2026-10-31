@@ -10,7 +10,8 @@ import 'geofence_event_handler.dart';
 /// Keeps the phone's geofences equal to the recognised locations. The only
 /// place that knows the geofencing plugin, with [onGeofenceEvent].
 abstract interface class LocationWatcher {
-  Future<void> watch(List<jitan.Location> locations);
+  /// Whether the phone accepted them.
+  Future<bool> watch(List<jitan.Location> locations);
 
   /// Stops all detection (the employee is on QR / manual).
   Future<void> stop();
@@ -48,14 +49,16 @@ class NativeLocationWatcher implements LocationWatcher {
       active.location.longitude == wanted.location.longitude;
 
   /// The phone can refuse (Google Location Accuracy off, too many
-  /// geofences). The employee can still register by hand; showing this on
-  /// Profile / Location permission (Figma 94:23) is LOC-02.
+  /// geofences). The employee can still register by hand, and Profile /
+  /// Location permission says so.
   @override
-  Future<void> watch(List<jitan.Location> locations) async {
+  Future<bool> watch(List<jitan.Location> locations) async {
     try {
       await _watch(locations);
+      return true;
     } on NativeGeofenceException catch (e) {
       Logger('geofencing').warning('The phone refused the geofences: ${e.code.name}');
+      return false;
     }
   }
 

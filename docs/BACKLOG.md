@@ -316,8 +316,10 @@ service rarely looks at the position, so this needs a real phone: arriving and l
 closed, phone locked, overnight, after a restart.
 
 Known limits:
-- Google Location Accuracy must be on (geofences are refused otherwise). Today this is only
-  logged; show it on Profile / Location permission (Figma `94:23`), not built yet.
+- Google Location Accuracy must be on (geofences are refused otherwise). Profile / Location
+  permission (Figma `94:23`) says so; its not-allowed and check-settings states reuse that frame.
+  Calmer than the frame on purpose: the three uses are one grouped list, and the main button shows
+  only when something needs fixing.
 - Android advises a radius of at least 100 m; the 50 m default may react late or miss a visit.
 - A start that can't be sent is lost, and Today still offers Start work: queueing waits for
   PRODUCT-CLARIFY-OFFLINE.

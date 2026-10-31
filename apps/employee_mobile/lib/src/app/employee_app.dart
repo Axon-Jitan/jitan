@@ -151,6 +151,7 @@ class _EmployeeAppState extends State<EmployeeApp> {
     settings: _services.settings,
     permissions: _services.permissions,
     onMethodChanged: _services.automaticRegistration.start,
+    presence: _services.presence,
     onSignOut: _signOut,
     onSessionEnded: _signOut,
   );

@@ -4,6 +4,7 @@ import 'package:employee_mobile/src/geofencing/geofence_event_handler.dart';
 import 'package:employee_mobile/src/geofencing/location_watcher.dart';
 import 'package:employee_mobile/src/geofencing/workplace_presence.dart';
 import 'package:employee_mobile/src/app/employee_app.dart';
+import 'package:employee_mobile/src/profile/location_permission_screen.dart';
 import 'package:employee_mobile/src/profile/registration_method_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,8 +18,13 @@ class _FakeWatcher implements LocationWatcher {
   List<Location>? watched;
   bool stopped = false;
 
+  bool accept = true;
+
   @override
-  Future<void> watch(List<Location> locations) async => watched = locations;
+  Future<bool> watch(List<Location> locations) async {
+    watched = locations;
+    return accept;
+  }
 
   @override
   Future<void> stop() async => stopped = true;
@@ -165,6 +171,17 @@ void main() {
 
       expect(watcher.watched?.single.name, 'Almeco office');
       expect(await presence.nameOf(7), 'Almeco office');
+    });
+
+    test('the phone refuses: remembered for Location permission; accepted later: forgotten', () async {
+      await h.services.settings.setRegistrationMethod(RegistrationMethod.automatic);
+      watcher.accept = false;
+      await automatic.start();
+      expect(await presence.geofencesRefused(), true);
+
+      watcher.accept = true;
+      await automatic.start();
+      expect(await presence.geofencesRefused(), false);
     });
 
     test('on QR / manual: nothing is watched', () async {
@@ -325,6 +342,51 @@ void main() {
       expect((sent(1)['boundary'], sent(1)['entry']), ('finish', 'now'));
       expect((sent(2)['boundary'], sent(2)['entry'], sent(2)['reason']), ('finish', 'corrected', 'Drove to the client'));
       expect(await presence.away(), isNull);
+    });
+  });
+
+  group('Profile / Location permission (Figma 94:23)', () {
+    Future<void> open(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(TranslationScope(
+        translations: Translations.english(),
+        child: MaterialApp(
+          theme: JitanTheme.light(),
+          home: LocationPermissionScreen(permissions: h.permissions, presence: presence),
+        ),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('all allowed: working, and what location is used for', (tester) async {
+      await open(tester);
+
+      expect(find.text('ALLOWED'), findsOneWidget);
+      expect(find.text('Automatic registration is working on this device.'), findsOneWidget);
+      expect(find.text('No live tracking'), findsOneWidget);
+      expect(find.text('Working'), findsOneWidget);
+    });
+
+    testWidgets('not allowed: says so and opens the phone settings', (tester) async {
+      h.permissions
+        ..grantLocation = false
+        ..backgroundLocationGranted = false;
+      await open(tester);
+
+      expect(find.text('NOT ALLOWED'), findsOneWidget);
+      expect(find.text('Off'), findsOneWidget);
+      await tester.tap(find.text('Open phone settings'));
+      expect(h.permissions.asked, contains('settings'));
+    });
+
+    testWidgets('the phone refused the geofences: names the setting', (tester) async {
+      await presence.setGeofencesRefused(true);
+      await open(tester);
+
+      expect(find.text('CHECK SETTINGS'), findsOneWidget);
+      expect(find.text('Turn on Location Accuracy in your phone’s location settings.'), findsOneWidget);
     });
   });
 

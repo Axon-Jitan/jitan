@@ -791,6 +791,10 @@ abstract final class AdminTextKeys {
   static const groupRemoveText = 'group.remove.text';
   static const groupRemoveConfirm = 'group.remove.confirm';
 
+  static const timeRecordDayAway = 'timeRecord.day.away';
+  static const timeRecordDayAwayText = 'timeRecord.day.away.text';
+  static const timeRecordDayAwayValue = 'timeRecord.day.away.value';
+
   // Locations (Figma HR / Locations 1465:2 to 1465:846)
   static const navLocations = 'nav.locations';
   static const locationsTitle = 'locations.title';

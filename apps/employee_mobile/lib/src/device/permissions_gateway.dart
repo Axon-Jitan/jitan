@@ -1,5 +1,8 @@
 import 'package:permission_handler/permission_handler.dart';
 
+/// What the phone currently allows, without asking.
+typedef LocationAccess = ({bool whileInUse, bool always});
+
 /// Asks the operating system for the permissions Jitan needs. Each method
 /// shows the system prompt when needed and returns whether it is granted.
 abstract interface class PermissionsGateway {
@@ -11,6 +14,11 @@ abstract interface class PermissionsGateway {
   Future<bool> requestBackgroundLocation();
 
   Future<bool> requestNotifications();
+
+  Future<LocationAccess> locationAccess();
+
+  /// Opens this app's page in the phone's settings.
+  Future<void> openSettings();
 }
 
 class PlatformPermissionsGateway implements PermissionsGateway {
@@ -24,4 +32,13 @@ class PlatformPermissionsGateway implements PermissionsGateway {
 
   @override
   Future<bool> requestNotifications() async => (await Permission.notification.request()).isGranted;
+
+  @override
+  Future<LocationAccess> locationAccess() async =>
+      (whileInUse: await Permission.locationWhenInUse.isGranted, always: await Permission.locationAlways.isGranted);
+
+  @override
+  Future<void> openSettings() async {
+    await openAppSettings();
+  }
 }

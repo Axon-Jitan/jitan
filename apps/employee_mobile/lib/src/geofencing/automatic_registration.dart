@@ -38,7 +38,7 @@ class AutomaticRegistration {
       if (!await _permissions.requestLocation() || !await _permissions.requestBackgroundLocation()) return;
       final locations = await _locations.recognised();
       await _presence.saveNames(locations);
-      await _watcher.watch(locations);
+      await _presence.setGeofencesRefused(!await _watcher.watch(locations));
       await _events.catchUp();
     } on ApiClientException catch (e) {
       // The geofences already on the phone keep working; tried again next time.

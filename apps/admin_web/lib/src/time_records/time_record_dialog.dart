@@ -18,8 +18,8 @@ Future<TimeCorrectionStep?> showTimeRecordDialog(BuildContext context, {required
 /// correction" while the employee's correction waits, D31).
 ///
 /// A time entered afterwards or corrected shows its reason, which HR needs to
-/// judge it (D30). The timeline holds registrations and corrections; absences
-/// and workplaces come with geofencing.
+/// judge it (D30). Time away (D34) is a note under the cards: Figma's frame
+/// has no place for it. The timeline holds registrations and corrections.
 class TimeRecordDialog extends StatefulWidget {
   const TimeRecordDialog({super.key, required this.day, required this.mayCorrect});
 
@@ -82,6 +82,35 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
                 fontSize: 13,
                 color: day.pending.isNotEmpty ? JitanColors.warning : JitanColors.ink,
               ),
+            ),
+          ),
+        ],
+        if (day.awayMinutes > 0) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(14)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(context.t(AdminTextKeys.timeRecordDayAway), style: JitanTextStyles.tableCellStrong),
+                      const SizedBox(height: 2),
+                      Text(context.t(AdminTextKeys.timeRecordDayAwayText), style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  context.t(
+                    AdminTextKeys.timeRecordDayAwayValue,
+                    args: {'hours': day.awayMinutes ~/ 60, 'minutes': (day.awayMinutes % 60).toString().padLeft(2, '0')},
+                  ),
+                  style: JitanTextStyles.tableCellStrong,
+                ),
+              ],
             ),
           ),
         ],

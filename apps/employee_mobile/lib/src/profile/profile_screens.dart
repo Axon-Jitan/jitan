@@ -8,9 +8,11 @@ import '../auth/password_rules.dart';
 import '../device/device_settings.dart';
 import '../device/permissions_gateway.dart';
 import '../device/session_manager.dart';
+import '../geofencing/workplace_presence.dart';
 import '../l10n/employee_text_keys.dart';
 import '../widgets/mobile_widgets.dart';
 import 'change_password_controller.dart';
+import 'location_permission_screen.dart';
 import 'registration_method_screen.dart';
 
 /// What the profile screens need from the app.
@@ -22,6 +24,7 @@ class ProfileContext {
     required this.settings,
     required this.permissions,
     required this.onMethodChanged,
+    required this.presence,
     required this.onSignOut,
     required this.onSessionEnded,
   });
@@ -34,6 +37,7 @@ class ProfileContext {
 
   /// The registration method changed: detection follows it.
   final Future<void> Function() onMethodChanged;
+  final WorkplacePresence presence;
 
   /// Confirmed "Sign out".
   final VoidCallback onSignOut;
@@ -220,6 +224,15 @@ class ProfileScreen extends StatelessWidget {
                 permissions: profile.permissions,
                 onChanged: profile.onMethodChanged,
               ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _ProfileRow(
+          label: context.t(EmployeeTextKeys.profileLocationRow),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => LocationPermissionScreen(permissions: profile.permissions, presence: profile.presence),
             ),
           ),
         ),

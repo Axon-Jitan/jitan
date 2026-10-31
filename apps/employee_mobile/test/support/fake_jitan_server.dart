@@ -445,7 +445,7 @@ class NoLocationWatcher implements LocationWatcher {
   const NoLocationWatcher();
 
   @override
-  Future<void> watch(List<Location> locations) async {}
+  Future<bool> watch(List<Location> locations) async => true;
 
   @override
   Future<void> stop() async {}
@@ -474,6 +474,12 @@ class FakePermissions implements PermissionsGateway {
     asked.add('notifications');
     return grantNotifications;
   }
+
+  @override
+  Future<LocationAccess> locationAccess() async => (whileInUse: grantLocation, always: backgroundLocationGranted);
+
+  @override
+  Future<void> openSettings() async => asked.add('settings');
 }
 
 /// The app's services against [FakeJitanServer], plus device fakes.

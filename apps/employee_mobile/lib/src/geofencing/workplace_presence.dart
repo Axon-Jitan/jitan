@@ -29,6 +29,7 @@ class WorkplacePresence {
   static const _enteredKey = 'presence.entered';
   static const _awayKey = 'presence.away';
   static const _namesKey = 'presence.names';
+  static const _refusedKey = 'presence.refused';
 
   /// The locations the phone watches, for their names.
   Future<void> saveNames(List<Location> locations) =>
@@ -78,4 +79,10 @@ class WorkplacePresence {
   }
 
   Future<void> clearAway() => _store.delete(_awayKey);
+
+  /// The phone refused the geofences (Google Location Accuracy off, …).
+  Future<bool> geofencesRefused() async => await _store.read(_refusedKey) != null;
+
+  Future<void> setGeofencesRefused(bool refused) =>
+      refused ? _store.write(_refusedKey, 'true') : _store.delete(_refusedKey);
 }
