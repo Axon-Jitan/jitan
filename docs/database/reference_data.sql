@@ -126,6 +126,7 @@ SELECT e.name FROM (
   UNION ALL SELECT 'time.correction.rejected'
   UNION ALL SELECT 'time.corrected'
   UNION ALL SELECT 'time.marked_non_work'
+  UNION ALL SELECT 'employee.password.first_set'
   UNION ALL SELECT 'location.created'
   UNION ALL SELECT 'location.changed'
   UNION ALL SELECT 'location.deactivated'

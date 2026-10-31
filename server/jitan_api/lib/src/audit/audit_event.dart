@@ -40,6 +40,9 @@ enum AuditEventType {
   /// The employee set their first password: onboarding is complete.
   onboardingCompleted('employee.onboarding.completed'),
 
+  /// IT gave the very first person a password on a fresh database (AUTH-03).
+  firstPasswordSet('employee.password.first_set'),
+
   /// A signed-in employee replaced their password (Profile → Change
   /// password). Every other session of theirs ends.
   passwordChanged('employee.password.changed'),

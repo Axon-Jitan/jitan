@@ -272,6 +272,9 @@ class FakeOnboardingRepository implements OnboardingRepository {
 
 /// Credentials over the same users and hashes as [FakeOnboardingRepository].
 class FakeCredentialRepository implements CredentialRepository {
+  @override
+  Future<List<int>> activeByCode(SqlExecutor tx, String code) async => const [];
+
   FakeCredentialRepository(this.onboarding);
 
   final FakeOnboardingRepository onboarding;

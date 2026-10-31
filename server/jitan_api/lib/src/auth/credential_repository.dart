@@ -31,6 +31,15 @@ class CredentialRepository {
     ];
   }
 
+  /// The active, non-deleted users with employee code [code].
+  Future<List<int>> activeByCode(SqlExecutor tx, String code) async => [
+    for (final row in await tx.query(
+      'SELECT userID FROM tblUser WHERE userCode = :code AND userActive = 1 AND userMFD = 0 LIMIT 5',
+      {'code': code},
+    ))
+      row.readInt('userID'),
+  ];
+
   /// Replaces the password of an active, non-deleted user, but only while
   /// the stored hash is still [currentHash] (the one the current password was
   /// verified against), so a concurrent change or reset is never overwritten.
@@ -43,8 +52,8 @@ class CredentialRepository {
       )).affectedRows ==
       1;
 
-  /// Recovery: stores the new password of an active, non-deleted user whose
-  /// access was reset, only while no password is set (the reset state).
+  /// Recovery, and the very first password: stores the password of an active,
+  /// non-deleted user, only while no password is set.
   /// Returns whether it did.
   Future<bool> setPasswordAfterReset(SqlExecutor tx, int userId, String passwordHash) async =>
       (await tx.execute(

@@ -145,7 +145,24 @@ Admin have the same rights, in every company.
 2. **For each person:** add a row to `tblUserCredGroup` for their `userID` and that group, with
    `userCredGroupActive = 1` and `userCredGroupMFD = 0`.
 3. They need a password: an HR person generates their onboarding QR, and they set it up in the
-   employee app. The very first HR person has nobody to do that: see AUTH-03 in the backlog.
+   employee app. The very first HR person has nobody to do that, see below.
 
 To take access away, set `userCredGroupActive = 0`. It applies on their next click, no restart.
 
+### The very first HR person
+
+On a fresh database nobody can generate an onboarding QR yet.
+
+1. Add the person to `tblUser` with their employee code. `userPassword` stays empty.
+2. Give them access as above.
+3. On the server, with the same configuration as the API, run the tool and type a password when
+   asked. It is never taken from the command line:
+
+   ```sh
+   dart compile exe bin/set_first_password.dart -o set_first_password   # with the release
+   ./set_first_password SBW
+   ```
+
+It only works for an active employee with no password, so it can't take over an account. It is
+audited as `employee.password.first_set`. The person signs in, and everyone else onboards from
+there. Ask them to change this password in the employee app.
