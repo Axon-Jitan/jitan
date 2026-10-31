@@ -98,6 +98,7 @@ dart run bin/server.dart
   the places where Jitan recognises employees (`tblAddress` + `tblGeofence`, one shared list until GAP-03)
 - `GET /me/locations`: the active locations the employee's phone watches; `POST /me/time-registrations`
   also takes `method: geofence` with `addressId`, and a start while the day runs adds nothing (D32)
+- `GET /projects`, `GET /project-options`, `POST /companies/{id}/projects`, `GET`/`PUT /companies/{id}/projects/{projectId}`, `PUT …/employees` (proposed tables, local database only)
 - `GET /dashboard?from=&to=` (at most 366 days): today, the totals and the period, per the Dashboard page
 - `GET /reports/hours?month=yyyy-MM&company=`: each employee's month (planned, registered, days to
   review, their days). Calculated when opened, never stored

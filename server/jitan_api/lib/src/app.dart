@@ -8,6 +8,7 @@ import 'employees/employee_assignment_routes.dart';
 import 'employees/employee_routes.dart';
 import 'groups/group_routes.dart';
 import 'locations/location_routes.dart';
+import 'projects/project_routes.dart';
 import 'reports/report_routes.dart';
 import 'health/health_routes.dart';
 import 'http/api_exception.dart';
@@ -42,6 +43,7 @@ Handler buildApp({
   required GroupRoutes groups,
   required LanguageRoutes languages,
   required LocationRoutes locations,
+  required ProjectRoutes projects,
   required ReportRoutes reports,
   required OnboardingRoutes onboarding,
   required RecoveryRoutes recovery,
@@ -58,6 +60,7 @@ Handler buildApp({
     ..mount('/', assignments.router.call)
     ..mount('/', groups.router.call)
     ..mount('/', locations.router.call)
+    ..mount('/', projects.router.call)
     ..mount('/', reports.router.call)
     ..mount('/', languages.authenticatedRouter.call)
     ..mount('/', me.router.call)

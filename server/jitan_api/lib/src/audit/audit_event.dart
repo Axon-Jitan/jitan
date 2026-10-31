@@ -109,7 +109,19 @@ enum AuditEventType {
   locationDeactivated('location.deactivated'),
 
   /// HR/Admin reactivated a location.
-  locationReactivated('location.reactivated');
+  locationReactivated('location.reactivated'),
+
+  /// HR/Admin added a project.
+  projectCreated('project.created'),
+
+  /// HR/Admin changed a project.
+  projectChanged('project.changed'),
+
+  /// HR/Admin put an employee on a project.
+  projectEmployeeAssigned('project.employee.assigned'),
+
+  /// HR/Admin took an employee off a project.
+  projectEmployeeUnassigned('project.employee.unassigned');
 
   const AuditEventType(this.typeName);
 
@@ -139,7 +151,11 @@ enum EventLogReference {
 
   /// PROPOSAL (ERD_GAPS GAP-15): exists only in the local database; written
   /// only with `JITAN_DEV_GROUP_SCHEDULES=true`.
-  groupSchedule('groupScheduleID');
+  groupSchedule('groupScheduleID'),
+
+  /// PROPOSAL (PROPOSED_TABLES.md): exist only in the local database.
+  project('projectID'),
+  userProject('userProjectID');
 
   const EventLogReference(this.column);
 

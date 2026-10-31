@@ -72,4 +72,10 @@ enum Permission {
 
   /// See the monthly hours report and export it (company-scoped).
   viewReports,
+
+  /// See a company's projects and who works on them (company-scoped).
+  viewProjects,
+
+  /// Add and change projects, and choose who works on them (company-scoped).
+  manageProjects,
 }

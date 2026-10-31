@@ -16,6 +16,7 @@ export 'src/locations_api.dart';
 export 'src/reports_api.dart';
 export 'src/me_api.dart';
 export 'src/onboarding_api.dart';
+export 'src/projects_api.dart';
 export 'src/recovery_api.dart';
 export 'src/schedule_source_api.dart';
 export 'src/schedules_api.dart';
