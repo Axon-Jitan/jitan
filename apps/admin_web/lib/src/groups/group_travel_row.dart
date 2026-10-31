@@ -74,6 +74,7 @@ class _GroupTravelRowState extends State<GroupTravelRow> {
               alignment: Alignment.centerRight,
               child: Switch(
                 value: value,
+                activeThumbColor: JitanColors.surface,
                 activeTrackColor: JitanColors.ink,
                 inactiveTrackColor: JitanColors.inputBorder,
                 inactiveThumbColor: JitanColors.surface,
