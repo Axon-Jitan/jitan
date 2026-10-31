@@ -18,6 +18,7 @@ class AdminServices {
     required this.scheduleSourceApi,
     required this.locationsApi,
     required this.reportsApi,
+    required this.dashboardApi,
     required this.session,
     this.locationMaps,
   });
@@ -35,6 +36,7 @@ class AdminServices {
   final ScheduleSourceApi scheduleSourceApi;
   final LocationsApi locationsApi;
   final ReportsApi reportsApi;
+  final DashboardApi dashboardApi;
   final AdminSession session;
 
   /// The Locations map; `null` when the build has no Mapbox token.

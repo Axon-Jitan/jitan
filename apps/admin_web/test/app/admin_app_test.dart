@@ -18,7 +18,7 @@ void main() {
         child: AdminApp(services: fakes.services, initialLocation: initialLocation),
       );
 
-  testWidgets('opens on Companies with the sidebar showing it as selected', (tester) async {
+  testWidgets('opens on the Dashboard with the sidebar showing it as selected', (tester) async {
     useDesktopSize(tester);
     final fakes = TestServices();
 
@@ -27,8 +27,8 @@ void main() {
 
     expect(find.text('jitan.'), findsOneWidget);
     final items = tester.widgetList<JitanNavItem>(find.byType(JitanNavItem)).toList();
-    expect(items.map((i) => (i.label, i.selected)), [('Companies', true), ('Employees', false), ('Locations', false), ('Schedules', false), ('Groups', false), ('Time records', false), ('Reports', false)]);
-    expect(fakes.companies.calls, [''], reason: 'the page loads companies on open');
+    expect(items.map((i) => (i.label, i.selected)), [('Dashboard', true), ('Companies', false), ('Employees', false), ('Locations', false), ('Schedules', false), ('Groups', false), ('Time records', false), ('Reports', false)]);
+    expect(fakes.dashboard.calls, hasLength(1), reason: 'the page loads on open');
   });
 
   testWidgets('the sidebar lists only built pages (no dead navigation)', (tester) async {
@@ -37,8 +37,8 @@ void main() {
     await tester.pumpWidget(app(TestServices()));
     await tester.pump();
 
-    expect(find.byType(JitanNavItem), findsNWidgets(7));
-    for (final unbuilt in ['Dashboard', 'Terminals', 'Exceptions']) {
+    expect(find.byType(JitanNavItem), findsNWidgets(8));
+    for (final unbuilt in ['Terminals', 'Exceptions']) {
       expect(find.text(unbuilt), findsNothing, reason: unbuilt);
     }
   });
@@ -81,13 +81,14 @@ void main() {
     expect(services.employees.calls, [(-1, '')]);
   });
 
-  testWidgets('an unknown URL lands on Companies', (tester) async {
+  testWidgets('an unknown URL lands on the Dashboard', (tester) async {
     useDesktopSize(tester);
 
     await tester.pumpWidget(app(TestServices(), initialLocation: '/nope'));
     await tester.pump();
+    await tester.pump();
 
-    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
+    expect(find.text('Everyone scheduled today'), findsOneWidget);
   });
 
   testWidgets('a narrow window moves the sidebar into a drawer', (tester) async {
@@ -102,6 +103,6 @@ void main() {
     await tester.tap(find.byTooltip('Open navigation menu'));
     // Not pumpAndSettle: the page's loading spinner animates indefinitely.
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(JitanNavItem), findsNWidgets(7));
+    expect(find.byType(JitanNavItem), findsNWidgets(8));
   });
 }

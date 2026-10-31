@@ -5,7 +5,9 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../auth/admin_session.dart';
 import '../auth/no_access_screen.dart';
 import '../auth/sign_in_screen.dart';
+import '../auth/platform/session_store.dart';
 import '../companies/companies_screen.dart';
+import '../dashboard/dashboard_screen.dart';
 import '../employees/employees_screen.dart';
 import '../employees/import/employee_import_screen.dart';
 import '../groups/group_page.dart';
@@ -34,21 +36,23 @@ String? _redirect(AdminSession session, GoRouterState state) {
     AdminSessionStatus.signedOut when path != AdminRoutes.signIn => gate(AdminRoutes.signIn),
     AdminSessionStatus.noAccess when path != AdminRoutes.noAccess => gate(AdminRoutes.noAccess),
     AdminSessionStatus.signedIn when gates.contains(path) || path == '/' =>
-      from != null && from.startsWith('/') && from != '/' ? from : AdminRoutes.companies,
+      from != null && from.startsWith('/') && from != '/' ? from : AdminRoutes.dashboard,
     _ => null,
   };
 }
 
-/// URL routing for the HR/Admin app. Unknown paths go to Companies.
+/// URL routing for the HR/Admin app. Unknown paths go to the Dashboard.
 GoRouter buildAdminRouter({required AdminServices services, String? initialLocation}) {
   AdminShell shell(String location, Widget child) =>
       AdminShell(location: location, companiesApi: services.companiesApi, session: services.session, child: child);
 
+  Widget dashboard() => DashboardScreen(api: services.dashboardApi, store: browserSessionStore());
+
   return GoRouter(
-    initialLocation: initialLocation ?? AdminRoutes.companies,
+    initialLocation: initialLocation ?? AdminRoutes.dashboard,
     refreshListenable: services.session,
     redirect: (context, state) => _redirect(services.session, state),
-    errorBuilder: (context, state) => shell(AdminRoutes.companies, CompaniesScreen(api: services.companiesApi)),
+    errorBuilder: (context, state) => shell(AdminRoutes.dashboard, dashboard()),
     routes: [
       GoRoute(
         path: AdminRoutes.checking,
@@ -65,6 +69,10 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
       ShellRoute(
         builder: (context, state, child) => shell(state.matchedLocation, child),
         routes: [
+          GoRoute(
+            path: AdminRoutes.dashboard,
+            pageBuilder: (context, state) => NoTransitionPage(child: dashboard()),
+          ),
           GoRoute(
             path: AdminRoutes.companies,
             pageBuilder: (context, state) => NoTransitionPage(child: CompaniesScreen(api: services.companiesApi)),

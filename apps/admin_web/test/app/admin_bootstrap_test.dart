@@ -5,26 +5,23 @@ import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 
-import '../support/fake_companies_api.dart';
 import '../support/fake_languages_api.dart';
 import '../support/test_services.dart';
 
 /// The full client translation path for the Company list (I18N-01).
 void main() {
   const dutch = {
-    'company.title': 'Bedrijven',
+    'dashboard.title': 'Overzicht',
     'company.column.name': 'Bedrijf',
     'common.status.active': 'Actief',
   };
 
   late FakeLanguagesApi languages;
   late TestServices fakes;
-  late FakeCompaniesApi companies;
 
   setUp(() {
     languages = FakeLanguagesApi({'nl': dutch});
     fakes = TestServices();
-    companies = fakes.companies;
   });
 
   Future<void> pumpBootstrap(WidgetTester tester) async {
@@ -41,7 +38,7 @@ void main() {
 
     await pumpBootstrap(tester);
 
-    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
+    expect(find.text('Dashboard'), findsNWidgets(2));
     expect(find.text('Companies'), findsWidgets);
   });
 
@@ -51,13 +48,9 @@ void main() {
     await pumpBootstrap(tester);
     await tester.pump();
     await tester.pump();
-    companies.succeed([company(1, 'Almeco')]);
-    await tester.pump();
 
-    expect(find.text('Bedrijven'), findsOneWidget, reason: 'Dutch from the database');
-    expect(find.text('Bedrijf'), findsOneWidget);
-    expect(find.text('Actief'), findsOneWidget);
-    expect(find.text('View and manage companies in Jitan.'), findsOneWidget, reason: 'missing in Dutch → English');
+    expect(find.text('Overzicht'), findsOneWidget, reason: 'Dutch from the database');
+    expect(find.text('Dashboard'), findsOneWidget, reason: 'the sidebar item is missing in Dutch → English');
     expect(languages.requests, ['me/language', 'translations:nl']);
   });
 
@@ -66,7 +59,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
+    expect(find.text('Dashboard'), findsNWidgets(2));
     expect(languages.requests, ['me/language']);
   });
 
@@ -78,7 +71,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
+    expect(find.text('Dashboard'), findsNWidgets(2));
     expect(find.text('Can’t reach Jitan'), findsNothing);
   });
 
@@ -92,7 +85,7 @@ void main() {
 
     await tester.pumpWidget(AdminBootstrap(translationService: service, services: fakes.services));
 
-    expect(find.text('Bedrijven'), findsOneWidget, reason: 'no English flash');
+    expect(find.text('Overzicht'), findsOneWidget, reason: 'no English flash');
   });
 
   testWidgets('a misconfigured user language still opens in English', (tester) async {
@@ -105,6 +98,6 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('View and manage companies in Jitan.'), findsOneWidget);
+    expect(find.text('Dashboard'), findsNWidgets(2));
   });
 }

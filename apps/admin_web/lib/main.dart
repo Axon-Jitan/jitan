@@ -48,6 +48,7 @@ void main() {
         scheduleSourceApi: ScheduleSourceApi(transport),
         locationsApi: LocationsApi(transport),
         reportsApi: ReportsApi(transport),
+        dashboardApi: DashboardApi(transport),
         session: session,
         locationMaps: switch (config.mapboxToken) {
           null => null,

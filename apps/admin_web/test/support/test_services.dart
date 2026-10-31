@@ -5,6 +5,7 @@ import 'package:admin_web/src/auth/platform/session_store.dart';
 import 'fake_assignments_api.dart';
 import 'fake_auth.dart';
 import 'fake_companies_api.dart';
+import 'fake_dashboard.dart';
 import 'fake_employees_api.dart';
 import 'fake_group_apis.dart';
 import 'fake_locations.dart';
@@ -27,6 +28,7 @@ class TestServices {
       scheduleSourceApi: scheduleSource,
       locationsApi: locations,
       reportsApi: reports,
+      dashboardApi: dashboard,
       session: session ??
           AdminSession.signedIn(
             auth: FakeAuthApi(),
@@ -50,6 +52,7 @@ class TestServices {
   final scheduleSource = FakeScheduleSourceApi();
   final locations = FakeLocationsApi();
   final reports = FakeReportsApi();
+  final dashboard = FakeDashboardApi();
   late final maps = fakeLocationMaps();
   late final AdminServices services;
 }

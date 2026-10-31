@@ -42,6 +42,18 @@ abstract final class JitanColors {
   /// "Active" status text.
   static const success = Color(0xFF16856B);
 
+  // Charts (validated together for colour-blind readers, 2026-10-31)
+  static const chartGreen = Color(0xFF0E8A70);
+  static const chartViolet = Color(0xFF7A6FD0);
+  static const chartAmber = Color(0xFFC47F1E);
+  static const chartBlue = Color(0xFF3E8FC4);
+
+  /// A chart's empty track.
+  static const chartTrack = inputFill;
+
+  /// The days between the two ends of a chosen period.
+  static const dateRange = Color(0xFFFDE5E1);
+
   // Tables (table design specification, 2026-10-20)
   /// Header row background, edge to edge.
   static const tableHeader = Color(0xFFF7F6F3);

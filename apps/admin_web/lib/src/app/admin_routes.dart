@@ -4,6 +4,7 @@ abstract final class AdminRoutes {
   static const checking = '/checking';
   static const signIn = '/sign-in';
   static const noAccess = '/no-access';
+  static const dashboard = '/dashboard';
   static const companies = '/companies';
   static const employees = '/employees';
 

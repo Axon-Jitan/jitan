@@ -12,6 +12,8 @@ import 'package:admin_web/src/groups/employee_picker.dart';
 import 'package:admin_web/src/groups/group_page.dart';
 import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/locations/locations_screen.dart';
+import 'package:admin_web/src/auth/platform/session_store.dart';
+import 'package:admin_web/src/dashboard/dashboard_screen.dart';
 import 'package:admin_web/src/reports/reports_screen.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:admin_web/src/schedules/schedule_dialog.dart';
@@ -28,6 +30,7 @@ import '../support/fake_companies_api.dart';
 import '../support/fake_employees_api.dart';
 import '../support/fake_group_apis.dart';
 import '../support/fake_locations.dart';
+import '../support/fake_dashboard.dart';
 import '../support/fake_reports.dart';
 import '../support/fake_schedules_api.dart';
 import '../support/fake_time_records_api.dart';
@@ -121,6 +124,17 @@ void main() {
   final white = groupSchedule(2, 'White collar', status: GroupScheduleStatus.noSchedule);
 
   for (final width in _widths) {
+    testWidgets('Dashboard and its period picker at $width px', (tester) async {
+      final api = FakeDashboardApi()..answer = dashboardWith(bars: 31);
+      await _pump(tester, width, DashboardScreen(api: api, store: MemorySessionStore(), today: () => DateTime(2026, 10, 31)));
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Dashboard');
+
+      await tester.tap(find.text('Last 7 days'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'The period picker');
+    });
+
     testWidgets('Reports and an employee\'s month at $width px', (tester) async {
       final api = FakeReportsApi()
         ..employees = [

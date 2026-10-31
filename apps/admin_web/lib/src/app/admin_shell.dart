@@ -9,8 +9,8 @@ import 'admin_routes.dart';
 
 /// Sidebar + page frame around every HR/Admin page.
 ///
-/// The sidebar lists only implemented pages. Figma's other items (Dashboard,
-/// Terminals, Time records, Exceptions, Reports) are added with their slices.
+/// The sidebar lists only implemented pages. Figma's other items (Terminals,
+/// Exceptions, …) are added with their slices.
 /// The role caption (Figma "ADMIN"/"HR") is omitted until the signed-in
 /// user's credential group is available from the API; it is never hardcoded.
 ///
@@ -41,6 +41,7 @@ class AdminShell extends StatelessWidget {
         context.go(path);
       },
       destinations: [
+        JitanNavDestination(label: context.t(AdminTextKeys.navDashboard), path: AdminRoutes.dashboard),
         JitanNavDestination(label: context.t(AdminTextKeys.navCompanies), path: AdminRoutes.companies),
         JitanNavDestination(label: context.t(AdminTextKeys.navEmployees), path: AdminRoutes.employees),
         JitanNavDestination(label: context.t(AdminTextKeys.navLocations), path: AdminRoutes.locations),
