@@ -684,12 +684,14 @@ class FakeTimeRegistrationWriteRepository implements TimeRegistrationWriteReposi
   Map<String, int> types = {
     'Start – actual – Manual': 4,
     'Finish – actual – Manual': 7,
+    'Start – actual – Geofence': 2,
+    'Finish – actual – Geofence': 5,
     'Start – rounded': 8,
     'Finish – rounded': 9,
   };
 
   /// Every row written, in order.
-  final rows = <({int id, int userId, int typeId, DateTime at, bool manualEntry, String? comment})>[];
+  final rows = <({int id, int userId, int typeId, DateTime at, bool manualEntry, String? comment, int? addressId})>[];
   final locked = <int>[];
   var _nextId = 1;
 
@@ -722,10 +724,26 @@ class FakeTimeRegistrationWriteRepository implements TimeRegistrationWriteReposi
     required DateTime at,
     required bool manualEntry,
     String? comment,
+    int? addressId,
   }) async {
     final id = _nextId++;
-    rows.add((id: id, userId: userId, typeId: typeId, at: at, manualEntry: manualEntry, comment: comment));
+    rows.add((id: id, userId: userId, typeId: typeId, at: at, manualEntry: manualEntry, comment: comment, addressId: addressId));
     return id;
+  }
+
+  @override
+  Future<({int id, int typeId, DateTime at})?> latestOfTypes(
+    SqlExecutor tx,
+    int userId,
+    List<int> typeIds,
+    DateTime from,
+    DateTime to,
+  ) async {
+    final matching = rows.where(
+      (r) => r.userId == userId && typeIds.contains(r.typeId) && !r.at.isBefore(from) && !r.at.isAfter(to),
+    ).toList()
+      ..sort((a, b) => a.at.compareTo(b.at));
+    return matching.isEmpty ? null : (id: matching.last.id, typeId: matching.last.typeId, at: matching.last.at);
   }
 }
 
@@ -801,6 +819,7 @@ class FakeTimeRecordWrites implements TimeRegistrationWriteRepository {
     required DateTime at,
     required bool manualEntry,
     String? comment,
+    int? addressId,
   }) async {
     final id = _store.nextId;
     final name = _types.entries.firstWhere((e) => e.value == typeId).key;

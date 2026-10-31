@@ -16,11 +16,13 @@ enum RegistrationBoundary {
 }
 
 /// How a registration was made (TIME_ENGINE_ANALYSIS D5): part of the
-/// "actual" `tblTimeRegType`. Only manual registration is accepted from the
-/// employee app today; QR (terminals, GAP-09) and geofence (phase 4) come
-/// later through the same request.
+/// "actual" `tblTimeRegType`. The employee app sends manual and geofence
+/// registrations; QR (terminals, GAP-09) comes later through the same request.
 enum TimeRegistrationMethod {
-  manual('manual');
+  manual('manual'),
+
+  /// Detected by the phone at a location: needs [RegisterTimeRequest.addressId].
+  geofence('geofence');
 
   const TimeRegistrationMethod(this.wireName);
 
@@ -65,6 +67,7 @@ class RegisterTimeRequest {
     required this.entry,
     required this.at,
     this.reason,
+    this.addressId,
   });
 
   factory RegisterTimeRequest.fromJson(Map<String, Object?> json) {
@@ -79,6 +82,7 @@ class RegisterTimeRequest {
       entry: RegistrationEntry.fromWire(json.readString(fieldEntry)),
       at: DateTime.parse(at).toUtc(),
       reason: json.readOptionalString(fieldReason),
+      addressId: json.readOptionalInt(fieldAddressId),
     );
   }
 
@@ -94,6 +98,9 @@ class RegisterTimeRequest {
   /// [maxReasonLength] characters (`tblTimeReg.timeRegComment`).
   final String? reason;
 
+  /// The location of a geofence registration (`tblTimeReg.addressID`).
+  final int? addressId;
+
   static const maxReasonLength = 500;
 
   static const fieldBoundary = 'boundary';
@@ -101,6 +108,7 @@ class RegisterTimeRequest {
   static const fieldEntry = 'entry';
   static const fieldAt = 'at';
   static const fieldReason = 'reason';
+  static const fieldAddressId = 'addressId';
 
   Map<String, Object?> toJson() => {
         fieldBoundary: boundary.wireName,
@@ -108,6 +116,7 @@ class RegisterTimeRequest {
         fieldEntry: entry.wireName,
         fieldAt: at.toUtc().toIso8601String(),
         fieldReason: reason,
+        fieldAddressId: addressId,
       };
 }
 

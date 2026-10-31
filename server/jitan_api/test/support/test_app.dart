@@ -172,6 +172,7 @@ class TestApp {
           clock: WorkplaceClock('Europe/Brussels'),
           repository: timeRegistrationWrites,
           audit: audit,
+          locations: locations,
           now: () => now,
         ),
       ),

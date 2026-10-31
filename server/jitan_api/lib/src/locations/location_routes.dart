@@ -4,6 +4,7 @@ import 'package:shelf_router/shelf_router.dart';
 
 import '../auth/authorizer.dart';
 import '../auth/permission.dart';
+import '../auth/request_identity.dart';
 import '../http/api_exception.dart';
 import '../http/json_request.dart';
 import '../http/json_response.dart';
@@ -17,6 +18,9 @@ import 'location_service.dart';
 /// - `GET /locations`: every location, active or not.
 /// - `POST /locations` (`LocationRequest`, 201), `PUT /locations/{id}`.
 /// - `POST /locations/{id}/deactivate`, `POST /locations/{id}/reactivate`.
+/// - `GET /me/locations`: the places the signed-in employee's phone watches
+///   (active, with a pin). Needs a session, no permission. Consumer: the
+///   employee app's automatic registration.
 class LocationRoutes {
   const LocationRoutes(this._authorizer, this._locations);
 
@@ -27,6 +31,7 @@ class LocationRoutes {
 
   Router get router => Router()
     ..get('/locations', _list)
+    ..get('/me/locations', _recognised)
     ..post('/locations', _create)
     ..put(_location, _update)
     ..post('$_location/deactivate', _deactivate)
@@ -35,6 +40,11 @@ class LocationRoutes {
   Future<Response> _list(Request request) async {
     await _authorizer.require(request, Permission.viewLocations);
     return jsonResponse(LocationListResponse(locations: await _locations.all()).toJson());
+  }
+
+  Future<Response> _recognised(Request request) async {
+    request.identity;
+    return jsonResponse(LocationListResponse(locations: await _locations.recognised()).toJson());
   }
 
   Future<Response> _create(Request request) async {

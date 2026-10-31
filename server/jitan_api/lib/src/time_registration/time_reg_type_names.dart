@@ -8,6 +8,7 @@ abstract final class TimeRegTypeNames {
   static String actual(RegistrationBoundary boundary, TimeRegistrationMethod method) =>
       '${_boundary(boundary)} – actual – ${switch (method) {
         TimeRegistrationMethod.manual => 'Manual',
+        TimeRegistrationMethod.geofence => 'Geofence',
       }}';
 
   /// "Start – rounded" / "Finish – rounded": the time rounded with the

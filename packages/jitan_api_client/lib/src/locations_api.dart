@@ -20,6 +20,16 @@ class LocationsApi {
     }
   }
 
+  /// The places the signed-in employee's phone watches.
+  Future<List<Location>> recognised() async {
+    final json = await _transport.getJson('me/locations');
+    try {
+      return LocationListResponse.fromJson(json).locations;
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Locations: ${e.message}');
+    }
+  }
+
   Future<Location> create(LocationRequest request) async =>
       _location(await _transport.postJson('locations', request.toJson()));
 

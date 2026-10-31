@@ -26,6 +26,12 @@ class LocationService {
 
   Future<List<Location>> all() => _locations.all(_executor);
 
+  /// The locations a phone watches: active, with a usable pin.
+  Future<List<Location>> recognised() async => [
+    for (final location in await all())
+      if (location.isActive && location.point != null) location,
+  ];
+
   Future<Location> create(int actorUserId, LocationRequest request) async {
     final location = validated(request);
     final keys = await _write(location, (tx) async {

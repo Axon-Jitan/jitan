@@ -4,6 +4,7 @@ import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
+import '../locations/location_repository.dart';
 import 'registration_rounding.dart';
 import 'rounding/rounding_calculator.dart';
 import 'rounding/rounding_policy.dart';
@@ -27,6 +28,7 @@ class TimeRegistrationWriteService {
     required this._clock,
     this._repository = const TimeRegistrationWriteRepository(),
     this._audit = const AuditLogRepository(),
+    this._locations = const LocationRepository(),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -35,6 +37,7 @@ class TimeRegistrationWriteService {
   final WorkplaceClock _clock;
   final TimeRegistrationWriteRepository _repository;
   final AuditLogRepository _audit;
+  final LocationRepository _locations;
   final DateTime Function() _now;
 
   /// How far ahead of the server's clock a time may be (a phone's clock may
@@ -51,8 +54,12 @@ class TimeRegistrationWriteService {
   /// - 400 `validation_failed` on `reason` (missing for a corrected time, or
   ///   longer than [RegisterTimeRequest.maxReasonLength]), on `at` (in the
   ///   future) or on `entry` (a first-day time once there are registrations)
+  /// - 400 on `entry` or `addressId` for a geofence registration that is not
+  ///   sent as it happened, or names no active location
   /// - the same request again (a retry) adds nothing and returns the pair
   ///   stored the first time; [created] is then `false`
+  /// - a geofence start while the day is already running (back from a short
+  ///   exit, or at another location: D32) adds nothing and returns that start
   Future<({RegisteredTime registered, bool created})> register(int userId, RegisterTimeRequest request) async {
     final reason = _reasonOf(request);
     final at = DateTime.fromMillisecondsSinceEpoch(request.at.millisecondsSinceEpoch ~/ 1000 * 1000, isUtc: true);
@@ -61,6 +68,10 @@ class TimeRegistrationWriteService {
     }
 
     final local = _clock.wallClockOf(at);
+    final geofence = request.method == TimeRegistrationMethod.geofence;
+    if (geofence && request.entry != RegistrationEntry.now) {
+      throw const ApiException.validation(RegisterTimeRequest.fieldEntry, 'A detected time is sent as it happened.');
+    }
     final policy = await _rounding.policyOn(userId, local.weekday);
     final boundary = switch (request.boundary) {
       RegistrationBoundary.start => RoundingBoundary.start,
@@ -72,6 +83,7 @@ class TimeRegistrationWriteService {
       final actualType = await _type(tx, TimeRegTypeNames.actual(request.boundary, request.method));
       final roundedType = await _type(tx, TimeRegTypeNames.rounded(request.boundary));
       await _repository.lockUser(tx, userId);
+      final addressId = geofence ? await _locationOf(tx, request) : null;
 
       final existing = await _repository.findSame(tx, userId, actualType, at);
       final pending = request.entry == RegistrationEntry.corrected;
@@ -103,6 +115,16 @@ class TimeRegistrationWriteService {
         }
       }
 
+      if (existing == null && geofence && request.boundary == RegistrationBoundary.start) {
+        final running = await _runningStart(tx, userId, at, local);
+        if (running != null) {
+          return (
+            registered: RegisteredTime(boundary: request.boundary, actualId: running.id, actualAt: running.at),
+            created: false,
+          );
+        }
+      }
+
       final actualId = await _repository.insert(
         tx,
         userId: userId,
@@ -110,6 +132,7 @@ class TimeRegistrationWriteService {
         at: at,
         manualEntry: request.entry != RegistrationEntry.now,
         comment: reason,
+        addressId: addressId,
       );
       // D31: a correction waits for HR; it gets its rounded row when approved.
       if (pending) {
@@ -131,7 +154,14 @@ class TimeRegistrationWriteService {
         );
       }
       // Calculated by Jitan, not entered by hand: not a manual entry.
-      final roundedId = await _repository.insert(tx, userId: userId, typeId: roundedType, at: rounded, manualEntry: false);
+      final roundedId = await _repository.insert(
+        tx,
+        userId: userId,
+        typeId: roundedType,
+        at: rounded,
+        manualEntry: false,
+        addressId: addressId,
+      );
       await _audit.record(
         tx,
         AuditEvent(
@@ -155,6 +185,29 @@ class TimeRegistrationWriteService {
         created: true,
       );
     });
+  }
+
+  /// The active location of a geofence registration; 400 otherwise.
+  Future<int> _locationOf(SqlExecutor tx, RegisterTimeRequest request) async {
+    final id = request.addressId;
+    final location = id == null ? null : await _locations.find(tx, id);
+    if (location == null || !location.isActive) {
+      throw const ApiException.validation(RegisterTimeRequest.fieldAddressId, 'This location is not recognised.');
+    }
+    return location.id;
+  }
+
+  /// The latest start of the workplace day of [at] when no finish follows it.
+  Future<({int id, DateTime at})?> _runningStart(SqlExecutor tx, int userId, DateTime at, DateTime local) async {
+    Future<List<int>> ids(RegistrationBoundary boundary) async => [
+      for (final method in TimeRegistrationMethod.values)
+        ?await _repository.typeId(tx, TimeRegTypeNames.actual(boundary, method)),
+    ];
+    final starts = await ids(RegistrationBoundary.start);
+    final finishes = await ids(RegistrationBoundary.finish);
+    final midnight = _clock.utcOf(DateTime(local.year, local.month, local.day));
+    final latest = await _repository.latestOfTypes(tx, userId, [...starts, ...finishes], midnight, at);
+    return latest == null || finishes.contains(latest.typeId) ? null : (id: latest.id, at: latest.at);
   }
 
   /// The reason, trimmed: required for a corrected time (D30).

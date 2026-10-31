@@ -57,8 +57,38 @@ class TimeRegistrationWriteRepository {
     return (id: rows.first.readInt('timeRegID'), at: DateTime.utc(at.year, at.month, at.day, at.hour, at.minute, at.second));
   }
 
-  /// Adds an active row and returns its `timeRegID`. No address yet: where
-  /// a registration happened comes with workplaces (phase 4).
+  /// [userId]'s latest active row of [typeIds] from [from] up to [to], or
+  /// `null`. The list holds ids read from `tblTimeRegType`, bound one by one.
+  Future<({int id, int typeId, DateTime at})?> latestOfTypes(
+    SqlExecutor tx,
+    int userId,
+    List<int> typeIds,
+    DateTime from,
+    DateTime to,
+  ) async {
+    final names = [for (var i = 0; i < typeIds.length; i++) ':t$i'];
+    final rows = await tx.query(
+      'SELECT timeRegID, timeRegTypeID, timeRegTimestamp FROM tblTimeReg '
+      'WHERE userID = :userId AND timeRegTypeID IN (${names.join(', ')}) '
+      'AND timeRegTimestamp >= :from AND timeRegTimestamp <= :to '
+      'AND timeRegActive = 1 AND timeRegMFD = 0 ORDER BY timeRegTimestamp DESC, timeRegID DESC LIMIT 1',
+      {
+        'userId': userId,
+        'from': sqlDateTime(from),
+        'to': sqlDateTime(to),
+        for (var i = 0; i < typeIds.length; i++) 't$i': typeIds[i],
+      },
+    );
+    if (rows.isEmpty) return null;
+    final at = rows.first.readOptionalDateTime('timeRegTimestamp')!;
+    return (
+      id: rows.first.readInt('timeRegID'),
+      typeId: rows.first.readInt('timeRegTypeID'),
+      at: DateTime.utc(at.year, at.month, at.day, at.hour, at.minute, at.second),
+    );
+  }
+
+  /// Adds an active row and returns its `timeRegID`.
   Future<int> insert(
     SqlExecutor tx, {
     required int userId,
@@ -66,12 +96,20 @@ class TimeRegistrationWriteRepository {
     required DateTime at,
     required bool manualEntry,
     String? comment,
+    int? addressId,
   }) async =>
       (await tx.execute(
         'INSERT INTO tblTimeReg (userID, addressID, timeRegTypeID, timeRegTimestamp, timeRegManualEntry, '
         'timeRegComment, timeRegWhenModified, timeRegActive, timeRegMFD) '
-        'VALUES (:userId, NULL, :typeId, :at, :manual, :comment, NULL, 1, 0)',
-        {'userId': userId, 'typeId': typeId, 'at': sqlDateTime(at), 'manual': manualEntry, 'comment': comment},
+        'VALUES (:userId, :addressId, :typeId, :at, :manual, :comment, NULL, 1, 0)',
+        {
+          'userId': userId,
+          'addressId': addressId,
+          'typeId': typeId,
+          'at': sqlDateTime(at),
+          'manual': manualEntry,
+          'comment': comment,
+        },
       ))
           .lastInsertId;
 

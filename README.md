@@ -96,6 +96,8 @@ dart run bin/server.dart
   for My QR; `cache-control: no-store`, 404 when the employee has none
 - `GET /locations`, `POST /locations`, `PUT /locations/{id}`, `POST /locations/{id}/deactivate|reactivate`:
   the places where Jitan recognises employees (`tblAddress` + `tblGeofence`, one shared list until GAP-03)
+- `GET /me/locations`: the active locations the employee's phone watches; `POST /me/time-registrations`
+  also takes `method: geofence` with `addressId`, and a start while the day runs adds nothing (D32)
 - `GET /time-records?from=&to=&company=&search=` (local dates `yyyy-MM-dd`, at most 62 days):
   HR/Admin Time records, one row per employee per day with the actual and rounded first
   start and last finish and a calculated status (complete, working, missing finish, missing

@@ -32,6 +32,9 @@ class FakeLocationsApi implements LocationsApi {
     return [...locations];
   }
 
+  @override
+  Future<List<Location>> recognised() async => [...locations.where((l) => l.isActive)];
+
   Future<Location> _write(String call, Location Function() change) async {
     calls.add(call);
     if (failNext case final failure?) {
