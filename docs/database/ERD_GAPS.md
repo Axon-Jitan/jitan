@@ -159,6 +159,9 @@ Recorded so they aren't raised again.
    - which address is a company's *primary* workplace
    - for multi-company employees, how a registration is attributed to a company. Related:
      should their schedules differ per company? `tblUserSchedule` has no company.
+5. **Geofencing (D36, 2026-10-31):** each company has one address, shared by all its employee
+   groups. The address-to-company link is still missing, so until IT adds it workplaces are one
+   shared `tblAddress` list and every employee on Automatic is recognised at all of them.
 
 ## GAP-04: Employee onboarding QR
 **RESOLVED (IT decision 2026-10-08): temporary QR codes, not stored in MySQL.** Supersedes

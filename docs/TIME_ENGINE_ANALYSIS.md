@@ -112,6 +112,7 @@ changes.
 | D33 | Arriving at a workplace (geofencing, 2026-10-31) | Product owner. Arrival counts after **5 minutes** inside; the actual time saved is the moment of entering. Arrival on a day **with no schedule** also starts the day by itself; HR can see and correct it. |
 | D34 | Answers to "What happened?" (2026-10-31) | Product owner. **Finished work:** the finish is the time they left, saved as actual and rounded as usual. **Break / personal:** the time away is not work; HR sees it and can correct it. **Travelling for work:** the employee enters the travel time themselves with a reason and it waits for HR (D31), because travelling is work for white collar and transport for blue collar, and the ERD holds no such setting in V1. **Other:** the employee writes a reason, it goes to HR, and the time away does not count unless HR approves. |
 | D35 | No answer (2026-10-31) | Product owner. Jitan never guesses: the day stays open and shows as missing finish, fixed through the existing flow (D30, D31). |
+| D36 | Workplaces (2026-10-31) | Product owner. A company has **one address**, shared by its blue collar employees (workplace) and white collar employees (offices). So V1 has one geofence per address and no geofence per employee group. |
 
 **Still open**
 
