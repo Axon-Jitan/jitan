@@ -14,6 +14,7 @@ export 'src/components/jitan_mobile_button.dart';
 export 'src/components/jitan_option_card.dart';
 export 'src/components/jitan_outline_button.dart';
 export 'src/components/jitan_modal.dart';
+export 'src/components/jitan_month_grid.dart';
 export 'src/components/jitan_multi_select_field.dart';
 export 'src/components/show_jitan_modal.dart';
 export 'src/components/jitan_page_header.dart';

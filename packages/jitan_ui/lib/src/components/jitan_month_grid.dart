@@ -1,37 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:jitan_core/jitan_core.dart';
-import 'package:jitan_ui/jitan_ui.dart';
 
-/// One month, Monday first, with the chosen period marked. Always six rows,
-/// so the picker keeps its height from month to month.
-class DashboardMonthGrid extends StatelessWidget {
-  const DashboardMonthGrid({
+import '../i18n/translation_scope.dart';
+import '../theme/jitan_colors.dart';
+import '../theme/jitan_text_styles.dart';
+
+/// One month, Monday first, with the chosen day or period marked. Always six
+/// rows, so a picker keeps its height from month to month.
+class JitanMonthGrid extends StatelessWidget {
+  const JitanMonthGrid({
     super.key,
     required this.month,
     required this.from,
     required this.to,
-    required this.today,
-    required this.selectable,
     required this.onPick,
+    this.latest,
+    this.selectable,
   });
 
   final DateTime month;
-  final DateTime from;
-  final DateTime to;
-  final DateTime today;
 
-  /// Whether a past or present day may be clicked now.
-  final bool Function(DateTime day) selectable;
+  /// Both `null` when nothing is chosen yet.
+  final DateTime? from;
+  final DateTime? to;
+
+  /// The last day that can be chosen; any day when `null`.
+  final DateTime? latest;
+
+  /// Rules out more days, on top of [latest].
+  final bool Function(DateTime day)? selectable;
   final ValueChanged<DateTime> onPick;
 
   static const _rowHeight = 34.0;
 
   Widget _cell(DateTime? day) {
     if (day == null) return const SizedBox(height: _rowHeight);
-    final last = DateTime(today.year, today.month, today.day);
-    final enabled = !day.isAfter(last) && selectable(day);
-    final isEnd = day == from || day == to;
-    final inside = day.isAfter(from) && day.isBefore(to);
+    final last = latest;
+    final first = from, end = to;
+    final enabled =
+        (last == null || !day.isAfter(DateTime(last.year, last.month, last.day))) && (selectable?.call(day) ?? true);
+    final isEnd = day == first || day == end;
+    final inside = first != null && end != null && day.isAfter(first) && day.isBefore(end);
     final radius = BorderRadius.circular(10);
     final colour = isEnd
         ? JitanColors.surface

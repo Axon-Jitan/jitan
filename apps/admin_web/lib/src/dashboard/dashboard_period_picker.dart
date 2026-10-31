@@ -3,7 +3,6 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/admin_text_keys.dart';
-import 'dashboard_month_grid.dart';
 import 'dashboard_period.dart';
 import 'dashboard_text.dart';
 
@@ -215,11 +214,11 @@ class _PeriodPickerState extends State<_PeriodPicker> {
     spacing: 8,
     children: [
       _monthHeader(month, previous: previous, next: next),
-      DashboardMonthGrid(
+      JitanMonthGrid(
         month: month,
         from: _from,
         to: _to,
-        today: widget.today,
+        latest: widget.today,
         selectable: _selectable,
         onPick: _pickDay,
       ),

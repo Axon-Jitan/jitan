@@ -9,6 +9,7 @@ import 'fake_dashboard.dart';
 import 'fake_employees_api.dart';
 import 'fake_group_apis.dart';
 import 'fake_locations.dart';
+import 'fake_projects.dart';
 import 'fake_reports.dart';
 import 'fake_schedules_api.dart';
 import 'fake_time_records_api.dart';
@@ -29,6 +30,7 @@ class TestServices {
       locationsApi: locations,
       reportsApi: reports,
       dashboardApi: dashboard,
+      projectsApi: projects,
       session: session ??
           AdminSession.signedIn(
             auth: FakeAuthApi(),
@@ -53,6 +55,7 @@ class TestServices {
   final locations = FakeLocationsApi();
   final reports = FakeReportsApi();
   final dashboard = FakeDashboardApi();
+  final projects = FakeProjectsApi();
   late final maps = fakeLocationMaps();
   late final AdminServices services;
 }

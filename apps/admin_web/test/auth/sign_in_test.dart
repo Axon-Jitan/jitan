@@ -197,7 +197,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(JitanNavItem), findsNWidgets(8));
+      expect(find.byType(JitanNavItem), findsNWidgets(9));
       expect(find.text('Disan Ssebowa'), findsOneWidget);
       expect(
         tester.widget<JitanNavItem>(find.widgetWithText(JitanNavItem, 'Time records')).selected,
