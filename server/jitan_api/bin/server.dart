@@ -13,7 +13,8 @@ import 'package:jitan_api/src/auth/sign_in_service.dart';
 import 'package:jitan_api/src/auth/permission_evaluator.dart';
 import 'package:jitan_api/src/auth/session_tokens.dart';
 import 'package:jitan_api/src/auth/token_authentication_middleware.dart';
-import 'package:jitan_api/src/auth/unconfigured_permission_evaluator.dart';
+import 'package:jitan_api/src/auth/credential_access_repository.dart';
+import 'package:jitan_api/src/auth/credential_permission_evaluator.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
 import 'package:jitan_api/src/companies/company_routes.dart';
 import 'package:jitan_api/src/companies/company_service.dart';
@@ -155,7 +156,7 @@ Future<void> main() async {
 
   final PermissionEvaluator permissions = config.environment.allowsDevelopmentMechanisms
       ? DevelopmentPermissionEvaluator(config.environment)
-      : const UnconfiguredPermissionEvaluator();
+      : CredentialPermissionEvaluator(CredentialAccessRepository(db));
   final authorizer = Authorizer(permissions);
 
   final sessionSecret = config.sessionSecret;

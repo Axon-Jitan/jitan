@@ -38,6 +38,10 @@ const _usedColumns = {
   'tblGeofenceAddress': ['geofenceAddressID', 'geofenceID', 'addressID', 'geofenceAddressActive', 'geofenceAddressMFD'],
   'tblCredGroup': ['credGroupID', 'credGroupName', 'credGroupLevel', 'credGroupActive', 'credGroupMFD'],
   'tblUserCredGroup': ['userCredGroupID', 'userID', 'credGroupID', 'userCredGroupActive', 'userCredGroupMFD'],
+  'tblAppModules': ['appModulesID', 'appModuleName', 'appModuleActive', 'appModuleMFD'],
+  'tblAppModulesCredGroup': [
+    'appModulesCredGroupID', 'appModulesID', 'credGroupID', 'appModulesCredGroupActive', 'appModulesCredGroupMFD',
+  ],
   'tblEventType': ['eventTypeID', 'eventTypeName'],
   'tblEventLogEventType': [
     'eventLogEventTypeID', 'eventTypeID', 'eventLogID', 'eventLogEventTypeActive', 'eventLogEventTypeMFD',

@@ -133,3 +133,19 @@ The network test does not establish full application readiness.
 Reference: [config loader](../dev/network-smoke/server_config.dart),
 [systemd example](../dev/network-smoke/jitan.service),
 [configuration example](../dev/network-smoke/app.env.example).
+
+## Giving HR access
+
+In V1, IT decides who opens Jitan HR, in its own tables. Jitan has no screen for it, and HR and
+Admin have the same rights, in every company.
+
+1. **Once per credential group that may open HR:** add a row to `tblAppModulesCredGroup` linking
+   that `tblCredGroup` row to an active `tblAppModules` row. Do not link the Employee group: a
+   group with no module opens nothing.
+2. **For each person:** add a row to `tblUserCredGroup` for their `userID` and that group, with
+   `userCredGroupActive = 1` and `userCredGroupMFD = 0`.
+3. They need a password: an HR person generates their onboarding QR, and they set it up in the
+   employee app. The very first HR person has nobody to do that: see AUTH-03 in the backlog.
+
+To take access away, set `userCredGroupActive = 0`. It applies on their next click, no restart.
+

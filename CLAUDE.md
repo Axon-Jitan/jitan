@@ -47,8 +47,8 @@ Unresolved production details never stall development. Classify every issue (ENG
   acting user. With `JITAN_ENV=production` (also the default when unset), the server refuses
   to start if any `JITAN_DEV_*` variable is set.
 - **Dev permissions:** a dev-only permission evaluator allows everything and is selectable
-  only outside production. Production authorization (CLARIFY-10/11) plugs into the same
-  interface.
+  only outside production. Production uses `CredentialPermissionEvaluator` on the same
+  interface: IT gives HR access in its own tables (V1, product owner, 2026-10-31).
 - **Dev data:** fixtures go in the dev/test database only, names prefixed `[DEV]`. Production
   code never references them.
 
@@ -239,7 +239,7 @@ named so it can be found:
 | Item | Replace with | Blocked on |
 |---|---|---|
 | `DevelopmentIdentityMiddleware` | Nothing: sign-in exists, so run the API without `JITAN_DEV_USER_ID`. Only for curl in development | remove before production |
-| `DevelopmentPermissionEvaluator` / `UnconfiguredPermissionEvaluator` | evaluator over `tblCredGroup`/`tblAppModulesCredGroup`/`tblFunction` | CLARIFY-10, -11 |
+| `DevelopmentPermissionEvaluator` | Nothing: production already uses `CredentialPermissionEvaluator` | selected only outside production |
 | Sidebar role caption omitted | signed-in user's credential group from a `/me` endpoint | CLARIFY-11 |
 | Cleartext `http://` in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`) | HTTPS API; release builds already refuse cleartext | production hosting |
 

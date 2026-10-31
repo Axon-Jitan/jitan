@@ -2,7 +2,6 @@ import 'package:jitan_api/src/auth/development_identity_middleware.dart';
 import 'package:jitan_api/src/auth/development_permission_evaluator.dart';
 import 'package:jitan_api/src/auth/permission.dart';
 import 'package:jitan_api/src/auth/request_identity.dart';
-import 'package:jitan_api/src/auth/unconfigured_permission_evaluator.dart';
 import 'package:jitan_api/src/config/app_environment.dart';
 import 'package:test/test.dart';
 
@@ -32,12 +31,5 @@ void main() {
       await evaluator.isAllowed(const RequestIdentity(userId: 1), Permission.viewCompanies),
       isTrue,
     );
-  });
-
-  test('the unconfigured production evaluator denies everything', () async {
-    const evaluator = UnconfiguredPermissionEvaluator();
-    for (final permission in Permission.values) {
-      expect(await evaluator.isAllowed(const RequestIdentity(userId: 1), permission), isFalse);
-    }
   });
 }
