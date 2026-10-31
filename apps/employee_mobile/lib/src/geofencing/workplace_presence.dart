@@ -6,10 +6,13 @@ import '../device/secure_store.dart';
 
 /// The employee has left a location and the day is still open (D32).
 class AwayFromWorkplace {
-  const AwayFromWorkplace({required this.addressId, required this.leftAt, this.name});
+  const AwayFromWorkplace({required this.addressId, required this.leftAt, this.name, this.onBreak = false});
 
   final int addressId;
   final DateTime leftAt;
+
+  /// Answered "Break / personal": nothing more to ask until they return.
+  final bool onBreak;
 
   /// The location's name; `null` if the phone no longer knows it.
   final String? name;
@@ -56,8 +59,10 @@ class WorkplacePresence {
 
   Future<void> clearEntered() => _store.delete(_enteredKey);
 
-  Future<void> left(int addressId, DateTime at) =>
-      _store.write(_awayKey, jsonEncode({'addressId': addressId, 'leftAt': at.toUtc().toIso8601String()}));
+  Future<void> left(int addressId, DateTime at, {bool onBreak = false}) => _store.write(
+    _awayKey,
+    jsonEncode({'addressId': addressId, 'leftAt': at.toUtc().toIso8601String(), 'onBreak': onBreak}),
+  );
 
   Future<AwayFromWorkplace?> away() async {
     final stored = await _store.read(_awayKey);
@@ -68,6 +73,7 @@ class WorkplacePresence {
       addressId: addressId,
       leftAt: DateTime.parse(json['leftAt']! as String),
       name: await nameOf(addressId),
+      onBreak: json['onBreak'] == true,
     );
   }
 

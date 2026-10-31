@@ -3,6 +3,7 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:logging/logging.dart';
 
 import '../today/today_controller.dart';
+import 'away_reminder.dart';
 import 'workplace_presence.dart';
 
 final _log = Logger('geofencing');
@@ -25,15 +26,20 @@ enum GeofenceChange { entered, stayed, left }
 /// A start that can't be sent is lost here and the Today screen still offers
 /// Start work; queueing waits for PRODUCT-CLARIFY-OFFLINE.
 class GeofenceEventHandler {
-  GeofenceEventHandler({required this._api, required this._presence, DateTime Function()? clock})
+  GeofenceEventHandler({required this._api, required this._presence, required this._reminder, DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;
 
   final TimeRegistrationsApi _api;
   final WorkplacePresence _presence;
+  final AwayReminder _reminder;
   final DateTime Function() _clock;
 
   /// How long inside before an arrival counts (D33).
   static const arrivalDelay = Duration(minutes: 5);
+
+  /// How long away before Jitan asks "What happened?" (D32). Where this
+  /// lives in the database is open (GAP-06, CLARIFY-04).
+  static const questionAfter = Duration(hours: 1);
 
   Future<void> handle(GeofenceChange change, int addressId) => switch (change) {
     GeofenceChange.entered => _entered(addressId),
@@ -45,6 +51,7 @@ class GeofenceEventHandler {
     // Told twice (geofences registered again): the first moment counts.
     if (await _presence.enteredAt(addressId) == null) await _presence.entered(addressId, _clock());
     await _presence.clearAway();
+    await _reminder.cancel();
   }
 
   /// Registers an arrival whose "stayed" event never came.
@@ -80,11 +87,16 @@ class GeofenceEventHandler {
     final now = _clock();
     try {
       final day = await _api.today();
-      if (TodayController.phaseOf(day) == TodayPhase.working) await _presence.left(addressId, now);
+      if (TodayController.phaseOf(day) == TodayPhase.working) await _remember(addressId, now);
     } on ApiClientException catch (e) {
       // Offline: remember it. Today only shows it while the day is running.
       _log.warning('The day could not be read on leaving: ${e.kind.name} ${e.statusCode ?? ''}');
-      await _presence.left(addressId, now);
+      await _remember(addressId, now);
     }
+  }
+
+  Future<void> _remember(int addressId, DateTime now) async {
+    await _presence.left(addressId, now);
+    await _reminder.schedule(now.add(questionAfter));
   }
 }

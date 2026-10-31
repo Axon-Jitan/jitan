@@ -6,6 +6,7 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../geofencing/away_reminder.dart';
 import '../geofencing/workplace_presence.dart';
 import '../l10n/employee_text_keys.dart';
 import '../period/period_screen.dart';
@@ -32,6 +33,7 @@ class HomeScreen extends StatefulWidget {
     required this.meApi,
     required this.timeRegistrationsApi,
     required this.presence,
+    required this.reminder,
     required this.onSessionEnded,
     required this.profileFor,
     this.onReady,
@@ -43,6 +45,7 @@ class HomeScreen extends StatefulWidget {
   final MeApi meApi;
   final TimeRegistrationsApi timeRegistrationsApi;
   final WorkplacePresence presence;
+  final AwayReminder reminder;
   final VoidCallback onSessionEnded;
 
   /// Called once when the employee arrives here: turns on detection.
@@ -69,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late final _today = TodayController(
     widget.timeRegistrationsApi,
     presence: widget.presence,
+    reminder: widget.reminder,
     onSessionEnded: widget.onSessionEnded,
     clock: widget.clock,
   )..load();
@@ -194,10 +198,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         TodayPhase.notStarted => _notStarted(context, day),
         TodayPhase.working => switch (_today.away) {
+          final away? when _today.needsAnswer => _question(context, away),
           final away? => _away(context, away),
           null => _working(context, day),
         },
-        TodayPhase.complete => _complete(context, day),
+        TodayPhase.complete => switch (_today.away) {
+          final away? when away.onBreak => _away(context, away),
+          _ => _complete(context, day),
+        },
       },
     },
   );
@@ -290,6 +298,77 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
+  /// Travelling or Other: the time and reason wait for HR (D34, D31).
+  void _answerWithTime(MyDay day) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => TimeEntryScreen(
+        boundary: RegistrationBoundary.finish,
+        entry: RegistrationEntry.corrected,
+        scheduled: day.scheduledFinish,
+        now: _today.now,
+        onConfirm: (hour, minute, reason) => _today.answerWithTime(hour, minute, reason ?? ''),
+      ),
+    ),
+  );
+
+  /// Figma 19:76, an hour after leaving. Different from Figma on purpose:
+  /// the note says "the time you left", because the rounded time is the
+  /// server's to work out (rule §6).
+  Widget _question(BuildContext context, AwayFromWorkplace away) {
+    final day = (_today.state as TodayLoaded).day;
+    final left = away.leftAt.toLocal();
+    final time = '${left.hour.toString().padLeft(2, '0')}:${left.minute.toString().padLeft(2, '0')}';
+    Widget option(String key, VoidCallback onTap) => Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: JitanColors.inputFill,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: _today.busy ? null : onTap,
+          child: Container(
+            height: 48,
+            width: double.infinity,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Text(context.t(key), style: JitanMobileTextStyles.cardTitleSmall.copyWith(fontSize: 14)),
+          ),
+        ),
+      ),
+    );
+    return _page(
+      context,
+      children: [
+        _title(context.t(EmployeeTextKeys.todayAnswerTitle)),
+        const SizedBox(height: 10),
+        Text(
+          away.name == null
+              ? context.t(EmployeeTextKeys.todayAnswerTextNoName, args: {'time': time})
+              : context.t(EmployeeTextKeys.todayAnswerText, args: {'place': away.name!, 'time': time}),
+          style: JitanMobileTextStyles.body,
+        ),
+        const SizedBox(height: 26),
+        TodayChip(label: context.t(EmployeeTextKeys.todayAnswerChip), filled: true, tinted: true, color: JitanColors.errorStrong),
+        const SizedBox(height: 18),
+        TodayCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(context.t(EmployeeTextKeys.todayAnswerCard), style: JitanMobileTextStyles.cardTitle.copyWith(fontSize: 24)),
+              const SizedBox(height: 14),
+              option(EmployeeTextKeys.todayAnswerFinished, _today.answerFinished),
+              option(EmployeeTextKeys.todayAnswerBreak, _today.answerBreak),
+              option(EmployeeTextKeys.todayAnswerTravelling, () => _answerWithTime(day)),
+              option(EmployeeTextKeys.todayAnswerOther, () => _answerWithTime(day)),
+              const SizedBox(height: 6),
+              Text(context.t(EmployeeTextKeys.todayAnswerNote), style: JitanMobileTextStyles.cardText),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Figma 19:52. Registers nothing: the day just keeps running (D32).
   Widget _away(BuildContext context, AwayFromWorkplace away) {
     final minutes = _today.now().difference(away.leftAt).inMinutes.clamp(0, 24 * 60);
@@ -307,7 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: JitanMobileTextStyles.body,
         ),
         const SizedBox(height: 26),
-        TodayChip(label: context.t(EmployeeTextKeys.todayAwayChip), filled: true, color: JitanColors.warning),
+        TodayChip(label: context.t(EmployeeTextKeys.todayAwayChip), filled: true, tinted: true, color: JitanColors.warning),
         const SizedBox(height: 18),
         TodayCard(
           child: Column(
@@ -353,6 +432,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // Since the start, minus the part of the break already passed (D13).
     final elapsed = start.at == null
         ? null
+        : day.day!.awayMinutes > 0
+        // Back from time away: it replaces the break (D34).
+        ? _today.now().difference(start.at!).inMinutes - day.day!.awayMinutes
         : RunningTotal.minutes(start: start.at!, now: _today.now(), breakStart: day.breakStart, breakFinish: day.breakFinish);
     final method = day.day?.start?.method ?? TimeRecordMethod.manual;
     final light = JitanMobileTextStyles.cardText.copyWith(color: JitanColors.sidebarText);

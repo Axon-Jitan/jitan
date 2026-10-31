@@ -6,6 +6,7 @@ import 'package:native_geofence/native_geofence.dart';
 import '../config/employee_config.dart';
 import '../device/secure_store.dart';
 import '../device/session_manager.dart';
+import 'away_reminder.dart';
 import 'geofence_event_handler.dart';
 import 'location_watcher.dart';
 import 'workplace_presence.dart';
@@ -24,6 +25,7 @@ Future<void> onGeofenceEvent(GeofenceCallbackParams params) async {
   final handler = GeofenceEventHandler(
     api: TimeRegistrationsApi(ApiTransport(baseUri: config.apiBaseUri, accessToken: () => session.accessToken)),
     presence: const WorkplacePresence(store),
+    reminder: LocalAwayReminder(),
   );
   final change = switch (params.event) {
     GeofenceEvent.enter => GeofenceChange.entered,

@@ -6,6 +6,7 @@ import 'package:employee_mobile/src/device/permissions_gateway.dart';
 import 'package:employee_mobile/src/device/secure_store.dart';
 import 'package:employee_mobile/src/device/session_manager.dart';
 import 'package:employee_mobile/src/geofencing/automatic_registration.dart';
+import 'package:employee_mobile/src/geofencing/away_reminder.dart';
 import 'package:employee_mobile/src/geofencing/geofence_event_handler.dart';
 import 'package:employee_mobile/src/geofencing/location_watcher.dart';
 import 'package:employee_mobile/src/geofencing/workplace_presence.dart';
@@ -429,6 +430,16 @@ class MemorySecureStore implements SecureStore {
   Future<void> delete(String key) async => values.remove(key);
 }
 
+class FakeAwayReminder implements AwayReminder {
+  DateTime? scheduled;
+
+  @override
+  Future<void> schedule(DateTime at) async => scheduled = at;
+
+  @override
+  Future<void> cancel() async => scheduled = null;
+}
+
 /// No device here: detection does nothing in the app's tests.
 class NoLocationWatcher implements LocationWatcher {
   const NoLocationWatcher();
@@ -484,13 +495,14 @@ class TestHarness {
       timeRegistrationsApi: TimeRegistrationsApi(transport),
       locationsApi: LocationsApi(transport),
       presence: WorkplacePresence(store),
+      reminder: reminder,
       automaticRegistration: AutomaticRegistration(
         settings: DeviceSettings(store),
         permissions: permissions,
         locations: LocationsApi(transport),
         watcher: const NoLocationWatcher(),
         presence: WorkplacePresence(store),
-        events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: WorkplacePresence(store)),
+        events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: WorkplacePresence(store), reminder: reminder),
       ),
       // 09:00 on Thursday 22 October 2026 unless a test says otherwise.
       clock: clock ?? () => DateTime(2026, 10, 22, 9),
@@ -516,6 +528,7 @@ class TestHarness {
   final server = FakeJitanServer();
   final store = MemorySecureStore();
   final permissions = FakePermissions();
+  final reminder = FakeAwayReminder();
   late final SessionManager session;
   late final EmployeeServices services;
 

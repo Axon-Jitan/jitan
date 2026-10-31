@@ -325,9 +325,15 @@ Known limits:
 - The app's own onboarding step does not yet ask for location with the app closed: it is asked
   when Home opens or when the method is saved.
 
-Next, slice 3: after 1 hour away, the notification and "What happened?" (Figma `19:76`), and the
-answers D34: Finished, Break / personal (the server must then subtract time away and skip the
-automatic break), Travelling, Other.
+Slice 3, built: after 1 hour away a notification set on the phone itself (cancelled on return) and
+"We need one answer" (Figma `19:76`). Every answer stores the time they left as a finish (D34b).
+Break / personal stays on Temporarily away until they return; Travelling and Other use the time
+entry screen, with a reason, and wait for HR. The server counts the minutes from a finish to the
+next start as time away, which replaces the automatic break. Not on a device yet: it needs a
+"left" event. The notification is in English when the app is closed.
+
+Different from Figma, on purpose: the note says "the time you left" instead of a rounded time,
+because rounding is the server's (rule §6).
 
 ## LOC-01: HR Locations (phase 4, slice 1)
 Status: `DONE` (2026-10-31), except the real map, which needs a Mapbox token

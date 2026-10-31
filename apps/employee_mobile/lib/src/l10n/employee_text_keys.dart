@@ -143,6 +143,17 @@ abstract final class EmployeeTextKeys {
   static const todayForgotStart = 'today.forgotStart';
   static const todayStartWork = 'today.startWork';
   static const todayWorkdayStartedAutomatically = 'today.workday.startedAutomatically';
+  static const todayAnswerTitle = 'today.answer.title';
+  static const todayAnswerText = 'today.answer.text';
+  static const todayAnswerTextNoName = 'today.answer.textNoName';
+  static const todayAnswerChip = 'today.answer.chip';
+  static const todayAnswerCard = 'today.answer.card';
+  static const todayAnswerFinished = 'today.answer.finished';
+  static const todayAnswerBreak = 'today.answer.break';
+  static const todayAnswerTravelling = 'today.answer.travelling';
+  static const todayAnswerOther = 'today.answer.somethingElse';
+  static const todayAnswerNote = 'today.answer.note';
+  static const todayAnswerNotification = 'today.answer.notification';
   static const todayAwayTitle = 'today.away.title';
   static const todayAwayText = 'today.away.text';
   static const todayAwayTextNoName = 'today.away.textNoName';

@@ -41,7 +41,7 @@ void main() {
     await h.session.restore();
     h.server.firstDay = false;
     presence = WorkplacePresence(h.store);
-    handler = GeofenceEventHandler(api: h.services.timeRegistrationsApi, presence: presence, clock: () => now);
+    handler = GeofenceEventHandler(api: h.services.timeRegistrationsApi, presence: presence, reminder: h.reminder, clock: () => now);
   });
 
   group('the rules on the phone', () {
@@ -121,12 +121,23 @@ void main() {
       expect(h.server.registrations, hasLength(1), reason: 'only the start');
     });
 
-    test('back at any recognised location: no longer away', () async {
+    test('back at any recognised location: no longer away, and no reminder', () async {
       await presence.left(7, now);
+      h.reminder.scheduled = now;
 
       await handler.handle(GeofenceChange.entered, 8);
 
       expect(await presence.away(), isNull);
+      expect(h.reminder.scheduled, isNull);
+    });
+
+    test('leaving during the day sets the reminder for an hour later (D32)', () async {
+      h.server.registrations.add({'boundary': 'start', 'entry': 'now', 'at': now.toUtc().toIso8601String()});
+      now = DateTime(2026, 10, 22, 12, 3);
+
+      await handler.handle(GeofenceChange.left, 7);
+
+      expect(h.reminder.scheduled, DateTime(2026, 10, 22, 13, 3));
     });
   });
 
@@ -230,6 +241,90 @@ void main() {
       expect(await h.services.settings.registrationMethod(), RegistrationMethod.manual);
       expect(find.text('Automatic registration requires location permission.'), findsOneWidget);
       expect(changes, 0);
+    });
+  });
+
+  group('We need one answer (Figma 19:76)', () {
+    Future<void> settle(WidgetTester tester) async {
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    Future<void> leftAnHourAgo(WidgetTester tester) async {
+      h.server.registrations.add({'boundary': 'start', 'entry': 'now', 'at': DateTime(2026, 10, 22, 8).toUtc().toIso8601String()});
+      await presence.saveNames([_almeco]);
+      await presence.left(7, DateTime(2026, 10, 22, 12, 3));
+      now = DateTime(2026, 10, 22, 13, 3);
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(EmployeeApp(services: h.services));
+      await settle(tester);
+    }
+
+    Map<String, Object?> sent(int i) => h.server.registrations[i];
+    final leftUtc = DateTime(2026, 10, 22, 12, 3).toUtc().toIso8601String();
+
+    testWidgets('fifty-nine minutes: not yet', (tester) async {
+      h.server.registrations.add({'boundary': 'start', 'entry': 'now', 'at': DateTime(2026, 10, 22, 8).toUtc().toIso8601String()});
+      await presence.left(7, DateTime(2026, 10, 22, 12, 3));
+      now = DateTime(2026, 10, 22, 13, 2);
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(EmployeeApp(services: h.services));
+      await settle(tester);
+
+      expect(find.text('We need one answer.'), findsNothing);
+      expect(find.text('You’re temporarily away.'), findsOneWidget);
+    });
+
+    testWidgets('an hour away: the four answers, where and when they left', (tester) async {
+      await leftAnHourAgo(tester);
+
+      expect(find.text('We need one answer.'), findsOneWidget);
+      expect(find.text('You left Almeco office at 12:03 and haven’t reached another work location.'), findsOneWidget);
+      for (final answer in ['Finished work', 'Break / personal', 'Travelling for work', 'Other']) {
+        expect(find.text(answer), findsOneWidget);
+      }
+    });
+
+    testWidgets('Finished work: a finish at the time they left', (tester) async {
+      await leftAnHourAgo(tester);
+
+      await tester.tap(find.text('Finished work'));
+      await settle(tester);
+
+      expect((sent(1)['boundary'], sent(1)['method'], sent(1)['at'], sent(1)['addressId']), ('finish', 'geofence', leftUtc, 7));
+      expect(await presence.away(), isNull);
+      expect(find.text('Your day is complete.'), findsOneWidget);
+    });
+
+    testWidgets('Break / personal: the finish is stored and they stay away, unasked', (tester) async {
+      await leftAnHourAgo(tester);
+
+      await tester.tap(find.text('Break / personal'));
+      await settle(tester);
+
+      expect((sent(1)['boundary'], sent(1)['at']), ('finish', leftUtc));
+      expect(find.text('You’re temporarily away.'), findsOneWidget);
+      expect((await presence.away())?.onBreak, true);
+    });
+
+    testWidgets('Travelling for work: their own time and reason go to HR', (tester) async {
+      await leftAnHourAgo(tester);
+
+      await tester.tap(find.text('Travelling for work'));
+      await settle(tester);
+      await tester.enterText(find.byType(TextField).last, 'Drove to the client');
+      await tester.pump();
+      await tester.tap(find.byType(JitanMobileButton).last);
+      await settle(tester);
+
+      expect((sent(1)['boundary'], sent(1)['entry']), ('finish', 'now'));
+      expect((sent(2)['boundary'], sent(2)['entry'], sent(2)['reason']), ('finish', 'corrected', 'Drove to the client'));
+      expect(await presence.away(), isNull);
     });
   });
 

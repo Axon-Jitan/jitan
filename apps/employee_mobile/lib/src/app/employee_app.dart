@@ -181,6 +181,7 @@ class _EmployeeAppState extends State<EmployeeApp> {
             meApi: _services.meApi,
             timeRegistrationsApi: _services.timeRegistrationsApi,
             presence: _services.presence,
+            reminder: _services.reminder,
             onReady: _services.automaticRegistration.start,
             onReturn: _services.automaticRegistration.catchUp,
             clock: _services.clock,

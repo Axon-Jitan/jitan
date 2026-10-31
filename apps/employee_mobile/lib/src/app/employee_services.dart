@@ -5,6 +5,7 @@ import '../device/device_settings.dart';
 import '../device/permissions_gateway.dart';
 import '../device/session_manager.dart';
 import '../geofencing/automatic_registration.dart';
+import '../geofencing/away_reminder.dart';
 import '../geofencing/workplace_presence.dart';
 import '../onboarding/qr_scanner_view.dart';
 
@@ -20,6 +21,7 @@ class EmployeeServices {
     required this.locationsApi,
     required this.automaticRegistration,
     required this.presence,
+    required this.reminder,
     required this.translationService,
     required this.session,
     required this.settings,
@@ -41,6 +43,9 @@ class EmployeeServices {
 
   /// What the phone remembers about locations (Temporarily away).
   final WorkplacePresence presence;
+
+  /// The notification an hour after leaving.
+  final AwayReminder reminder;
   final TranslationService translationService;
   final SessionManager session;
   final DeviceSettings settings;

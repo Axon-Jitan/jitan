@@ -37,11 +37,14 @@ class TodayCard extends StatelessWidget {
 /// "● WORKING NOW" / "● COMPLETE": a dot and small capitals, on a grey pill
 /// when [filled].
 class TodayChip extends StatelessWidget {
-  const TodayChip({super.key, required this.label, this.filled = false, this.color = JitanColors.ink});
+  const TodayChip({super.key, required this.label, this.filled = false, this.color = JitanColors.ink, this.tinted = false});
 
   final String label;
   final bool filled;
   final Color color;
+
+  /// The pill takes a tint of [color] (AWAY, NEEDS ATTENTION).
+  final bool tinted;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +59,10 @@ class TodayChip extends StatelessWidget {
     return filled
         ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(
+              color: tinted ? color.withValues(alpha: 0.12) : JitanColors.inputFill,
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: content,
           )
         : content;

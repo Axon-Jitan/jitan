@@ -30,7 +30,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 
-import '../test/support/fake_jitan_server.dart' show NoLocationWatcher;
+import '../test/support/fake_jitan_server.dart' show FakeAwayReminder, NoLocationWatcher;
 
 // Seed fixtures (dev/local-db/seed.sql): permanent Terminal QRs. They must
 // never onboard or recover an account.
@@ -76,13 +76,14 @@ void main() {
       timeRegistrationsApi: TimeRegistrationsApi(transport),
       locationsApi: LocationsApi(transport),
       presence: WorkplacePresence(store),
+      reminder: FakeAwayReminder(),
       automaticRegistration: AutomaticRegistration(
         settings: DeviceSettings(store),
         permissions: _GrantAll(),
         locations: LocationsApi(transport),
         watcher: const NoLocationWatcher(),
         presence: WorkplacePresence(store),
-        events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: WorkplacePresence(store)),
+        events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: WorkplacePresence(store), reminder: FakeAwayReminder()),
       ),
       translationService: TranslationService(languages),
       session: session,

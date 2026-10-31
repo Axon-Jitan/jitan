@@ -12,6 +12,7 @@ import 'src/device/permissions_gateway.dart';
 import 'src/device/secure_store.dart';
 import 'src/device/session_manager.dart';
 import 'src/geofencing/automatic_registration.dart';
+import 'src/geofencing/away_reminder.dart';
 import 'src/geofencing/geofence_event_handler.dart';
 import 'src/geofencing/location_watcher.dart';
 import 'src/geofencing/workplace_presence.dart';
@@ -35,6 +36,7 @@ void main() {
   final languagesApi = LanguagesApi(transport);
   final locationsApi = LocationsApi(transport);
   const presence = WorkplacePresence(store);
+  final reminder = LocalAwayReminder();
   runApp(
     EmployeeApp(
       services: EmployeeServices(
@@ -46,13 +48,14 @@ void main() {
         timeRegistrationsApi: TimeRegistrationsApi(transport),
         locationsApi: locationsApi,
         presence: presence,
+        reminder: reminder,
         automaticRegistration: AutomaticRegistration(
           settings: const DeviceSettings(store),
           permissions: const PlatformPermissionsGateway(),
           locations: locationsApi,
           watcher: const NativeLocationWatcher(store),
           presence: presence,
-          events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: presence),
+          events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: presence, reminder: reminder),
         ),
         translationService: TranslationService(languagesApi),
         session: session,
