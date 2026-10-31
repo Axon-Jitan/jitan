@@ -8,6 +8,7 @@ import 'device_id.dart';
 import 'password_hasher.dart';
 import 'password_policy.dart';
 import 'session_tokens.dart';
+import 'sign_in_throttle.dart';
 
 /// Sign-in with employee code + password, for an activated employee on a new
 /// device, after a reinstall, an expired session or sign-out. Onboarding
@@ -25,13 +26,15 @@ class SignInService {
     required this._executor,
     required this._sessions,
     this._hasher = const PasswordHasher(),
-  });
+    SignInThrottle? throttle,
+  }) : _throttle = throttle ?? SignInThrottle();
 
   final CredentialRepository _credentials;
   final UserRepository _users;
   final SqlExecutor _executor;
   final SessionTokens _sessions;
   final PasswordHasher _hasher;
+  final SignInThrottle _throttle;
 
   /// Longest accepted employee code, as a cheap sanity bound.
   static const maxCodeLength = 64;
@@ -45,10 +48,16 @@ class SignInService {
     if (code.isEmpty || code.length > maxCodeLength) throw _invalidCredentials();
     if (request.password.isEmpty || request.password.length > PasswordPolicy.maxLength) throw _invalidCredentials();
     final deviceId = checkedDeviceId(request.deviceId, field: SignInRequest.fieldDeviceId);
+    // Before any hashing: a blocked code costs the server nothing, and even
+    // the right password is not tried.
+    if (_throttle.isBlocked(code)) {
+      throw const ApiException(429, ApiErrorCode.tooManyAttempts, 'Too many attempts. Try again later.');
+    }
 
     final candidates = await _credentials.candidatesByCode(_executor, code);
     if (candidates.isEmpty) {
       await _hasher.verify(request.password, await (_decoyHash ??= _hasher.hash('decoy-${DateTime.now()}')));
+      _throttle.failed(code);
       throw _invalidCredentials();
     }
     for (final candidate in candidates) {
@@ -56,6 +65,7 @@ class SignInService {
       if (!candidate.isActive || candidate.isMarkedForDeletion) {
         throw const ApiException(403, ApiErrorCode.accountInactive, 'This account can’t sign in right now.');
       }
+      _throttle.succeeded(code);
       final account = await _users.account(candidate.userId) ?? (throw _invalidCredentials());
       final session = _sessions.issue(userId: candidate.userId, deviceId: deviceId, passwordHash: candidate.passwordHash);
       return SessionResponse(
@@ -63,6 +73,7 @@ class SignInService {
         session: SessionInfo(accessToken: session.token, expiresAt: session.expiresAt),
       );
     }
+    _throttle.failed(code);
     throw _invalidCredentials();
   }
 

@@ -269,8 +269,10 @@ void main() {
   test('breaks need one set of work hours: when employees differ, 409; saving work hours unifies them', () async {
     final extra = await db.query(
       'SELECT s.scheduleID FROM tblSchedule s JOIN tblScheduleType st ON st.scheduleTypeID = s.scheduleTypeID '
+      // Only this employee's rows: other test files write schedules at the same time.
+      'JOIN tblUserSchedule us ON us.scheduleID = s.scheduleID AND us.userID = :u '
       'WHERE st.scheduleTypeName = :t AND s.scheduleActive = 0 ORDER BY s.scheduleID DESC LIMIT 1',
-      {'t': ScheduleTypeNames.workStart},
+      {'t': ScheduleTypeNames.workStart, 'u': users['B']},
     );
     await db.execute('UPDATE tblSchedule SET scheduleActive = 1, scheduleMFD = 0 WHERE scheduleID = :s',
         {'s': extra.single.readInt('scheduleID')});

@@ -166,3 +166,26 @@ On a fresh database nobody can generate an onboarding QR yet.
 It only works for an active employee with no password, so it can't take over an account. It is
 audited as `employee.password.first_set`. The person signs in, and everyone else onboards from
 there. Ask them to change this password in the employee app.
+
+## Serving the HR web
+
+Build it so that nothing loads from Google's servers:
+
+```sh
+flutter build web --release --no-web-resources-cdn \
+  --dart-define=JITAN_API_BASE_URL=https://jitan.example.com/api \
+  --dart-define=JITAN_MAPBOX_TOKEN=pk.…
+```
+
+Nginx must send this header on the HR web's pages. HR stays signed in for 30 days with the session
+in the browser's local storage, which any script on the page can read, so only Jitan's own scripts
+may run. Replace the address in `connect-src` if the API is not on the same site.
+
+```nginx
+add_header Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://api.mapbox.com; font-src 'self' data:; connect-src 'self' https://api.mapbox.com; worker-src 'self' blob:; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'" always;
+```
+
+Tested with the real app on 2026-10-31, map included: scripts from another site, an injected inline
+script and sending data to another site are all refused. Flutter's optional Roboto download is
+refused too; Jitan uses Inter, so nothing changes on screen.
+

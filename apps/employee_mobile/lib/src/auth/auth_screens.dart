@@ -372,6 +372,17 @@ class AuthErrorScreen extends StatelessWidget {
         help: context.t(EmployeeTextKeys.errorAccountHelp),
         actions: [back],
       ),
+      AuthProblem.tooManyAttempts => StatusPage(
+        showLogo: true,
+        buttonSize: JitanMobileButtonSize.medium,
+        tone: StatusTone.warning,
+        inkHelpTitle: true,
+        title: context.t(EmployeeTextKeys.errorTooManyTitle),
+        text: context.t(EmployeeTextKeys.errorTooManyText),
+        helpTitle: context.t(EmployeeTextKeys.errorTooManyHelpTitle),
+        help: context.t(EmployeeTextKeys.errorTooManyHelp),
+        actions: [back],
+      ),
       AuthProblem.unreachable => StatusPage(
         showLogo: true,
         buttonSize: JitanMobileButtonSize.medium,

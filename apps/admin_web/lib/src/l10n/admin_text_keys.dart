@@ -808,6 +808,7 @@ abstract final class AdminTextKeys {
   static const signInForgot = 'hr.signIn.forgot';
   static const signInErrorCredentials = 'hr.signIn.error.credentials';
   static const signInErrorInactive = 'hr.signIn.error.inactive';
+  static const signInErrorTooMany = 'hr.signIn.error.tooMany';
   static const signInErrorNetwork = 'hr.signIn.error.network';
   static const signInErrorServer = 'hr.signIn.error.server';
   static const noAccessTitle = 'hr.noAccess.title';

@@ -51,6 +51,41 @@ void main() {
       expect((await app.getAuthorized('/me', body.session.accessToken)).statusCode, 200);
     });
 
+    test('five wrong passwords block the code: even the right one is refused, and no hashing runs', () async {
+      final app = await _app();
+      for (var i = 0; i < 5; i++) {
+        expect((await app.post('/auth/sign-in', _signIn(password: 'wrong password'))).statusCode, 401);
+      }
+
+      final response = await app.post('/auth/sign-in', _signIn());
+
+      expect(response.statusCode, 429);
+      expect(await _error(response), containsPair('code', ApiErrorCode.tooManyAttempts));
+    });
+
+    test('a code that does not exist is blocked the same way: nothing shows which codes are real', () async {
+      final app = await _app();
+      for (var i = 0; i < 5; i++) {
+        await app.post('/auth/sign-in', _signIn(code: 'NOBODY'));
+      }
+
+      expect((await app.post('/auth/sign-in', _signIn(code: 'NOBODY'))).statusCode, 429);
+      expect((await app.post('/auth/sign-in', _signIn())).statusCode, 200, reason: 'other codes are not affected');
+    });
+
+    test('signing in clears the count', () async {
+      final app = await _app();
+      for (var i = 0; i < 4; i++) {
+        await app.post('/auth/sign-in', _signIn(password: 'wrong password'));
+      }
+      await app.post('/auth/sign-in', _signIn());
+
+      for (var i = 0; i < 4; i++) {
+        await app.post('/auth/sign-in', _signIn(password: 'wrong password'));
+      }
+      expect((await app.post('/auth/sign-in', _signIn())).statusCode, 200);
+    });
+
     test('wrong password, unknown code and a never-activated employee get the same generic answer', () async {
       final wrongPassword = await (await _app()).post('/auth/sign-in', _signIn(password: 'wrong password'));
       final unknownCode = await (await _app()).post('/auth/sign-in', _signIn(code: 'NOBODY'));

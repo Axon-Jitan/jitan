@@ -36,6 +36,9 @@ enum AuthProblem {
 
   /// 05: no answer or a server error. Retrying is safe: nothing changed.
   unreachable,
+
+  /// Too many wrong passwords on this code: waiting is the only way on.
+  tooManyAttempts,
 }
 
 /// Why "Recover account" refuses a scanned QR.
@@ -132,6 +135,7 @@ class AuthController extends ChangeNotifier {
       _show(switch (code) {
         ApiErrorCode.invalidCredentials => AuthProblem.invalidCredentials,
         ApiErrorCode.accountInactive => AuthProblem.accountUnavailable,
+        ApiErrorCode.tooManyAttempts => AuthProblem.tooManyAttempts,
         _ => AuthProblem.unreachable,
       });
     });

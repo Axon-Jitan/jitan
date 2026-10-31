@@ -61,6 +61,7 @@ class _SignInScreenState extends State<SignInScreen> {
           (ApiFailureKind.network, _) => AdminTextKeys.signInErrorNetwork,
           (_, ApiErrorCode.invalidCredentials) => AdminTextKeys.signInErrorCredentials,
           (_, ApiErrorCode.accountInactive) => AdminTextKeys.signInErrorInactive,
+          (_, ApiErrorCode.tooManyAttempts) => AdminTextKeys.signInErrorTooMany,
           _ => AdminTextKeys.signInErrorServer,
         };
       });

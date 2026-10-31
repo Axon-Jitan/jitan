@@ -217,6 +217,11 @@ IT's database**, items 2–3 before production
       -fingerprint -sha256`), confirm both with IT, and put both in `/etc/jitan/app.env`.
       Or IT issues a certificate with the database address in its SAN and gives us its CA.
 - [x] **Production refuses `JITAN_DB_SECURE=false`** (2026-10-20, `app_config.dart`).
+- [x] **Sign-in attempt limit** (2026-10-31, `auth/sign_in_throttle.dart`): five wrong attempts on
+      one employee code block it for 15 minutes, before any hashing and also for the right
+      password. Unknown codes count the same, so it shows no code exists. Per code, not per address.
+- [x] **Content-Security-Policy** (2026-10-31): the header is in DEPLOYMENT_CONFIGURATION, tested
+      with the real app. **IT adds it to Nginx.**
 - [ ] **Least privilege** for the API's database account (SELECT/INSERT/UPDATE; IT's
       development account also has DELETE/CREATE/DROP/ALTER).
 - [ ] **Database not reachable from the internet** (ENGINEERING_RULES §28a.3): confirm
@@ -308,8 +313,8 @@ no access, `1469:53` signed-in user), designed by us and approved on 2026-10-31.
   everything, in any company. Steps for IT: DEPLOYMENT_CONFIGURATION, "Giving HR access".
 - Forgot password: HR/Admin-assisted, like employees; recovery finishes in the phone app.
 
-Before production (SEC-01): a sign-in attempt limit, and a Content-Security-Policy, because local
-storage is readable by any script on the page.
+Local storage is readable by any script on the page: the Content-Security-Policy in
+DEPLOYMENT_CONFIGURATION keeps other sites' scripts out (SEC-01).
 
 ## AUTH-03: The very first HR person
 Status: `DONE` (2026-10-31)

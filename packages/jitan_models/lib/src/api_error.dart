@@ -41,6 +41,9 @@ abstract final class ApiErrorCode {
   /// code or the password was wrong.
   static const invalidCredentials = 'invalid_credentials';
 
+  /// Too many failed sign-ins on this employee code; try again later.
+  static const tooManyAttempts = 'too_many_attempts';
+
   /// Reset account access on an employee who has not set up Jitan yet.
   static const accountNotActivated = 'account_not_activated';
 

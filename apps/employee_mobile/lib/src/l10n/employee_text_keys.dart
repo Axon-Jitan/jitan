@@ -349,6 +349,10 @@ abstract final class EmployeeTextKeys {
   static const locationBackgroundOff = 'location.permission.background.off';
   static const locationBackgroundText = 'location.permission.background.text';
   static const locationOpenSettings = 'location.permission.openSettings';
+  static const errorTooManyTitle = 'auth.error.tooMany.title';
+  static const errorTooManyText = 'auth.error.tooMany.text';
+  static const errorTooManyHelpTitle = 'auth.error.tooMany.helpTitle';
+  static const errorTooManyHelp = 'auth.error.tooMany.help';
   static const profileMethodTitle = 'profile.method.title';
   static const profileMethodText = 'profile.method.text';
   static const profileMethodEyebrow = 'profile.method.eyebrow';

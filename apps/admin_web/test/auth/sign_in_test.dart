@@ -174,6 +174,7 @@ void main() {
 
     for (final (what, failure, message) in [
       ('a switched-off account', const ApiClientException.server(403, ApiError(code: ApiErrorCode.accountInactive, message: 'x')), 'This account is not available. Ask your administrator.'),
+      ('too many attempts', const ApiClientException.server(429, ApiError(code: ApiErrorCode.tooManyAttempts, message: 'x')), 'Too many attempts. Try again in 15 minutes.'),
       ('no connection', const ApiClientException.network('offline'), 'Jitan can’t be reached. Check your connection and try again.'),
     ]) {
       testWidgets('$what says so', (tester) async {
