@@ -9,6 +9,7 @@ import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
 import 'package:jitan_api/src/time_records/time_record_repository.dart';
+import 'package:jitan_api/src/time_records/week_plans.dart';
 import 'package:jitan_api/src/time_registration/registration_rounding.dart';
 import 'package:jitan_api/src/time_registration/time_registration_write_service.dart';
 import 'package:jitan_api/src/time_registration/workplace_clock.dart';
@@ -171,7 +172,7 @@ void main() {
         employees: EmployeeRepository(db),
         companies: CompanyRepository(db),
         clock: clock,
-        schedules: ScheduleRepository(db),
+        plans: WeekPlans(ScheduleRepository(db)),
         rounding: RegistrationRounding(ScheduleRepository(db)),
         now: () => now,
       ),

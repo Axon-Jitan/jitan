@@ -12,6 +12,7 @@ export 'src/group_members_api.dart';
 export 'src/groups_api.dart';
 export 'src/languages_api.dart';
 export 'src/locations_api.dart';
+export 'src/reports_api.dart';
 export 'src/me_api.dart';
 export 'src/onboarding_api.dart';
 export 'src/recovery_api.dart';

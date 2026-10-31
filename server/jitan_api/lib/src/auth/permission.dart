@@ -69,4 +69,7 @@ enum Permission {
   /// Add, change, deactivate and reactivate locations. Not company-scoped,
   /// like [viewLocations].
   manageLocations,
+
+  /// See the monthly hours report and export it (company-scoped).
+  viewReports,
 }

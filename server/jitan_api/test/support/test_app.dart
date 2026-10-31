@@ -29,6 +29,9 @@ import 'package:jitan_api/src/languages/language_service.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_api/src/locations/location_routes.dart';
 import 'package:jitan_api/src/locations/location_service.dart';
+import 'package:jitan_api/src/reports/report_routes.dart';
+import 'package:jitan_api/src/reports/report_service.dart';
+import 'package:jitan_api/src/time_records/week_plans.dart';
 import 'package:jitan_api/src/recovery/recovery_routes.dart';
 import 'package:jitan_api/src/recovery/recovery_service.dart';
 import 'package:jitan_api/src/schedules/schedule_editing_service.dart';
@@ -182,6 +185,17 @@ class TestApp {
         scheduleEditing,
       ),
       timeRecords: TimeRecordRoutes(Authorizer(permissions), timeRecordService, timeCorrections, myDays),
+      reports: ReportRoutes(
+        Authorizer(permissions),
+        ReportService(
+          days: timeRecordService,
+          plans: WeekPlans(schedules),
+          employees: employees,
+          companies: companies,
+          clock: WorkplaceClock('Europe/Brussels'),
+          now: () => now,
+        ),
+      ),
       me: MeRoutes(
         users,
         AccountService(
@@ -224,7 +238,7 @@ class TestApp {
   late final myDays = MyDayService(
     days: timeRecordService,
     records: timeRecords,
-    schedules: schedules,
+    plans: WeekPlans(schedules),
     clock: WorkplaceClock('Europe/Brussels'),
     now: () => now,
   );

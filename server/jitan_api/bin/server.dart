@@ -40,6 +40,9 @@ import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
+import 'package:jitan_api/src/reports/report_routes.dart';
+import 'package:jitan_api/src/reports/report_service.dart';
+import 'package:jitan_api/src/time_records/week_plans.dart';
 import 'package:jitan_api/src/locations/location_repository.dart';
 import 'package:jitan_api/src/locations/location_routes.dart';
 import 'package:jitan_api/src/locations/location_service.dart';
@@ -327,7 +330,17 @@ Future<void> main() async {
       MyDayService(
         days: timeRecordService,
         records: TimeRecordRepository(db),
-        schedules: ScheduleRepository(db),
+        plans: WeekPlans(ScheduleRepository(db)),
+        clock: workplaceClock,
+      ),
+    ),
+    reports: ReportRoutes(
+      authorizer,
+      ReportService(
+        days: timeRecordService,
+        plans: WeekPlans(ScheduleRepository(db)),
+        employees: EmployeeRepository(db),
+        companies: companyRepository,
         clock: workplaceClock,
       ),
     ),

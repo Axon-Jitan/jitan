@@ -13,6 +13,7 @@ export 'src/employee_summary.dart';
 export 'src/group_member.dart';
 export 'src/group_summary.dart';
 export 'src/json_reading.dart';
+export 'src/hours_report.dart';
 export 'src/language.dart';
 export 'src/location.dart';
 export 'src/onboarding.dart';
