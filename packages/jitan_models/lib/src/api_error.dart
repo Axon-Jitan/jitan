@@ -48,6 +48,9 @@ abstract final class ApiErrorCode {
   /// ignoring upper/lower case.
   static const duplicateGroupName = 'duplicate_group_name';
 
+  /// Another location (active or inactive) already has this name.
+  static const duplicateLocationName = 'duplicate_location_name';
+
   /// The employee group still has employees, so it can't be deactivated.
   static const groupInUse = 'group_in_use';
 

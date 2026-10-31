@@ -23,14 +23,19 @@ const _usedColumns = {
   'tblEventLog': [
     'eventLogID', 'eventLogTimestamp', 'userIDInit', 'userIDTarget', 'companyID', 'userCompanyID',
     'groupID', 'userGroupID', 'credGroupID', 'userCredGroupID', 'scheduleID', 'scheduleTypeID', 'dayID',
-    'roundingRuleID', 'scheduleRoundingRuleID',
+    'roundingRuleID', 'scheduleRoundingRuleID', 'addressID', 'geofenceID', 'geofenceAddressID',
   ],
   'tblTimeReg': [
     'timeRegID', 'userID', 'addressID', 'timeRegTypeID', 'timeRegTimestamp', 'timeRegManualEntry',
     'timeRegComment', 'timeRegWhenModified', 'timeRegActive', 'timeRegMFD',
   ],
   'tblTimeRegType': ['timeRegTypeID', 'timeRegTypeName', 'timeRegTypeActive', 'timeRegTypeMFD'],
-  'tblAddress': ['addressID', 'addressLogicalName'],
+  'tblAddress': [
+    'addressID', 'addressStreet', 'addressNumber', 'addressBoxNumber', 'addressZipcode', 'addressCity',
+    'addressLogicalName', 'addressCoordinates', 'addressActive', 'addressMFD',
+  ],
+  'tblGeofence': ['geofenceID', 'geofenceRadiusInMeter', 'geofenceCorrectionInMin', 'geofenceActive', 'geofenceMFD'],
+  'tblGeofenceAddress': ['geofenceAddressID', 'geofenceID', 'addressID', 'geofenceAddressActive', 'geofenceAddressMFD'],
   'tblCredGroup': ['credGroupID', 'credGroupName', 'credGroupLevel', 'credGroupActive', 'credGroupMFD'],
   'tblUserCredGroup': ['userCredGroupID', 'userID', 'credGroupID', 'userCredGroupActive', 'userCredGroupMFD'],
   'tblEventType': ['eventTypeID', 'eventTypeName'],

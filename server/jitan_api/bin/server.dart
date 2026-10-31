@@ -40,6 +40,9 @@ import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
+import 'package:jitan_api/src/locations/location_repository.dart';
+import 'package:jitan_api/src/locations/location_routes.dart';
+import 'package:jitan_api/src/locations/location_service.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
 import 'package:jitan_api/src/languages/user_language_repository.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
@@ -248,6 +251,15 @@ Future<void> main() async {
       ),
     ),
     languages: LanguageRoutes(LanguageService(LanguageRepository(db), TranslationRepository(db), languageChanges)),
+    locations: LocationRoutes(
+      authorizer,
+      LocationService(
+        locations: const LocationRepository(),
+        audit: const AuditLogRepository(),
+        transactions: db,
+        executor: db,
+      ),
+    ),
     onboarding: OnboardingRoutes(
       OnboardingService(
         onboarding: const OnboardingRepository(),

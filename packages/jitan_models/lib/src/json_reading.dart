@@ -40,6 +40,13 @@ extension JsonReading on Map<String, Object?> {
     throw FormatException('Expected "$key" to be an integer, got ${value.runtimeType}.');
   }
 
+  /// A number; JSON does not tell `50` from `50.0`.
+  double readDouble(String key) {
+    final value = this[key];
+    if (value is num) return value.toDouble();
+    throw FormatException('Expected "$key" to be a number, got ${value.runtimeType}.');
+  }
+
   bool readBool(String key) {
     final value = this[key];
     if (value is bool) return value;

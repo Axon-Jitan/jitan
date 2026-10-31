@@ -27,6 +27,8 @@ import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/languages/language_service.dart';
 import 'package:jitan_api/src/languages/user_language_service.dart';
+import 'package:jitan_api/src/locations/location_routes.dart';
+import 'package:jitan_api/src/locations/location_service.dart';
 import 'package:jitan_api/src/recovery/recovery_routes.dart';
 import 'package:jitan_api/src/recovery/recovery_service.dart';
 import 'package:jitan_api/src/schedules/schedule_editing_service.dart';
@@ -49,6 +51,7 @@ import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
 import 'package:jitan_api/src/onboarding/onboarding_service.dart';
 import 'package:shelf/shelf.dart';
 
+import 'fake_locations.dart';
 import 'fakes.dart';
 
 /// The full request pipeline wired to fakes.
@@ -118,6 +121,10 @@ class TestApp {
         ),
       ),
       languages: LanguageRoutes(LanguageService(languages, translations, languageChanges)),
+      locations: LocationRoutes(
+        Authorizer(permissions),
+        LocationService(locations: locations, audit: audit, transactions: transactions, executor: UnusedExecutor()),
+      ),
       onboarding: OnboardingRoutes(
         OnboardingService(
           onboarding: onboarding,
@@ -235,6 +242,7 @@ class TestApp {
   );
   final scheduleSync = FakeEmployeeScheduleSync();
   late final scheduleService = ScheduleService(schedules: schedules, groups: groups);
+  final locations = FakeLocationRepository();
   final audit = FakeAuditLog();
   final transactions = FakeTransactions();
   final onboarding = FakeOnboardingRepository();

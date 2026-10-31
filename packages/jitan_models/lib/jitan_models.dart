@@ -14,6 +14,7 @@ export 'src/group_member.dart';
 export 'src/group_summary.dart';
 export 'src/json_reading.dart';
 export 'src/language.dart';
+export 'src/location.dart';
 export 'src/onboarding.dart';
 export 'src/phone_numbers.dart';
 export 'src/schedule.dart';

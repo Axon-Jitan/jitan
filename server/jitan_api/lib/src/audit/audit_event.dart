@@ -94,7 +94,19 @@ enum AuditEventType {
 
   /// A schedule row no employee uses any more was switched off (soft
   /// delete), after a save or a removal by HR/Admin.
-  scheduleDeactivated('schedule.deactivated');
+  scheduleDeactivated('schedule.deactivated'),
+
+  /// HR/Admin added a location: its address, geofence and their link.
+  locationCreated('location.created'),
+
+  /// HR/Admin changed a location's name, address, pin or area.
+  locationChanged('location.changed'),
+
+  /// HR/Admin deactivated a location: Jitan stops recognising it.
+  locationDeactivated('location.deactivated'),
+
+  /// HR/Admin reactivated a location.
+  locationReactivated('location.reactivated');
 
   const AuditEventType(this.typeName);
 
@@ -118,6 +130,9 @@ enum EventLogReference {
   scheduleRoundingRule('scheduleRoundingRuleID'),
   timeReg('timeRegID'),
   timeRegType('timeRegTypeID'),
+  address('addressID'),
+  geofence('geofenceID'),
+  geofenceAddress('geofenceAddressID'),
 
   /// PROPOSAL (ERD_GAPS GAP-15): exists only in the local database; written
   /// only with `JITAN_DEV_GROUP_SCHEDULES=true`.

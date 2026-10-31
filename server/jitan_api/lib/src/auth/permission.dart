@@ -61,4 +61,12 @@ enum Permission {
   /// Set or remove an employee group's work hours and breaks. Schedules are
   /// global, so not company-scoped.
   manageSchedules,
+
+  /// See the locations (`tblAddress` with a geofence). Locations have no
+  /// company in the ERD yet (GAP-03), so not company-scoped.
+  viewLocations,
+
+  /// Add, change, deactivate and reactivate locations. Not company-scoped,
+  /// like [viewLocations].
+  manageLocations,
 }

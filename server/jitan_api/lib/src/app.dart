@@ -7,6 +7,7 @@ import 'companies/company_routes.dart';
 import 'employees/employee_assignment_routes.dart';
 import 'employees/employee_routes.dart';
 import 'groups/group_routes.dart';
+import 'locations/location_routes.dart';
 import 'health/health_routes.dart';
 import 'http/api_exception.dart';
 import 'http/cors_middleware.dart';
@@ -39,6 +40,7 @@ Handler buildApp({
   required EmployeeAssignmentRoutes assignments,
   required GroupRoutes groups,
   required LanguageRoutes languages,
+  required LocationRoutes locations,
   required OnboardingRoutes onboarding,
   required RecoveryRoutes recovery,
   required SignInRoutes signIn,
@@ -53,6 +55,7 @@ Handler buildApp({
     ..mount('/', employees.router.call)
     ..mount('/', assignments.router.call)
     ..mount('/', groups.router.call)
+    ..mount('/', locations.router.call)
     ..mount('/', languages.authenticatedRouter.call)
     ..mount('/', me.router.call)
     ..mount('/', timeRegistrations.router.call)

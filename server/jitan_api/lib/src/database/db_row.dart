@@ -23,6 +23,14 @@ class DbRow {
     return parsed;
   }
 
+  /// Reads a `DOUBLE` column.
+  double readDouble(String column) {
+    final raw = _raw(column);
+    final parsed = raw == null ? null : double.tryParse(raw.toString());
+    if (parsed == null) throw _unexpected(column, raw ?? 'NULL', 'a number');
+    return parsed;
+  }
+
   String readString(String column) {
     final value = readOptionalString(column);
     if (value == null) throw _unexpected(column, 'NULL', 'a string');

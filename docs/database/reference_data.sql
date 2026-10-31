@@ -126,6 +126,10 @@ SELECT e.name FROM (
   UNION ALL SELECT 'time.correction.rejected'
   UNION ALL SELECT 'time.corrected'
   UNION ALL SELECT 'time.marked_non_work'
+  UNION ALL SELECT 'location.created'
+  UNION ALL SELECT 'location.changed'
+  UNION ALL SELECT 'location.deactivated'
+  UNION ALL SELECT 'location.reactivated'
 ) e WHERE NOT EXISTS (SELECT 1 FROM tblEventType x WHERE x.eventTypeName = e.name);
 
 -- ---------- Not proposed yet -----------------------------------------
