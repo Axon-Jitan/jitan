@@ -16,6 +16,7 @@ class AdminServices {
     required this.timeRecordsApi,
     required this.scheduleSourceApi,
     required this.locationsApi,
+    required this.reportsApi,
     this.locationMaps,
   });
 
@@ -31,6 +32,7 @@ class AdminServices {
   /// "Schedules come from" for employees in several groups.
   final ScheduleSourceApi scheduleSourceApi;
   final LocationsApi locationsApi;
+  final ReportsApi reportsApi;
 
   /// The Locations map; `null` when the build has no Mapbox token.
   final LocationMaps? locationMaps;

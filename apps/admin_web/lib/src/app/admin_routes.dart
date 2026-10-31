@@ -10,6 +10,7 @@ abstract final class AdminRoutes {
   static const schedules = '/schedules';
   static const groups = '/groups';
   static const timeRecords = '/time-records';
+  static const reports = '/reports';
 
   /// One group's page.
   static String group(int id) => '$groups/$id';

@@ -795,6 +795,47 @@ abstract final class AdminTextKeys {
   static const timeRecordDayAwayText = 'timeRecord.day.away.text';
   static const timeRecordDayAwayValue = 'timeRecord.day.away.value';
 
+  // Reports (Figma HR / Reports V1 1467:2 to 1467:631)
+  static const navReports = 'nav.reports';
+  static const reportTitle = 'report.title';
+  static const reportSubtitle = 'report.subtitle';
+  static const reportExport = 'report.export';
+  static const reportExportExcel = 'report.export.excel';
+  static const reportExportCsv = 'report.export.csv';
+  static const reportMonth = 'report.month';
+  static const reportCompany = 'report.company';
+  static const reportCompanyAll = 'report.company.all';
+  static const reportSearch = 'report.search';
+  static const reportPlanned = 'report.planned';
+  static const reportRegistered = 'report.registered';
+  static const reportDifference = 'report.difference';
+  static const reportToReview = 'report.toReview';
+  static const reportColumnEmployee = 'report.column.employee';
+  static const reportColumnToReview = 'report.column.toReview';
+  static const reportColumnDay = 'report.column.day';
+  static const reportColumnStart = 'report.column.start';
+  static const reportColumnFinish = 'report.column.finish';
+  static const reportColumnStatus = 'report.column.status';
+  static const reportHours = 'report.hours';
+  static const reportHoursMinutes = 'report.hoursMinutes';
+  static const reportDays = 'report.days';
+  static const reportEmployees = 'report.employees';
+  static const reportDayAway = 'report.day.away';
+  static const reportDaysNone = 'report.daysNone';
+  static const reportClose = 'report.close';
+  static const reportLoading = 'report.loading';
+  static const reportLoadFailed = 'report.loadFailed';
+  static const reportNoMatch = 'report.noMatch';
+  static const reportEmptyTitle = 'report.empty.title';
+  static const reportEmptyText = 'report.empty.text';
+  static const reportFileCode = 'report.file.code';
+  static const reportFileFirstName = 'report.file.firstName';
+  static const reportFileLastName = 'report.file.lastName';
+  static const reportFilePlanned = 'report.file.planned';
+  static const reportFileRegistered = 'report.file.registered';
+  static const reportFileDifference = 'report.file.difference';
+  static const reportFileToReview = 'report.file.toReview';
+
   // Locations (Figma HR / Locations 1465:2 to 1465:846)
   static const navLocations = 'nav.locations';
   static const locationsTitle = 'locations.title';

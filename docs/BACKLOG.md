@@ -293,6 +293,25 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## REP-01: Monthly hours report (phase 7)
+Status: `DONE` (2026-10-31)
+
+HR sees one month per employee and exports it (Figma `1467:2` month, `1467:230` export,
+`1467:391` an employee's month, `1467:631` empty), designed by us and approved on 2026-10-31; the
+older Reports frames were demos with dummy data.
+- `GET /reports/hours?month=yyyy-MM&company=`: calculated when opened, never stored (D24), from the
+  same days as Time records. Permission `viewReports`, checked per company.
+- **Only what Jitan can calculate** (product owner, 2026-10-31): planned, registered, difference,
+  days to review. No overtime, absence, attendance percentages or company totals.
+- Planned counts days up to today, so the running month's difference means something; non-work
+  days are not planned. Days to review (missing start or finish, a correction waiting, no
+  registration) stay out of Registered until fixed.
+- An employee in two companies shows under each with all their hours (GAP-03).
+- Export in the browser: Excel, or CSV with semicolons for Excel in Belgium. A text that a
+  spreadsheet would run as a formula is neutralised.
+
+Later, with IT's update: transports and kilometres (D23), the project report (D24).
+
 ## LOC-02: Phone detection (phase 4, slice 2)
 Status: `IN PROGRESS`: built; **leaving not yet seen on a device**, a real Android phone is needed
 

@@ -5,6 +5,7 @@ import 'fake_companies_api.dart';
 import 'fake_employees_api.dart';
 import 'fake_group_apis.dart';
 import 'fake_locations.dart';
+import 'fake_reports.dart';
 import 'fake_schedules_api.dart';
 import 'fake_time_records_api.dart';
 
@@ -22,6 +23,7 @@ class TestServices {
       timeRecordsApi: timeRecords,
       scheduleSourceApi: scheduleSource,
       locationsApi: locations,
+      reportsApi: reports,
       locationMaps: maps,
     );
   }
@@ -36,6 +38,7 @@ class TestServices {
   final timeRecords = FakeTimeRecordsApi();
   final scheduleSource = FakeScheduleSourceApi();
   final locations = FakeLocationsApi();
+  final reports = FakeReportsApi();
   late final maps = fakeLocationMaps();
   late final AdminServices services;
 }

@@ -33,6 +33,7 @@ void main() {
         timeRecordsApi: TimeRecordsApi(transport),
         scheduleSourceApi: ScheduleSourceApi(transport),
         locationsApi: LocationsApi(transport),
+        reportsApi: ReportsApi(transport),
         locationMaps: switch (config.mapboxToken) {
           null => null,
           final token => LocationMaps.mapbox(token),

@@ -244,7 +244,7 @@ named so it can be found:
 | Cleartext `http://` in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`) | HTTPS API; release builds already refuse cleartext | production hosting |
 
 Backend modules today (routes / service / repository where they have endpoints and data):
-`audit auth companies employees groups health languages locations onboarding recovery schedules
+`audit auth companies employees groups health languages locations onboarding recovery reports schedules
 temporary_qr time_registration users`. `audit` is the event-log writer (there is no `events` module).
 `schedules`: a group's schedules are derived from its employees who are only in that group
 (type and day rows found by name, `schedules/schedule_names.dart`); saving gives fresh rows
@@ -252,7 +252,7 @@ to those employees and to employees in several groups whose schedule follows the
 switching old rows off (never in place, never deleted). After any change of an employee's
 groups, `EmployeeScheduleSync` brings their schedule in line (one group: its schedule; none:
 no schedule; several: kept while it belongs to one, else HR picks "Schedules come from"). Planned, not built yet: `geofences`,
-`work_sessions`, `reports`.
+`work_sessions`.
 
 Modules waiting on ERD gaps, not to be built until resolved: `devices` (GAP-05),
 `terminals` (GAP-09), `visitors` (GAP-10), `exceptions` (GAP-08, detection-only is fine).
