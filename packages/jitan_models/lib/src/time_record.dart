@@ -266,6 +266,7 @@ class TimeRecordDay {
     this.events = const [],
     this.nonWorkReason,
     this.companyIds = const [],
+    this.awayMinutes = 0,
   });
 
   factory TimeRecordDay.fromJson(Map<String, Object?> json) => TimeRecordDay(
@@ -281,6 +282,7 @@ class TimeRecordDay {
         events: json['events'] == null ? const [] : json.readObjectList('events').map(TimeRecordEvent.fromJson).toList(),
         nonWorkReason: json.readOptionalString('nonWorkReason'),
         companyIds: json['companyIds'] == null ? const [] : json.readIntList('companyIds'),
+        awayMinutes: json.readOptionalInt('awayMinutes') ?? 0,
       );
 
   final int employeeId;
@@ -304,6 +306,10 @@ class TimeRecordDay {
   /// one of them (company-scoped endpoints).
   final List<int> companyIds;
 
+  /// Minutes between a finish and the next start of the day: time away that
+  /// is not work (D34). When there are any, they replace the automatic break.
+  final int awayMinutes;
+
   Map<String, Object?> toJson() => {
         'employeeId': employeeId,
         'firstName': firstName,
@@ -317,6 +323,7 @@ class TimeRecordDay {
         if (events.isNotEmpty) 'events': [for (final e in events) e.toJson()],
         'nonWorkReason': nonWorkReason,
         if (companyIds.isNotEmpty) 'companyIds': companyIds,
+        if (awayMinutes > 0) 'awayMinutes': awayMinutes,
       };
 
   /// A `yyyy-MM-dd` date as a UTC-flagged calendar day (no time zone meant).

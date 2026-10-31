@@ -15,6 +15,11 @@ import 'time_record_repository.dart';
 ///   reason) does not count until HR approves it, which adds a corrected row
 ///   after it; until then it is **pending**.
 ///
+/// A start after the last finish means the employee came back: the day is
+/// open again, and the time between them is time away (D34). An employee's
+/// correction counts here too once HR approved it, so an approved finish
+/// closes that part of the gap.
+///
 /// Status: non-work (every row switched off by "Mark as non-work") ·
 /// pending review · corrected / complete · working (today) · missing finish
 /// · missing start. A past scheduled working day without any row, from the
@@ -84,10 +89,10 @@ abstract final class TimeRecordDays {
     if (active.isEmpty && !nonWork) return null;
 
     final pending = <TimeRecordPending>[];
-    TimeRecordTime? side(RegistrationBoundary boundary) {
+    TimeRecordTime? side(RegistrationBoundary boundary, {bool registrationOnly = false}) {
       bool of<T extends _Kind>(RegistrationRow r) => kinds[r.id] is T && kinds[r.id]!.boundary == boundary;
-      final corrections = [for (final r in active) if (of<_Corrected>(r)) r];
-      final requests = [for (final r in active) if (of<_Actual>(r) && isEmployeeCorrection(r)) r];
+      final corrections = [if (!registrationOnly) for (final r in active) if (of<_Corrected>(r)) r];
+      final requests = [if (!registrationOnly) for (final r in active) if (of<_Actual>(r) && isEmployeeCorrection(r)) r];
       for (final request in requests) {
         if (!corrections.any((c) => c.id > request.id)) {
           pending.add(
@@ -140,7 +145,14 @@ abstract final class TimeRecordDays {
     }
 
     final start = nonWork ? null : side(RegistrationBoundary.start);
-    final finish = nonWork ? null : side(RegistrationBoundary.finish);
+    final moments = nonWork ? const <_Moment>[] : _moments(active, kinds, isEmployeeCorrection);
+    final latestStart = moments.where((m) => m.boundary == RegistrationBoundary.start).lastOrNull;
+    var lastFinish = nonWork ? null : side(RegistrationBoundary.finish);
+    // A correction before the latest start closes a gap: it is not the finish.
+    if (lastFinish?.correctedBy != null && latestStart != null && !latestStart.at.isBefore(lastFinish!.actual)) {
+      lastFinish = side(RegistrationBoundary.finish, registrationOnly: true);
+    }
+    final finish = lastFinish != null && latestStart != null && latestStart.at.isAfter(lastFinish.actual) ? null : lastFinish;
     final status = switch ((start, finish)) {
       _ when nonWork => TimeRecordStatus.nonWork,
       _ when pending.isNotEmpty => TimeRecordStatus.pendingReview,
@@ -193,7 +205,42 @@ abstract final class TimeRecordDays {
           ? byId.where((r) => kinds[r.id] is _Rounded && (r.comment?.isNotEmpty ?? false)).firstOrNull?.comment
           : null,
       companyIds: employee.companyIds,
+      awayMinutes: _awayMinutes(moments),
     );
+  }
+
+  /// Every start and finish that counts, by time; a finish first at the same
+  /// moment (finished travelling just as the employee returned).
+  static List<_Moment> _moments(
+    List<RegistrationRow> active,
+    Map<int, _Kind?> kinds,
+    bool Function(RegistrationRow) isEmployeeCorrection,
+  ) => [
+    for (final r in active)
+      if (kinds[r.id] case final _Corrected kind)
+        _Moment(r.at, kind.boundary)
+      else if (kinds[r.id] case final _Actual kind when !isEmployeeCorrection(r))
+        _Moment(r.at, kind.boundary),
+  ]..sort((a, b) {
+    final byTime = a.at.compareTo(b.at);
+    return byTime != 0 ? byTime : a.boundary.index.compareTo(b.boundary.index) * -1;
+  });
+
+  /// From the latest finish to the next start, for every return in the day.
+  static int _awayMinutes(List<_Moment> moments) {
+    var minutes = 0;
+    var started = false;
+    DateTime? finished;
+    for (final moment in moments) {
+      if (moment.boundary == RegistrationBoundary.finish) {
+        finished = moment.at;
+        continue;
+      }
+      if (started && finished != null) minutes += moment.at.difference(finished).inMinutes;
+      started = true;
+      finished = null;
+    }
+    return minutes;
   }
 
   static TimeRecordDay _empty(EmployeeSummary employee, DateTime date) => TimeRecordDay(
@@ -233,6 +280,14 @@ abstract final class TimeRecordDays {
 
   static RegistrationBoundary _boundary(String word) =>
       word == 'Start' ? RegistrationBoundary.start : RegistrationBoundary.finish;
+}
+
+/// A start or finish that counts, at its moment.
+class _Moment {
+  const _Moment(this.at, this.boundary);
+
+  final DateTime at;
+  final RegistrationBoundary boundary;
 }
 
 sealed class _Kind {

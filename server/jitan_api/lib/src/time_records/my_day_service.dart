@@ -84,12 +84,13 @@ class MyDayService {
 
   /// Rounded finish − rounded start − break (D4, D13), never below zero;
   /// `null` while the day has no finish, a time is not rounded, or a
-  /// correction waits for HR (D31).
+  /// correction waits for HR (D31). Time away replaces the break, never both
+  /// (D34).
   static int? registeredMinutes(TimeRecordDay day, int breakMinutes) {
     final start = day.start?.rounded;
     final finish = day.finish?.rounded;
     if (start == null || finish == null || day.pending.isNotEmpty) return null;
-    final worked = finish.difference(start).inMinutes - breakMinutes;
+    final worked = finish.difference(start).inMinutes - (day.awayMinutes > 0 ? day.awayMinutes : breakMinutes);
     return worked < 0 ? 0 : worked;
   }
 
