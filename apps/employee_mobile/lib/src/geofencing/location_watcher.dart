@@ -1,7 +1,9 @@
 import 'package:jitan_models/jitan_models.dart' as jitan;
 import 'package:logging/logging.dart';
 import 'package:native_geofence/native_geofence.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import '../device/secure_store.dart';
 import 'geofence_background.dart';
 import 'geofence_event_handler.dart';
 
@@ -15,9 +17,12 @@ abstract interface class LocationWatcher {
 }
 
 class NativeLocationWatcher implements LocationWatcher {
-  const NativeLocationWatcher();
+  const NativeLocationWatcher(this._store);
+
+  final SecureStore _store;
 
   static const _prefix = 'location-';
+  static const _installKey = 'presence.installedAt';
 
   static String idOf(int addressId) => '$_prefix$addressId';
 
@@ -54,8 +59,19 @@ class NativeLocationWatcher implements LocationWatcher {
     }
   }
 
+  /// Android drops an app's geofences when the app is installed or updated,
+  /// while the plugin still lists them: registered again once per install.
+  Future<void> _restoreAfterInstall() async {
+    final info = await PackageInfo.fromPlatform();
+    final installed = info.updateTime?.toIso8601String() ?? info.buildNumber;
+    if (await _store.read(_installKey) == installed) return;
+    await NativeGeofenceManager.instance.reCreateAfterReboot();
+    await _store.write(_installKey, installed);
+  }
+
   Future<void> _watch(List<jitan.Location> locations) async {
     await NativeGeofenceManager.instance.initialize();
+    await _restoreAfterInstall();
     final wanted = {for (final location in locations) idOf(location.id): _geofence(location)};
     final active = await NativeGeofenceManager.instance.getRegisteredGeofences();
     for (final geofence in active) {

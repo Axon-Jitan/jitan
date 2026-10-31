@@ -50,7 +50,7 @@ void main() {
           settings: const DeviceSettings(store),
           permissions: const PlatformPermissionsGateway(),
           locations: locationsApi,
-          watcher: const NativeLocationWatcher(),
+          watcher: const NativeLocationWatcher(store),
           presence: presence,
           events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: presence),
         ),

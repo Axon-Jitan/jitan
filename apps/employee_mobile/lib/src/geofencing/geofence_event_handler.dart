@@ -42,7 +42,8 @@ class GeofenceEventHandler {
   };
 
   Future<void> _entered(int addressId) async {
-    await _presence.entered(addressId, _clock());
+    // Told twice (geofences registered again): the first moment counts.
+    if (await _presence.enteredAt(addressId) == null) await _presence.entered(addressId, _clock());
     await _presence.clearAway();
   }
 

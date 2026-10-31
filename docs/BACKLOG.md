@@ -293,6 +293,42 @@ Order agreed 2026-10-07. Employee Onboarding follows immediately after.
 | EMP-08 | Onboarding QR from Employee details: shows `tblUser.userQRcode` as a scannable QR (stores a random one once if missing, audited); no-store, never logged or shown as text. **Superseded by QR-TEMP (2026-10-08):** onboarding uses a temporary QR; `userQRcode` is the Terminal QR only | `DONE`, superseded |
 | EMP-09 | Import employees (Figma `1419:2` … `1419:404`, roadmap §8): Employees → "Import CSV / Excel" → `/employees/import`. The browser reads an .xlsx or .csv (first row = column names, matched in the current language or English; `,` `;` or tab; at most 500 employees; template download). The server checks every row (`…/employees/import/check`: names, code, lengths, email, codes taken or repeated, group names) and imports the ready rows in **one** transaction, each created and audited exactly like Add employee; rows with a problem are skipped and listed (product owner, 2026-10-21). Nothing is reported before the server confirms | `DONE` |
 
+## LOC-02: Phone detection (phase 4, slice 2)
+Status: `IN PROGRESS`: built; **leaving not yet seen on a device**, a real Android phone is needed
+
+On Automatic the phone watches `GET /me/locations` with Android geofences (`native_geofence`,
+all of it behind `LocationWatcher`, rule §27), also with the app closed:
+- **Arriving (D33):** entering is remembered; after 5 minutes inside the start goes to the server
+  as `method: geofence` with `addressId`, at the moment of entering. Android's "stayed" event can
+  be late or missing (on the emulator it never came), so opening the app and leaving apply the
+  same five minutes.
+- **Leaving (D32):** only remembered on the phone; Today shows Temporarily away (Figma `19:52`).
+  Back at any recognised location: no longer away. A start while the day runs adds nothing.
+- **Profile / Registration method** (Figma `94:2`): stored on the phone (GAP-07), asks for
+  location also with the app closed.
+- Android drops geofences on install or update while the plugin still lists them, so they are
+  registered again once per install.
+
+Seen on the emulator with the app in the background: geofences registered and re-created, the
+"entered" event, the callback, and the start stored at the moment of entering. **Not seen:** the
+"stayed" and "left" events; those are covered by tests only. On an emulator Google's location
+service rarely looks at the position, so this needs a real phone: arriving and leaving, app
+closed, phone locked, overnight, after a restart.
+
+Known limits:
+- Google Location Accuracy must be on (geofences are refused otherwise). Today this is only
+  logged; show it on Profile / Location permission (Figma `94:23`), not built yet.
+- Android advises a radius of at least 100 m; the 50 m default may react late or miss a visit.
+- A start that can't be sent is lost, and Today still offers Start work: queueing waits for
+  PRODUCT-CLARIFY-OFFLINE.
+- iOS has no "stayed" event, and is not built (phase 11).
+- The app's own onboarding step does not yet ask for location with the app closed: it is asked
+  when Home opens or when the method is saved.
+
+Next, slice 3: after 1 hour away, the notification and "What happened?" (Figma `19:76`), and the
+answers D34: Finished, Break / personal (the server must then subtract time away and skip the
+automatic break), Travelling, Other.
+
 ## LOC-01: HR Locations (phase 4, slice 1)
 Status: `DONE` (2026-10-31), except the real map, which needs a Mapbox token
 

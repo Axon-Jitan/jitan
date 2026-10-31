@@ -68,6 +68,17 @@ void main() {
       expect(sent['at'], DateTime(2026, 10, 22, 8).toUtc().toIso8601String());
     });
 
+    test('told twice that it entered: the first moment counts', () async {
+      await handler.handle(GeofenceChange.entered, 7);
+      now = now.add(const Duration(minutes: 3));
+      await handler.handle(GeofenceChange.entered, 7);
+      now = now.add(const Duration(minutes: 3));
+
+      await handler.handle(GeofenceChange.stayed, 7);
+
+      expect(h.server.registrations.single['at'], DateTime(2026, 10, 22, 8).toUtc().toIso8601String());
+    });
+
     test('the app opening too soon registers nothing yet', () async {
       await handler.handle(GeofenceChange.entered, 7);
       now = now.add(const Duration(minutes: 4));
