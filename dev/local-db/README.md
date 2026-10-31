@@ -9,6 +9,7 @@ that arrives, point the same settings at it and rerun the same tests.
 | `schema.sql` | IT's development database as exported on 2026-10-09: every table, column, type, length, NULL/default, key and unique pair. Nothing else |
 | `seed.sql` | Fake companies and employees for the current flows (below) |
 | `proposals/gap15_group_schedule.sql` | **Proposal, not in IT's database:** `tblGroupSchedule` and `tblEventLog.groupScheduleID` (ERD_GAPS GAP-15), sent to IT on 2026-10-21. Local only; changed or deleted when IT answers. To add it to an existing local database: `docker exec -i jitan-local-db-mysql-1 sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < proposals/gap15_group_schedule.sql` |
+| `proposals/projects_terminals_visitors.sql` | **Proposal, not in IT's database:** projects, terminals, visitors ([PROPOSED_TABLES.md](../../docs/database/PROPOSED_TABLES.md)). Run once, after `schema.sql` |
 | `docker-compose.yml` | MySQL 8.4 on `127.0.0.1` only; loads schema + seed on first start |
 | `.env.example` | Connection settings; copy to `.env` (git-ignored) |
 | `with_local_db.py` | Runs a command with `JITAN_DB_*` / `JITAN_TEST_DB_*` set from `.env` |

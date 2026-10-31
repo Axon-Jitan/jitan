@@ -18,6 +18,7 @@ imported here so every session loads them:
 | [docs/database/ERD.md](docs/database/ERD.md) | Before writing any model, query, repository or endpoint: what every table means |
 | [docs/database/ERD.jpg](docs/database/ERD.jpg) | Authoritative structure. Wins over ERD.md if they disagree |
 | [docs/database/ERD_GAPS.md](docs/database/ERD_GAPS.md) | Before building anything the roadmap wants but the ERD may not hold. Also holds IT clarifications. |
+| [docs/database/PROPOSED_TABLES.md](docs/database/PROPOSED_TABLES.md) | Before adding or using a table IT doesn't have yet: the list to ask IT for |
 | [docs/PRODUCT_CLARIFICATIONS.md](docs/PRODUCT_CLARIFICATIONS.md) | Before building behaviour the product hasn't defined yet (e.g. offline) |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | Named follow-up tasks (I18N-01 translations, DB-VERIFY-01) |
 | [docs/TIME_ENGINE_ANALYSIS.md](docs/TIME_ENGINE_ANALYSIS.md) | Before any rounding, schedule or registered-time work: requirements vs the ERD |
@@ -66,6 +67,11 @@ Unresolved production details never stall development. Classify every issue (ENG
 The ERD is the source of truth. **Never** create migrations, add tables or columns, rename
 columns, repurpose a field, or invent backend-only storage to cover a missing
 relationship. Schema changes happen only after discussion with IT and explicit approval.
+
+**Approved exception (product owner, 2026-10-31):** projects, transport, terminals and
+visitors are built on proposed tables, in `dev/local-db/proposals/` and the local database
+only, each recorded in [PROPOSED_TABLES.md](docs/database/PROPOSED_TABLES.md) for IT to add.
+`schema.sql` and IT's databases are never touched. Anything else still follows the steps below.
 
 Before adding any model, service, endpoint or query, map the concept to the ERD:
 
