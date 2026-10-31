@@ -10,7 +10,7 @@ import 'activity_controller.dart';
 import 'activity_text.dart';
 
 /// Home / Switch activity (Figma `1088:2`, chosen `1109:269`): a project and
-/// what they're doing on it. The workday goes on.
+/// what they're doing on it, travelling included. The workday goes on.
 class SwitchActivityScreen extends StatefulWidget {
   const SwitchActivityScreen({super.key, required this.controller});
 
@@ -30,6 +30,7 @@ class _SwitchActivityScreenState extends State<SwitchActivityScreen> {
   List<ActivityKind> get _kinds => [
     if (_project?.isClient ?? false) ...[ActivityKind.clientOnSite, ActivityKind.clientInHouse],
     ActivityKind.internal,
+    ActivityKind.transport,
   ];
 
   bool get _changed {

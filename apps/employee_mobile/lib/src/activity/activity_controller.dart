@@ -5,10 +5,13 @@ import 'package:jitan_models/jitan_models.dart';
 /// What the employee is on, for Home. It never gets in the way of the day:
 /// when it can't be loaded, Home simply shows no project card.
 class ActivityController extends ChangeNotifier {
-  ActivityController(this._api, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  ActivityController(this._api, {this.onSwitched, DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
 
   final ActivityApi _api;
   final DateTime Function() _clock;
+
+  /// A switch was saved: the day's totals may have changed (D39).
+  final VoidCallback? onSwitched;
 
   MyActivity _activity = MyActivity.disabled;
   MyActivity get activity => _activity;
@@ -42,6 +45,7 @@ class ActivityController extends ChangeNotifier {
         SwitchActivityRequest(kind: kind, at: _clock().toUtc(), projectId: projectId, companyId: companyId),
       ),
     );
+    onSwitched?.call();
   }
 
   void _set(MyActivity activity) {

@@ -21,6 +21,24 @@ class GroupManagementApi {
     }
   }
 
+  /// Whether the group's travel counts as work (D39).
+  Future<GroupTravel> travel(int groupId) async => _travel(await _transport.getJson('groups/$groupId/travel'));
+
+  Future<GroupTravel> setTravel(int groupId, {required bool travelIsWork}) async => _travel(
+    await _transport.putJson(
+      'groups/$groupId/travel',
+      GroupTravel(available: true, travelIsWork: travelIsWork).toJson(),
+    ),
+  );
+
+  static GroupTravel _travel(Map<String, Object?> json) {
+    try {
+      return GroupTravel.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Group travel: ${e.message}');
+    }
+  }
+
   /// Create group: the group with its employees and work hours, saved by
   /// the server in one transaction.
   Future<GroupOverview> create(CreateGroupRequest request) async =>

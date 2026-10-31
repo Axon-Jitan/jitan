@@ -87,31 +87,15 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
         ],
         if (day.awayMinutes > 0) ...[
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(14)),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(context.t(AdminTextKeys.timeRecordDayAway), style: JitanTextStyles.tableCellStrong),
-                      const SizedBox(height: 2),
-                      Text(context.t(AdminTextKeys.timeRecordDayAwayText), style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  context.t(
-                    AdminTextKeys.timeRecordDayAwayValue,
-                    args: {'hours': day.awayMinutes ~/ 60, 'minutes': (day.awayMinutes % 60).toString().padLeft(2, '0')},
-                  ),
-                  style: JitanTextStyles.tableCellStrong,
-                ),
-              ],
-            ),
+          _minutesNote(context, AdminTextKeys.timeRecordDayAway, AdminTextKeys.timeRecordDayAwayText, day.awayMinutes),
+        ],
+        if (day.transportMinutes > 0) ...[
+          const SizedBox(height: 16),
+          _minutesNote(
+            context,
+            AdminTextKeys.timeRecordDayTransport,
+            day.travelIsWork ? AdminTextKeys.timeRecordDayTransportWork : AdminTextKeys.timeRecordDayTransportNotWork,
+            day.transportMinutes,
           ),
         ],
         if (day.events.isNotEmpty) ...[
@@ -221,4 +205,32 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
       ),
     );
   }
+
+  /// Time away or transport: a title, what it means, and the time.
+  Widget _minutesNote(BuildContext context, String title, String text, int minutes) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+    decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(12)),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.t(title), style: JitanTextStyles.tableCellStrong),
+              const SizedBox(height: 2),
+              Text(context.t(text), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Text(
+          context.t(
+            AdminTextKeys.timeRecordDayAwayValue,
+            args: {'hours': minutes ~/ 60, 'minutes': (minutes % 60).toString().padLeft(2, '0')},
+          ),
+          style: JitanTextStyles.tableCellStrong,
+        ),
+      ],
+    ),
+  );
 }

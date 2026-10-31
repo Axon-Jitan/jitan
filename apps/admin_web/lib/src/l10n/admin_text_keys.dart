@@ -776,6 +776,8 @@ abstract final class AdminTextKeys {
   static const groupDetailToleranceRow = 'group.detail.toleranceRow';
   static const groupDetailToleranceValue = 'group.detail.toleranceValue';
   static const groupDetailRoundingRow = 'group.detail.roundingRow';
+  static const groupTravelRow = 'group.detail.travelRow';
+  static const groupTravelFailed = 'group.detail.travelFailed';
   static const groupDetailHoursEmptyText = 'group.detail.hoursEmptyText';
   static const groupDetailHoursNoSingleText = 'group.detail.hoursNoSingleText';
   static const groupDetailHoursDifferText = 'group.detail.hoursDifferText';
@@ -791,6 +793,9 @@ abstract final class AdminTextKeys {
   static const groupRemoveText = 'group.remove.text';
   static const groupRemoveConfirm = 'group.remove.confirm';
 
+  static const timeRecordDayTransport = 'timeRecord.day.transport';
+  static const timeRecordDayTransportWork = 'timeRecord.day.transportWork';
+  static const timeRecordDayTransportNotWork = 'timeRecord.day.transportNotWork';
   static const timeRecordDayAway = 'timeRecord.day.away';
   static const timeRecordDayAwayText = 'timeRecord.day.away.text';
   static const timeRecordDayAwayValue = 'timeRecord.day.away.value';

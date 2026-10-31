@@ -177,6 +177,10 @@ abstract final class EmployeeTextKeys {
   static const todayWorkdayWaitingForHr = 'today.workday.waitingForHr';
   static const todayWorkdayScheduledFinish = 'today.workday.scheduledFinish';
   static const activityCurrent = 'activity.current';
+  static const activityBreakdown = 'activity.breakdown';
+  static const activityClientWork = 'activity.clientWork';
+  static const activityOtherWork = 'activity.otherWork';
+  static const activityTrips = 'activity.trips';
   static const activityNoProject = 'activity.noProject';
   static const activitySwitch = 'activity.switch';
   static const activitySwitchText = 'activity.switchText';

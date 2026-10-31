@@ -2,6 +2,7 @@ import 'package:employee_mobile/src/activity/activity_controller.dart';
 import 'package:employee_mobile/src/activity/current_project_card.dart';
 import 'package:employee_mobile/src/activity/my_projects_screen.dart';
 import 'package:employee_mobile/src/activity/switch_activity_screen.dart';
+import 'package:employee_mobile/src/activity/today_breakdown_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
@@ -68,6 +69,15 @@ void main() {
     expect((nothing.showsCard, nothing.showsCompanies), (false, false));
   });
 
+  test('a saved switch tells Home, so the totals follow', () async {
+    var told = 0;
+    final controller = ActivityController(_FakeActivityApi(_on(_towers)), onSwitched: () => told++);
+
+    await controller.switchTo(kind: ActivityKind.transport, projectId: _towers.id);
+
+    expect(told, 1);
+  });
+
   test('a failed load keeps Home working', () async {
     final api = _FakeActivityApi(_on(_towers))..fail = const ApiClientException.network('offline');
     final controller = ActivityController(api);
@@ -117,8 +127,10 @@ void main() {
       expect(button.onPressed, isNull);
     });
 
-    testWidgets('a client project offers its three activities', (tester) async {
+    testWidgets('a client project offers its activities and transport', (tester) async {
       await open(tester, _on(_towers));
+
+      expect(find.text('Transport'), findsOneWidget);
 
       expect(find.text('Client · In-house'), findsOneWidget);
       expect(find.text('Internal work'), findsOneWidget);
@@ -149,6 +161,24 @@ void main() {
 
       expect(find.text('The switch could not be saved.'), findsOneWidget);
     });
+  });
+
+  testWidgets('the breakdown shows only parts with time in them, and the trips', (tester) async {
+    await _show(
+      tester,
+      const Scaffold(
+        body: TodayBreakdownCard(breakdown: ActivityBreakdown(clientMinutes: 255, transportMinutes: 105, trips: 2)),
+      ),
+    );
+
+    expect(find.text('Client work'), findsOneWidget);
+    expect(find.text('Internal work'), findsNothing);
+    expect(find.textContaining('2 trips'), findsOneWidget);
+  });
+
+  test('one kind of work alone is no breakdown', () {
+    expect(const ActivityBreakdown(clientMinutes: 60).isMixed, isFalse);
+    expect(const ActivityBreakdown(clientMinutes: 60, transportMinutes: 5).isMixed, isTrue);
   });
 
   testWidgets('My projects: current and earlier; none says so', (tester) async {

@@ -49,7 +49,7 @@ class TodayFailed extends TodayState {
 /// Offline queueing is not built yet (PRODUCT_CLARIFICATIONS, offline): a
 /// registration that can't reach the server fails visibly and is not kept.
 class TodayController extends ChangeNotifier {
-  TodayController(this._api, {required this._presence, required this._reminder, required this.onSessionEnded, DateTime Function()? clock})
+  TodayController(this._api, {required this._presence, required this._reminder, required this.onSessionEnded, this.onDayLoaded, DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;
 
   final TimeRegistrationsApi _api;
@@ -59,6 +59,9 @@ class TodayController extends ChangeNotifier {
 
   /// A 401: the session is no longer valid.
   final VoidCallback onSessionEnded;
+
+  /// The day was loaded: what hangs on it (the current project) follows.
+  final VoidCallback? onDayLoaded;
 
   TodayState state = const TodayLoading();
 
@@ -97,6 +100,7 @@ class TodayController extends ChangeNotifier {
       final day = await _api.today();
       away = await _awayOn(day);
       _set(TodayLoaded(day));
+      onDayLoaded?.call();
     } on ApiClientException catch (e) {
       if (e.statusCode == 401) return onSessionEnded();
       // Keep showing the day already loaded; only a first load fails.

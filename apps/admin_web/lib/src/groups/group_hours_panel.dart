@@ -13,10 +13,13 @@ ScheduleVariant? configuredVariant(GroupSchedule? schedule) =>
 /// with its hours or "Day off", then break, tolerance and rounding, and the
 /// button that opens the schedule wizard on this group.
 class GroupHoursPanel extends StatelessWidget {
-  const GroupHoursPanel({super.key, required this.schedule, required this.hasMembers, required this.onEdit});
+  const GroupHoursPanel({super.key, required this.schedule, required this.hasMembers, this.travel, required this.onEdit});
 
   final GroupSchedule? schedule;
   final bool hasMembers;
+
+  /// "Travel counts as work", under the rest.
+  final Widget? travel;
 
   /// `null` while the group is inactive.
   final VoidCallback? onEdit;
@@ -109,6 +112,7 @@ class GroupHoursPanel extends StatelessWidget {
           Text(context.t(AdminTextKeys.groupDetailHoursPanel), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
           const SizedBox(height: 14),
           ...content,
+          ?travel,
           const SizedBox(height: 18),
           JitanPrimaryButton(
             label: context.t(variant != null || schedule?.status == GroupScheduleStatus.employeesDiffer

@@ -53,6 +53,15 @@ void main() {
     });
   }
 
+  testWidgets('Start work reloads the current project, so the default shows at once', (tester) async {
+    await startApp(tester);
+    final before = h.server.requestsTo('/me/activity').length;
+
+    await tap(tester, 'Start work');
+
+    expect(h.server.requestsTo('/me/activity').length, greaterThan(before));
+  });
+
   testWidgets('not started: the schedule; Start work → working; Finish work → complete with the registered time', (tester) async {
     await startApp(tester);
     expect(find.text('Tap Start work when you begin.'), findsOneWidget);

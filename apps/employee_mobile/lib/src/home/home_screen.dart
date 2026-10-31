@@ -11,6 +11,7 @@ import '../activity/company_picker.dart';
 import '../activity/current_project_card.dart';
 import '../activity/my_projects_screen.dart';
 import '../activity/switch_activity_screen.dart';
+import '../activity/today_breakdown_card.dart';
 import '../geofencing/away_reminder.dart';
 import '../geofencing/workplace_presence.dart';
 import '../l10n/employee_text_keys.dart';
@@ -76,14 +77,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late EmployeeAccount? _account = widget.initialAccount;
-  late final _today = TodayController(
+  late final TodayController _today = TodayController(
     widget.timeRegistrationsApi,
     presence: widget.presence,
     reminder: widget.reminder,
     onSessionEnded: widget.onSessionEnded,
+    onDayLoaded: () => _activity.load(),
     clock: widget.clock,
   )..load();
-  late final _activity = ActivityController(widget.activityApi, clock: widget.clock)..load();
+  late final ActivityController _activity = ActivityController(widget.activityApi, onSwitched: () => _today.load(), clock: widget.clock);
 
   /// Moves "Registered today" and the greeting on while the screen is open.
   late final Timer _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -96,7 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
     onResume: () async {
       await widget.onReturn?.call();
       await _today.load();
-      await _activity.load();
     },
   );
 
@@ -142,10 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (tab == _tab) return;
     setState(() => _tab = tab);
     // Back on Home: what changed in Period (a time added) shows at once.
-    if (tab == 0) {
-      _today.load();
-      _activity.load();
-    }
+    if (tab == 0) _today.load();
   }
 
   Widget _navBar(BuildContext context) => EmployeeNavBar(
@@ -457,13 +455,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _working(BuildContext context, MyDay day) {
     final start = shownTime(day.day, RegistrationBoundary.start);
+    final travelCounts = day.day?.travelIsWork ?? false;
+    final current = _activity.activity.current;
+    // Travelling that isn't work: the total waits until it ends (D39).
+    final now = !travelCounts && current?.kind == ActivityKind.transport ? current!.since : _today.now();
+    final transport = travelCounts ? 0 : day.day?.transportMinutes ?? 0;
     // Since the start, minus the part of the break already passed (D13).
     final elapsed = start.at == null
         ? null
-        : day.day!.awayMinutes > 0
-        // Back from time away: it replaces the break (D34).
-        ? _today.now().difference(start.at!).inMinutes - day.day!.awayMinutes
-        : RunningTotal.minutes(start: start.at!, now: _today.now(), breakStart: day.breakStart, breakFinish: day.breakFinish);
+        : (day.day!.awayMinutes > 0
+                  // Back from time away: it replaces the break (D34).
+                  ? now.difference(start.at!).inMinutes - day.day!.awayMinutes
+                  : RunningTotal.minutes(start: start.at!, now: now, breakStart: day.breakStart, breakFinish: day.breakFinish)) -
+              transport;
     final method = day.day?.start?.method ?? TimeRecordMethod.manual;
     final light = JitanMobileTextStyles.cardText.copyWith(color: JitanColors.sidebarText);
     return _page(
@@ -505,6 +509,10 @@ class _HomeScreenState extends State<HomeScreen> {
             onSwitch: _openSwitch,
             onProjects: _openProjects,
           ),
+          const SizedBox(height: 18),
+        ],
+        if (_activity.activity.breakdown.isMixed) ...[
+          TodayBreakdownCard(breakdown: _activity.activity.breakdown),
           const SizedBox(height: 18),
         ],
         TodayCard(
