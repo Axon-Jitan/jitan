@@ -116,7 +116,7 @@ class RegisterTimeRequest {
         fieldEntry: entry.wireName,
         fieldAt: at.toUtc().toIso8601String(),
         fieldReason: reason,
-        fieldAddressId: addressId,
+        fieldAddressId: ?addressId,
       };
 }
 
