@@ -529,6 +529,27 @@ void main() {
     });
   });
 
+  onlyWithTables('time away counts for no activity', () async {
+    final user = await newUser();
+    final project = await newProject(internalType);
+    await assign(user, project);
+    await start(user, moment(120));
+    await writes.register(
+      user,
+      RegisterTimeRequest(
+        boundary: RegistrationBoundary.finish,
+        method: TimeRegistrationMethod.manual,
+        entry: RegistrationEntry.now,
+        at: moment(90),
+      ),
+    );
+    await start(user, moment(30));
+
+    final mine = await activities.mine(user);
+
+    expect(mine.breakdown.internalMinutes, inInclusiveRange(58, 62), reason: '30 before leaving, 30 since coming back');
+  });
+
   onlyWithTables('the default company is the marked one, and a switch of company lasts for the day', () async {
     final user = await newUser(isDefault: true);
     await db.execute(

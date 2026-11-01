@@ -19,12 +19,15 @@ import 'period_widgets.dart';
 /// phase 4), and "Weekly breakdown" / "Daily breakdown" are left out (they
 /// split time by project, which waits for IT's ERD update).
 class PeriodScreen extends StatefulWidget {
-  const PeriodScreen({super.key, required this.api, required this.onSessionEnded, this.clock, this.bottomBar});
+  const PeriodScreen({super.key, required this.api, required this.onSessionEnded, this.clock, this.bottomBar, this.current});
 
   final TimeRegistrationsApi api;
   final VoidCallback onSessionEnded;
   final DateTime Function()? clock;
   final Widget? bottomBar;
+
+  /// What the employee is on, so the total here is the one on Home (D39).
+  final CurrentActivity? current;
 
   @override
   State<PeriodScreen> createState() => _PeriodScreenState();
@@ -128,7 +131,7 @@ class _PeriodScreenState extends State<PeriodScreen> {
     final minutes = today.registeredMinutes ??
         (day == null ? 0 : null) ??
         (open && start != null
-            ? RunningTotal.minutes(start: start, now: _controller.now(), breakStart: today.breakStart, breakFinish: today.breakFinish)
+            ? RunningTotal.ofToday(today, start, widget.current, _controller.now())
             : null);
     return [
       PeriodTotalCard(

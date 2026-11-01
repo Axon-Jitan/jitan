@@ -174,6 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onSessionEnded: widget.onSessionEnded,
       clock: widget.clock,
       bottomBar: _navBar(context),
+      current: _activity.activity.current,
     ),
     2 => MyQrScreen(meApi: widget.meApi, account: _account, onSessionEnded: widget.onSessionEnded, bottomBar: _navBar(context)),
     _ => _home(context),

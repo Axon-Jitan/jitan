@@ -1,4 +1,5 @@
 import 'package:jitan_core/jitan_core.dart';
+import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -27,5 +28,36 @@ void main() {
     expect(RunningTotal.minutes(start: DateTime(2026, 10, 22, 13), now: DateTime(2026, 10, 22, 14), breakStart: '12:00', breakFinish: '12:30'), 60);
     expect(RunningTotal.minutes(start: start, now: DateTime(2026, 10, 22, 16)), 8 * 60);
     expect(RunningTotal.minutes(start: start, now: DateTime(2026, 10, 22, 7)), 0);
+  });
+
+  group('the total of today, the same on every screen', () {
+    final start = DateTime(2026, 11, 1, 8);
+    TimeRecordDay record({int away = 0, int transport = 0, bool travelIsWork = false}) => TimeRecordDay(
+      employeeId: 1,
+      employeeCode: 'SBW',
+      date: DateTime.utc(2026, 11, 1),
+      status: TimeRecordStatus.working,
+      awayMinutes: away,
+      transportMinutes: transport,
+      travelIsWork: travelIsWork,
+    );
+    MyDay day(TimeRecordDay record) => MyDay(date: DateTime.utc(2026, 11, 1), firstDay: false, day: record);
+
+    test('time away replaces the break', () {
+      final total = RunningTotal.ofToday(day(record(away: 60)), start, null, DateTime(2026, 11, 1, 12));
+      expect(total, 180);
+    });
+
+    test('finished transport isn’t work, unless the group says it is', () {
+      final now = DateTime(2026, 11, 1, 12);
+      expect(RunningTotal.ofToday(day(record(transport: 30)), start, null, now), 210);
+      expect(RunningTotal.ofToday(day(record(transport: 30, travelIsWork: true)), start, null, now), 240);
+    });
+
+    test('a running transport holds the total still', () {
+      final since = DateTime(2026, 11, 1, 11);
+      final current = CurrentActivity(kind: ActivityKind.transport, since: since);
+      expect(RunningTotal.ofToday(day(record()), start, current, DateTime(2026, 11, 1, 12)), 180);
+    });
   });
 }

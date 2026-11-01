@@ -270,13 +270,15 @@ class ActivityService {
   Future<ActivityBreakdown> _breakdown(int userId) async {
     final (from, to) = _todayBounds();
     final rows = await _activities.between(_executor, userId, from, to);
-    final finish = (await _myDay.today(userId)).day?.finish?.actual;
+    final day = (await _myDay.today(userId)).day;
+    final finish = day?.finish?.actual;
     final now = _now().toUtc();
     final last = finish != null && finish.isBefore(now) ? finish : now;
+    final away = _timeAway(day);
     var client = 0, internal = 0, other = 0, transport = 0, trips = 0;
     for (final (i, row) in rows.indexed) {
       final end = i + 1 < rows.length ? rows[i + 1].at : last;
-      final minutes = end.isAfter(row.at) ? end.difference(row.at).inMinutes : 0;
+      final minutes = end.isAfter(row.at) ? _workedMinutes(row.at, end, away) : 0;
       switch (_kindOf(row.typeName)) {
         case ActivityKind.clientOnSite || ActivityKind.clientInHouse:
           client += minutes;
@@ -299,6 +301,41 @@ class ActivityService {
       distanceMetres: distance.metres,
       tripsWithoutDistance: distance.unknown,
     );
+  }
+
+  /// From each finish to the next start of [day], in workplace minutes of the
+  /// day: nothing counts for any activity then (D34).
+  static List<(int, int)> _timeAway(TimeRecordDay? day) {
+    final events = [
+      for (final event in day?.events ?? const <TimeRecordEvent>[])
+        if (event.active && event.kind == TimeRecordEventKind.registered) event,
+    ]..sort((a, b) => a.atLocal.compareTo(b.atLocal));
+    final away = <(int, int)>[];
+    int? finished;
+    for (final event in events) {
+      final at = _minuteOf(event.atLocal);
+      if (event.boundary == RegistrationBoundary.finish) {
+        finished = at;
+      } else if (finished != null) {
+        away.add((finished, at));
+        finished = null;
+      }
+    }
+    return away;
+  }
+
+  static int _minuteOf(String hhmm) => int.parse(hhmm.substring(0, 2)) * 60 + int.parse(hhmm.substring(3, 5));
+
+  /// Whole minutes from [from] to [to], without the time [away].
+  int _workedMinutes(DateTime from, DateTime to, List<(int, int)> away) {
+    final local = _clock.wallClockOf(from), localEnd = _clock.wallClockOf(to);
+    final start = local.hour * 60 + local.minute, end = localEnd.hour * 60 + localEnd.minute;
+    var minutes = to.difference(from).inMinutes;
+    for (final (left, back) in away) {
+      final overlapStart = left > start ? left : start, overlapEnd = back < end ? back : end;
+      if (overlapEnd > overlapStart) minutes -= overlapEnd - overlapStart;
+    }
+    return minutes < 0 ? 0 : minutes;
   }
 
   /// Stores what the day starts on, and at [addressId] when that is known, in
