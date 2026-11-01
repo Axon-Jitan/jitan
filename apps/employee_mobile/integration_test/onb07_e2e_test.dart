@@ -90,7 +90,7 @@ void main() {
         locations: LocationsApi(transport),
         watcher: const NoLocationWatcher(),
         presence: WorkplacePresence(store),
-        events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: WorkplacePresence(store), reminder: FakeAwayReminder()),
+        events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), activities: ActivityApi(transport), presence: WorkplacePresence(store), reminder: FakeAwayReminder()),
       ),
       translationService: TranslationService(languages),
       session: session,

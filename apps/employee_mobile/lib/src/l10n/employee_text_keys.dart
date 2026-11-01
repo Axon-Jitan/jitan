@@ -181,6 +181,7 @@ abstract final class EmployeeTextKeys {
   static const activityClientWork = 'activity.clientWork';
   static const activityOtherWork = 'activity.otherWork';
   static const activityTrips = 'activity.trips';
+  static const activityKilometres = 'activity.kilometres';
   static const activityNoProject = 'activity.noProject';
   static const activitySwitch = 'activity.switch';
   static const activitySwitchText = 'activity.switchText';

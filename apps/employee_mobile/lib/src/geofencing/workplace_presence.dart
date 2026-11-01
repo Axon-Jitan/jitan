@@ -20,7 +20,8 @@ class AwayFromWorkplace {
 
 /// What the phone remembers between geofence events, which wake the app one
 /// at a time: when it entered a location, and that it left one. Never sent
-/// anywhere; a leaving is only stored on the server once it is a finish.
+/// anywhere; a leaving is only stored on the server once it is a finish, or
+/// part of a trip when another location follows (D40).
 class WorkplacePresence {
   const WorkplacePresence(this._store);
 
@@ -30,6 +31,8 @@ class WorkplacePresence {
   static const _awayKey = 'presence.away';
   static const _namesKey = 'presence.names';
   static const _refusedKey = 'presence.refused';
+  static const _tripOriginKey = 'presence.tripOrigin';
+  static const _tripKey = 'presence.trip';
 
   /// The locations the phone watches, for their names.
   Future<void> saveNames(List<Location> locations) =>
@@ -79,6 +82,32 @@ class WorkplacePresence {
   }
 
   Future<void> clearAway() => _store.delete(_awayKey);
+
+  /// Where the employee came from when they entered a new location. It is a
+  /// trip once they stay there; driving past, they are simply still away.
+  Future<void> rememberTripOrigin(AwayFromWorkplace away) => _store.write(
+    _tripOriginKey,
+    jsonEncode({'addressId': away.addressId, 'leftAt': away.leftAt.toUtc().toIso8601String()}),
+  );
+
+  Future<({int addressId, DateTime leftAt})?> tripOrigin() async {
+    final stored = await _store.read(_tripOriginKey);
+    if (stored == null) return null;
+    final json = jsonDecode(stored) as Map<String, Object?>;
+    return (addressId: json['addressId']! as int, leftAt: DateTime.parse(json['leftAt']! as String));
+  }
+
+  Future<void> clearTripOrigin() => _store.delete(_tripOriginKey);
+
+  /// A trip the server hasn't confirmed yet.
+  Future<void> holdTrip(TripRequest trip) => _store.write(_tripKey, jsonEncode(trip.toJson()));
+
+  Future<TripRequest?> heldTrip() async {
+    final stored = await _store.read(_tripKey);
+    return stored == null ? null : TripRequest.fromJson(jsonDecode(stored) as Map<String, Object?>);
+  }
+
+  Future<void> clearHeldTrip() => _store.delete(_tripKey);
 
   /// The phone refused the geofences (Google Location Accuracy off, …).
   Future<bool> geofencesRefused() async => await _store.read(_refusedKey) != null;

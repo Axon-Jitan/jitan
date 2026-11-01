@@ -29,6 +29,9 @@ class _FakeActivityApi implements ActivityApi {
   }
 
   @override
+  Future<MyActivity> registerTrip(TripRequest request) async => answer;
+
+  @override
   Future<MyActivity> switchTo(SwitchActivityRequest request) async {
     if (fail case final failure?) throw failure;
     switches.add(request);
@@ -174,6 +177,34 @@ void main() {
     expect(find.text('Client work'), findsOneWidget);
     expect(find.text('Internal work'), findsNothing);
     expect(find.textContaining('2 trips'), findsOneWidget);
+  });
+
+  testWidgets('transport says its kilometres; with a trip unknown, its time', (tester) async {
+    await _show(
+      tester,
+      const Scaffold(
+        body: TodayBreakdownCard(
+          breakdown: ActivityBreakdown(clientMinutes: 255, transportMinutes: 105, trips: 2, distanceMetres: 36400),
+        ),
+      ),
+    );
+    expect(find.text('2 trips · 36 km'), findsOneWidget);
+
+    await _show(
+      tester,
+      const Scaffold(
+        body: TodayBreakdownCard(
+          breakdown: ActivityBreakdown(
+            clientMinutes: 255,
+            transportMinutes: 105,
+            trips: 2,
+            distanceMetres: 18000,
+            tripsWithoutDistance: 1,
+          ),
+        ),
+      ),
+    );
+    expect(find.textContaining('km'), findsNothing);
   });
 
   test('one kind of work alone is no breakdown', () {

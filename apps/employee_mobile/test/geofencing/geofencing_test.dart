@@ -47,7 +47,13 @@ void main() {
     await h.session.restore();
     h.server.firstDay = false;
     presence = WorkplacePresence(h.store);
-    handler = GeofenceEventHandler(api: h.services.timeRegistrationsApi, presence: presence, reminder: h.reminder, clock: () => now);
+    handler = GeofenceEventHandler(
+      api: h.services.timeRegistrationsApi,
+      activities: h.services.activityApi,
+      presence: presence,
+      reminder: h.reminder,
+      clock: () => now,
+    );
   });
 
   group('the rules on the phone', () {
@@ -103,6 +109,82 @@ void main() {
 
       expect(h.server.registrations.single['boundary'], 'start');
       expect(await presence.away(), isNotNull);
+    });
+
+    group('a trip (D40)', () {
+      const almeco = 7, client = 8, passed = 9;
+
+      Future<void> leftAlmeco() async {
+        h.server.registrations.add({'boundary': 'start', 'entry': 'now', 'at': DateTime(2026, 10, 22, 7).toUtc().toIso8601String()});
+        await presence.left(almeco, DateTime(2026, 10, 22, 8));
+      }
+
+      test('left Almeco and stayed at a client: sent from leaving to arriving', () async {
+        await leftAlmeco();
+        now = DateTime(2026, 10, 22, 8, 45);
+        await handler.handle(GeofenceChange.entered, client);
+        now = now.add(const Duration(minutes: 5));
+        await handler.handle(GeofenceChange.stayed, client);
+
+        final trip = h.server.trips.single;
+        expect((trip['fromAddressId'], trip['toAddressId']), (almeco, client));
+        expect(trip['leftAt'], DateTime(2026, 10, 22, 8).toUtc().toIso8601String());
+        expect(trip['arrivedAt'], DateTime(2026, 10, 22, 8, 45).toUtc().toIso8601String());
+        expect(await presence.away(), isNull);
+        expect(await presence.heldTrip(), isNull);
+      });
+
+      test('back at the place they left: no trip', () async {
+        await leftAlmeco();
+        await handler.handle(GeofenceChange.entered, almeco);
+        now = now.add(const Duration(minutes: 5));
+        await handler.handle(GeofenceChange.stayed, almeco);
+
+        expect(h.server.trips, isEmpty);
+      });
+
+      test('driving past a location: still away from Almeco, and the trip still counts from there', () async {
+        await leftAlmeco();
+        now = DateTime(2026, 10, 22, 8, 20);
+        await handler.handle(GeofenceChange.entered, passed);
+        now = now.add(const Duration(minutes: 1));
+        await handler.handle(GeofenceChange.left, passed);
+
+        final away = await presence.away();
+        expect(away?.addressId, almeco);
+        expect(away?.leftAt, DateTime(2026, 10, 22, 8).toUtc());
+
+        now = DateTime(2026, 10, 22, 8, 45);
+        await handler.handle(GeofenceChange.entered, client);
+        now = now.add(const Duration(minutes: 5));
+        await handler.handle(GeofenceChange.stayed, client);
+
+        expect(h.server.trips.single['fromAddressId'], almeco);
+      });
+
+      test('no signal on arrival: kept, and sent when the app opens', () async {
+        await leftAlmeco();
+        await handler.handle(GeofenceChange.entered, client);
+        now = now.add(const Duration(minutes: 5));
+        h.server.dropNext.add('/me/activity/trip');
+        await handler.handle(GeofenceChange.stayed, client);
+        expect(await presence.heldTrip(), isNotNull);
+
+        await handler.catchUp();
+
+        expect(h.server.trips, hasLength(1));
+        expect(await presence.heldTrip(), isNull);
+      });
+
+      test('refused by the server: not sent again', () async {
+        await leftAlmeco();
+        await handler.handle(GeofenceChange.entered, client);
+        now = now.add(const Duration(minutes: 5));
+        h.server.refuseTrips = true;
+        await handler.handle(GeofenceChange.stayed, client);
+
+        expect(await presence.heldTrip(), isNull);
+      });
     });
 
     test('entering and leaving at once registers nothing', () async {

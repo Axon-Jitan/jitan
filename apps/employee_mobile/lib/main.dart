@@ -56,7 +56,7 @@ void main() {
           locations: locationsApi,
           watcher: const NativeLocationWatcher(store),
           presence: presence,
-          events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: presence, reminder: reminder),
+          events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), activities: ActivityApi(transport), presence: presence, reminder: reminder),
         ),
         translationService: TranslationService(languagesApi),
         session: session,

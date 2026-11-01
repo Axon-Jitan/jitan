@@ -19,6 +19,9 @@ enum GeofenceChange { entered, stayed, left }
 /// - Stayed [arrivalDelay] inside: register the start, at the moment of
 ///   entering.
 /// - Left: only remembered, while the day runs. Leaving is not a finish.
+/// - Stayed somewhere else than the location left: a trip, for the server to
+///   judge (D40). Only passing through a location leaves them away from the
+///   first one.
 ///
 /// Android may deliver "stayed" late or not at all, so [catchUp] (the app
 /// opens) and leaving apply the same rule from the stored moment of entering.
@@ -26,10 +29,16 @@ enum GeofenceChange { entered, stayed, left }
 /// A start that can't be sent is lost here and the Today screen still offers
 /// Start work; queueing waits for PRODUCT-CLARIFY-OFFLINE.
 class GeofenceEventHandler {
-  GeofenceEventHandler({required this._api, required this._presence, required this._reminder, DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  GeofenceEventHandler({
+    required this._api,
+    required this._activities,
+    required this._presence,
+    required this._reminder,
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
 
   final TimeRegistrationsApi _api;
+  final ActivityApi _activities;
   final WorkplacePresence _presence;
   final AwayReminder _reminder;
   final DateTime Function() _clock;
@@ -50,12 +59,15 @@ class GeofenceEventHandler {
   Future<void> _entered(int addressId) async {
     // Told twice (geofences registered again): the first moment counts.
     if (await _presence.enteredAt(addressId) == null) await _presence.entered(addressId, _clock());
+    final away = await _presence.away();
+    if (away != null && away.addressId != addressId && !away.onBreak) await _presence.rememberTripOrigin(away);
     await _presence.clearAway();
     await _reminder.cancel();
   }
 
   /// Registers an arrival whose "stayed" event never came.
   Future<void> catchUp() async {
+    await _sendTrip();
     final entered = await _presence.lastEntered();
     if (entered != null && _longEnough(entered.at)) await _stayed(entered.addressId);
   }
@@ -78,25 +90,49 @@ class GeofenceEventHandler {
     } on ApiClientException catch (e) {
       _log.warning('The arrival could not be sent: ${e.kind.name} ${e.statusCode ?? ''}');
     }
+    final origin = await _presence.tripOrigin();
+    if (origin == null) return;
+    await _presence.clearTripOrigin();
+    await _presence.holdTrip(
+      TripRequest(fromAddressId: origin.addressId, toAddressId: addressId, leftAt: origin.leftAt, arrivedAt: at),
+    );
+    await _sendTrip();
+  }
+
+  /// Kept until the server answers: kilometres are paid. Refused, it is gone.
+  Future<void> _sendTrip() async {
+    final trip = await _presence.heldTrip();
+    if (trip == null) return;
+    try {
+      await _activities.registerTrip(trip);
+      await _presence.clearHeldTrip();
+    } on ApiClientException catch (e) {
+      _log.warning('The trip could not be sent: ${e.kind.name} ${e.statusCode ?? ''}');
+      if (e.kind != ApiFailureKind.network) await _presence.clearHeldTrip();
+    }
   }
 
   Future<void> _left(int addressId) async {
     final entered = await _presence.enteredAt(addressId);
     if (entered != null && _longEnough(entered)) await _stayed(addressId);
     await _presence.clearEntered();
-    final now = _clock();
+    // Only passing through: they are still away from where they came from.
+    final origin = await _presence.tripOrigin();
+    await _presence.clearTripOrigin();
+    final from = origin?.addressId ?? addressId;
+    final at = origin?.leftAt ?? _clock();
     try {
       final day = await _api.today();
-      if (TodayController.phaseOf(day) == TodayPhase.working) await _remember(addressId, now);
+      if (TodayController.phaseOf(day) == TodayPhase.working) await _remember(from, at);
     } on ApiClientException catch (e) {
       // Offline: remember it. Today only shows it while the day is running.
       _log.warning('The day could not be read on leaving: ${e.kind.name} ${e.statusCode ?? ''}');
-      await _remember(addressId, now);
+      await _remember(from, at);
     }
   }
 
-  Future<void> _remember(int addressId, DateTime now) async {
-    await _presence.left(addressId, now);
-    await _reminder.schedule(now.add(questionAfter));
+  Future<void> _remember(int addressId, DateTime at) async {
+    await _presence.left(addressId, at);
+    await _reminder.schedule(at.add(questionAfter));
   }
 }

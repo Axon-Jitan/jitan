@@ -7,12 +7,17 @@ import '../today/today_text.dart';
 import '../today/today_widgets.dart';
 
 /// "Today's breakdown" (Figma `1092:30`): how the day has gone so far, shown
-/// once there is more than one kind of work. No kilometres until a routing
-/// provider is chosen (D23), and only parts that have time in them.
+/// once there is more than one kind of work, with only the parts that have
+/// time in them. Transport says its kilometres (D23); while a trip's distance
+/// isn't known they would be too low, so it says its time.
 class TodayBreakdownCard extends StatelessWidget {
   const TodayBreakdownCard({super.key, required this.breakdown});
 
   final ActivityBreakdown breakdown;
+
+  String _transport(BuildContext context, int minutes) => breakdown.tripsWithoutDistance == 0
+      ? context.t(EmployeeTextKeys.activityKilometres, args: {'km': (breakdown.distanceMetres / 1000).round()})
+      : TodayText.duration(context, minutes);
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +61,7 @@ class TodayBreakdownCard extends StatelessWidget {
                   Expanded(child: Text(context.t(key), style: JitanMobileTextStyles.cardText)),
                   Text(
                     key == EmployeeTextKeys.activityTransport
-                        ? '${context.tPlural(EmployeeTextKeys.activityTrips, breakdown.trips)} · ${TodayText.duration(context, minutes)}'
+                        ? '${context.tPlural(EmployeeTextKeys.activityTrips, breakdown.trips)} · ${_transport(context, minutes)}'
                         : TodayText.duration(context, minutes),
                     style: JitanMobileTextStyles.cardText.copyWith(color: JitanColors.ink),
                   ),

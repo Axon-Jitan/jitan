@@ -22,8 +22,10 @@ Future<void> onGeofenceEvent(GeofenceCallbackParams params) async {
   const store = PlatformSecureStore();
   final session = SessionManager(store);
   if (!await session.restore()) return;
+  final transport = ApiTransport(baseUri: config.apiBaseUri, accessToken: () => session.accessToken);
   final handler = GeofenceEventHandler(
-    api: TimeRegistrationsApi(ApiTransport(baseUri: config.apiBaseUri, accessToken: () => session.accessToken)),
+    api: TimeRegistrationsApi(transport),
+    activities: ActivityApi(transport),
     presence: const WorkplacePresence(store),
     reminder: LocalAwayReminder(),
   );

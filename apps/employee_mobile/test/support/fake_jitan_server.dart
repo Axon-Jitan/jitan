@@ -96,6 +96,7 @@ class FakeJitanServer {
       '/me/language' => _json({'languageCode': null}),
       '/me/today' => _today(request),
       '/me/activity' => _json(MyActivity.disabled.toJson()),
+      '/me/activity/trip' => _trip(request),
       '/me/period' => _period(request),
       '/me/locations' => !_authorized(request)
           ? _error(401, 'unauthenticated')
@@ -260,6 +261,18 @@ class FakeJitanServer {
 
   /// The registration bodies received, in order.
   final registrations = <Map<String, Object?>>[];
+
+  /// `POST /me/activity/trip` bodies received, in order.
+  final trips = <Map<String, Object?>>[];
+
+  /// The day isn't running: the trip is refused.
+  bool refuseTrips = false;
+
+  http.Response _trip(http.Request request) {
+    if (refuseTrips) return _error(409, 'workday_not_running');
+    trips.add(jsonDecode(request.body) as Map<String, Object?>);
+    return _json(MyActivity.disabled.toJson());
+  }
 
   /// The next registration is refused with this error code (e.g.
   /// `validation_failed`).
@@ -510,7 +523,7 @@ class TestHarness {
         locations: LocationsApi(transport),
         watcher: const NoLocationWatcher(),
         presence: WorkplacePresence(store),
-        events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), presence: WorkplacePresence(store), reminder: reminder),
+        events: GeofenceEventHandler(api: TimeRegistrationsApi(transport), activities: ActivityApi(transport), presence: WorkplacePresence(store), reminder: reminder),
       ),
       // 09:00 on Thursday 22 October 2026 unless a test says otherwise.
       clock: clock ?? () => DateTime(2026, 10, 22, 9),
