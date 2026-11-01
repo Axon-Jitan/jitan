@@ -4,10 +4,12 @@ import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
+import '../locations/location_repository.dart';
 import '../time_records/my_day_service.dart';
 import '../time_registration/time_registration_write_repository.dart';
 import '../time_registration/workplace_clock.dart';
 import 'activity_repository.dart';
+import 'trip_kilometres.dart';
 
 /// The day as a sequence of activities (D19, D22, D37). Switching changes
 /// only what the time counts for: it adds a row of its own, and the day's
@@ -21,6 +23,8 @@ class ActivityService {
     required this._activities,
     required this._writes,
     required this._myDay,
+    required this._locations,
+    required this._kilometres,
     required this._audit,
     required this._transactions,
     required this._executor,
@@ -31,6 +35,8 @@ class ActivityService {
   final ActivityRepository _activities;
   final TimeRegistrationWriteRepository _writes;
   final MyDayService _myDay;
+  final LocationRepository _locations;
+  final TripKilometres _kilometres;
   final AuditLogRepository _audit;
   final TransactionRunner _transactions;
   final SqlExecutor _executor;
@@ -65,7 +71,7 @@ class ActivityService {
   /// an activity that doesn't fit it. The same switch again (a retry) changes
   /// nothing.
   Future<MyActivity> switchTo(int userId, SwitchActivityRequest request) async {
-    final at = DateTime.fromMillisecondsSinceEpoch(request.at.millisecondsSinceEpoch ~/ 1000 * 1000, isUtc: true);
+    final at = _toSecond(request.at);
     if (at.isAfter(_now().toUtc().add(_allowedClockSkew))) {
       throw const ApiException.validation(SwitchActivityRequest.fieldAt, 'A switch can’t be in the future.');
     }
@@ -113,6 +119,84 @@ class ActivityService {
           },
         ),
       );
+    });
+    return mine(userId);
+  }
+
+  /// On Automatic: left one location and stayed at another (D40). It is a
+  /// trip when one end is a client project of theirs; moving between other
+  /// workplaces simply continues the day. What they registered themselves
+  /// meanwhile wins, and a retry changes nothing.
+  ///
+  /// 409 while the day isn't running; 400 for an unknown location or times
+  /// that can't be.
+  Future<MyActivity> registerTrip(int userId, TripRequest request) async {
+    final left = _toSecond(request.leftAt), arrived = _toSecond(request.arrivedAt);
+    if (arrived.isAfter(_now().toUtc().add(_allowedClockSkew))) {
+      throw const ApiException.validation(TripRequest.fieldArrivedAt, 'A trip can’t end in the future.');
+    }
+    if (!arrived.isAfter(left)) {
+      throw const ApiException.validation(TripRequest.fieldArrivedAt, 'A trip ends after it starts.');
+    }
+    if (request.fromAddressId == request.toAddressId) {
+      throw const ApiException.validation(TripRequest.fieldTo, 'A trip goes somewhere else.');
+    }
+    for (final (field, id) in [(TripRequest.fieldFrom, request.fromAddressId), (TripRequest.fieldTo, request.toAddressId)]) {
+      final location = await _locations.find(_executor, id);
+      if (location == null || !location.isActive) {
+        throw ApiException.validation(field, 'This location is not recognised.');
+      }
+    }
+    final day = (await _myDay.today(userId)).day;
+    if (day == null || day.finish != null || (day.start == null && day.pending.isEmpty)) {
+      throw const ApiException(409, ApiErrorCode.workdayNotRunning, 'Start the day first.');
+    }
+    final projects = await _activities.projects(_executor, userId);
+    final atClient = _clientProjectAt(projects, request.toAddressId);
+    final project = atClient ?? _clientProjectAt(projects, request.fromAddressId);
+    if (project == null && !_hasClientProject(projects, request.toAddressId, request.fromAddressId)) {
+      return mine(userId);
+    }
+    final companies = await _activities.companies(_executor, userId);
+    final companyId = project?.companyId ?? _defaultCompany(companies)?.id;
+
+    await _transactions.transaction((tx) async {
+      await _writes.lockUser(tx, userId);
+      final (from, to) = _todayBounds();
+      final latest = (await _activities.between(tx, userId, from, to)).lastOrNull;
+      // Already on Transport by their own switch: only the arrival is new.
+      final travelling = latest?.typeName == ActivityRepository.transportType;
+      if (latest != null && !latest.at.isBefore(travelling ? arrived : left)) return;
+      Future<void> add(ActivityKind kind, DateTime at, int addressId, MyProject? forProject) async {
+        final typeId = await _typeOf(tx, kind);
+        final id = await _activities.insert(
+          tx,
+          userId: userId,
+          typeId: typeId,
+          at: at,
+          projectId: forProject?.id,
+          companyId: companyId,
+          addressId: addressId,
+        );
+        await _audit.record(
+          tx,
+          AuditEvent(
+            type: AuditEventType.activitySwitched,
+            actorUserId: userId,
+            references: {
+              EventLogReference.user: userId,
+              EventLogReference.timeReg: id,
+              EventLogReference.timeRegType: typeId,
+              EventLogReference.address: addressId,
+              EventLogReference.project: ?forProject?.id,
+              EventLogReference.company: ?companyId,
+            },
+          ),
+        );
+      }
+
+      if (!travelling) await add(ActivityKind.transport, left, request.fromAddressId, project);
+      await add(atClient == null ? ActivityKind.work : ActivityKind.clientOnSite, arrived, request.toAddressId, atClient);
     });
     return mine(userId);
   }
@@ -166,18 +250,22 @@ class ActivityService {
           if (i == 0 || _kindOf(rows[i - 1].typeName) != ActivityKind.transport) trips++;
       }
     }
+    final distance = await _kilometres.ofDay(rows);
     return ActivityBreakdown(
       clientMinutes: client,
       internalMinutes: internal,
       otherMinutes: other,
       transportMinutes: transport,
       trips: trips,
+      distanceMetres: distance.metres,
+      tripsWithoutDistance: distance.unknown,
     );
   }
 
-  /// Stores what the day starts on, in the transaction of the start. Nothing
-  /// to store without a project or a company.
-  Future<void> dayStarted(SqlExecutor tx, int userId, DateTime at) async {
+  /// Stores what the day starts on, and at [addressId] when that is known, in
+  /// the transaction of the start. Nothing to store without a project or a
+  /// company.
+  Future<void> dayStarted(SqlExecutor tx, int userId, DateTime at, int? addressId) async {
     final projects = await _activities.projects(tx, userId);
     final companies = await _activities.companies(tx, userId);
     final project = _defaultProject(projects);
@@ -195,6 +283,7 @@ class ActivityService {
       at: at,
       projectId: project?.id,
       companyId: project?.companyId ?? company?.id,
+      addressId: addressId,
     );
   }
 
@@ -229,8 +318,22 @@ class ActivityService {
     return used.firstOrNull?.project;
   }
 
+  /// The client project of theirs at [addressId]. Several there: the one
+  /// their default rule picks (D38), which may be none.
+  static MyProject? _clientProjectAt(List<AssignedProject> projects, int addressId) => _defaultProject([
+    for (final p in projects)
+      if (p.addressId == addressId && p.project.isClient) p,
+  ]);
+
+  static bool _hasClientProject(List<AssignedProject> projects, int to, int from) => projects.any(
+    (p) => p.project.isClient && p.project.isCurrent && (p.addressId == to || p.addressId == from),
+  );
+
   static MyCompany? _defaultCompany(List<MyCompany> companies) =>
       companies.where((c) => c.isDefault).firstOrNull ?? (companies.length == 1 ? companies.single : null);
+
+  static DateTime _toSecond(DateTime at) =>
+      DateTime.fromMillisecondsSinceEpoch(at.millisecondsSinceEpoch ~/ 1000 * 1000, isUtc: true);
 
   static MyProject _assigned(List<AssignedProject> projects, int projectId) {
     for (final p in projects) {

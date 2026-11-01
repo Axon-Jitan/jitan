@@ -1,5 +1,6 @@
 import 'package:jitan_models/jitan_models.dart';
 
+import '../activities/trip_kilometres.dart';
 import '../companies/company_repository.dart';
 import '../employees/employee_repository.dart';
 import '../http/api_exception.dart';
@@ -18,6 +19,7 @@ class ReportService {
     required this._employees,
     required this._companies,
     required this._clock,
+    this._kilometres,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -26,6 +28,9 @@ class ReportService {
   final EmployeeRepository _employees;
   final CompanyRepository _companies;
   final WorkplaceClock _clock;
+
+  /// `null` on a database without the proposed tables.
+  final TripKilometres? _kilometres;
   final DateTime Function() _now;
 
   static final _month = RegExp(r'^(\d{4})-(0[1-9]|1[0-2])$');
@@ -67,6 +72,11 @@ class ReportService {
     final employees = await _employees.listForCompanies(companyIds);
     final days = await _days.daysOf(employees, first, last);
     final plans = await _plans.of([for (final e in employees) e.id]);
+    final trips = await _kilometres?.ofUsers(
+      [for (final e in employees) e.id],
+      _clock.utcOf(DateTime(year, number)),
+      _clock.utcOf(DateTime(year, number + 1)),
+    );
     final local = _clock.wallClockOf(_now().toUtc());
     final today = DateTime.utc(local.year, local.month, local.day);
     final end = last.isBefore(today) ? last : today;
@@ -97,6 +107,7 @@ class ReportService {
         );
       }
       if (planned == 0 && reportDays.isEmpty) continue;
+      final travelled = trips?[employee.id];
       rows.add(
         HoursReportEmployee(
           employeeId: employee.id,
@@ -107,6 +118,9 @@ class ReportService {
           registeredMinutes: registered,
           daysToReview: toReview,
           days: reportDays.reversed.toList(),
+          trips: travelled?.trips ?? 0,
+          distanceMetres: travelled?.metres ?? 0,
+          tripsWithoutDistance: travelled?.unknown ?? 0,
         ),
       );
     }

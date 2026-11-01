@@ -145,7 +145,8 @@ class ProjectService {
     }
     final addressId = project.addressId;
     final location = addressId == null ? null : await _locations.find(_executor, addressId);
-    if (location == null || !location.isActive) {
+    // Without a pin there is no geofence, and arriving would go unseen (D40).
+    if (location == null || !location.isActive || location.point == null) {
       throw const ApiException.validation(ProjectRequest.fieldAddress, 'Choose the client address.');
     }
     return project;

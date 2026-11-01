@@ -54,6 +54,9 @@ class HoursReportEmployee {
     required this.days,
     this.firstName,
     this.lastName,
+    this.trips = 0,
+    this.distanceMetres = 0,
+    this.tripsWithoutDistance = 0,
   });
 
   factory HoursReportEmployee.fromJson(Map<String, Object?> json) => HoursReportEmployee(
@@ -65,6 +68,9 @@ class HoursReportEmployee {
     registeredMinutes: json.readInt('registeredMinutes'),
     daysToReview: json.readInt('daysToReview'),
     days: json.readObjectList('days').map(HoursReportDay.fromJson).toList(),
+    trips: json.readOptionalInt('trips') ?? 0,
+    distanceMetres: json.readOptionalInt('distanceMetres') ?? 0,
+    tripsWithoutDistance: json.readOptionalInt('tripsWithoutDistance') ?? 0,
   );
 
   final int employeeId;
@@ -82,6 +88,13 @@ class HoursReportEmployee {
   /// The days with something to show, newest first.
   final List<HoursReportDay> days;
 
+  /// Transports this month and their normal route (D23, D24).
+  final int trips;
+  final int distanceMetres;
+
+  /// Trips whose place or route isn't known: [distanceMetres] leaves them out.
+  final int tripsWithoutDistance;
+
   int get differenceMinutes => registeredMinutes - plannedMinutes;
 
   Map<String, Object?> toJson() => {
@@ -93,6 +106,9 @@ class HoursReportEmployee {
     'registeredMinutes': registeredMinutes,
     'daysToReview': daysToReview,
     'days': [for (final day in days) day.toJson()],
+    'trips': trips,
+    'distanceMetres': distanceMetres,
+    'tripsWithoutDistance': tripsWithoutDistance,
   };
 }
 

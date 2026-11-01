@@ -23,6 +23,7 @@ class AppConfig {
     required this.sessionLifetime,
     required this.passwordHashing,
     this.timeZone = defaultTimeZone,
+    this.mapboxToken,
   });
 
   /// The configuration from one map of settings (tests and tools).
@@ -73,6 +74,7 @@ class AppConfig {
       sessionLifetime: Duration(days: _optionalPositiveInt(sources, 'JITAN_SESSION_LIFETIME_DAYS') ?? 30),
       passwordHashing: _passwordHashing(sources),
       timeZone: sources.value(['JITAN_TIMEZONE']) ?? defaultTimeZone,
+      mapboxToken: sources.value(['JITAN_MAPBOX_TOKEN']),
     );
   }
 
@@ -185,6 +187,10 @@ class AppConfig {
   final String timeZone;
 
   static const defaultTimeZone = 'Europe/Brussels';
+
+  /// For the driving distance of trips (D23, `JITAN_MAPBOX_TOKEN`). Without
+  /// it Jitan still records trips, and their distance stays unknown.
+  final String? mapboxToken;
 
   static String _required(ConfigSources sources, List<String> keys) =>
       sources.value(keys) ?? (throw ConfigException('${keys.join(' or ')} is required.'));

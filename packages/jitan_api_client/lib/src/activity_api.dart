@@ -15,6 +15,10 @@ class ActivityApi {
   Future<MyActivity> switchTo(SwitchActivityRequest request) async =>
       _activity(await _transport.postJson('me/activity', request.toJson()));
 
+  /// On Automatic: left one location and stayed at another (D40).
+  Future<MyActivity> registerTrip(TripRequest request) async =>
+      _activity(await _transport.postJson('me/activity/trip', request.toJson()));
+
   static MyActivity _activity(Map<String, Object?> json) {
     try {
       return MyActivity.fromJson(json);

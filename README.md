@@ -96,11 +96,12 @@ dart run bin/server.dart
   for My QR; `cache-control: no-store`, 404 when the employee has none
 - `GET /locations`, `POST /locations`, `PUT /locations/{id}`, `POST /locations/{id}/deactivate|reactivate`:
   the places where Jitan recognises employees (`tblAddress` + `tblGeofence`, one shared list until GAP-03)
-- `GET /me/locations`: the active locations the employee's phone watches; `POST /me/time-registrations`
+- `GET /me/locations`: the active locations the employee's phone watches, without other people's client projects; `POST /me/time-registrations`
   also takes `method: geofence` with `addressId`, and a start while the day runs adds nothing (D32)
 - `GET /projects`, `GET /project-options`, `POST /companies/{id}/projects`, `GET`/`PUT /companies/{id}/projects/{projectId}`, `PUT …/employees` (proposed tables, local database only)
 - `GET`/`PUT /groups/{id}/travel`: whether a group's travel counts as work (proposed tables)
 - `GET`/`POST /me/activity`: what the employee is on, and switching it (proposed tables, off without them)
+- `POST /me/activity/trip`: on Automatic, left one location and stayed at another (D40)
 - `GET /dashboard?from=&to=` (at most 366 days): today, the totals and the period, per the Dashboard page
 - `GET /reports/hours?month=yyyy-MM&company=`: each employee's month (planned, registered, days to
   review, their days). Calculated when opened, never stored
@@ -172,7 +173,9 @@ flutter run -d chrome --web-port 5000 \
 Company-scoped pages such as Employees use the company chosen in their "Current company"
 field.
 
-`JITAN_MAPBOX_TOKEN` (optional, a Mapbox public token) turns on the map on Locations.
+`JITAN_MAPBOX_TOKEN` (optional, a Mapbox public token) turns on the map on Locations. The API
+reads the same setting for the driving distance of trips (D23); without it trips are still
+recorded and their distance stays unknown.
 `JITAN_API_BASE_URL` is required. Without it the app shows a configuration error instead
 of guessing. The API must list the web origin in `JITAN_CORS_ORIGINS`
 (`.env.example` has `http://localhost:5000`).

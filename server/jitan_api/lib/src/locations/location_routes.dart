@@ -43,8 +43,7 @@ class LocationRoutes {
   }
 
   Future<Response> _recognised(Request request) async {
-    request.identity;
-    return jsonResponse(LocationListResponse(locations: await _locations.recognised()).toJson());
+    return jsonResponse(LocationListResponse(locations: await _locations.recognisedFor(request.identity.userId)).toJson());
   }
 
   Future<Response> _create(Request request) async {

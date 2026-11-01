@@ -167,6 +167,14 @@ It only works for an active employee with no password, so it can't take over an 
 audited as `employee.password.first_set`. The person signs in, and everyone else onboards from
 there. Ask them to change this password in the employee app.
 
+## Kilometres
+
+The API asks Mapbox for the driving distance of trips (D23), so it needs `JITAN_MAPBOX_TOKEN` in
+`/etc/jitan/app.env` and outbound HTTPS to `api.mapbox.com`. Only the coordinates of the two places
+are sent. A token restricted to web addresses is refused for a server, so use one without that
+restriction. Without the setting trips are still recorded, and Reports marks their distance as
+unknown.
+
 ## Serving the HR web
 
 Build it so that nothing loads from Google's servers:

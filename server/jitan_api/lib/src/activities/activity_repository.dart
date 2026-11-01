@@ -5,10 +5,20 @@ import '../employees/membership_filters.dart';
 import '../time_records/time_record_repository.dart';
 
 /// One activity row of `tblTimeReg`.
-typedef ActivityRow = ({int id, String typeName, DateTime at, int? projectId, int? companyId});
+typedef ActivityRow = ({
+  int id,
+  String typeName,
+  DateTime at,
+  int? projectId,
+  int? companyId,
+  // Where it happened, when that is known (D40).
+  int? addressId,
+  // The address of the project.
+  int? projectAddressId,
+});
 
 /// A project with what the employee's history says about it.
-typedef AssignedProject = ({MyProject project, DateTime? lastUsed});
+typedef AssignedProject = ({MyProject project, DateTime? lastUsed, int? addressId});
 
 /// Data access for activities (D19, D22, D37). PROPOSAL
 /// (docs/database/PROPOSED_TABLES.md): uses tables and columns that exist only
@@ -19,6 +29,7 @@ class ActivityRepository {
 
   /// `tblTimeRegType` names of activities start with this.
   static const typePrefix = 'Activity – ';
+  static const transportType = '${typePrefix}Transport';
 
   static const _clientType = 'Client';
   static const _finishedStatus = 'Completed';
@@ -33,7 +44,7 @@ class ActivityRepository {
   /// use first.
   Future<List<AssignedProject>> projects(SqlExecutor executor, int userId) async {
     final rows = await executor.query(
-      'SELECT p.projectID, p.projectName, p.companyID, c.companyName, t.projectTypeName, s.projectStatusName, '
+      'SELECT p.projectID, p.projectName, p.companyID, p.addressID, c.companyName, t.projectTypeName, s.projectStatusName, '
       '(up.userProjectActive = 1 AND up.userProjectMFD = 0) AS assigned, '
       '(SELECT MAX(r.timeRegTimestamp) FROM tblTimeReg r WHERE r.userID = up.userID '
       ' AND r.projectID = p.projectID AND r.timeRegActive = 1 AND r.timeRegMFD = 0) AS lastUsed '
@@ -57,6 +68,7 @@ class ActivityRepository {
             isCurrent: row.readBool('assigned') && row.readString('projectStatusName') != _finishedStatus,
           ),
           lastUsed: row.readOptionalString('lastUsed') == null ? null : row.readUtcDateTime('lastUsed'),
+          addressId: row.readOptionalInt('addressID'),
         ),
     ];
   }
@@ -77,28 +89,62 @@ class ActivityRepository {
   ];
 
   /// [userId]'s activities from [from] up to [to], oldest first.
-  Future<List<ActivityRow>> between(SqlExecutor executor, int userId, DateTime from, DateTime to) async => [
-    for (final row in await executor.query(
-      'SELECT r.timeRegID, t.timeRegTypeName, r.timeRegTimestamp, r.projectID, r.companyID FROM tblTimeReg r '
+  Future<List<ActivityRow>> between(SqlExecutor executor, int userId, DateTime from, DateTime to) async =>
+      (await ofUsers(executor, [userId], from, to))[userId] ?? const [];
+
+  /// The activities of [userIds] from [from] up to [to], oldest first. The
+  /// list holds only numbers from the server, each a bound placeholder.
+  Future<Map<int, List<ActivityRow>>> ofUsers(
+    SqlExecutor executor,
+    List<int> userIds,
+    DateTime from,
+    DateTime to,
+  ) async {
+    if (userIds.isEmpty) return const {};
+    final names = [for (var i = 0; i < userIds.length; i++) ':u$i'];
+    final rows = await executor.query(
+      'SELECT r.userID, r.timeRegID, t.timeRegTypeName, r.timeRegTimestamp, r.projectID, r.companyID, r.addressID, '
+      'p.addressID AS projectAddressID FROM tblTimeReg r '
       'JOIN tblTimeRegType t ON t.timeRegTypeID = r.timeRegTypeID '
-      'WHERE r.userID = :user AND r.timeRegActive = 1 AND r.timeRegMFD = 0 '
+      'LEFT JOIN tblProject p ON p.projectID = r.projectID '
+      'WHERE r.userID IN (${names.join(', ')}) AND r.timeRegActive = 1 AND r.timeRegMFD = 0 '
       'AND t.timeRegTypeName LIKE :prefix AND r.timeRegTimestamp >= :from AND r.timeRegTimestamp < :to '
       'ORDER BY r.timeRegTimestamp, r.timeRegID',
       {
-        'user': userId,
+        for (var i = 0; i < userIds.length; i++) 'u$i': userIds[i],
         'prefix': '$typePrefix%',
         'from': TimeRecordRepository.sqlDateTime(from),
         'to': TimeRecordRepository.sqlDateTime(to),
       },
-    ))
-      (
+    );
+    final byUser = <int, List<ActivityRow>>{};
+    for (final row in rows) {
+      byUser.putIfAbsent(row.readInt('userID'), () => []).add((
         id: row.readInt('timeRegID'),
         typeName: row.readString('timeRegTypeName'),
         at: row.readUtcDateTime('timeRegTimestamp'),
         projectId: row.readOptionalInt('projectID'),
         companyId: row.readOptionalInt('companyID'),
-      ),
-  ];
+        addressId: row.readOptionalInt('addressID'),
+        projectAddressId: row.readOptionalInt('projectAddressID'),
+      ));
+    }
+    return byUser;
+  }
+
+  /// The project addresses that are not [userId]'s: their phone has no reason
+  /// to watch these (D40), and Android allows only so many.
+  Future<Set<int>> otherProjectAddresses(SqlExecutor executor, int userId) async => {
+    for (final row in await executor.query(
+      'SELECT DISTINCT p.addressID FROM tblProject p WHERE p.addressID IS NOT NULL AND p.addressID NOT IN ('
+      'SELECT own.addressID FROM tblProject own '
+      'JOIN tblUserProject up ON up.projectID = own.projectID AND up.userProjectActive = 1 AND up.userProjectMFD = 0 '
+      'JOIN tblProjectStatus s ON s.projectStatusID = own.projectStatusID AND s.projectStatusName <> :finished '
+      'WHERE up.userID = :user AND own.projectActive = 1 AND own.projectMFD = 0 AND own.addressID IS NOT NULL)',
+      {'user': userId, 'finished': _finishedStatus},
+    ))
+      row.readInt('addressID'),
+  };
 
   /// Those of [userIds] with a group whose travel is work (D39). The list
   /// holds only numbers from the server, each a bound placeholder.
@@ -135,15 +181,17 @@ class ActivityRepository {
     required DateTime at,
     int? projectId,
     int? companyId,
+    int? addressId,
   }) async => (await tx.execute(
     'INSERT INTO tblTimeReg (userID, timeRegTypeID, timeRegTimestamp, timeRegManualEntry, projectID, companyID, '
-    'timeRegActive, timeRegMFD) VALUES (:user, :type, :at, 0, :project, :company, 1, 0)',
+    'addressID, timeRegActive, timeRegMFD) VALUES (:user, :type, :at, 0, :project, :company, :address, 1, 0)',
     {
       'user': userId,
       'type': typeId,
       'at': TimeRecordRepository.sqlDateTime(at),
       'project': projectId,
       'company': companyId,
+      'address': addressId,
     },
   )).lastInsertId;
 }

@@ -5,6 +5,7 @@ import 'package:jitan_api/src/app.dart';
 import 'package:jitan_api/src/activities/activity_repository.dart';
 import 'package:jitan_api/src/activities/activity_routes.dart';
 import 'package:jitan_api/src/activities/activity_service.dart';
+import 'package:jitan_api/src/activities/trip_kilometres.dart';
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/auth/authorizer.dart';
 import 'package:jitan_api/src/auth/development_identity_middleware.dart';
@@ -47,6 +48,7 @@ import 'package:jitan_api/src/languages/language_routes.dart';
 import 'package:jitan_api/src/projects/project_repository.dart';
 import 'package:jitan_api/src/projects/project_routes.dart';
 import 'package:jitan_api/src/projects/project_service.dart';
+import 'package:jitan_api/src/routing/driving_distance.dart';
 import 'package:jitan_api/src/reports/dashboard_service.dart';
 import 'package:jitan_api/src/reports/report_routes.dart';
 import 'package:jitan_api/src/reports/report_service.dart';
@@ -201,16 +203,26 @@ Future<void> main() async {
     transactions: db,
   );
 
+  // Off on a database without the proposed tables (PROPOSED_TABLES.md):
+  // registering starts and finishes works the same either way.
+  final hasActivities = await const ActivityRepository().available(db);
+  final mapboxToken = config.mapboxToken;
+  final tripKilometres = hasActivities
+      ? TripKilometres(
+          activities: const ActivityRepository(),
+          locations: const LocationRepository(),
+          distance: mapboxToken == null ? const NoDrivingDistance() : MapboxDrivingDistance(token: mapboxToken),
+          executor: db,
+          clock: workplaceClock,
+        )
+      : null;
   final locationService = LocationService(
     locations: const LocationRepository(),
     audit: const AuditLogRepository(),
     transactions: db,
     executor: db,
+    notWatchedBy: hasActivities ? (userId) => const ActivityRepository().otherProjectAddresses(db, userId) : null,
   );
-
-  // Off on a database without the proposed tables (PROPOSED_TABLES.md):
-  // registering starts and finishes works the same either way.
-  final hasActivities = await const ActivityRepository().available(db);
   final timeRecordService = TimeRecordService(
     records: TimeRecordRepository(db),
     employees: EmployeeRepository(db),
@@ -231,6 +243,8 @@ Future<void> main() async {
           activities: const ActivityRepository(),
           writes: const TimeRegistrationWriteRepository(),
           myDay: myDayService,
+          locations: const LocationRepository(),
+          kilometres: tripKilometres!,
           audit: const AuditLogRepository(),
           transactions: db,
           executor: db,
@@ -380,6 +394,7 @@ Future<void> main() async {
         employees: EmployeeRepository(db),
         companies: companyRepository,
         clock: workplaceClock,
+        kilometres: tripKilometres,
       ),
       DashboardService(
         days: timeRecordService,

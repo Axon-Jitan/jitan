@@ -3,11 +3,14 @@ library;
 
 import 'package:jitan_api/src/activities/activity_repository.dart';
 import 'package:jitan_api/src/activities/activity_service.dart';
+import 'package:jitan_api/src/activities/trip_kilometres.dart';
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
 import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/http/api_exception.dart';
+import 'package:jitan_api/src/locations/location_repository.dart';
+import 'package:jitan_api/src/routing/driving_distance.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
 import 'package:jitan_api/src/time_records/my_day_service.dart';
 import 'package:jitan_api/src/time_records/time_record_repository.dart';
@@ -21,6 +24,12 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
 import '../support/test_database.dart';
+
+/// 42.5 km, whatever the places.
+class _FixedDistance implements DrivingDistance {
+  @override
+  Future<int?> metres(GeoPoint from, GeoPoint to) async => 42500;
+}
 
 /// PROPOSAL (docs/database/PROPOSED_TABLES.md, D37, D38): activities against
 /// the local database. Skipped where the proposed tables are missing. Each
@@ -43,6 +52,8 @@ void main() {
   late int activeStatus;
   late int completedStatus;
   late int address;
+  late int almeco;
+  late int client;
   final users = <int>[];
   final clock = WorkplaceClock('Europe/Brussels');
   final stamp = DateTime.now().microsecondsSinceEpoch % 100000000;
@@ -90,6 +101,35 @@ void main() {
     {'u': user, 'p': project},
   );
 
+  /// A location: an address with a pin and a geofence.
+  Future<int> newLocation(String name, String coordinates) async {
+    final id = (await db.execute(
+      'INSERT INTO tblAddress (addressStreet, addressLogicalName, addressCoordinates, addressActive, addressMFD) '
+      'VALUES (:s, :n, :c, 1, 0)',
+      {'s': 'Street', 'n': '$prefix $name', 'c': coordinates},
+    )).lastInsertId;
+    final geofence = (await db.execute(
+      'INSERT INTO tblGeofence (geofenceRadiusInMeter, geofenceActive, geofenceMFD) VALUES (100, 1, 0)',
+    )).lastInsertId;
+    await db.execute(
+      'INSERT INTO tblGeofenceAddress (geofenceID, addressID, geofenceAddressActive, geofenceAddressMFD) '
+      'VALUES (:g, :a, 1, 0)',
+      {'g': geofence, 'a': id},
+    );
+    return id;
+  }
+
+  Future<void> startAt(int user, DateTime at, int location) => writes.register(
+    user,
+    RegisterTimeRequest(
+      boundary: RegistrationBoundary.start,
+      method: TimeRegistrationMethod.geofence,
+      entry: RegistrationEntry.now,
+      at: at,
+      addressId: location,
+    ),
+  );
+
   Future<void> start(int user, DateTime at) => writes.register(
     user,
     RegisterTimeRequest(
@@ -118,6 +158,14 @@ void main() {
       activities: const ActivityRepository(),
       writes: const TimeRegistrationWriteRepository(),
       myDay: MyDayService(days: days, records: records, plans: WeekPlans(schedules), clock: clock),
+      locations: const LocationRepository(),
+      kilometres: TripKilometres(
+        activities: const ActivityRepository(),
+        locations: const LocationRepository(),
+        distance: _FixedDistance(),
+        executor: db,
+        clock: clock,
+      ),
       audit: const AuditLogRepository(),
       transactions: db,
       executor: db,
@@ -140,6 +188,8 @@ void main() {
       'INSERT INTO tblAddress (addressStreet, addressLogicalName, addressActive, addressMFD) VALUES (:s, :n, 1, 0)',
       {'s': 'Street', 'n': '$prefix site'},
     )).lastInsertId;
+    almeco = await newLocation('almeco', '51.0,4.0');
+    client = await newLocation('client', '51.2,4.4');
   });
 
   tearDownAll(() async {
@@ -157,7 +207,14 @@ void main() {
       }
       await db.execute('DELETE FROM tblProject WHERE companyID IN (:a, :b)', {'a': company, 'b': otherCompany});
       await db.execute('DELETE FROM tblCompany WHERE companyID IN (:a, :b)', {'a': company, 'b': otherCompany});
-      await db.execute('DELETE FROM tblAddress WHERE addressID = :a', {'a': address});
+      for (final location in [almeco, client]) {
+        final links = await db.query('SELECT geofenceID FROM tblGeofenceAddress WHERE addressID = :a', {'a': location});
+        await db.execute('DELETE FROM tblGeofenceAddress WHERE addressID = :a', {'a': location});
+        for (final link in links) {
+          await db.execute('DELETE FROM tblGeofence WHERE geofenceID = :g', {'g': link.readInt('geofenceID')});
+        }
+      }
+      await db.execute('DELETE FROM tblAddress WHERE addressID IN (:a, :b, :c)', {'a': address, 'b': almeco, 'c': client});
     }
     await db.close();
   });
@@ -338,6 +395,131 @@ void main() {
     expect(mine.breakdown.transportMinutes, inInclusiveRange(29, 31));
     expect(mine.breakdown.trips, 1);
     expect(mine.breakdown.isMixed, isTrue);
+  });
+
+  group('D40: a trip is known on arrival', () {
+    TripRequest trip(int from, int to, int leftAgo, int arrivedAgo) =>
+        TripRequest(fromAddressId: from, toAddressId: to, leftAt: moment(leftAgo), arrivedAt: moment(arrivedAgo));
+
+    Future<int> withClientProject() async {
+      final user = await newUser();
+      await assign(user, await newProject(clientType, addressId: client));
+      return user;
+    }
+
+    onlyWithTables('Almeco to a client of theirs: Transport from leaving, on site from arriving, and the kilometres', () async {
+      final user = await withClientProject();
+      await startAt(user, moment(120), almeco);
+
+      final mine = await activities.registerTrip(user, trip(almeco, client, 60, 15));
+
+      expect(mine.current?.kind, ActivityKind.clientOnSite);
+      expect(mine.breakdown.trips, 1);
+      expect(mine.breakdown.transportMinutes, inInclusiveRange(44, 46));
+      expect(mine.breakdown.distanceMetres, 42500);
+      expect(mine.breakdown.tripsWithoutDistance, 0);
+    });
+
+    onlyWithTables('and back: a second trip, working on without a project', () async {
+      final user = await withClientProject();
+      await startAt(user, moment(120), almeco);
+      await activities.registerTrip(user, trip(almeco, client, 100, 90));
+
+      final mine = await activities.registerTrip(user, trip(client, almeco, 30, 15));
+
+      expect(mine.current?.kind, ActivityKind.work);
+      expect(mine.breakdown.trips, 2);
+      expect(mine.breakdown.distanceMetres, 85000);
+    });
+
+    onlyWithTables('sent twice: one trip', () async {
+      final user = await withClientProject();
+      await startAt(user, moment(120), almeco);
+      final request = trip(almeco, client, 60, 15);
+
+      await activities.registerTrip(user, request);
+      final mine = await activities.registerTrip(user, request);
+
+      expect(mine.breakdown.trips, 1);
+      expect(mine.breakdown.distanceMetres, 42500);
+    });
+
+    onlyWithTables('between places that are no client of theirs: no trip', () async {
+      final user = await newUser();
+      await startAt(user, moment(120), almeco);
+
+      final mine = await activities.registerTrip(user, trip(almeco, client, 60, 15));
+
+      expect(mine.breakdown.trips, 0);
+    });
+
+    onlyWithTables('their own switch during the drive wins', () async {
+      final user = await withClientProject();
+      await startAt(user, moment(120), almeco);
+      await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.work, at: moment(30)));
+
+      final mine = await activities.registerTrip(user, trip(almeco, client, 60, 15));
+
+      expect(mine.current?.kind, ActivityKind.work);
+      expect(mine.breakdown.trips, 0);
+    });
+
+    onlyWithTables('already on Transport by hand: only the arrival is added, and it still has its kilometres', () async {
+      final user = await withClientProject();
+      await startAt(user, moment(120), almeco);
+      await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(62)));
+
+      final mine = await activities.registerTrip(user, trip(almeco, client, 60, 15));
+
+      expect(mine.current?.kind, ActivityKind.clientOnSite);
+      expect(mine.breakdown.trips, 1);
+      expect(mine.breakdown.distanceMetres, 42500);
+    });
+
+    onlyWithTables('a manual start: the place is not known, so the trip has no distance', () async {
+      final user = await withClientProject();
+      await start(user, moment(120));
+      final project = (await activities.mine(user)).projects.single;
+      await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(100), projectId: project.id));
+      await db.execute('UPDATE tblProject SET addressID = NULL WHERE projectID = :p', {'p': project.id});
+
+      await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60)));
+      final mine = await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.work, at: moment(30)));
+
+      expect(mine.breakdown.trips, 1);
+      expect(mine.breakdown.distanceMetres, 0);
+      expect(mine.breakdown.tripsWithoutDistance, 1);
+    });
+
+    onlyWithTables('checks: a day not running, an unknown location, times that can’t be', () async {
+      final user = await withClientProject();
+      await expectLater(
+        activities.registerTrip(user, trip(almeco, client, 60, 15)),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 409)),
+      );
+      await startAt(user, moment(120), almeco);
+      for (final request in [
+        trip(almeco, 2147483000, 60, 15),
+        trip(almeco, almeco, 60, 15),
+        trip(almeco, client, 15, 60),
+        trip(almeco, client, 60, -10),
+      ]) {
+        await expectLater(
+          activities.registerTrip(user, request),
+          throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)),
+        );
+      }
+    });
+
+    onlyWithTables('a phone watches its own clients, not everyone’s', () async {
+      final mine = await withClientProject();
+      final other = await newUser();
+
+      const repository = ActivityRepository();
+
+      expect(await repository.otherProjectAddresses(db, mine), isNot(contains(client)));
+      expect(await repository.otherProjectAddresses(db, other), contains(client));
+    });
   });
 
   onlyWithTables('the default company is the marked one, and a switch of company lasts for the day', () async {

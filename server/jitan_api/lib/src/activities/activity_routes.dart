@@ -16,6 +16,8 @@ import 'activity_service.dart';
 ///
 /// - `GET /me/activity`: what they're on, their projects and companies.
 /// - `POST /me/activity` (`SwitchActivityRequest`): switch, the day goes on.
+/// - `POST /me/activity/trip` (`TripRequest`, D40): on Automatic, the phone
+///   left one location and stayed at another.
 /// - `GET` and `PUT /groups/{id}/travel` (`GroupTravel`, D39): whether a
 ///   group's travel counts as work. Consumer: the HR group page.
 ///
@@ -32,6 +34,7 @@ class ActivityRoutes {
   Router get router => Router()
     ..get('/me/activity', _mine)
     ..post('/me/activity', _switch)
+    ..post('/me/activity/trip', _trip)
     ..get(_travel, _groupTravel)
     ..put(_travel, _setGroupTravel);
 
@@ -76,5 +79,18 @@ class ActivityRoutes {
       throw ApiException.badRequest(e.message);
     }
     return jsonResponse((await activities.switchTo(userId, body)).toJson());
+  }
+
+  Future<Response> _trip(Request request) async {
+    final userId = request.identity.userId;
+    final activities = _activities;
+    if (activities == null) throw const ApiException.notFound('Activities are not available.');
+    final TripRequest body;
+    try {
+      body = TripRequest.fromJson(await readJsonObject(request));
+    } on FormatException catch (e) {
+      throw ApiException.badRequest(e.message);
+    }
+    return jsonResponse((await activities.registerTrip(userId, body)).toJson());
   }
 }

@@ -104,6 +104,8 @@ class ActivityBreakdown {
     this.otherMinutes = 0,
     this.transportMinutes = 0,
     this.trips = 0,
+    this.distanceMetres = 0,
+    this.tripsWithoutDistance = 0,
   });
 
   factory ActivityBreakdown.fromJson(Map<String, Object?> json) => ActivityBreakdown(
@@ -112,6 +114,8 @@ class ActivityBreakdown {
     otherMinutes: json.readInt('otherMinutes'),
     transportMinutes: json.readInt('transportMinutes'),
     trips: json.readInt('trips'),
+    distanceMetres: json.readOptionalInt('distanceMetres') ?? 0,
+    tripsWithoutDistance: json.readOptionalInt('tripsWithoutDistance') ?? 0,
   );
 
   final int clientMinutes;
@@ -119,6 +123,12 @@ class ActivityBreakdown {
   final int otherMinutes;
   final int transportMinutes;
   final int trips;
+
+  /// The normal route of each trip (D23), calculated by the server.
+  final int distanceMetres;
+
+  /// Trips whose place or route isn't known: [distanceMetres] leaves them out.
+  final int tripsWithoutDistance;
 
   /// More than one kind of work: worth showing.
   bool get isMixed =>
@@ -130,6 +140,8 @@ class ActivityBreakdown {
     'otherMinutes': otherMinutes,
     'transportMinutes': transportMinutes,
     'trips': trips,
+    'distanceMetres': distanceMetres,
+    'tripsWithoutDistance': tripsWithoutDistance,
   };
 }
 
@@ -218,5 +230,49 @@ class SwitchActivityRequest {
     'at': at.toUtc().toIso8601String(),
     'projectId': projectId,
     'companyId': companyId,
+  };
+}
+
+/// Body of `POST /me/activity/trip` (D40): on Automatic, the employee left one
+/// location and stayed at another. The server decides whether that is a trip.
+class TripRequest {
+  const TripRequest({
+    required this.fromAddressId,
+    required this.toAddressId,
+    required this.leftAt,
+    required this.arrivedAt,
+  });
+
+  factory TripRequest.fromJson(Map<String, Object?> json) => TripRequest(
+    fromAddressId: json.readInt(fieldFrom),
+    toAddressId: json.readInt(fieldTo),
+    leftAt: _moment(json, fieldLeftAt),
+    arrivedAt: _moment(json, fieldArrivedAt),
+  );
+
+  static const fieldFrom = 'fromAddressId';
+  static const fieldTo = 'toAddressId';
+  static const fieldLeftAt = 'leftAt';
+  static const fieldArrivedAt = 'arrivedAt';
+
+  final int fromAddressId;
+  final int toAddressId;
+  final DateTime leftAt;
+  final DateTime arrivedAt;
+
+  /// A moment, not a wall-clock time: it must say its offset.
+  static DateTime _moment(Map<String, Object?> json, String field) {
+    final value = json.readString(field);
+    if (!RegExp(r'(Z|[+-]\d\d:\d\d)$').hasMatch(value)) {
+      throw FormatException('"$field" must be a moment with an offset.');
+    }
+    return DateTime.parse(value).toUtc();
+  }
+
+  Map<String, Object?> toJson() => {
+    fieldFrom: fromAddressId,
+    fieldTo: toAddressId,
+    fieldLeftAt: leftAt.toUtc().toIso8601String(),
+    fieldArrivedAt: arrivedAt.toUtc().toIso8601String(),
   };
 }
