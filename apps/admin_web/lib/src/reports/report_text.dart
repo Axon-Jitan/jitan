@@ -20,6 +20,13 @@ abstract final class ReportText {
   static String difference(BuildContext context, int minutes) =>
       '${minutes > 0 ? '+' : minutes < 0 ? '−' : ''}${hours(context, minutes)}';
 
+  /// "1 268 km"; "—" without trips.
+  static String kilometres(BuildContext context, HoursReportEmployee e) {
+    if (e.trips == 0) return '—';
+    final km = (e.distanceMetres / 1000).round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+$)'), (_) => ' ');
+    return context.t(AdminTextKeys.reportKilometres, args: {'km': km});
+  }
+
   /// "October 2026" for `2026-10`.
   static String month(BuildContext context, String month) {
     final [year, number] = month.split('-');

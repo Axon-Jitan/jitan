@@ -67,6 +67,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('kilometres: a dash without trips, and the note only when a distance is short', (tester) async {
+    await pump(tester);
+    expect(find.text('Kilometres'), findsOneWidget);
+    expect(find.text('—'), findsWidgets);
+    expect(find.textContaining('A distance in amber'), findsNothing);
+
+    api.employees = [reportEmployee(1, 'Kevin', 'De Vos', 'KDV', trips: 40, metres: 1267600, unknownTrips: 1)];
+    await tester.tap(find.text('October 2026').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('September 2026').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 268 km'), findsOneWidget);
+    expect(find.textContaining('A distance in amber'), findsOneWidget);
+  });
+
   testWidgets('the month: totals, one row per employee, and what to review', (tester) async {
     await pump(tester);
 
@@ -147,21 +163,32 @@ void main() {
   });
 
   group('the file', () {
-    final emma = reportEmployee(1, 'Émma', 'Janssens', 'EJA', planned: 9600, registered: 9450, toReview: 1);
+    final emma = reportEmployee(
+      1,
+      'Émma',
+      'Janssens',
+      'EJA',
+      planned: 9600,
+      registered: 9450,
+      toReview: 1,
+      trips: 4,
+      metres: 96450,
+      unknownTrips: 1,
+    );
 
     test('Excel: titles, then hours as numbers', () {
       final book = Excel.decodeBytes(ReportExport.excel(_titles, [emma]));
       final rows = book.tables[book.getDefaultSheet()!]!.rows;
 
       expect(rows[0].first?.value.toString(), 'Code');
-      expect(rows[1].map((c) => c?.value.toString()), ['EJA', 'Émma', 'Janssens', '160', '157.5', '-2.5', '1']);
+      expect(rows[1].map((c) => c?.value.toString()), ['EJA', 'Émma', 'Janssens', '160', '157.5', '-2.5', '1', '4', '96.5', '1']);
     });
 
     test('CSV: semicolons, and é survives', () {
       final bytes = ReportExport.csv(_titles, [emma]);
 
       expect(bytes.take(3), [0xEF, 0xBB, 0xBF]);
-      expect(utf8.decode(bytes.skip(3).toList()).split('\r\n')[1], 'EJA;Émma;Janssens;160.0;157.5;-2.5;1');
+      expect(utf8.decode(bytes.skip(3).toList()).split('\r\n')[1], 'EJA;Émma;Janssens;160.0;157.5;-2.5;1;4;96.5;1');
     });
 
     test('CSV: a name can not become a formula or a new column', () {

@@ -74,6 +74,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       AdminTextKeys.reportFileRegistered,
       AdminTextKeys.reportFileDifference,
       AdminTextKeys.reportFileToReview,
+      AdminTextKeys.reportFileTrips,
+      AdminTextKeys.reportFileKilometres,
+      AdminTextKeys.reportFileUnknownTrips,
     ])
       context.t(key),
   ];

@@ -962,7 +962,13 @@ abstract final class AdminTextKeys {
   static const reportDifference = 'report.difference';
   static const reportToReview = 'report.toReview';
   static const reportColumnEmployee = 'report.column.employee';
+  static const reportColumnKilometres = 'report.column.kilometres';
   static const reportColumnToReview = 'report.column.toReview';
+  static const reportKilometres = 'report.kilometres';
+  static const reportUnknownDistance = 'report.unknownDistance';
+  static const reportFileTrips = 'report.file.trips';
+  static const reportFileKilometres = 'report.file.kilometres';
+  static const reportFileUnknownTrips = 'report.file.unknownTrips';
   static const reportColumnDay = 'report.column.day';
   static const reportColumnStart = 'report.column.start';
   static const reportColumnFinish = 'report.column.finish';

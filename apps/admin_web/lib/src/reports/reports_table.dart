@@ -15,8 +15,9 @@ class ReportsTable extends StatelessWidget {
   final ValueChanged<HoursReportEmployee> onOpen;
 
   /// Column widths proportional to Figma.
-  static const _flexEmployee = 400;
+  static const _flexEmployee = 270;
   static const _flexHours = 150;
+  static const _flexKilometres = 130;
   static const _flexReview = 150;
   static const _flexOpen = 40;
   static const _flexPhoneEmployee = 200;
@@ -34,6 +35,7 @@ class ReportsTable extends StatelessWidget {
         JitanTableColumn(label: t.t(AdminTextKeys.reportPlanned), flex: _flexHours),
         JitanTableColumn(label: t.t(AdminTextKeys.reportRegistered), flex: _flexHours),
         JitanTableColumn(label: t.t(AdminTextKeys.reportDifference), flex: _flexHours),
+        JitanTableColumn(label: t.t(AdminTextKeys.reportColumnKilometres), flex: _flexKilometres),
         JitanTableColumn(label: t.t(AdminTextKeys.reportColumnToReview), flex: _flexReview),
         const JitanTableColumn(label: '', flex: _flexOpen, align: JitanColumnAlign.end),
       ],
@@ -45,6 +47,12 @@ class ReportsTable extends StatelessWidget {
           Text(ReportText.hours(context, e.plannedMinutes), style: JitanTextStyles.tableCell),
           Text(ReportText.hours(context, e.registeredMinutes), style: JitanTextStyles.tableCellStrong),
           Text(ReportText.difference(context, e.differenceMinutes), style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted)),
+          Text(
+            ReportText.kilometres(context, e),
+            style: JitanTextStyles.tableCell.copyWith(
+              color: e.tripsWithoutDistance > 0 ? JitanColors.warning : JitanColors.inkMuted,
+            ),
+          ),
           e.daysToReview == 0
               ? Text('—', style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted))
               : Row(
@@ -84,7 +92,10 @@ class ReportsTable extends StatelessWidget {
   Widget _footer(BuildContext context) => Padding(
     padding: const EdgeInsets.all(16),
     child: Text(
-      context.tPlural(AdminTextKeys.reportEmployees, employees.length),
+      [
+        context.tPlural(AdminTextKeys.reportEmployees, employees.length),
+        if (employees.any((e) => e.tripsWithoutDistance > 0)) context.t(AdminTextKeys.reportUnknownDistance),
+      ].join(' '),
       style: JitanTextStyles.stateMessage.copyWith(fontSize: 12),
     ),
   );

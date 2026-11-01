@@ -19,6 +19,9 @@ abstract final class ReportExport {
     _hours(e.registeredMinutes),
     _hours(e.differenceMinutes),
     e.daysToReview,
+    e.trips,
+    double.parse((e.distanceMetres / 1000).toStringAsFixed(1)),
+    e.tripsWithoutDistance,
   ];
 
   static List<int> excel(List<String> titles, List<HoursReportEmployee> employees) {

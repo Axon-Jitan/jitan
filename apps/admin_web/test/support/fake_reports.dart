@@ -9,6 +9,9 @@ HoursReportEmployee reportEmployee(
   int planned = 9600,
   int registered = 9600,
   int toReview = 0,
+  int trips = 0,
+  int metres = 0,
+  int unknownTrips = 0,
   List<HoursReportDay> days = const [],
 }) => HoursReportEmployee(
   employeeId: id,
@@ -18,6 +21,9 @@ HoursReportEmployee reportEmployee(
   plannedMinutes: planned,
   registeredMinutes: registered,
   daysToReview: toReview,
+  trips: trips,
+  distanceMetres: metres,
+  tripsWithoutDistance: unknownTrips,
   days: days,
 );
 
