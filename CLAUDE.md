@@ -200,9 +200,9 @@ server/    jitan_api
 ```
 
 Dart pub workspace, one lockfile at the root. **Exists today:** `apps/admin_web`,
-`apps/employee_mobile`, `apps/terminal`, `packages/jitan_models`, `packages/jitan_api_client`, `packages/jitan_core`,
+`apps/employee_mobile`, `apps/employee_web`, `apps/terminal`, `packages/jitan_models`, `packages/jitan_api_client`, `packages/jitan_core`,
 `packages/jitan_ui`, `server/jitan_api`.
-The others are created with their first slice (no empty placeholder packages).
+
 
 ### Commands
 
@@ -210,7 +210,7 @@ The others are created with their first slice (no empty placeholder packages).
 flutter pub get                    # repo root, resolves everything
 dart analyze                       # repo root, must report no issues
 cd server/jitan_api && dart test   # also: packages/jitan_models, jitan_api_client, jitan_core
-cd apps/admin_web && flutter test  # also: packages/jitan_ui, apps/employee_mobile, apps/terminal
+cd apps/admin_web && flutter test  # also: packages/jitan_ui, apps/employee_mobile, apps/employee_web, apps/terminal
 cd server/jitan_api && dart run bin/server.dart
 cd apps/admin_web && flutter run -d chrome --web-port 5000 --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080
 ```

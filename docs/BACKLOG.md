@@ -344,6 +344,19 @@ older Reports frames were demos with dummy data.
 
 Later, with IT's update: transports and kilometres (D23), the project report (D24).
 
+## WEB-01: Employee Web
+Status: `DONE` on the approved redesign (Figma `1499:*`, `1501:*`, 2026-11-01)
+
+`apps/employee_web`: sign in, Home, My QR, Switch activity, Period by month, adding a missing time
+(it waits for HR), Projects, Profile, Change password. A phone width gets a menu.
+
+Left out on purpose: Start and Finish, which stay on the phone and the terminal. QR sign-in,
+sessions and trusted devices wait for GAP-05. Registration method and notifications belong to the
+phone. Privacy pages have nothing behind them yet.
+
+Different on purpose: the Sent to HR window uses the shared success window. A day with something
+registered shows its hours on a phone width, and otherwise its status.
+
 ## TERM-01: Terminals
 Status: `IN PROGRESS`: built on proposed tables, local only (GAP-09); needs a real tablet
 
