@@ -97,12 +97,15 @@ class TimeRegistrationWriteRepository {
     required bool manualEntry,
     String? comment,
     int? addressId,
+    int? terminalId,
   }) async =>
       (await tx.execute(
+        // terminalID is a proposed column: named only when there is a terminal.
         'INSERT INTO tblTimeReg (userID, addressID, timeRegTypeID, timeRegTimestamp, timeRegManualEntry, '
-        'timeRegComment, timeRegWhenModified, timeRegActive, timeRegMFD) '
-        'VALUES (:userId, :addressId, :typeId, :at, :manual, :comment, NULL, 1, 0)',
+        'timeRegComment, timeRegWhenModified, timeRegActive, timeRegMFD${terminalId == null ? '' : ', terminalID'}) '
+        'VALUES (:userId, :addressId, :typeId, :at, :manual, :comment, NULL, 1, 0${terminalId == null ? '' : ', :terminal'})',
         {
+          'terminal': ?terminalId,
           'userId': userId,
           'addressId': addressId,
           'typeId': typeId,

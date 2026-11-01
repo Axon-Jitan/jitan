@@ -126,6 +126,22 @@ enum AuditEventType {
   /// HR/Admin took an employee off a project.
   projectEmployeeUnassigned('project.employee.unassigned'),
 
+  /// HR/Admin added a terminal.
+  terminalCreated('terminal.created'),
+
+  /// HR/Admin changed a terminal, or whether employees can scan there.
+  terminalChanged('terminal.changed'),
+
+  /// HR/Admin asked for a QR to connect a tablet.
+  terminalPairingStarted('terminal.pairing.started'),
+
+  /// A tablet connected with that QR; no person did this, so no actor.
+  terminalPaired('terminal.paired'),
+
+  terminalDeactivated('terminal.deactivated'),
+  terminalReactivated('terminal.reactivated'),
+  terminalRemoved('terminal.removed'),
+
   /// The employee switched activity, project or company; the day goes on.
   activitySwitched('time.activity.switched');
 
@@ -161,7 +177,8 @@ enum EventLogReference {
 
   /// PROPOSAL (PROPOSED_TABLES.md): exist only in the local database.
   project('projectID'),
-  userProject('userProjectID');
+  userProject('userProjectID'),
+  terminal('terminalID');
 
   const EventLogReference(this.column);
 
@@ -175,6 +192,7 @@ class AuditEvent {
   final AuditEventType type;
 
   /// `tblEventLog.userIDInit`.
-  final int actorUserId;
+  /// `null`: no person did this (a tablet connecting itself).
+  final int? actorUserId;
   final Map<EventLogReference, int> references;
 }

@@ -12,7 +12,8 @@ import 'session_tokens.dart';
 /// token was issued (a password change ends every session). Anything else is
 /// 401: an invalid token never falls back to another mechanism.
 ///
-/// Requests without an Authorization header pass through unchanged.
+/// Requests without an Authorization header pass through unchanged, and so
+/// does `/terminal/`, where a tablet's own secret is checked by its routes.
 class TokenAuthenticationMiddleware {
   const TokenAuthenticationMiddleware({required this.tokens, required this.users});
 
@@ -20,10 +21,11 @@ class TokenAuthenticationMiddleware {
   final UserRepository users;
 
   static const _scheme = 'bearer ';
+  static const _terminalPath = 'terminal/';
 
   Middleware get middleware => (inner) => (request) async {
         final header = request.headers['authorization'];
-        if (header == null) return inner(request);
+        if (header == null || request.url.path.startsWith(_terminalPath)) return inner(request);
         if (!header.toLowerCase().startsWith(_scheme)) throw _unauthenticated();
 
         final claims = tokens.verify(header.substring(_scheme.length).trim());

@@ -216,6 +216,7 @@ class EmployeeService {
             ApiErrorCode.accountNotReset,
             'Reset account access before generating a recovery QR.',
           ),
+          TemporaryQrPurpose.terminalPairing => const ApiException.badRequest('This QR is for terminals.'),
         };
       }
       await _audit.record(
@@ -224,6 +225,7 @@ class EmployeeService {
           type: switch (purpose) {
             TemporaryQrPurpose.onboarding => AuditEventType.onboardingQrGenerated,
             TemporaryQrPurpose.recovery => AuditEventType.recoveryQrGenerated,
+            TemporaryQrPurpose.terminalPairing => throw const ApiException.badRequest('This QR is for terminals.'),
           },
           actorUserId: actorUserId,
           references: {EventLogReference.user: userId, EventLogReference.company: companyId},

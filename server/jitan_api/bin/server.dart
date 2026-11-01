@@ -49,6 +49,11 @@ import 'package:jitan_api/src/projects/project_repository.dart';
 import 'package:jitan_api/src/projects/project_routes.dart';
 import 'package:jitan_api/src/projects/project_service.dart';
 import 'package:jitan_api/src/routing/driving_distance.dart';
+import 'package:jitan_api/src/terminals/terminal_device_routes.dart';
+import 'package:jitan_api/src/terminals/terminal_device_service.dart';
+import 'package:jitan_api/src/terminals/terminal_repository.dart';
+import 'package:jitan_api/src/terminals/terminal_routes.dart';
+import 'package:jitan_api/src/terminals/terminal_service.dart';
 import 'package:jitan_api/src/reports/dashboard_service.dart';
 import 'package:jitan_api/src/reports/report_routes.dart';
 import 'package:jitan_api/src/reports/report_service.dart';
@@ -367,6 +372,40 @@ Future<void> main() async {
       ),
     ),
     activities: ActivityRoutes(authorizer, activityService),
+    terminals: TerminalRoutes(
+      authorizer,
+      hasActivities
+          ? TerminalService(
+              terminals: const TerminalRepository(),
+              companies: companyRepository,
+              locations: const LocationRepository(),
+              temporaryQr: temporaryQr,
+              audit: const AuditLogRepository(),
+              transactions: db,
+              executor: db,
+            )
+          : null,
+    ),
+    terminalDevices: TerminalDeviceRoutes(
+      activityService == null
+          ? null
+          : TerminalDeviceService(
+              terminals: const TerminalRepository(),
+              temporaryQr: temporaryQr,
+              writes: TimeRegistrationWriteService(
+                transactions: db,
+                rounding: RegistrationRounding(ScheduleRepository(db)),
+                clock: workplaceClock,
+                onDayStart: activityService.dayStarted,
+              ),
+              activities: activityService,
+              myDay: myDayService,
+              audit: const AuditLogRepository(),
+              transactions: db,
+              executor: db,
+              clock: workplaceClock,
+            ),
+    ),
     schedules: ScheduleRoutes(
       authorizer,
       scheduleService,

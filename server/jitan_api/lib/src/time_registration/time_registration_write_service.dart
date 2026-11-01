@@ -42,7 +42,7 @@ class TimeRegistrationWriteService {
 
   /// Stores what the day starts on (D37), in the same transaction; `null` on
   /// a database without the proposed tables.
-  final Future<void> Function(SqlExecutor tx, int userId, DateTime at, int? addressId)? _onDayStart;
+  final Future<void> Function(SqlExecutor tx, int userId, DateTime at, int? addressId, int? companyId)? _onDayStart;
   final DateTime Function() _now;
 
   /// How far ahead of the server's clock a time may be (a phone's clock may
@@ -65,7 +65,17 @@ class TimeRegistrationWriteService {
   ///   stored the first time; [created] is then `false`
   /// - a geofence start while the day is already running (back from a short
   ///   exit, or at another location: D32) adds nothing and returns that start
-  Future<({RegisteredTime registered, bool created})> register(int userId, RegisterTimeRequest request) async {
+  /// - from a terminal: [terminalId] says which took the scan, and [companyId]
+  ///   what the day counts for
+  Future<({RegisteredTime registered, bool created})> register(
+    int userId,
+    RegisterTimeRequest request, {
+    int? terminalId,
+    int? companyId,
+  }) async {
+    if (request.method == TimeRegistrationMethod.qr && terminalId == null) {
+      throw const ApiException.validation(RegisterTimeRequest.fieldMethod, 'A QR registration comes from a terminal.');
+    }
     final reason = _reasonOf(request);
     final at = DateTime.fromMillisecondsSinceEpoch(request.at.millisecondsSinceEpoch ~/ 1000 * 1000, isUtc: true);
     if (at.isAfter(_now().toUtc().add(allowedClockSkew))) {
@@ -88,7 +98,7 @@ class TimeRegistrationWriteService {
       final actualType = await _type(tx, TimeRegTypeNames.actual(request.boundary, request.method));
       final roundedType = await _type(tx, TimeRegTypeNames.rounded(request.boundary));
       await _repository.lockUser(tx, userId);
-      final addressId = geofence ? await _locationOf(tx, request) : null;
+      final addressId = geofence || request.addressId != null && terminalId != null ? await _locationOf(tx, request) : null;
 
       final existing = await _repository.findSame(tx, userId, actualType, at);
       final pending = request.entry == RegistrationEntry.corrected;
@@ -138,6 +148,7 @@ class TimeRegistrationWriteService {
         manualEntry: request.entry != RegistrationEntry.now,
         comment: reason,
         addressId: addressId,
+        terminalId: terminalId,
       );
       // D31: a correction waits for HR; it gets its rounded row when approved.
       if (pending) {
@@ -179,7 +190,7 @@ class TimeRegistrationWriteService {
           },
         ),
       );
-      if (request.boundary == RegistrationBoundary.start) await _onDayStart?.call(tx, userId, at, addressId);
+      if (request.boundary == RegistrationBoundary.start) await _onDayStart?.call(tx, userId, at, addressId, companyId);
       return (
         registered: RegisteredTime(
           boundary: request.boundary,

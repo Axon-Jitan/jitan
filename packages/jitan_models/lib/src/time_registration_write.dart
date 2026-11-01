@@ -22,7 +22,10 @@ enum TimeRegistrationMethod {
   manual('manual'),
 
   /// Detected by the phone at a location: needs [RegisterTimeRequest.addressId].
-  geofence('geofence');
+  geofence('geofence'),
+
+  /// Scanned at a terminal; only the server's terminal code writes this.
+  qr('qr');
 
   const TimeRegistrationMethod(this.wireName);
 

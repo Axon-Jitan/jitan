@@ -7,7 +7,10 @@ enum TemporaryQrPurpose {
   onboarding('onboarding'),
 
   /// Setting a new password after HR/Admin "Reset account access".
-  recovery('recovery');
+  recovery('recovery'),
+
+  /// Connecting a tablet to a terminal: the id it carries is the terminal's.
+  terminalPairing('terminal_pairing');
 
   const TemporaryQrPurpose(this.wireName);
 

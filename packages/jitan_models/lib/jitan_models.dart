@@ -21,6 +21,7 @@ export 'src/location.dart';
 export 'src/onboarding.dart';
 export 'src/phone_numbers.dart';
 export 'src/project.dart';
+export 'src/terminal.dart';
 export 'src/schedule.dart';
 export 'src/schedule_requests.dart';
 export 'src/temporary_qr.dart';

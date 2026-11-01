@@ -10,6 +10,8 @@ import 'employees/employee_routes.dart';
 import 'groups/group_routes.dart';
 import 'locations/location_routes.dart';
 import 'projects/project_routes.dart';
+import 'terminals/terminal_device_routes.dart';
+import 'terminals/terminal_routes.dart';
 import 'reports/report_routes.dart';
 import 'health/health_routes.dart';
 import 'http/api_exception.dart';
@@ -46,6 +48,8 @@ Handler buildApp({
   required LocationRoutes locations,
   required ProjectRoutes projects,
   required ActivityRoutes activities,
+  required TerminalRoutes terminals,
+  required TerminalDeviceRoutes terminalDevices,
   required ReportRoutes reports,
   required OnboardingRoutes onboarding,
   required RecoveryRoutes recovery,
@@ -64,6 +68,8 @@ Handler buildApp({
     ..mount('/', locations.router.call)
     ..mount('/', projects.router.call)
     ..mount('/', activities.router.call)
+    ..mount('/', terminals.router.call)
+    ..mount('/', terminalDevices.router.call)
     ..mount('/', reports.router.call)
     ..mount('/', languages.authenticatedRouter.call)
     ..mount('/', me.router.call)

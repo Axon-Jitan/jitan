@@ -78,4 +78,10 @@ enum Permission {
 
   /// Add and change projects, and choose who works on them (company-scoped).
   manageProjects,
+
+  /// See a company's terminals (company-scoped).
+  viewTerminals,
+
+  /// Add, change, connect and remove terminals (company-scoped).
+  manageTerminals,
 }

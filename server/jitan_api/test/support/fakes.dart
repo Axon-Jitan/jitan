@@ -728,6 +728,7 @@ class FakeTimeRegistrationWriteRepository implements TimeRegistrationWriteReposi
     required bool manualEntry,
     String? comment,
     int? addressId,
+    int? terminalId,
   }) async {
     final id = _nextId++;
     rows.add((id: id, userId: userId, typeId: typeId, at: at, manualEntry: manualEntry, comment: comment, addressId: addressId));
@@ -823,6 +824,7 @@ class FakeTimeRecordWrites implements TimeRegistrationWriteRepository {
     required bool manualEntry,
     String? comment,
     int? addressId,
+    int? terminalId,
   }) async {
     final id = _store.nextId;
     final name = _types.entries.firstWhere((e) => e.value == typeId).key;

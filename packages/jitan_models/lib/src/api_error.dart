@@ -54,6 +54,18 @@ abstract final class ApiErrorCode {
   /// An activity can only be switched while the day is running.
   static const workdayNotRunning = 'workday_not_running';
 
+  /// A terminal: HR deactivated it or switched scanning off.
+  static const terminalOff = 'terminal_off';
+
+  /// A terminal: this is no employee's Terminal QR.
+  static const qrNotRecognised = 'qr_not_recognised';
+
+  /// A terminal: the QR's owner is not active.
+  static const employeeUnavailable = 'employee_unavailable';
+
+  /// A terminal: the QR's owner doesn't belong to its company.
+  static const scanNotAllowed = 'scan_not_allowed';
+
   /// Another location (active or inactive) already has this name.
   static const duplicateLocationName = 'duplicate_location_name';
 

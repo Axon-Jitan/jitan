@@ -47,6 +47,15 @@ void main() {
     expect(rows.first.manualEntry, false);
   });
 
+  test('a phone can’t claim a terminal scan', () async {
+    final app = await _app();
+
+    final refused = await _error(app, _body(method: 'qr'));
+
+    expect((refused['status'], refused['field']), (400, 'method'));
+    expect(app.timeRegistrationWrites.rows, isEmpty);
+  });
+
   test('a day with no schedule starts too (D33)', () async {
     final app = await _app();
 

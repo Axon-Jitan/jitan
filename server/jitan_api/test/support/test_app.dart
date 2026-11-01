@@ -30,6 +30,8 @@ import 'package:jitan_api/src/languages/user_language_service.dart';
 import 'package:jitan_api/src/locations/location_routes.dart';
 import 'package:jitan_api/src/locations/location_service.dart';
 import 'package:jitan_api/src/activities/activity_routes.dart';
+import 'package:jitan_api/src/terminals/terminal_device_routes.dart';
+import 'package:jitan_api/src/terminals/terminal_routes.dart';
 import 'package:jitan_api/src/projects/project_routes.dart';
 import 'package:jitan_api/src/projects/project_service.dart';
 import 'package:jitan_api/src/reports/dashboard_service.dart';
@@ -191,6 +193,8 @@ class TestApp {
       ),
       timeRecords: TimeRecordRoutes(Authorizer(permissions), timeRecordService, timeCorrections, myDays),
       activities: ActivityRoutes(Authorizer(permissions), null),
+      terminals: TerminalRoutes(Authorizer(permissions), null),
+      terminalDevices: const TerminalDeviceRoutes(null),
       projects: ProjectRoutes(
         Authorizer(permissions),
         ProjectService(

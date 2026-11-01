@@ -9,6 +9,7 @@ abstract final class TimeRegTypeNames {
       '${_boundary(boundary)} – actual – ${switch (method) {
         TimeRegistrationMethod.manual => 'Manual',
         TimeRegistrationMethod.geofence => 'Geofence',
+        TimeRegistrationMethod.qr => 'QR',
       }}';
 
   /// "Start – rounded" / "Finish – rounded": the time rounded with the

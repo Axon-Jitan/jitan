@@ -263,14 +263,14 @@ class ActivityService {
   }
 
   /// Stores what the day starts on, and at [addressId] when that is known, in
-  /// the transaction of the start. Nothing to store without a project or a
-  /// company.
-  Future<void> dayStarted(SqlExecutor tx, int userId, DateTime at, int? addressId) async {
+  /// the transaction of the start. A terminal says the company with
+  /// [companyId]. Nothing to store without a project or a company.
+  Future<void> dayStarted(SqlExecutor tx, int userId, DateTime at, int? addressId, int? companyId) async {
     final projects = await _activities.projects(tx, userId);
     final companies = await _activities.companies(tx, userId);
     final project = _defaultProject(projects);
     final company = _defaultCompany(companies);
-    if (project == null && company == null) return;
+    if (project == null && company == null && companyId == null) return;
     final kind = project == null
         ? ActivityKind.work
         : project.isClient
@@ -282,7 +282,7 @@ class ActivityService {
       typeId: await _typeOf(tx, kind),
       at: at,
       projectId: project?.id,
-      companyId: project?.companyId ?? company?.id,
+      companyId: project?.companyId ?? companyId ?? company?.id,
       addressId: addressId,
     );
   }
