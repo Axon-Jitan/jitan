@@ -344,6 +344,22 @@ older Reports frames were demos with dummy data.
 
 Later, with IT's update: transports and kilometres (D23), the project report (D24).
 
+## TERM-01: Terminals
+Status: `IN PROGRESS`: built on proposed tables, local only (GAP-09); needs a real tablet
+
+HR manages terminals (Figma `1488:2` …, `1494:*`) and connects a tablet with a temporary QR. The
+tablet app (`apps/terminal`, Figma `1489:*`, `1494:*`) is a scanner from the first screen, so
+nobody taps anything: the first scan of the day checks in, the next checks out (D41). No offline
+scanning in this version (D42). Visitors are left out of this version.
+
+The approved redesign replaces the older Terminal and HR Terminals frames. Different on purpose:
+the Connected window uses the shared success window, and on a phone width Deactivate and Remove
+sit under the details because they don't fit beside the buttons. "This terminal is switched off"
+has no frame of its own: it uses the layout of "That didn't scan".
+
+Not seen on a real device: scanning itself, with the front camera. Which camera a tablet uses
+depends on how it is mounted, and it is the front camera for now.
+
 ## LOC-02: Phone detection (phase 4, slice 2)
 Status: `IN PROGRESS`: built; **leaving not yet seen on a device**, a real Android phone is needed
 

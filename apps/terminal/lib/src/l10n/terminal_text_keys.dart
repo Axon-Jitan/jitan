@@ -1,0 +1,52 @@
+/// The keys of the terminal's words: meaning, not copy. English is in
+/// `builtInEnglish`.
+abstract final class TerminalTextKeys {
+  static const clockDate = 'tablet.clockDate';
+  static const scanTitle = 'tablet.scan.title';
+  static const scanHint = 'tablet.scan.hint';
+  static const scanFailedTitle = 'tablet.scan.failed.title';
+  static const scanFailedHint = 'tablet.scan.failed.hint';
+  static const scanOffTitle = 'tablet.scan.off.title';
+  static const scanOffHint = 'tablet.scan.off.hint';
+  static const cameraUnavailable = 'tablet.camera.unavailable';
+  static const camera = 'tablet.camera';
+  static const morning = 'tablet.greeting.morning';
+  static const afternoon = 'tablet.greeting.afternoon';
+  static const evening = 'tablet.greeting.evening';
+  static const hello = 'tablet.greeting.hello';
+  static const checkedInAt = 'tablet.checkedInAt';
+  static const goodbye = 'tablet.goodbye';
+  static const goodbyeName = 'tablet.goodbye.name';
+  static const checkedOutAt = 'tablet.checkedOutAt';
+  static const alreadyIn = 'tablet.already.in';
+  static const alreadyInSince = 'tablet.already.in.since';
+  static const alreadyOut = 'tablet.already.out';
+  static const alreadyOutAt = 'tablet.already.out.at';
+  static const backSoon = 'tablet.backSoon';
+  static const change = 'tablet.change';
+  static const chooseTitle = 'tablet.choose.title';
+  static const chooseFailed = 'tablet.choose.failed';
+  static const keepProject = 'tablet.choose.keep';
+  static const keepCurrent = 'tablet.choose.keepCurrent';
+  static const onSite = 'tablet.kind.onSite';
+  static const internal = 'tablet.kind.internal';
+  static const transport = 'tablet.kind.transport';
+  static const transportHint = 'tablet.kind.transportHint';
+  static const projectDetail = 'tablet.projectDetail';
+  static const seeHrTitle = 'tablet.seeHr.title';
+  static const seeHrText = 'tablet.seeHr.text';
+  static const back = 'tablet.back';
+  static const noConnectionTitle = 'tablet.noConnection.title';
+  static const noConnectionText = 'tablet.noConnection.text';
+  static const tryAgain = 'tablet.tryAgain';
+  static const connectTitle = 'tablet.connect.title';
+  static const connectText = 'tablet.connect.text';
+  static const connectExpired = 'tablet.connect.expired';
+  static const connectExpiredText = 'tablet.connect.expiredText';
+  static const connectUnreadable = 'tablet.connect.unreadable';
+  static const connectUnreadableText = 'tablet.connect.unreadableText';
+  static const newTablet = 'tablet.newTablet';
+  static const readyTitle = 'tablet.ready.title';
+  static const readyPlace = 'tablet.ready.place';
+  static const configError = 'tablet.configError';
+}

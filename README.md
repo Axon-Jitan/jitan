@@ -102,6 +102,9 @@ dart run bin/server.dart
 - `GET`/`PUT /groups/{id}/travel`: whether a group's travel counts as work (proposed tables)
 - `GET`/`POST /me/activity`: what the employee is on, and switching it (proposed tables, off without them)
 - `POST /me/activity/trip`: on Automatic, left one location and stayed at another (D40)
+- `GET /terminal-options`, `GET /terminals`, `POST /companies/{id}/terminals`, `GET`/`PUT …/{terminalId}`,
+  `PUT …/{terminalId}/scanning`, `POST …/{terminalId}/deactivate`, `/reactivate`, `/remove`, `/pairing-qr`: HR/Admin
+- `POST /terminal/pair`, `GET /terminal/me`, `POST /terminal/scan`, `POST /terminal/switch`: the tablet itself
 - `GET /dashboard?from=&to=` (at most 366 days): today, the totals and the period, per the Dashboard page
 - `GET /reports/hours?month=yyyy-MM&company=`: each employee's month (planned, registered, days to
   review, their days). Calculated when opened, never stored

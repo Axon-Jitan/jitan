@@ -68,8 +68,8 @@ The ERD is the source of truth. **Never** create migrations, add tables or colum
 columns, repurpose a field, or invent backend-only storage to cover a missing
 relationship. Schema changes happen only after discussion with IT and explicit approval.
 
-**Approved exception (product owner, 2026-10-31):** projects, transport, terminals and
-visitors are built on proposed tables, in `dev/local-db/proposals/` and the local database
+**Approved exception (product owner, 2026-10-31):** projects, transport and terminals
+are built on proposed tables (visitors are left out of this version, 2026-11-01), in `dev/local-db/proposals/` and the local database
 only, each recorded in [PROPOSED_TABLES.md](docs/database/PROPOSED_TABLES.md) for IT to add.
 `schema.sql` and IT's databases are never touched. Anything else still follows the steps below.
 
@@ -188,6 +188,7 @@ after an HR/Admin reset (newest access event = `employee.access.reset`, CLARIFY-
 | Temporary onboarding QR | HR/Admin, on demand (`…/onboarding-qr`) | the employee, purpose `onboarding` | first setup on the mobile app | temporary store only, 10 min, single use |
 | Temporary recovery QR | HR/Admin after Reset account access (`…/recovery-qr`) | the employee, purpose `recovery` | setting a new password | temporary store only, 10 min, single use |
 | Terminal QR | system, at employee creation | the employee | Jitan Terminal check-in/out | `tblUser.userQRcode` |
+| Terminal pairing QR | HR/Admin, on demand (`…/terminals/{id}/pairing-qr`) | the **terminal**, purpose `terminal_pairing` | connecting a tablet | temporary store only, 10 min, single use |
 | Web-login QR | browser session | the *browser*, not the employee | approving a web sign-in from the mobile app | **GAP-05** |
 
 ## Layout
@@ -199,7 +200,7 @@ server/    jitan_api
 ```
 
 Dart pub workspace, one lockfile at the root. **Exists today:** `apps/admin_web`,
-`apps/employee_mobile`, `packages/jitan_models`, `packages/jitan_api_client`, `packages/jitan_core`,
+`apps/employee_mobile`, `apps/terminal`, `packages/jitan_models`, `packages/jitan_api_client`, `packages/jitan_core`,
 `packages/jitan_ui`, `server/jitan_api`.
 The others are created with their first slice (no empty placeholder packages).
 
@@ -209,7 +210,7 @@ The others are created with their first slice (no empty placeholder packages).
 flutter pub get                    # repo root, resolves everything
 dart analyze                       # repo root, must report no issues
 cd server/jitan_api && dart test   # also: packages/jitan_models, jitan_api_client, jitan_core
-cd apps/admin_web && flutter test  # also: packages/jitan_ui, apps/employee_mobile
+cd apps/admin_web && flutter test  # also: packages/jitan_ui, apps/employee_mobile, apps/terminal
 cd server/jitan_api && dart run bin/server.dart
 cd apps/admin_web && flutter run -d chrome --web-port 5000 --dart-define=JITAN_API_BASE_URL=http://127.0.0.1:8080
 ```
@@ -226,7 +227,8 @@ CORS, JSON, `pathId` for path ids), `auth/` (`RequestIdentity`, `Authorizer`,
 `Authorizer.require(request, Permission.x)` first. Exceptions, each documented in its
 routes file: `/me…` endpoints act only on the signed-in user (identity, no permission),
 and public endpoints need none (`/health`, `/languages`, `/translations`,
-`/auth/sign-in`, `/onboarding/*`, `/recovery/*`, which are authorized by a temporary QR).
+`/auth/sign-in`, `/onboarding/*`, `/recovery/*`, which are authorized by a temporary QR, and
+`/terminal/pair`, which is too).
 Add the permission to `auth/permission.dart`, and add any new column to
 `test/integration/schema_contract_test.dart`.
 
@@ -251,7 +253,7 @@ named so it can be found:
 
 Backend modules today (routes / service / repository where they have endpoints and data):
 `audit auth companies employees groups health languages locations onboarding recovery reports routing
-schedules temporary_qr time_registration users`. `audit` is the event-log writer (there is no `events` module).
+schedules temporary_qr terminals time_registration users`. `audit` is the event-log writer (there is no `events` module).
 `schedules`: a group's schedules are derived from its employees who are only in that group
 (type and day rows found by name, `schedules/schedule_names.dart`); saving gives fresh rows
 to those employees and to employees in several groups whose schedule follows the group,
@@ -261,7 +263,10 @@ no schedule; several: kept while it belongs to one, else HR picks "Schedules com
 `work_sessions`.
 
 Modules waiting on ERD gaps, not to be built until resolved: `devices` (GAP-05),
-`terminals` (GAP-09), `visitors` (GAP-10), `exceptions` (GAP-08, detection-only is fine).
+`exceptions` (GAP-08, detection-only is fine). `visitors` is left out of this version.
+`terminals` runs on proposed tables. A tablet proves itself with its own secret
+(`Authorization: Bearer`, stored hashed), which `TokenAuthenticationMiddleware` leaves to
+the `/terminal/` routes.
 `policies` from the roadmap is **not** a module: its concerns live in `schedules`,
 `geofences` and `employees` (groups).
 
