@@ -4,7 +4,6 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
-import '../widgets/mobile_widgets.dart';
 
 /// "My QR" (Figma 50:67): the employee's permanent Terminal QR
 /// (`tblUser.userQRcode`) to present at a Jitan Terminal. A credential: it

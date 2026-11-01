@@ -50,17 +50,6 @@ class OnboardingPage extends StatelessWidget {
   );
 }
 
-/// The "jitan." wordmark. A brand name: never translated.
-class JitanWordmark extends StatelessWidget {
-  const JitanWordmark({super.key, this.style});
-
-  final TextStyle? style;
-
-  @override
-  Widget build(BuildContext context) =>
-      ExcludeSemantics(child: Text('jitan.', style: style ?? JitanMobileTextStyles.logo));
-}
-
 /// A Figma illustration: 210 px high, radius 22, image scaled and offset the
 /// way the Figma frame crops it.
 class OnboardingIllustration extends StatelessWidget {

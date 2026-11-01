@@ -5,7 +5,6 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
 import 'time_picker_card.dart';
-import '../widgets/mobile_widgets.dart';
 import 'today_widgets.dart';
 
 /// "When did you arrive?" / "When did you finish?" (Figma 1436:2, 1436:43,

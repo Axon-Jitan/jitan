@@ -6,7 +6,6 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
 import '../today/today_text.dart';
-import '../widgets/mobile_widgets.dart';
 import 'day_details_screen.dart';
 import 'period_controller.dart';
 import 'period_text.dart';
