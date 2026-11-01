@@ -44,13 +44,15 @@ class ActivityRepository {
   /// use first.
   Future<List<AssignedProject>> projects(SqlExecutor executor, int userId) async {
     final rows = await executor.query(
-      'SELECT p.projectID, p.projectName, p.companyID, p.addressID, c.companyName, t.projectTypeName, s.projectStatusName, '
+      'SELECT p.projectID, p.projectName, p.projectReference, p.projectStartDate, p.projectEndDate, p.companyID, p.addressID, '
+      'a.addressLogicalName, c.companyName, t.projectTypeName, s.projectStatusName, '
       '(up.userProjectActive = 1 AND up.userProjectMFD = 0) AS assigned, '
       '(SELECT MAX(r.timeRegTimestamp) FROM tblTimeReg r WHERE r.userID = up.userID '
       ' AND r.projectID = p.projectID AND r.timeRegActive = 1 AND r.timeRegMFD = 0) AS lastUsed '
       'FROM tblUserProject up '
       'JOIN tblProject p ON p.projectID = up.projectID AND p.projectActive = 1 AND p.projectMFD = 0 '
       'JOIN tblCompany c ON c.companyID = p.companyID '
+      'LEFT JOIN tblAddress a ON a.addressID = p.addressID '
       'JOIN tblProjectType t ON t.projectTypeID = p.projectTypeID '
       'JOIN tblProjectStatus s ON s.projectStatusID = p.projectStatusID '
       'WHERE up.userID = :user ORDER BY lastUsed DESC, p.projectName, p.projectID',
@@ -66,12 +68,19 @@ class ActivityRepository {
             companyName: row.readString('companyName'),
             isClient: row.readString('projectTypeName') == _clientType,
             isCurrent: row.readBool('assigned') && row.readString('projectStatusName') != _finishedStatus,
+            statusName: row.readString('projectStatusName'),
+            reference: row.readOptionalString('projectReference'),
+            addressName: row.readOptionalString('addressLogicalName'),
+            startDate: _date(row.readOptionalDateTime('projectStartDate')),
+            endDate: _date(row.readOptionalDateTime('projectEndDate')),
           ),
           lastUsed: row.readOptionalString('lastUsed') == null ? null : row.readUtcDateTime('lastUsed'),
           addressId: row.readOptionalInt('addressID'),
         ),
     ];
   }
+
+  static String? _date(DateTime? value) => value == null ? null : TimeRecordDay.dateText(value);
 
   /// The active companies of [userId], by name.
   Future<List<MyCompany>> companies(SqlExecutor executor, int userId) async => [

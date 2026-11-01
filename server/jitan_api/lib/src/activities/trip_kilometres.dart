@@ -54,6 +54,17 @@ class TripKilometres {
     return trips;
   }
 
+  /// Each trip of one day's activities with its distance, in order.
+  Future<List<({Trip trip, int? metres})>> distancesOf(List<ActivityRow> day) async {
+    final points = await _points();
+    return [for (final trip in tripsOf(day)) (trip: trip, metres: await _metres(trip, points))];
+  }
+
+  Future<int?> _metres(Trip trip, Map<int, GeoPoint> points) async {
+    final from = points[trip.from], to = points[trip.to];
+    return from == null || to == null ? null : _distance.metres(from, to);
+  }
+
   /// The totals of one day's activities.
   Future<TripTotals> ofDay(List<ActivityRow> day) async => _total(tripsOf(day), await _points());
 
@@ -81,8 +92,7 @@ class TripKilometres {
   Future<TripTotals> _total(List<Trip> trips, Map<int, GeoPoint> points) async {
     var metres = 0, unknown = 0;
     for (final trip in trips) {
-      final from = points[trip.from], to = points[trip.to];
-      final distance = from == null || to == null ? null : await _distance.metres(from, to);
+      final distance = await _metres(trip, points);
       if (distance == null) {
         unknown++;
       } else {

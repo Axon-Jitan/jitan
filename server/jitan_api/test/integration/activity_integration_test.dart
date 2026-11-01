@@ -235,6 +235,8 @@ void main() {
     expect(mine.current?.project?.id, project);
     expect(mine.current?.kind, ActivityKind.clientOnSite);
     expect(mine.current?.company?.id, company);
+    expect(mine.projects.single.statusName, 'Active');
+    expect(mine.projects.single.startDate, '2026-01-01');
   });
 
   onlyWithTables('several projects: the day starts on the one used last', () async {
@@ -418,6 +420,11 @@ void main() {
       expect(mine.breakdown.transportMinutes, inInclusiveRange(44, 46));
       expect(mine.breakdown.distanceMetres, 42500);
       expect(mine.breakdown.tripsWithoutDistance, 0);
+
+      final transport = mine.today.singleWhere((e) => e.kind == ActivityKind.transport);
+      expect((transport.placeName, transport.metres), ('$prefix client', 42500));
+      expect(mine.today.first.placeName, '$prefix almeco');
+      expect(mine.today.last.kind, ActivityKind.clientOnSite);
     });
 
     onlyWithTables('and back: a second trip, working on without a project', () async {

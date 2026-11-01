@@ -62,6 +62,7 @@ class ActivityService {
       enabled: true,
       current: current,
       breakdown: await _breakdown(userId),
+      today: await _entries(userId, projects),
       projects: [for (final p in projects) p.project],
       companies: companies,
     );
@@ -226,6 +227,44 @@ class ActivityService {
   }
 
   static ApiException _noGroup() => const ApiException.notFound('No such group.');
+
+  /// Today's list: transports in a row are one line.
+  Future<List<ActivityEntry>> _entries(int userId, List<AssignedProject> projects) async {
+    final (from, to) = _todayBounds();
+    final rows = await _activities.between(_executor, userId, from, to);
+    if (rows.isEmpty) return const [];
+    final names = {for (final p in projects) p.project.id: p.project.name};
+    final places = {for (final l in await _locations.all(_executor)) l.id: l.name};
+    final trips = await _kilometres.distancesOf(rows);
+    bool isTransport(int i) => rows[i].typeName == ActivityRepository.transportType;
+    var trip = 0;
+    return [
+      for (final (i, row) in rows.indexed)
+        if (!isTransport(i))
+          ActivityEntry(
+            timeLocal: _time(row.at),
+            kind: _kindOf(row.typeName),
+            projectName: names[row.projectId],
+            placeName: places[row.addressId ?? row.projectAddressId],
+          )
+        else if (i == 0 || !isTransport(i - 1))
+          () {
+            final (trip: to, :metres) = trips[trip++];
+            return ActivityEntry(
+              timeLocal: _time(row.at),
+              kind: ActivityKind.transport,
+              projectName: names[row.projectId],
+              placeName: places[to.to],
+              metres: metres,
+            );
+          }(),
+    ];
+  }
+
+  String _time(DateTime at) {
+    final local = _clock.wallClockOf(at);
+    return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
 
   /// Today's activities, each until the next one, the finish or now.
   Future<ActivityBreakdown> _breakdown(int userId) async {

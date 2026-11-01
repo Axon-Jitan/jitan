@@ -28,6 +28,11 @@ class MyProject {
     required this.companyName,
     required this.isClient,
     required this.isCurrent,
+    this.statusName,
+    this.reference,
+    this.addressName,
+    this.startDate,
+    this.endDate,
   });
 
   factory MyProject.fromJson(Map<String, Object?> json) => MyProject(
@@ -37,6 +42,11 @@ class MyProject {
     companyName: json.readString('companyName'),
     isClient: json.readBool('isClient'),
     isCurrent: json.readBool('isCurrent'),
+    statusName: json.readOptionalString('statusName'),
+    reference: json.readOptionalString('reference'),
+    addressName: json.readOptionalString('addressName'),
+    startDate: json.readOptionalString('startDate'),
+    endDate: json.readOptionalString('endDate'),
   );
 
   final int id;
@@ -48,6 +58,15 @@ class MyProject {
   /// Assigned now; `false` for a project they worked on before.
   final bool isCurrent;
 
+  /// For the project's details on Employee Web.
+  final String? statusName;
+  final String? reference;
+  final String? addressName;
+
+  /// `yyyy-MM-dd`.
+  final String? startDate;
+  final String? endDate;
+
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
@@ -55,6 +74,11 @@ class MyProject {
     'companyName': companyName,
     'isClient': isClient,
     'isCurrent': isCurrent,
+    'statusName': statusName,
+    'reference': reference,
+    'addressName': addressName,
+    'startDate': startDate,
+    'endDate': endDate,
   };
 }
 
@@ -145,6 +169,36 @@ class ActivityBreakdown {
   };
 }
 
+/// One line of today's list. A transport says where it arrives and how far.
+class ActivityEntry {
+  const ActivityEntry({required this.timeLocal, required this.kind, this.projectName, this.placeName, this.metres});
+
+  factory ActivityEntry.fromJson(Map<String, Object?> json) => ActivityEntry(
+    timeLocal: json.readString('timeLocal'),
+    kind: ActivityKind.fromWire(json.readString('kind')),
+    projectName: json.readOptionalString('projectName'),
+    placeName: json.readOptionalString('placeName'),
+    metres: json.readOptionalInt('metres'),
+  );
+
+  /// Workplace-local `HH:mm`.
+  final String timeLocal;
+  final ActivityKind kind;
+  final String? projectName;
+  final String? placeName;
+
+  /// `null` when the distance isn't known.
+  final int? metres;
+
+  Map<String, Object?> toJson() => {
+    'timeLocal': timeLocal,
+    'kind': kind.wireName,
+    'projectName': projectName,
+    'placeName': placeName,
+    'metres': metres,
+  };
+}
+
 /// `GET /groups/{id}/travel`. [available] is `false` on a database without
 /// the proposed tables: the group page then shows no switch.
 class GroupTravel {
@@ -168,6 +222,7 @@ class MyActivity {
     required this.companies,
     this.current,
     this.breakdown = const ActivityBreakdown(),
+    this.today = const [],
   });
 
   factory MyActivity.fromJson(Map<String, Object?> json) => MyActivity(
@@ -176,6 +231,7 @@ class MyActivity {
     projects: json.readObjectList('projects').map(MyProject.fromJson).toList(),
     companies: json.readObjectList('companies').map(MyCompany.fromJson).toList(),
     breakdown: ActivityBreakdown.fromJson(json.readObject('breakdown')),
+    today: json['today'] == null ? const [] : json.readObjectList('today').map(ActivityEntry.fromJson).toList(),
   );
 
   static const disabled = MyActivity(enabled: false, projects: [], companies: []);
@@ -188,12 +244,16 @@ class MyActivity {
   final List<MyCompany> companies;
   final ActivityBreakdown breakdown;
 
+  /// What the day went on so far, oldest first.
+  final List<ActivityEntry> today;
+
   Map<String, Object?> toJson() => {
     'enabled': enabled,
     'current': current?.toJson(),
     'projects': [for (final p in projects) p.toJson()],
     'companies': [for (final c in companies) c.toJson()],
     'breakdown': breakdown.toJson(),
+    'today': [for (final entry in today) entry.toJson()],
   };
 }
 
