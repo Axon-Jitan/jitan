@@ -48,22 +48,11 @@ class _MyQrDialogState extends State<_MyQrDialog> {
       body: Center(
         child: _failed
             ? Text(context.t(EmployeeWebTextKeys.qrMissing), textAlign: TextAlign.center, style: JitanTextStyles.stateMessage)
-            : Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: JitanColors.surface,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: JitanColors.inputBorder),
-                ),
-                child: qr == null
-                    ? SizedBox(width: 275, height: 275, child: JitanLoadingState(label: context.t(EmployeeWebTextKeys.loading)))
-                    : LayoutBuilder(
-                        builder: (context, constraints) => JitanQrCode(
-                          data: qr,
-                          size: constraints.maxWidth < 275 ? constraints.maxWidth : 275,
-                          semanticLabel: title,
-                        ),
-                      ),
+            : qr == null
+            ? SizedBox(width: 275, height: 275, child: JitanLoadingState(label: context.t(EmployeeWebTextKeys.loading)))
+            : LayoutBuilder(
+                builder: (context, constraints) =>
+                    JitanQrCode(data: qr, size: constraints.maxWidth < 275 ? constraints.maxWidth : 275, semanticLabel: title),
               ),
       ),
       actions: [
