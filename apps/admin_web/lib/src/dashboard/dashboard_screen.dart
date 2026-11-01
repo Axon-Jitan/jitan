@@ -5,7 +5,6 @@ import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import '../auth/platform/session_store.dart';
 import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'dashboard_attention.dart';

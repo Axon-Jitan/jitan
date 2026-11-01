@@ -7,8 +7,6 @@ import 'src/app/admin_bootstrap.dart';
 import 'src/app/admin_services.dart';
 import 'src/app/configuration_error_app.dart';
 import 'src/auth/admin_session.dart';
-import 'src/auth/platform/session_store.dart';
-import 'src/auth/session_http_client.dart';
 import 'src/config/admin_web_config.dart';
 import 'src/locations/location_map.dart';
 

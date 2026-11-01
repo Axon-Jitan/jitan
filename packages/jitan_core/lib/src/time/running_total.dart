@@ -1,3 +1,5 @@
+import 'package:jitan_models/jitan_models.dart';
+
 /// "Registered today" while the employee is still working: the time since
 /// the start, minus the part of the break already passed (D13: the break is
 /// deducted automatically; D28 places it in the middle of the day).
@@ -7,6 +9,20 @@
 /// instead (rounded finish − rounded start − break), which this total meets
 /// after the break has passed.
 abstract final class RunningTotal {
+  /// "Registered today" for [day] from [start] to [now]. Time away replaces
+  /// the break (D34). Travelling that isn't work waits until it ends, so the
+  /// total stands still during it (D39).
+  static int ofToday(MyDay day, DateTime start, CurrentActivity? current, DateTime now) {
+    final record = day.day;
+    if (record == null) return 0;
+    final travelCounts = record.travelIsWork;
+    final end = !travelCounts && current?.kind == ActivityKind.transport ? current!.since : now;
+    final elapsed = record.awayMinutes > 0
+        ? end.difference(start).inMinutes - record.awayMinutes
+        : minutes(start: start, now: end, breakStart: day.breakStart, breakFinish: day.breakFinish);
+    return elapsed - (travelCounts ? 0 : record.transportMinutes);
+  }
+
   /// Whole minutes from [start] to [now], minus the overlap with the break
   /// from [breakStart] to [breakFinish] (`HH:mm` on [now]'s day, local time);
   /// never below zero. Without a break window nothing is deducted.

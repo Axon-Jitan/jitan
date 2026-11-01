@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
-import '../auth/platform/session_store.dart';
 import 'dashboard_period.dart';
 
 /// What the Dashboard is showing.

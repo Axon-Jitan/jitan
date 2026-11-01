@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
-import 'platform/session_store.dart';
 
 /// Where the app stands with the signed-in person.
 enum AdminSessionStatus {

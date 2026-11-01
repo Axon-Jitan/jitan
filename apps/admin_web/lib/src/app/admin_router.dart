@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jitan_ui/jitan_ui.dart';
+import 'package:jitan_api_client/jitan_api_client.dart';
 
 import '../auth/admin_session.dart';
 import '../auth/no_access_screen.dart';
 import '../auth/sign_in_screen.dart';
-import '../auth/platform/session_store.dart';
 import '../companies/companies_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../employees/employees_screen.dart';

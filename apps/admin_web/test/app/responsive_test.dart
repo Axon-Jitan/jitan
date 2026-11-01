@@ -12,7 +12,6 @@ import 'package:admin_web/src/groups/employee_picker.dart';
 import 'package:admin_web/src/groups/group_page.dart';
 import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/locations/locations_screen.dart';
-import 'package:admin_web/src/auth/platform/session_store.dart';
 import 'package:admin_web/src/dashboard/dashboard_screen.dart';
 import 'package:admin_web/src/projects/projects_screen.dart';
 import 'package:admin_web/src/terminals/terminals_screen.dart';
@@ -26,6 +25,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
+import 'package:jitan_api_client/jitan_api_client.dart';
 
 import '../support/fake_assignments_api.dart';
 import '../support/fake_companies_api.dart';

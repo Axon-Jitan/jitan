@@ -21,6 +21,7 @@ class JitanTextField extends StatelessWidget {
     this.maxLength,
     this.inputFormatters = const [],
     this.maxLines = 1,
+    this.obscureText = false,
   });
 
   final String label;
@@ -45,11 +46,15 @@ class JitanTextField extends StatelessWidget {
   /// More than 1 makes a text area (e.g. a reason); Enter then adds a line.
   final int maxLines;
 
+  /// Hides what is typed, for a password.
+  final bool obscureText;
+
   @override
   Widget build(BuildContext context) => JitanFieldLabel(
         label: label,
         child: TextField(
           controller: controller,
+          obscureText: obscureText,
           enabled: enabled,
           autofocus: autofocus,
           keyboardType: keyboardType ?? (maxLines > 1 ? TextInputType.multiline : null),

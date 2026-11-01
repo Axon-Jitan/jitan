@@ -454,19 +454,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _working(BuildContext context, MyDay day) {
     final start = shownTime(day.day, RegistrationBoundary.start);
-    final travelCounts = day.day?.travelIsWork ?? false;
-    final current = _activity.activity.current;
-    // Travelling that isn't work: the total waits until it ends (D39).
-    final now = !travelCounts && current?.kind == ActivityKind.transport ? current!.since : _today.now();
-    final transport = travelCounts ? 0 : day.day?.transportMinutes ?? 0;
-    // Since the start, minus the part of the break already passed (D13).
-    final elapsed = start.at == null
-        ? null
-        : (day.day!.awayMinutes > 0
-                  // Back from time away: it replaces the break (D34).
-                  ? now.difference(start.at!).inMinutes - day.day!.awayMinutes
-                  : RunningTotal.minutes(start: start.at!, now: now, breakStart: day.breakStart, breakFinish: day.breakFinish)) -
-              transport;
+    final elapsed = start.at == null ? null : RunningTotal.ofToday(day, start.at!, _activity.activity.current, _today.now());
     final method = day.day?.start?.method ?? TimeRecordMethod.manual;
     final light = JitanMobileTextStyles.cardText.copyWith(color: JitanColors.sidebarText);
     return _page(

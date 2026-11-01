@@ -18,6 +18,8 @@ export 'src/reports_api.dart';
 export 'src/me_api.dart';
 export 'src/onboarding_api.dart';
 export 'src/projects_api.dart';
+export 'src/session/session_http_client.dart';
+export 'src/session/session_store.dart';
 export 'src/terminal_device_api.dart';
 export 'src/terminals_api.dart';
 export 'src/recovery_api.dart';

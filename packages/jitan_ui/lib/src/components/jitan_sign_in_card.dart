@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:jitan_ui/jitan_ui.dart';
+
+import '../theme/jitan_colors.dart';
+import '../theme/jitan_text_styles.dart';
 
 /// The page around sign-in: the logo and one small card, nothing else.
-class SignInCard extends StatelessWidget {
-  const SignInCard({super.key, required this.children, this.footnote});
+class JitanSignInCard extends StatelessWidget {
+  const JitanSignInCard({super.key, required this.children, this.footnote});
 
   final List<Widget> children;
 

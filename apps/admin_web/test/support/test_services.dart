@@ -1,6 +1,6 @@
 import 'package:admin_web/src/app/admin_services.dart';
 import 'package:admin_web/src/auth/admin_session.dart';
-import 'package:admin_web/src/auth/platform/session_store.dart';
+import 'package:jitan_api_client/jitan_api_client.dart';
 
 import 'fake_assignments_api.dart';
 import 'fake_auth.dart';

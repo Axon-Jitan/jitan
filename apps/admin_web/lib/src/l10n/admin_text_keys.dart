@@ -801,21 +801,8 @@ abstract final class AdminTextKeys {
   static const timeRecordDayAwayValue = 'timeRecord.day.away.value';
 
   // Sign-in (Figma HR / Sign in 1469:2 to 1469:53)
-  static const signInTitle = 'hr.signIn.title';
-  static const signInText = 'hr.signIn.text';
-  static const signInCode = 'hr.signIn.code';
-  static const signInCodeHint = 'hr.signIn.codeHint';
-  static const signInPassword = 'hr.signIn.password';
-  static const signInPasswordHint = 'hr.signIn.passwordHint';
-  static const signInShowPassword = 'hr.signIn.showPassword';
-  static const signInHidePassword = 'hr.signIn.hidePassword';
-  static const signInAction = 'hr.signIn.action';
   static const signInForgot = 'hr.signIn.forgot';
-  static const signInErrorCredentials = 'hr.signIn.error.credentials';
   static const signInErrorInactive = 'hr.signIn.error.inactive';
-  static const signInErrorTooMany = 'hr.signIn.error.tooMany';
-  static const signInErrorNetwork = 'hr.signIn.error.network';
-  static const signInErrorServer = 'hr.signIn.error.server';
   static const noAccessTitle = 'hr.noAccess.title';
   static const noAccessText = 'hr.noAccess.text';
   static const signOut = 'hr.signOut';

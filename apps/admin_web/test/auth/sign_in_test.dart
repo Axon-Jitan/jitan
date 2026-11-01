@@ -1,7 +1,5 @@
 import 'package:admin_web/src/app/admin_app.dart';
 import 'package:admin_web/src/auth/admin_session.dart';
-import 'package:admin_web/src/auth/platform/session_store.dart';
-import 'package:admin_web/src/auth/session_http_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;

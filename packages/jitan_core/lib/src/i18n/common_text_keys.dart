@@ -9,6 +9,20 @@ abstract final class CommonTextKeys {
   /// their own name.
   static String languageName(String languageCode) => 'language.name.$languageCode';
 
+  static const signInTitle = 'hr.signIn.title';
+  static const signInText = 'hr.signIn.text';
+  static const signInCode = 'hr.signIn.code';
+  static const signInCodeHint = 'hr.signIn.codeHint';
+  static const signInPassword = 'hr.signIn.password';
+  static const signInPasswordHint = 'hr.signIn.passwordHint';
+  static const signInShowPassword = 'hr.signIn.showPassword';
+  static const signInHidePassword = 'hr.signIn.hidePassword';
+  static const signInAction = 'hr.signIn.action';
+  static const signInErrorCredentials = 'hr.signIn.error.credentials';
+  static const signInErrorTooMany = 'hr.signIn.error.tooMany';
+  static const signInErrorNetwork = 'hr.signIn.error.network';
+  static const signInErrorServer = 'hr.signIn.error.server';
+
   static const retry = 'common.retry';
   static const back = 'common.back';
   static const continueAction = 'common.continue';
