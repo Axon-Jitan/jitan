@@ -15,6 +15,7 @@ import '../groups/groups_screen.dart';
 import '../locations/locations_screen.dart';
 import '../projects/project_page.dart';
 import '../projects/projects_screen.dart';
+import '../terminals/terminals_screen.dart';
 import '../reports/reports_screen.dart';
 import '../schedules/schedules_screen.dart';
 import '../time_records/time_records_screen.dart';
@@ -109,6 +110,16 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
             path: AdminRoutes.reports,
             pageBuilder: (context, state) => NoTransitionPage(
               child: ReportsScreen(api: services.reportsApi, companiesApi: services.companiesApi),
+            ),
+          ),
+          GoRoute(
+            path: AdminRoutes.terminals,
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: TerminalsScreen(
+                api: services.terminalsApi,
+                companiesApi: services.companiesApi,
+                locationsApi: services.locationsApi,
+              ),
             ),
           ),
           GoRoute(

@@ -45,6 +45,7 @@ class AdminShell extends StatelessWidget {
         JitanNavDestination(label: context.t(AdminTextKeys.navCompanies), path: AdminRoutes.companies),
         JitanNavDestination(label: context.t(AdminTextKeys.navEmployees), path: AdminRoutes.employees),
         JitanNavDestination(label: context.t(AdminTextKeys.navLocations), path: AdminRoutes.locations),
+        JitanNavDestination(label: context.t(AdminTextKeys.navTerminals), path: AdminRoutes.terminals),
         JitanNavDestination(label: context.t(AdminTextKeys.navSchedules), path: AdminRoutes.schedules),
         JitanNavDestination(label: context.t(AdminTextKeys.navGroups), path: AdminRoutes.groups),
         JitanNavDestination(label: context.t(AdminTextKeys.navProjects), path: AdminRoutes.projects),

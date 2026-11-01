@@ -16,6 +16,7 @@ abstract final class AdminRoutes {
   static const timeRecords = '/time-records';
   static const reports = '/reports';
   static const projects = '/projects';
+  static const terminals = '/terminals';
 
   /// One project's page.
   static String project(int companyId, int id) => '$projects/$companyId/$id';

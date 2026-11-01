@@ -20,6 +20,7 @@ class AdminServices {
     required this.reportsApi,
     required this.dashboardApi,
     required this.projectsApi,
+    required this.terminalsApi,
     required this.session,
     this.locationMaps,
   });
@@ -39,6 +40,7 @@ class AdminServices {
   final ReportsApi reportsApi;
   final DashboardApi dashboardApi;
   final ProjectsApi projectsApi;
+  final TerminalsApi terminalsApi;
   final AdminSession session;
 
   /// The Locations map; `null` when the build has no Mapbox token.

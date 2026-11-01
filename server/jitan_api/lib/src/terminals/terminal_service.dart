@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:jitan_models/jitan_models.dart';
 
 import '../audit/audit_event.dart';
@@ -154,6 +157,7 @@ class TerminalService {
       plateNumber: row.plateNumber,
       deviceName: row.deviceName,
       lastSeen: lastSeen,
+      connectionTag: row.secretHash == null ? null : sha256.convert(utf8.encode(row.secretHash!)).toString().substring(0, 16),
     );
   }
 

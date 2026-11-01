@@ -50,6 +50,7 @@ void main() {
         reportsApi: ReportsApi(transport),
         dashboardApi: DashboardApi(transport),
         projectsApi: ProjectsApi(transport),
+        terminalsApi: TerminalsApi(transport),
         session: session,
         locationMaps: switch (config.mapboxToken) {
           null => null,

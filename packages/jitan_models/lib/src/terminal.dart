@@ -69,6 +69,7 @@ class Terminal {
     this.plateNumber,
     this.deviceName,
     this.lastSeen,
+    this.connectionTag,
   });
 
   factory Terminal.fromJson(Map<String, Object?> json) => Terminal(
@@ -84,6 +85,7 @@ class Terminal {
     plateNumber: json.readOptionalString('plateNumber'),
     deviceName: json.readOptionalString('deviceName'),
     lastSeen: json.readOptionalDateTime('lastSeen')?.toUtc(),
+    connectionTag: json.readOptionalString('connectionTag'),
   );
 
   final int id;
@@ -101,6 +103,10 @@ class Terminal {
   final String? deviceName;
   final DateTime? lastSeen;
 
+  /// Changes each time a tablet connects, so HR sees that this one did. Says
+  /// nothing about the secret.
+  final String? connectionTag;
+
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
@@ -114,6 +120,7 @@ class Terminal {
     'plateNumber': plateNumber,
     'deviceName': deviceName,
     'lastSeen': lastSeen?.toUtc().toIso8601String(),
+    'connectionTag': connectionTag,
   };
 }
 

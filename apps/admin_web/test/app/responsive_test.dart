@@ -15,6 +15,7 @@ import 'package:admin_web/src/locations/locations_screen.dart';
 import 'package:admin_web/src/auth/platform/session_store.dart';
 import 'package:admin_web/src/dashboard/dashboard_screen.dart';
 import 'package:admin_web/src/projects/projects_screen.dart';
+import 'package:admin_web/src/terminals/terminals_screen.dart';
 import 'package:admin_web/src/reports/reports_screen.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:admin_web/src/schedules/schedule_dialog.dart';
@@ -33,6 +34,7 @@ import '../support/fake_group_apis.dart';
 import '../support/fake_locations.dart';
 import '../support/fake_dashboard.dart';
 import '../support/fake_projects.dart';
+import '../support/fake_terminals.dart';
 import '../support/fake_reports.dart';
 import '../support/fake_schedules_api.dart';
 import '../support/fake_time_records_api.dart';
@@ -139,6 +141,28 @@ void main() {
       await tester.tap(find.text('Add project'));
       await _settle(tester);
       _fitsTheWindow(tester, width, 'Add project');
+    });
+
+    testWidgets('Terminals, Add terminal and Manage at $width px', (tester) async {
+      final api = FakeTerminalsApi()
+        ..terminals = [officeTerminal(), officeTerminal(id: 2, name: 'A terminal with a really rather long name indeed')];
+      await _pump(
+        tester,
+        width,
+        TerminalsScreen(api: api, companiesApi: FakeCompaniesApi(), locationsApi: FakeLocationsApi(), clock: () => DateTime(2026, 11, 1, 9)),
+      );
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Terminals');
+
+      await tester.tap(find.text('Add terminal'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Add terminal');
+      await tester.tap(find.text('Cancel'));
+      await _settle(tester);
+
+      await tester.tap(find.text('Almeco Reception'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Manage');
     });
 
     testWidgets('Dashboard and its period picker at $width px', (tester) async {

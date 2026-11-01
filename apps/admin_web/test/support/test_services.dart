@@ -12,6 +12,7 @@ import 'fake_locations.dart';
 import 'fake_projects.dart';
 import 'fake_reports.dart';
 import 'fake_schedules_api.dart';
+import 'fake_terminals.dart';
 import 'fake_time_records_api.dart';
 
 /// [AdminServices] wired to fakes; the fakes stay reachable for assertions.
@@ -31,6 +32,7 @@ class TestServices {
       reportsApi: reports,
       dashboardApi: dashboard,
       projectsApi: projects,
+      terminalsApi: FakeTerminalsApi(),
       session: session ??
           AdminSession.signedIn(
             auth: FakeAuthApi(),
