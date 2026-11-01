@@ -278,6 +278,7 @@ the 2026-10-07 decision that the permanent `userQRcode` also served for onboardi
 4. **Missing:** the entire visitor concept.
 5. **Product decision (2026-10-13, D18):** visitors register at the **front-desk**
    terminal.
+6. **Product decision (2026-11-01):** visitors are left out of this version, maybe later.
 
 ## GAP-11: Employee location
 **ERD GAP — requires clarification with IT.** · Status: `OPEN`

@@ -31,7 +31,7 @@ prefers another structure, Jitan changes to match.
 | `tblProjectAgreement` | Lookup: who gets the kilometres (charge the customer, pay the employee, both) | Same | D26 |
 | `tblTerminal` | A shared tablet: name, type, company, location or plate number, QR enabled, device, last seen, device secret (hashed) | A kiosk user has no type, location, last seen or plate number | GAP-09, D18, D20 |
 | `tblTerminalType` | Lookup: Office, Vehicle | Lookup values are read from the database | Figma `153:1389` |
-| `tblVisitor` | One visit: name, phone, person to meet, plate, company, photo, arrival, departure, terminal | Visitors are not users: `tblUser` would mix them into employee lists | GAP-10 |
+| `tblVisitor` | **Not needed for this version** (product owner, 2026-11-01), so leave it out for now. One visit: name, phone, person to meet, plate, company, photo, arrival, departure, terminal | Visitors are not users: `tblUser` would mix them into employee lists | GAP-10 |
 
 Terminal pairing codes are temporary, so they stay out of the database, like
 temporary QR codes.
@@ -45,7 +45,7 @@ temporary QR codes.
 | `tblTimeReg.companyID` | Which company an activity counts for, for people in several companies | GAP-03, D16 |
 | `tblTimeReg.projectID` | Which project an activity belongs to | D16, D19 |
 | `tblTimeReg.terminalID` | Which terminal took the scan | GAP-09 |
-| `tblEventLog.projectID`, `userProjectID`, `terminalID`, `visitorID` | Audit of changes to these, like the existing ID columns | Rule 6 |
+| `tblEventLog.projectID`, `userProjectID`, `terminalID` | Audit of changes to these, like the existing ID columns (`visitorID` only when visitors come) | Rule 6 |
 
 ## New lookup rows
 
