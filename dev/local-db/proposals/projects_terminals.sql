@@ -6,17 +6,11 @@
 
 -- ── Workplaces and defaults (GAP-03) ───────
 
-CREATE TABLE tblCompanyAddress (
-  companyAddressID     INT NOT NULL AUTO_INCREMENT,
-  companyID            INT NOT NULL,
-  addressID            INT NOT NULL,
-  companyAddressActive TINYINT(1) NOT NULL DEFAULT 1,
-  companyAddressMFD    TINYINT(1) NOT NULL DEFAULT 0,
-  PRIMARY KEY (companyAddressID),
-  UNIQUE KEY uk_tblCompanyAddress_companyID_addressID (companyID, addressID),
-  CONSTRAINT fk_tblCompanyAddress_companyID FOREIGN KEY (companyID) REFERENCES tblCompany (companyID),
-  CONSTRAINT fk_tblCompanyAddress_addressID FOREIGN KEY (addressID) REFERENCES tblAddress (addressID)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+-- A company's workplace (D36: one per company for now). What kind of place an
+-- address is stays in tblAddressLocationType.
+ALTER TABLE tblCompany
+  ADD COLUMN addressID INT NULL,
+  ADD CONSTRAINT fk_tblCompany_addressID FOREIGN KEY (addressID) REFERENCES tblAddress (addressID);
 
 ALTER TABLE tblUserCompany ADD COLUMN userCompanyDefault TINYINT(1) NOT NULL DEFAULT 0;
 

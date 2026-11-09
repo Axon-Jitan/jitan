@@ -162,6 +162,11 @@ Recorded so they aren't raised again.
 5. **Geofencing (D36, 2026-10-31):** each company has one address, shared by all its employee
    groups. The address-to-company link is still missing, so until IT adds it workplaces are one
    shared `tblAddress` list and every employee on Automatic is recognised at all of them.
+6. **Proposed (2026-11-09):** one column, `tblCompany.addressID`, since each company has one
+   workplace for now. `tblLocationType` / `tblAddressLocationType` say what kind of place an
+   address is (office, customer site), not which company it belongs to, so they can't carry
+   the link. Attribution of a registration is the proposed `tblTimeReg.companyID`.
+   See [PROPOSED_TABLES.md](PROPOSED_TABLES.md).
 
 ## GAP-04: Employee onboarding QR
 **RESOLVED (IT decision 2026-10-08): temporary QR codes, not stored in MySQL.** Supersedes

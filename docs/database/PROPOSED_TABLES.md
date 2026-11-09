@@ -26,7 +26,6 @@ prefers another structure, Jitan changes to match.
 
 | Table | Purpose | Why existing tables don't fit | Gap / decision |
 |---|---|---|---|
-| `tblCompanyAddress` | Links an address to a company | Nothing links an address to a company | GAP-03, D36 |
 | `tblProject` | A client or internal project of a company: name, reference, status, dates, description, client address | No project concept exists | D16, D17, D21 |
 | `tblUserProject` | Who is assigned to a project | No link between employees and projects | D16, D27 |
 | `tblProjectType` | Lookup: Client, Internal | Lookup values are read from the database, not hardcoded | D17 |
@@ -41,6 +40,7 @@ temporary QR codes.
 
 | Column | Purpose | Gap / decision |
 |---|---|---|
+| `tblCompany.addressID` | A company's workplace, in `tblAddress`. One per company for now (product owner, 2026-11-09). `tblAddressLocationType` only says what kind of place an address is, not whose | GAP-03, D36 |
 | `tblUserCompany.userCompanyDefault` | An employee's default company | D16 |
 | `tblGroup.groupTravelIsWork` | Whether this group's travel counts as working time (White collar yes, Blue collar no) | D39 |
 | `tblTimeReg.companyID` | Which company an activity counts for, for people in several companies | GAP-03, D16 |
