@@ -188,7 +188,9 @@ the 2026-10-07 decision that the permanent `userQRcode` also served for onboardi
   (`UPDATE … WHERE userPassword IS NULL`).
 
 ## GAP-05: Web-login QR, sessions, trusted devices, push tokens
-**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+**Status:** `ACCEPTED` for V1 (product owner, 2026-11-09): stateless 30-day session tokens as
+built, no device list, no per-device sign-out, no web-login QR, notifications made on the
+phone. Nothing to ask IT now; a device table comes back only if a later version wants these.
 
 1. **Requirement** (§4, §25, §14): browser sign-in approved by scanning a QR on the mobile
    app. Employee can list and revoke **active web sessions** and **trusted devices**.
@@ -221,7 +223,10 @@ the 2026-10-07 decision that the permanent `userQRcode` also served for onboardi
    `geofenceCorrectionInMin`, this gap closes.
 
 ## GAP-07: Registration methods (allowed and chosen)
-**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+**Status:** `ACCEPTED` for V1 (product owner, 2026-11-09): every method is offered, the
+employee's choice stays on the device, and the three method switches are **removed** from
+Figma `Admin / Add company` (`153:87`). A terminal's own `terminalQrEnabled` still turns QR
+scanning off there. Nothing to ask IT.
 
 1. **Requirement** (§13, §11): HR/Admin controls which methods (Automatic / QR / Manual)
    are available. The employee **chooses** one of the available methods. Figma
@@ -333,7 +338,8 @@ else changes.
    [TIME_ENGINE_ANALYSIS.md](../TIME_ENGINE_ANALYSIS.md).
 
 ## GAP-14: Schedule name
-**Status:** `DEFERRED` · not needed for V1 (product owner, 2026-10-21) · ERD GAP to raise with IT only if a later version wants schedule names · asked by the product owner 2026-10-20
+**Status:** `NOT NEEDED` (product owner, 2026-11-09): schedules belong to employee groups, so the
+group's name names them. `tblScheduleType` is the kind of period and can't carry a name.
 
 1. **Requirement:** HR gives a group's schedule a name when creating it (e.g. "Office
    hours", "Summer schedule"), shown in the Schedules list.
