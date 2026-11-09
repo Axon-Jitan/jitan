@@ -23,7 +23,7 @@ ALTER TABLE tblUserCompany ADD COLUMN userCompanyDefault TINYINT(1) NOT NULL DEF
 -- Whether an employee group's travel is working time (D39).
 ALTER TABLE tblGroup ADD COLUMN groupTravelIsWork TINYINT(1) NOT NULL DEFAULT 0;
 
--- ── Projects (D16, D17, D21, D26, D27) ─────
+-- ── Projects (D16, D17, D21, D27) ─────────
 
 CREATE TABLE tblProjectType (
   projectTypeID     INT NOT NULL AUTO_INCREMENT,
@@ -41,20 +41,11 @@ CREATE TABLE tblProjectStatus (
   PRIMARY KEY (projectStatusID)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
-CREATE TABLE tblProjectAgreement (
-  projectAgreementID     INT NOT NULL AUTO_INCREMENT,
-  projectAgreementName   VARCHAR(100) NOT NULL,
-  projectAgreementActive TINYINT(1) NOT NULL DEFAULT 1,
-  projectAgreementMFD    TINYINT(1) NOT NULL DEFAULT 0,
-  PRIMARY KEY (projectAgreementID)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
 CREATE TABLE tblProject (
   projectID          INT NOT NULL AUTO_INCREMENT,
   companyID          INT NOT NULL,
   projectTypeID      INT NOT NULL,
   projectStatusID    INT NOT NULL,
-  projectAgreementID INT NULL,
   addressID          INT NULL,
   projectName        VARCHAR(150) NOT NULL,
   projectReference   VARCHAR(50) NULL,
@@ -67,7 +58,6 @@ CREATE TABLE tblProject (
   CONSTRAINT fk_tblProject_companyID FOREIGN KEY (companyID) REFERENCES tblCompany (companyID),
   CONSTRAINT fk_tblProject_projectTypeID FOREIGN KEY (projectTypeID) REFERENCES tblProjectType (projectTypeID),
   CONSTRAINT fk_tblProject_projectStatusID FOREIGN KEY (projectStatusID) REFERENCES tblProjectStatus (projectStatusID),
-  CONSTRAINT fk_tblProject_projectAgreementID FOREIGN KEY (projectAgreementID) REFERENCES tblProjectAgreement (projectAgreementID),
   CONSTRAINT fk_tblProject_addressID FOREIGN KEY (addressID) REFERENCES tblAddress (addressID)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
@@ -112,26 +102,6 @@ CREATE TABLE tblTerminal (
   CONSTRAINT fk_tblTerminal_addressID FOREIGN KEY (addressID) REFERENCES tblAddress (addressID)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
--- ── Visitors (GAP-10) ──────────────────────
-
-CREATE TABLE tblVisitor (
-  visitorID           INT NOT NULL AUTO_INCREMENT,
-  terminalID          INT NOT NULL,
-  userIDHost          INT NOT NULL,
-  visitorName         VARCHAR(150) NOT NULL,
-  visitorPhone        VARCHAR(30) NOT NULL,
-  visitorPlateNumber  VARCHAR(20) NULL,
-  visitorCompanyName  VARCHAR(150) NULL,
-  visitorPhoto        MEDIUMBLOB NULL,
-  visitorArrival      DATETIME NOT NULL,
-  visitorDeparture    DATETIME NULL,
-  visitorMFD          TINYINT(1) NOT NULL DEFAULT 0,
-  PRIMARY KEY (visitorID),
-  INDEX ix_tblVisitor_arrival (visitorArrival),
-  CONSTRAINT fk_tblVisitor_terminalID FOREIGN KEY (terminalID) REFERENCES tblTerminal (terminalID),
-  CONSTRAINT fk_tblVisitor_userIDHost FOREIGN KEY (userIDHost) REFERENCES tblUser (userID)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
 -- ── Links on existing tables ───────────────
 
 ALTER TABLE tblTimeReg
@@ -146,17 +116,14 @@ ALTER TABLE tblEventLog
   ADD COLUMN projectID INT NULL,
   ADD COLUMN userProjectID INT NULL,
   ADD COLUMN terminalID INT NULL,
-  ADD COLUMN visitorID INT NULL,
   ADD CONSTRAINT fk_tblEventLog_projectID FOREIGN KEY (projectID) REFERENCES tblProject (projectID),
   ADD CONSTRAINT fk_tblEventLog_userProjectID FOREIGN KEY (userProjectID) REFERENCES tblUserProject (userProjectID),
-  ADD CONSTRAINT fk_tblEventLog_terminalID FOREIGN KEY (terminalID) REFERENCES tblTerminal (terminalID),
-  ADD CONSTRAINT fk_tblEventLog_visitorID FOREIGN KEY (visitorID) REFERENCES tblVisitor (visitorID);
+  ADD CONSTRAINT fk_tblEventLog_terminalID FOREIGN KEY (terminalID) REFERENCES tblTerminal (terminalID);
 
 -- ── Lookup rows ────────────────────────────
 
 INSERT INTO tblProjectType (projectTypeName) VALUES ('Client'), ('Internal');
 INSERT INTO tblProjectStatus (projectStatusName) VALUES ('Planned'), ('Active'), ('Completed');
-INSERT INTO tblProjectAgreement (projectAgreementName) VALUES ('Charge the customer'), ('Pay the employee'), ('Both');
 INSERT INTO tblTerminalType (terminalTypeName) VALUES ('Office'), ('Vehicle');
 INSERT INTO tblTimeRegType (timeRegTypeName) VALUES
   ('Activity – Work'), ('Activity – Client on site'), ('Activity – Client in-house'),
