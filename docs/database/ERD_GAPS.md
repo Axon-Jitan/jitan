@@ -207,7 +207,9 @@ the 2026-10-07 decision that the permanent `userQRcode` also served for onboardi
    valid until it expires (default 30 days).
 
 ## GAP-06: Short-exit threshold
-**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+**Status:** `RESOLVED` without a schema change (product owner, 2026-11-09): the threshold is
+**2 hours**, one product constant for everyone, defined once in the server's configuration.
+`geofenceCorrectionInMin` is not this threshold (CLARIFY-04). Nothing to ask IT.
 
 1. **Requirement** (§14, §19): after leaving a geofence, the employee is "temporarily
    away" until a threshold expires. Only then does Jitan ask "Finished work?".
@@ -288,7 +290,8 @@ the 2026-10-07 decision that the permanent `userQRcode` also served for onboardi
 6. **Product decision (2026-11-01):** visitors are left out of this version, maybe later.
 
 ## GAP-11: Employee location
-**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+**Status:** `DEFERRED` · not needed now (product owner, 2026-11-09). Nothing to ask IT; the
+Location column stays empty.
 
 1. **Requirement** (§7, Figma `Admin / Employees` `153:137`, column "Location"): each
    employee has a location (their workplace, e.g. "Almeco").
@@ -370,7 +373,8 @@ else changes.
 # Clarifications
 
 ## GAP-16: Absence and leave days
-**Status:** `OPEN` · ERD GAP — requires clarification with IT (2026-10-22)
+**Status:** `ACCEPTED` for V1 (product owner, 2026-11-09): such a day stays **No
+registration**; no absence storage is asked of IT in this version.
 
 1. **Requirement:** Time records lists a scheduled working day on which an employee
    registered nothing ("No registration"). HR must be able to say why (holiday, sick, day off)
@@ -419,9 +423,11 @@ Start and finish are separate schedule rows ("Work – start" / "Work – finish
 
 A worked example from IT for each rule type would settle this.
 
-## CLARIFY-04: `geofenceCorrectionInMin` · `OPEN`
+## CLARIFY-04: `geofenceCorrectionInMin` · `ANSWERED` by the product owner (2026-11-09)
 Is it walking time from the geofence edge to the workstation, the short-exit threshold
 (GAP-06), a dwell time before arrival counts, or something else?
+**Answer:** it is about the employee or HR correcting the time, not the short-exit threshold.
+How exactly it changes a registration is settled when geofence corrections are built.
 
 ## CLARIFY-05: `addressCoordinates` format · `RESOLVED` (IT's creation script, 2026-10-13)
 `"latitude,longitude"` in decimal degrees with a dot and one comma, e.g. `"50.7436,3.2167"`
