@@ -162,11 +162,13 @@ Recorded so they aren't raised again.
 5. **Geofencing (D36, 2026-10-31):** each company has one address, shared by all its employee
    groups. The address-to-company link is still missing, so until IT adds it workplaces are one
    shared `tblAddress` list and every employee on Automatic is recognised at all of them.
-6. **Proposed (2026-11-09):** one column, `tblCompany.addressID`, since each company has one
-   workplace for now. `tblLocationType` / `tblAddressLocationType` say what kind of place an
-   address is (office, customer site), not which company it belongs to, so they can't carry
-   the link. Attribution of a registration is the proposed `tblTimeReg.companyID`.
-   See [PROPOSED_TABLES.md](PROPOSED_TABLES.md).
+6. **Not asked for (product owner, 2026-11-09):** each company has one workshop, and the
+   company of a registration is the employee's choice or default (D16, the proposed
+   `tblTimeReg.companyID`), never the place. So no address-to-company link is requested;
+   workplaces stay one shared `tblAddress` list. `tblLocationType` / `tblAddressLocationType`
+   say what kind of place an address is (office, customer site), not whose. Ask IT again
+   if HR needs each company's own location list, or Jitan should pick the company from the
+   place.
 
 ## GAP-04: Employee onboarding QR
 **RESOLVED (IT decision 2026-10-08): temporary QR codes, not stored in MySQL.** Supersedes

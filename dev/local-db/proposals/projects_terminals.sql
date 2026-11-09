@@ -4,13 +4,7 @@
 -- contain this. If IT chooses another structure, this file changes to match.
 -- Run once, after schema.sql.
 
--- ── Workplaces and defaults (GAP-03) ───────
-
--- A company's workplace (D36: one per company for now). What kind of place an
--- address is stays in tblAddressLocationType.
-ALTER TABLE tblCompany
-  ADD COLUMN addressID INT NULL,
-  ADD CONSTRAINT fk_tblCompany_addressID FOREIGN KEY (addressID) REFERENCES tblAddress (addressID);
+-- ── Defaults (GAP-03) ──────────────────────
 
 ALTER TABLE tblUserCompany ADD COLUMN userCompanyDefault TINYINT(1) NOT NULL DEFAULT 0;
 

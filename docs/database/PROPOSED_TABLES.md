@@ -40,7 +40,6 @@ temporary QR codes.
 
 | Column | Purpose | Gap / decision |
 |---|---|---|
-| `tblCompany.addressID` | A company's workplace, in `tblAddress`. One per company for now (product owner, 2026-11-09). `tblAddressLocationType` only says what kind of place an address is, not whose | GAP-03, D36 |
 | `tblUserCompany.userCompanyDefault` | An employee's default company | D16 |
 | `tblGroup.groupTravelIsWork` | Whether this group's travel counts as working time (White collar yes, Blue collar no) | D39 |
 | `tblTimeReg.companyID` | Which company an activity counts for, for people in several companies | GAP-03, D16 |
@@ -63,5 +62,8 @@ temporary QR codes.
 ## Not needed
 
 Kilometres are calculated, never stored (D23). Reports are calculated when opened (D24).
+No address-to-company link is asked for (product owner, 2026-11-09): each company has one
+workshop, the company of a registration is the employee's choice or default (D16), and
+workplaces stay one shared `tblAddress` list (D36).
 Visitors are left out of this version (product owner, 2026-11-01, GAP-10). The client
 agreement about kilometres comes from SAP (question 2), so no agreement table is asked for.
