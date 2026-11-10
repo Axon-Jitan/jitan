@@ -4,7 +4,7 @@ Jitan needs these to support projects, transport and terminals. They do not exis
 IT's database. The product owner decided on 2026-10-31 to build on them locally and ask
 IT to add them. SQL: [projects_terminals.sql](../../dev/local-db/proposals/projects_terminals.sql).
 
-**Status: not yet sent to IT.** They exist only in the local development database.
+**Status: not yet sent to IT, and being revised** after IT's ERD of 2026-11-09: terminals are IT's `tblDevice` (GAP-09), the default company is in IT's ERD, projects come live from SAP and are `tblAddress` rows (D43, D44), so the project, terminal and `tblTimeReg` items below are no longer requested. The list is rewritten once IT confirms the ERD is in `jitandev`. They exist only in the local development database.
 Features using them are off on IT's database until IT has added them; registering
 starts and finishes keeps working there, because the server checks at startup. If IT
 prefers another structure, Jitan changes to match.
