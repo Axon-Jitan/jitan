@@ -43,7 +43,8 @@ class LocationRoutes {
   }
 
   Future<Response> _recognised(Request request) async {
-    return jsonResponse(LocationListResponse(locations: await _locations.recognisedFor(request.identity.userId)).toJson());
+    request.identity; // 401 without a signed-in employee.
+    return jsonResponse(LocationListResponse(locations: await _locations.recognised()).toJson());
   }
 
   Future<Response> _create(Request request) async {

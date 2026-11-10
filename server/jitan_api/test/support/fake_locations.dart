@@ -30,7 +30,7 @@ class FakeLocationRepository implements LocationRepository {
   );
 
   @override
-  Future<List<Location>> all(SqlExecutor executor) async => locations.values.toList();
+  Future<List<Location>> all(SqlExecutor executor, {bool withProjects = true}) async => locations.values.toList();
 
   @override
   Future<Location?> find(SqlExecutor executor, int addressId) async => locations[addressId];

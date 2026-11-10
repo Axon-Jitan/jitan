@@ -5,6 +5,8 @@ import '../audit/audit_log_repository.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
 import '../locations/location_repository.dart';
+import '../projects/project_repository.dart';
+import '../projects/project_service.dart';
 import '../time_records/my_day_service.dart';
 import '../time_registration/time_registration_write_repository.dart';
 import '../time_registration/workplace_clock.dart';
@@ -15,12 +17,15 @@ import 'trip_kilometres.dart';
 /// only what the time counts for: it adds a row of its own, and the day's
 /// Start and Finish rows stay as they are.
 ///
-/// The default project (D16, D38) needs no setting: someone with one project
-/// has that one, someone with several the one used last, and otherwise work
-/// simply starts without a project. A company switch lasts for the day.
+/// Projects (D43, D44) are `tblAddress` rows of the kind "Project location",
+/// and an activity row's `addressID` is its project or place. Anyone may
+/// choose any active project. The default project (D38) needs no setting: it
+/// is the one used last, and otherwise work starts without a project. The day
+/// counts for the employee's default company.
 class ActivityService {
   ActivityService({
     required this._activities,
+    required this._projects,
     required this._writes,
     required this._myDay,
     required this._locations,
@@ -33,6 +38,7 @@ class ActivityService {
   }) : _now = now ?? DateTime.now;
 
   final ActivityRepository _activities;
+  final ProjectRepository _projects;
   final TimeRegistrationWriteRepository _writes;
   final MyDayService _myDay;
   final LocationRepository _locations;
@@ -58,20 +64,19 @@ class ActivityService {
   };
 
   Future<MyActivity> mine(int userId) async {
-    final projects = await _activities.projects(_executor, userId);
+    final projects = await _projectsOf(_executor, userId);
     final companies = await _activities.companies(_executor, userId);
-    final current = await _current(userId, projects, companies);
     return MyActivity(
-      enabled: true,
-      current: current,
+      enabled: await _typesReady(_executor),
+      current: await _current(userId, projects, companies),
       breakdown: await _breakdown(userId),
       today: await _entries(userId, projects),
-      projects: [for (final p in projects) p.project],
+      projects: projects,
       companies: companies,
     );
   }
 
-  /// 409 while the day isn't running; 400 for a project that isn't theirs or
+  /// 409 while the day isn't running; 400 for a project that isn't active or
   /// an activity that doesn't fit it. The same switch again (a retry) changes
   /// nothing.
   Future<MyActivity> switchTo(int userId, SwitchActivityRequest request) async {
@@ -84,31 +89,19 @@ class ActivityService {
     if (day == null || day.finish != null || (day.start == null && day.pending.isEmpty)) {
       throw const ApiException(409, ApiErrorCode.workdayNotRunning, 'Start the day first.');
     }
-    final projects = await _activities.projects(_executor, userId);
-    final companies = await _activities.companies(_executor, userId);
-    final project = request.projectId == null ? null : _assigned(projects, request.projectId!);
+    final projects = await _projectsOf(_executor, userId);
+    final project = request.projectId == null ? null : _active(projects, request.projectId!);
     _checkFits(request.kind, project);
-    final companyId = project?.companyId ?? request.companyId;
-    if (companyId != null && !companies.any((c) => c.id == companyId)) {
-      throw const ApiException.validation(SwitchActivityRequest.fieldCompany, 'This is not one of your companies.');
-    }
 
     await _transactions.transaction((tx) async {
       await _writes.lockUser(tx, userId);
       final typeId = await _typeOf(tx, request.kind);
       final (from, to) = _todayBounds();
       final latest = (await _activities.between(tx, userId, from, to)).lastOrNull;
-      if (latest != null && latest.at == at && latest.projectId == project?.id && latest.typeName == _typeNames[request.kind]) {
+      if (latest != null && latest.at == at && latest.addressId == project?.id && latest.typeName == _typeNames[request.kind]) {
         return;
       }
-      final id = await _activities.insert(
-        tx,
-        userId: userId,
-        typeId: typeId,
-        at: at,
-        projectId: project?.id,
-        companyId: companyId,
-      );
+      final id = await _activities.insert(tx, userId: userId, typeId: typeId, at: at, addressId: project?.id);
       await _audit.record(
         tx,
         AuditEvent(
@@ -118,8 +111,7 @@ class ActivityService {
             EventLogReference.user: userId,
             EventLogReference.timeReg: id,
             EventLogReference.timeRegType: typeId,
-            EventLogReference.project: ?project?.id,
-            EventLogReference.company: ?companyId,
+            EventLogReference.address: ?project?.id,
           },
         ),
       );
@@ -155,14 +147,9 @@ class ActivityService {
     if (day == null || day.finish != null || (day.start == null && day.pending.isEmpty)) {
       throw const ApiException(409, ApiErrorCode.workdayNotRunning, 'Start the day first.');
     }
-    final projects = await _activities.projects(_executor, userId);
-    final atClient = _clientProjectAt(projects, request.toAddressId);
-    final project = atClient ?? _clientProjectAt(projects, request.fromAddressId);
-    if (project == null && !_hasClientProject(projects, request.toAddressId, request.fromAddressId)) {
-      return mine(userId);
-    }
-    final companies = await _activities.companies(_executor, userId);
-    final companyId = project?.companyId ?? _defaultCompany(companies)?.id;
+    final projects = await _projectsOf(_executor, userId);
+    final atClient = _clientSite(projects, request.toAddressId);
+    if (atClient == null && _clientSite(projects, request.fromAddressId) == null) return mine(userId);
 
     await _transactions.transaction((tx) async {
       await _writes.lockUser(tx, userId);
@@ -171,17 +158,9 @@ class ActivityService {
       // Already on Transport by their own switch: only the arrival is new.
       final travelling = latest?.typeName == ActivityRepository.transportType;
       if (latest != null && !latest.at.isBefore(travelling ? arrived : left)) return;
-      Future<void> add(ActivityKind kind, DateTime at, int addressId, MyProject? forProject) async {
+      Future<void> add(ActivityKind kind, DateTime at, int addressId) async {
         final typeId = await _typeOf(tx, kind);
-        final id = await _activities.insert(
-          tx,
-          userId: userId,
-          typeId: typeId,
-          at: at,
-          projectId: forProject?.id,
-          companyId: companyId,
-          addressId: addressId,
-        );
+        final id = await _activities.insert(tx, userId: userId, typeId: typeId, at: at, addressId: addressId);
         await _audit.record(
           tx,
           AuditEvent(
@@ -192,25 +171,23 @@ class ActivityService {
               EventLogReference.timeReg: id,
               EventLogReference.timeRegType: typeId,
               EventLogReference.address: addressId,
-              EventLogReference.project: ?forProject?.id,
-              EventLogReference.company: ?companyId,
             },
           ),
         );
       }
 
-      if (!travelling) await add(ActivityKind.transport, left, request.fromAddressId, project);
-      await add(atClient == null ? ActivityKind.work : ActivityKind.clientOnSite, arrived, request.toAddressId, atClient);
+      if (!travelling) await add(ActivityKind.transport, left, request.fromAddressId);
+      await add(atClient == null ? ActivityKind.work : ActivityKind.clientOnSite, arrived, request.toAddressId);
     });
     return mine(userId);
   }
 
   /// Today's list: transports in a row are one line.
-  Future<List<ActivityEntry>> _entries(int userId, List<AssignedProject> projects) async {
+  Future<List<ActivityEntry>> _entries(int userId, List<MyProject> projects) async {
     final (from, to) = _todayBounds();
     final rows = await _activities.between(_executor, userId, from, to);
     if (rows.isEmpty) return const [];
-    final names = {for (final p in projects) p.project.id: p.project.name};
+    final names = {for (final p in projects) p.id: p.name};
     final places = {for (final l in await _locations.all(_executor)) l.id: l.name};
     final trips = await _kilometres.distancesOf(rows);
     bool isTransport(int i) => rows[i].typeName == ActivityRepository.transportType;
@@ -221,8 +198,8 @@ class ActivityService {
           ActivityEntry(
             timeLocal: _time(row.at),
             kind: _kindOf(row.typeName),
-            projectName: names[row.projectId],
-            placeName: places[row.addressId ?? row.projectAddressId],
+            projectName: names[row.addressId],
+            placeName: places[row.addressId],
           )
         else if (i == 0 || !isTransport(i - 1))
           () {
@@ -230,7 +207,6 @@ class ActivityService {
             return ActivityEntry(
               timeLocal: _time(row.at),
               kind: ActivityKind.transport,
-              projectName: names[row.projectId],
               placeName: places[to.to],
               metres: metres,
             );
@@ -315,72 +291,66 @@ class ActivityService {
     return minutes < 0 ? 0 : minutes;
   }
 
-  /// Stores what the day starts on, and at [addressId] when that is known, in
-  /// the transaction of the start. A terminal says the company with
-  /// [companyId]. Nothing to store without a project or a company.
-  Future<void> dayStarted(SqlExecutor tx, int userId, DateTime at, int? addressId, int? companyId) async {
-    final projects = await _activities.projects(tx, userId);
-    final companies = await _activities.companies(tx, userId);
-    final project = _defaultProject(projects);
-    final company = _defaultCompany(companies);
-    if (project == null && company == null && companyId == null) return;
-    final kind = project == null
-        ? ActivityKind.work
-        : project.isClient
+  /// Stores what the day starts on, in the transaction of the start: the
+  /// project used last (D38), else plain work at [addressId] so a trip later
+  /// knows where it left from (D40). Nothing to store without either, or while
+  /// the activity rows are missing from the Lists page: the start itself
+  /// never fails for it.
+  Future<void> dayStarted(SqlExecutor tx, int userId, DateTime at, int? addressId) async {
+    final project = (await _projectsOf(tx, userId)).where((p) => p.isRecent).firstOrNull;
+    if ((project == null && addressId == null) || !await _typesReady(tx)) return;
+    if (project == null) {
+      await _activities.insert(tx, userId: userId, typeId: await _typeOf(tx, ActivityKind.work), at: at, addressId: addressId);
+      return;
+    }
+    final kind = !project.isClient
+        ? ActivityKind.internal
+        : addressId == null || addressId == project.id
         ? ActivityKind.clientOnSite
-        : ActivityKind.internal;
-    await _activities.insert(
-      tx,
-      userId: userId,
-      typeId: await _typeOf(tx, kind),
-      at: at,
-      projectId: project?.id,
-      companyId: project?.companyId ?? companyId ?? company?.id,
-      addressId: addressId,
-    );
+        : ActivityKind.clientInHouse;
+    await _activities.insert(tx, userId: userId, typeId: await _typeOf(tx, kind), at: at, addressId: project.id);
   }
 
-  Future<CurrentActivity?> _current(
-    int userId,
-    List<AssignedProject> projects,
-    List<MyCompany> companies,
-  ) async {
+  /// Every active project, the ones [userId] used last first.
+  Future<List<MyProject>> _projectsOf(SqlExecutor executor, int userId) async {
+    final workshops = {
+      for (final w in await _locations.all(executor, withProjects: false)) ?ProjectRepository.coordinatesOf(w.point): w.name,
+    };
+    return [
+      for (final row in await _projects.list(executor, activeOnly: true, userId: userId))
+        MyProject(
+          id: row.id,
+          name: row.fullName,
+          isClient: row.hasArea,
+          placeName: ProjectService.summaryOf(row, workshops).placeName,
+          lastUsed: row.lastUsed,
+        ),
+    ];
+  }
+
+  /// Every activity row exists (the Lists page).
+  Future<bool> _typesReady(SqlExecutor executor) async {
+    for (final name in _typeNames.values) {
+      if (await _writes.typeId(executor, name) == null) return false;
+    }
+    return true;
+  }
+
+  Future<CurrentActivity?> _current(int userId, List<MyProject> projects, List<MyCompany> companies) async {
     final (from, to) = _todayBounds();
     final latest = (await _activities.between(_executor, userId, from, to)).lastOrNull;
     if (latest == null) return null;
-    MyProject? project;
-    for (final p in projects) {
-      if (p.project.id == latest.projectId) project = p.project;
-    }
     return CurrentActivity(
       kind: _kindOf(latest.typeName),
       since: latest.at,
-      project: project,
-      company: companies.where((c) => c.id == latest.companyId).firstOrNull,
+      project: projects.where((p) => p.id == latest.addressId).firstOrNull,
+      company: _defaultCompany(companies),
     );
   }
 
-  /// One project: that one. Several: the one used last.
-  static MyProject? _defaultProject(List<AssignedProject> projects) {
-    final current = [
-      for (final p in projects)
-        if (p.project.isCurrent) p,
-    ];
-    if (current.length == 1) return current.single.project;
-    final used = current.where((p) => p.lastUsed != null).toList()..sort((a, b) => b.lastUsed!.compareTo(a.lastUsed!));
-    return used.firstOrNull?.project;
-  }
-
-  /// The client project of theirs at [addressId]. Several there: the one
-  /// their default rule picks (D38), which may be none.
-  static MyProject? _clientProjectAt(List<AssignedProject> projects, int addressId) => _defaultProject([
-    for (final p in projects)
-      if (p.addressId == addressId && p.project.isClient) p,
-  ]);
-
-  static bool _hasClientProject(List<AssignedProject> projects, int to, int from) => projects.any(
-    (p) => p.project.isClient && p.project.isCurrent && (p.addressId == to || p.addressId == from),
-  );
+  /// The active client project whose site is [addressId].
+  static MyProject? _clientSite(List<MyProject> projects, int addressId) =>
+      projects.where((p) => p.isClient && p.id == addressId).firstOrNull;
 
   static MyCompany? _defaultCompany(List<MyCompany> companies) =>
       companies.where((c) => c.isDefault).firstOrNull ?? (companies.length == 1 ? companies.single : null);
@@ -388,12 +358,9 @@ class ActivityService {
   static DateTime _toSecond(DateTime at) =>
       DateTime.fromMillisecondsSinceEpoch(at.millisecondsSinceEpoch ~/ 1000 * 1000, isUtc: true);
 
-  static MyProject _assigned(List<AssignedProject> projects, int projectId) {
-    for (final p in projects) {
-      if (p.project.id == projectId && p.project.isCurrent) return p.project;
-    }
-    throw const ApiException.validation(SwitchActivityRequest.fieldProject, 'This is not one of your projects.');
-  }
+  static MyProject _active(List<MyProject> projects, int projectId) =>
+      projects.where((p) => p.id == projectId).firstOrNull ??
+      (throw const ApiException.validation(SwitchActivityRequest.fieldProject, 'This project can’t be chosen.'));
 
   static void _checkFits(ActivityKind kind, MyProject? project) {
     final fits = switch (kind) {

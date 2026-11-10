@@ -4,83 +4,20 @@ import '../database/sql_executor.dart';
 import '../employees/membership_filters.dart';
 import '../time_records/time_record_repository.dart';
 
-/// One activity row of `tblTimeReg`.
-typedef ActivityRow = ({
-  int id,
-  String typeName,
-  DateTime at,
-  int? projectId,
-  int? companyId,
-  // Where it happened, when that is known (D40).
-  int? addressId,
-  // The address of the project.
-  int? projectAddressId,
-});
+/// One activity row of `tblTimeReg`. [addressId] is where it happened when
+/// that is known, and its project when that address is a project's (D44).
+typedef ActivityRow = ({int id, String typeName, DateTime at, int? addressId});
 
-/// A project with what the employee's history says about it.
-typedef AssignedProject = ({MyProject project, DateTime? lastUsed, int? addressId});
-
-/// Data access for activities (D19, D22, D37). PROPOSAL
-/// (docs/database/PROPOSED_TABLES.md): uses tables and columns that exist only
-/// in the local database, so nothing here runs where they are missing. The
-/// Start and Finish rows are not touched: an activity is a row of its own.
+/// Data access for activities (D19, D22, D37, D44) on IT's tables: an
+/// activity is a `tblTimeReg` row of an "Activity – …" type, and its
+/// `addressID` says the project or the place. The Start and Finish rows are
+/// not touched: an activity is a row of its own.
 class ActivityRepository {
   const ActivityRepository();
 
   /// `tblTimeRegType` names of activities start with this.
   static const typePrefix = 'Activity – ';
   static const transportType = '${typePrefix}Transport';
-
-  static const _clientType = 'Client';
-  static const _finishedStatus = 'Completed';
-
-  /// Whether this database has the proposed tables.
-  Future<bool> available(SqlExecutor executor) async => (await executor.query(
-    'SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() '
-    "AND TABLE_NAME = 'tblTimeReg' AND COLUMN_NAME = 'projectID'",
-  )).isNotEmpty;
-
-  /// The active projects [userId] has worked on or is assigned to, newest
-  /// use first.
-  Future<List<AssignedProject>> projects(SqlExecutor executor, int userId) async {
-    final rows = await executor.query(
-      'SELECT p.projectID, p.projectName, p.projectReference, p.projectStartDate, p.projectEndDate, p.companyID, p.addressID, '
-      'a.addressLogicalName, c.companyName, t.projectTypeName, s.projectStatusName, '
-      '(up.userProjectActive = 1 AND up.userProjectMFD = 0) AS assigned, '
-      '(SELECT MAX(r.timeRegTimestamp) FROM tblTimeReg r WHERE r.userID = up.userID '
-      ' AND r.projectID = p.projectID AND r.timeRegActive = 1 AND r.timeRegMFD = 0) AS lastUsed '
-      'FROM tblUserProject up '
-      'JOIN tblProject p ON p.projectID = up.projectID AND p.projectActive = 1 AND p.projectMFD = 0 '
-      'JOIN tblCompany c ON c.companyID = p.companyID '
-      'LEFT JOIN tblAddress a ON a.addressID = p.addressID '
-      'JOIN tblProjectType t ON t.projectTypeID = p.projectTypeID '
-      'JOIN tblProjectStatus s ON s.projectStatusID = p.projectStatusID '
-      'WHERE up.userID = :user ORDER BY lastUsed DESC, p.projectName, p.projectID',
-      {'user': userId},
-    );
-    return [
-      for (final row in rows)
-        (
-          project: MyProject(
-            id: row.readInt('projectID'),
-            name: row.readString('projectName'),
-            companyId: row.readInt('companyID'),
-            companyName: row.readString('companyName'),
-            isClient: row.readString('projectTypeName') == _clientType,
-            isCurrent: row.readBool('assigned') && row.readString('projectStatusName') != _finishedStatus,
-            statusName: row.readString('projectStatusName'),
-            reference: row.readOptionalString('projectReference'),
-            addressName: row.readOptionalString('addressLogicalName'),
-            startDate: _date(row.readOptionalDateTime('projectStartDate')),
-            endDate: _date(row.readOptionalDateTime('projectEndDate')),
-          ),
-          lastUsed: row.readOptionalString('lastUsed') == null ? null : row.readUtcDateTime('lastUsed'),
-          addressId: row.readOptionalInt('addressID'),
-        ),
-    ];
-  }
-
-  static String? _date(DateTime? value) => value == null ? null : TimeRecordDay.dateText(value);
 
   /// The active companies of [userId], by name.
   Future<List<MyCompany>> companies(SqlExecutor executor, int userId) async => [
@@ -112,10 +49,8 @@ class ActivityRepository {
     if (userIds.isEmpty) return const {};
     final names = [for (var i = 0; i < userIds.length; i++) ':u$i'];
     final rows = await executor.query(
-      'SELECT r.userID, r.timeRegID, t.timeRegTypeName, r.timeRegTimestamp, r.projectID, r.companyID, r.addressID, '
-      'p.addressID AS projectAddressID FROM tblTimeReg r '
+      'SELECT r.userID, r.timeRegID, t.timeRegTypeName, r.timeRegTimestamp, r.addressID FROM tblTimeReg r '
       'JOIN tblTimeRegType t ON t.timeRegTypeID = r.timeRegTypeID '
-      'LEFT JOIN tblProject p ON p.projectID = r.projectID '
       'WHERE r.userID IN (${names.join(', ')}) AND r.timeRegActive = 1 AND r.timeRegMFD = 0 '
       'AND t.timeRegTypeName LIKE :prefix AND r.timeRegTimestamp >= :from AND r.timeRegTimestamp < :to '
       'ORDER BY r.timeRegTimestamp, r.timeRegID',
@@ -132,48 +67,17 @@ class ActivityRepository {
         id: row.readInt('timeRegID'),
         typeName: row.readString('timeRegTypeName'),
         at: row.readUtcDateTime('timeRegTimestamp'),
-        projectId: row.readOptionalInt('projectID'),
-        companyId: row.readOptionalInt('companyID'),
         addressId: row.readOptionalInt('addressID'),
-        projectAddressId: row.readOptionalInt('projectAddressID'),
       ));
     }
     return byUser;
   }
 
-  /// The project addresses that are not [userId]'s: their phone has no reason
-  /// to watch these (D40), and Android allows only so many.
-  Future<Set<int>> otherProjectAddresses(SqlExecutor executor, int userId) async => {
-    for (final row in await executor.query(
-      'SELECT DISTINCT p.addressID FROM tblProject p WHERE p.addressID IS NOT NULL AND p.addressID NOT IN ('
-      'SELECT own.addressID FROM tblProject own '
-      'JOIN tblUserProject up ON up.projectID = own.projectID AND up.userProjectActive = 1 AND up.userProjectMFD = 0 '
-      'JOIN tblProjectStatus s ON s.projectStatusID = own.projectStatusID AND s.projectStatusName <> :finished '
-      'WHERE up.userID = :user AND own.projectActive = 1 AND own.projectMFD = 0 AND own.addressID IS NOT NULL)',
-      {'user': userId, 'finished': _finishedStatus},
-    ))
-      row.readInt('addressID'),
-  };
-
   /// Adds an activity row; `timeRegManualEntry = 0`, it is what happened.
-  Future<int> insert(
-    SqlExecutor tx, {
-    required int userId,
-    required int typeId,
-    required DateTime at,
-    int? projectId,
-    int? companyId,
-    int? addressId,
-  }) async => (await tx.execute(
-    'INSERT INTO tblTimeReg (userID, timeRegTypeID, timeRegTimestamp, timeRegManualEntry, projectID, companyID, '
-    'addressID, timeRegActive, timeRegMFD) VALUES (:user, :type, :at, 0, :project, :company, :address, 1, 0)',
-    {
-      'user': userId,
-      'type': typeId,
-      'at': TimeRecordRepository.sqlDateTime(at),
-      'project': projectId,
-      'company': companyId,
-      'address': addressId,
-    },
-  )).lastInsertId;
+  Future<int> insert(SqlExecutor tx, {required int userId, required int typeId, required DateTime at, int? addressId}) async =>
+      (await tx.execute(
+        'INSERT INTO tblTimeReg (userID, timeRegTypeID, timeRegTimestamp, timeRegManualEntry, addressID, '
+        'timeRegActive, timeRegMFD) VALUES (:user, :type, :at, 0, :address, 1, 0)',
+        {'user': userId, 'type': typeId, 'at': TimeRecordRepository.sqlDateTime(at), 'address': addressId},
+      )).lastInsertId;
 }

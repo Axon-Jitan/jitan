@@ -212,25 +212,22 @@ Future<void> main() async {
     transactions: db,
   );
 
-  // Off on a database without the proposed tables (PROPOSED_TABLES.md):
-  // registering starts and finishes works the same either way.
-  final hasActivities = await const ActivityRepository().available(db);
+  // Activities and projects run on IT's tables (D44); without the activity
+  // rows from the Lists page they are simply off, and registering starts and
+  // finishes works the same.
   final mapboxToken = config.mapboxToken;
-  final tripKilometres = hasActivities
-      ? TripKilometres(
-          activities: const ActivityRepository(),
-          locations: const LocationRepository(),
-          distance: mapboxToken == null ? const NoDrivingDistance() : MapboxDrivingDistance(token: mapboxToken),
-          executor: db,
-          clock: workplaceClock,
-        )
-      : null;
+  final tripKilometres = TripKilometres(
+    activities: const ActivityRepository(),
+    locations: const LocationRepository(),
+    distance: mapboxToken == null ? const NoDrivingDistance() : MapboxDrivingDistance(token: mapboxToken),
+    executor: db,
+    clock: workplaceClock,
+  );
   final locationService = LocationService(
     locations: const LocationRepository(),
     audit: const AuditLogRepository(),
     transactions: db,
     executor: db,
-    notWatchedBy: hasActivities ? (userId) => const ActivityRepository().otherProjectAddresses(db, userId) : null,
   );
   final timeRecordService = TimeRecordService(
     records: TimeRecordRepository(db),
@@ -247,19 +244,18 @@ Future<void> main() async {
     plans: WeekPlans(ScheduleRepository(db)),
     clock: workplaceClock,
   );
-  final activityService = hasActivities
-      ? ActivityService(
-          activities: const ActivityRepository(),
-          writes: const TimeRegistrationWriteRepository(),
-          myDay: myDayService,
-          locations: const LocationRepository(),
-          kilometres: tripKilometres!,
-          audit: const AuditLogRepository(),
-          transactions: db,
-          executor: db,
-          clock: workplaceClock,
-        )
-      : null;
+  final activityService = ActivityService(
+    activities: const ActivityRepository(),
+    projects: const ProjectRepository(),
+    writes: const TimeRegistrationWriteRepository(),
+    myDay: myDayService,
+    locations: const LocationRepository(),
+    kilometres: tripKilometres,
+    audit: const AuditLogRepository(),
+    transactions: db,
+    executor: db,
+    clock: workplaceClock,
+  );
   // Which tablets checked in lately: kept in memory only (GAP-09).
   final terminalPresence = TerminalPresence();
   final employeeService = EmployeeService(
@@ -321,8 +317,6 @@ Future<void> main() async {
       authorizer,
       ProjectService(
         projects: const ProjectRepository(),
-        companies: companyRepository,
-        employees: EmployeeRepository(db),
         locations: const LocationRepository(),
         audit: const AuditLogRepository(),
         transactions: db,
@@ -374,7 +368,7 @@ Future<void> main() async {
         transactions: db,
         rounding: RegistrationRounding(ScheduleRepository(db)),
         clock: workplaceClock,
-        onDayStart: activityService?.dayStarted,
+        onDayStart: activityService.dayStarted,
       ),
     ),
     activities: ActivityRoutes(activityService),
@@ -407,7 +401,7 @@ Future<void> main() async {
           transactions: db,
           rounding: RegistrationRounding(ScheduleRepository(db)),
           clock: workplaceClock,
-          onDayStart: activityService?.dayStarted,
+          onDayStart: activityService.dayStarted,
         ),
         activities: activityService,
         myDay: myDayService,

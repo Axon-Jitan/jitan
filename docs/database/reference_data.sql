@@ -42,9 +42,9 @@ SELECT t.name, 1, 0 FROM (
 -- Every registration is stored as rows told apart by type (decisions 4, 5,
 -- 7, 8): the actual time with how it was registered, the rounded time, and
 -- HR's corrected time. Manual rows also have timeRegManualEntry = 1 and a
--- required reason in timeRegComment (decision 6). Transport is not a type:
--- it is an activity the employee switches to, like a project (D22); how a
--- switch is stored comes with IT's projects update.
+-- required reason in timeRegComment (decision 6). What the day is spent on
+-- is an "Activity – …" row (D19, D22): its addressID is the project or the
+-- place (D44). Transport is not working time (D46).
 
 INSERT INTO tblTimeRegType (timeRegTypeName, timeRegTypeActive, timeRegTypeMFD)
 SELECT t.name, 1, 0 FROM (
@@ -58,6 +58,11 @@ SELECT t.name, 1, 0 FROM (
   UNION ALL SELECT 'Finish – rounded'
   UNION ALL SELECT 'Start – corrected'
   UNION ALL SELECT 'Finish – corrected'
+  UNION ALL SELECT 'Activity – Work'
+  UNION ALL SELECT 'Activity – Client on site'
+  UNION ALL SELECT 'Activity – Client in-house'
+  UNION ALL SELECT 'Activity – Internal'
+  UNION ALL SELECT 'Activity – Transport'
 ) t WHERE NOT EXISTS (SELECT 1 FROM tblTimeRegType x WHERE x.timeRegTypeName = t.name);
 
 -- ---------- Employee groups (tblGroup) -------------------------------
@@ -140,7 +145,15 @@ SELECT e.name FROM (
   UNION ALL SELECT 'terminal.deactivated'
   UNION ALL SELECT 'terminal.reactivated'
   UNION ALL SELECT 'terminal.removed'
+  UNION ALL SELECT 'list.entry.added'
 ) e WHERE NOT EXISTS (SELECT 1 FROM tblEventType x WHERE x.eventTypeName = e.name);
+
+-- ---------- Kinds of place (tblLocationType) ------------------------
+-- A project is an address of this kind (D44).
+
+INSERT INTO tblLocationType (locationTypeName, locationTypeActive, locationTypeMFD)
+SELECT 'Project location', 1, 0 FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM tblLocationType x WHERE x.locationTypeName = 'Project location');
 
 -- ---------- Terminal kinds (tblDeviceType) ---------------------------
 -- A terminal is a shared tablet (tblDevice, deviceMultiUser = 1) of one of
@@ -154,4 +167,3 @@ SELECT d.name, 'Android', 1, 0 FROM (
 -- ---------- Not proposed yet -----------------------------------------
 -- tblAppModules, tblFunction, tblAppModulesCredGroup: what each role may
 -- open and do (CLARIFY-10/11).
--- tblLocationType: not used by any decided feature yet.

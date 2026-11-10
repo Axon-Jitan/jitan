@@ -3,22 +3,14 @@ import 'package:jitan_models/jitan_models.dart';
 import 'api_client_exception.dart';
 import 'api_transport.dart';
 
-/// HR/Admin managing projects.
+/// HR/Admin managing projects (D43, D44): shared by every company, so the
+/// paths have none.
 class ProjectsApi {
   const ProjectsApi(this._transport);
 
   final ApiTransport _transport;
 
-  Future<ProjectOptions> options() async {
-    final json = await _transport.getJson('project-options');
-    try {
-      return ProjectOptions.fromJson(json);
-    } on FormatException catch (e) {
-      throw ApiClientException.invalidResponse(200, 'Project options: ${e.message}');
-    }
-  }
-
-  /// Every project the viewer may see.
+  /// Every project, active or not.
   Future<List<ProjectSummary>> list() async {
     final json = await _transport.getJson('projects');
     try {
@@ -28,22 +20,18 @@ class ProjectsApi {
     }
   }
 
-  Future<ProjectDetails> find(int companyId, int projectId) async =>
-      _details(await _transport.getJson('companies/$companyId/projects/$projectId'));
+  Future<ProjectDetails> find(int projectId) async => _details(await _transport.getJson('projects/$projectId'));
 
-  Future<ProjectDetails> create(int companyId, ProjectRequest request) async =>
-      _details(await _transport.postJson('companies/$companyId/projects', request.toJson()));
+  Future<ProjectDetails> create(ProjectRequest request) async => _details(await _transport.postJson('projects', request.toJson()));
 
-  Future<ProjectDetails> update(int companyId, int projectId, ProjectRequest request) async =>
-      _details(await _transport.putJson('companies/$companyId/projects/$projectId', request.toJson()));
+  Future<ProjectDetails> update(int projectId, ProjectRequest request) async =>
+      _details(await _transport.putJson('projects/$projectId', request.toJson()));
 
-  /// "Save assignments": [employeeIds] become the project's team.
-  Future<ProjectDetails> assign(int companyId, int projectId, List<int> employeeIds) async => _details(
-    await _transport.putJson(
-      'companies/$companyId/projects/$projectId/employees',
-      ProjectEmployeesRequest(employeeIds: employeeIds).toJson(),
-    ),
-  );
+  Future<ProjectDetails> deactivate(int projectId) async =>
+      _details(await _transport.postJson('projects/$projectId/deactivate', const {}));
+
+  Future<ProjectDetails> reactivate(int projectId) async =>
+      _details(await _transport.postJson('projects/$projectId/reactivate', const {}));
 
   static ProjectDetails _details(Map<String, Object?> json) {
     try {

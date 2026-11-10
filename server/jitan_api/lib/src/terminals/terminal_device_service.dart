@@ -148,7 +148,7 @@ class TerminalDeviceService {
       current: mine.current,
       projects: [
         for (final project in mine.projects)
-          if (project.isCurrent) project,
+          if (project.isRecent) project,
       ],
     );
   }

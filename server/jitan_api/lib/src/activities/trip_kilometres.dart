@@ -33,12 +33,11 @@ class TripKilometres {
 
   /// The trips of [day], one day's activities oldest first. Transports in a
   /// row are one trip. It leaves from the row's own place, else from the place
-  /// of the activity before; it arrives at the place of the activity after,
-  /// else at the project it was for. Out and back to one place says nothing
-  /// about where they went, so that arrival is not known either.
+  /// of the activity before; it arrives at the place of the activity after
+  /// (a client project's site is its place, D44). Out and back to one place
+  /// says nothing about where they went, so that arrival is not known either.
   static List<Trip> tripsOf(List<ActivityRow> day) {
     bool isTransport(int i) => day[i].typeName == ActivityRepository.transportType;
-    int? place(ActivityRow row) => row.addressId ?? row.projectAddressId;
     final trips = <Trip>[];
     for (var i = 0; i < day.length; i++) {
       if (!isTransport(i) || (i > 0 && isTransport(i - 1))) continue;
@@ -46,9 +45,8 @@ class TripKilometres {
       while (last + 1 < day.length && isTransport(last + 1)) {
         last++;
       }
-      final from = day[i].addressId ?? (i > 0 ? place(day[i - 1]) : null);
-      final after = last + 1 < day.length ? place(day[last + 1]) : null;
-      final arrives = after ?? day[last].projectAddressId;
+      final from = day[i].addressId ?? (i > 0 ? day[i - 1].addressId : null);
+      final arrives = last + 1 < day.length ? day[last + 1].addressId : null;
       trips.add((from: from, to: arrives == from ? null : arrives));
     }
     return trips;

@@ -19,66 +19,42 @@ enum ActivityKind {
   );
 }
 
-/// A project an employee can work on.
+/// A project an employee can choose (D43, D44): every active project, the
+/// ones they used most recently first. Its [id] is its `tblAddress` row.
 class MyProject {
-  const MyProject({
-    required this.id,
-    required this.name,
-    required this.companyId,
-    required this.companyName,
-    required this.isClient,
-    required this.isCurrent,
-    this.statusName,
-    this.reference,
-    this.addressName,
-    this.startDate,
-    this.endDate,
-  });
+  const MyProject({required this.id, required this.name, required this.isClient, this.placeName, this.lastUsed});
 
   factory MyProject.fromJson(Map<String, Object?> json) => MyProject(
     id: json.readInt('id'),
     name: json.readString('name'),
-    companyId: json.readInt('companyId'),
-    companyName: json.readString('companyName'),
     isClient: json.readBool('isClient'),
-    isCurrent: json.readBool('isCurrent'),
-    statusName: json.readOptionalString('statusName'),
-    reference: json.readOptionalString('reference'),
-    addressName: json.readOptionalString('addressName'),
-    startDate: json.readOptionalString('startDate'),
-    endDate: json.readOptionalString('endDate'),
+    placeName: json.readOptionalString('placeName'),
+    lastUsed: json.readOptionalDateTime('lastUsed')?.toUtc(),
   );
 
   final int id;
+
+  /// "P-1042 Office refurbishment".
   final String name;
-  final int companyId;
-  final String companyName;
+
+  /// At a client site; `false` for internal work at a workshop.
   final bool isClient;
 
-  /// Assigned now; `false` for a project they worked on before.
-  final bool isCurrent;
+  /// The client site's town, or the workshop's name.
+  final String? placeName;
 
-  /// For the project's details on Employee Web.
-  final String? statusName;
-  final String? reference;
-  final String? addressName;
+  /// When they last worked on it; `null` for never.
+  final DateTime? lastUsed;
 
-  /// `yyyy-MM-dd`.
-  final String? startDate;
-  final String? endDate;
+  /// Shown under "Recent" (Figma `1512:502`).
+  bool get isRecent => lastUsed != null;
 
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
-    'companyId': companyId,
-    'companyName': companyName,
     'isClient': isClient,
-    'isCurrent': isCurrent,
-    'statusName': statusName,
-    'reference': reference,
-    'addressName': addressName,
-    'startDate': startDate,
-    'endDate': endDate,
+    'placeName': placeName,
+    'lastUsed': lastUsed?.toUtc().toIso8601String(),
   };
 }
 
@@ -199,8 +175,8 @@ class ActivityEntry {
   };
 }
 
-/// `GET /me/activity`. [enabled] is `false` on a database without the proposed
-/// tables: the app then shows no project card.
+/// `GET /me/activity`. [enabled] is `false` while the activity rows are
+/// missing from the Lists page: the app then shows no project card.
 class MyActivity {
   const MyActivity({
     required this.enabled,
@@ -225,8 +201,10 @@ class MyActivity {
   final bool enabled;
   final CurrentActivity? current;
 
-  /// Assigned now, and the ones worked on before.
+  /// Every active project, the most recently used first (D43).
   final List<MyProject> projects;
+
+  /// Their companies; the day counts for the default one (D44).
   final List<MyCompany> companies;
   final ActivityBreakdown breakdown;
 
@@ -245,7 +223,7 @@ class MyActivity {
 
 /// Body of `POST /me/activity`: "Switching activity does not end your workday."
 class SwitchActivityRequest {
-  const SwitchActivityRequest({required this.kind, required this.at, this.projectId, this.companyId});
+  const SwitchActivityRequest({required this.kind, required this.at, this.projectId});
 
   factory SwitchActivityRequest.fromJson(Map<String, Object?> json) {
     final at = json.readString(fieldAt);
@@ -257,26 +235,18 @@ class SwitchActivityRequest {
       kind: ActivityKind.fromWire(json.readString('kind')),
       at: DateTime.parse(at).toUtc(),
       projectId: json.readOptionalInt(fieldProject),
-      companyId: json.readOptionalInt(fieldCompany),
     );
   }
 
   static const fieldAt = 'at';
   static const fieldKind = 'kind';
   static const fieldProject = 'projectId';
-  static const fieldCompany = 'companyId';
 
   final ActivityKind kind;
   final DateTime at;
   final int? projectId;
-  final int? companyId;
 
-  Map<String, Object?> toJson() => {
-    'kind': kind.wireName,
-    'at': at.toUtc().toIso8601String(),
-    'projectId': projectId,
-    'companyId': companyId,
-  };
+  Map<String, Object?> toJson() => {'kind': kind.wireName, 'at': at.toUtc().toIso8601String(), 'projectId': projectId};
 }
 
 /// Body of `POST /me/activity/trip` (D40): on Automatic, the employee left one

@@ -42,7 +42,7 @@ class TimeRegistrationWriteService {
 
   /// Stores what the day starts on (D37), in the same transaction; `null` on
   /// a database without the proposed tables.
-  final Future<void> Function(SqlExecutor tx, int userId, DateTime at, int? addressId, int? companyId)? _onDayStart;
+  final Future<void> Function(SqlExecutor tx, int userId, DateTime at, int? addressId)? _onDayStart;
   final DateTime Function() _now;
 
   /// How far ahead of the server's clock a time may be (a phone's clock may
@@ -191,7 +191,7 @@ class TimeRegistrationWriteService {
           },
         ),
       );
-      if (request.boundary == RegistrationBoundary.start) await _onDayStart?.call(tx, userId, at, addressId, companyId);
+      if (request.boundary == RegistrationBoundary.start) await _onDayStart?.call(tx, userId, at, addressId);
       return (
         registered: RegisteredTime(
           boundary: request.boundary,

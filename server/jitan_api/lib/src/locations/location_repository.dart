@@ -3,6 +3,7 @@ import 'package:jitan_models/jitan_models.dart';
 import '../database/db_row.dart';
 import '../database/sql_executor.dart';
 import '../database/loose_text.dart';
+import 'location_type_names.dart';
 
 /// A location's row IDs: what its audit events reference.
 typedef LocationKeys = ({int addressId, int geofenceId, int geofenceAddressId});
@@ -23,10 +24,21 @@ class LocationRepository {
       'JOIN tblGeofence g ON g.geofenceID = ga.geofenceID AND g.geofenceActive = 1 AND g.geofenceMFD = 0 '
       'WHERE a.addressMFD = 0';
 
-  /// Every location, active or not, by name.
-  Future<List<Location>> all(SqlExecutor executor) async => [
-    for (final row in await executor.query('$_select ORDER BY a.addressLogicalName, a.addressID')) _toLocation(row),
+  /// Every location, active or not, by name. A project's client site is a
+  /// location too (D44); [withProjects] `false` leaves those out (the
+  /// Locations page shows only workplaces).
+  Future<List<Location>> all(SqlExecutor executor, {bool withProjects = true}) async => [
+    for (final row in await executor.query(
+      '$_select${withProjects ? '' : ' AND NOT $_isProject'} ORDER BY a.addressLogicalName, a.addressID',
+      {if (!withProjects) 'projectKind': LocationTypeNames.projectLocation},
+    ))
+      _toLocation(row),
   ];
+
+  static const _isProject =
+      'EXISTS (SELECT 1 FROM tblAddressLocationType alt '
+      'JOIN tblLocationType lt ON lt.locationTypeID = alt.locationTypeID AND lt.locationTypeName = :projectKind '
+      'WHERE alt.addressID = a.addressID AND alt.addressLocationTypeActive = 1 AND alt.addressLocationTypeMFD = 0)';
 
   /// One location; `null` when it does not exist or is marked for deletion.
   Future<Location?> find(SqlExecutor executor, int addressId) async {

@@ -60,12 +60,12 @@ void main() {
       outcome: TerminalScanOutcome.alreadyCheckedIn,
       timeLocal: '09:42',
       firstName: 'Disan',
-      projects: [MyProject(id: 1, name: 'Towers', companyId: 2, companyName: 'Almeco', isClient: true, isCurrent: true)],
+      projects: [MyProject(id: 1, name: 'P-1057 Towers', isClient: true, placeName: 'Engis')],
     );
 
     final back = TerminalScanResult.fromJson(_wire(result.toJson()));
 
     expect(back.outcome, TerminalScanOutcome.alreadyCheckedIn);
-    expect(back.projects.single.name, 'Towers');
+    expect(back.projects.single.name, 'P-1057 Towers');
   });
 }

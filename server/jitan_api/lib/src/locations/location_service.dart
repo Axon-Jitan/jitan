@@ -17,7 +17,6 @@ class LocationService {
     required this._audit,
     required this._transactions,
     required this._executor,
-    this._notWatchedBy,
   });
 
   final LocationRepository _locations;
@@ -25,25 +24,16 @@ class LocationService {
   final TransactionRunner _transactions;
   final SqlExecutor _executor;
 
-  /// Client addresses of other people's projects (D40).
-  final Future<Set<int>> Function(int userId)? _notWatchedBy;
+  /// The workplaces, for the Locations page: projects' client sites are
+  /// managed on the Projects page (D44).
+  Future<List<Location>> all() => _locations.all(_executor, withProjects: false);
 
-  Future<List<Location>> all() => _locations.all(_executor);
-
-  /// The locations a phone watches: active, with a usable pin.
+  /// What a phone watches: every active place with a usable pin, the client
+  /// sites of projects included, so arriving there is recognised (D40, D44).
   Future<List<Location>> recognised() async => [
-    for (final location in await all())
+    for (final location in await _locations.all(_executor))
       if (location.isActive && location.point != null) location,
   ];
-
-  /// What [userId]'s phone watches: not the clients of other people's projects.
-  Future<List<Location>> recognisedFor(int userId) async {
-    final others = await _notWatchedBy?.call(userId) ?? const <int>{};
-    return [
-      for (final location in await recognised())
-        if (!others.contains(location.id)) location,
-    ];
-  }
 
   Future<Location> create(int actorUserId, LocationRequest request) async {
     final location = validated(request);

@@ -11,6 +11,7 @@ import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/http/api_exception.dart';
 import 'package:jitan_api/src/locations/location_repository.dart';
+import 'package:jitan_api/src/projects/project_repository.dart';
 import 'package:jitan_api/src/routing/driving_distance.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
 import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
@@ -108,7 +109,7 @@ void main() {
 
   setUpAll(() async {
     db = TestDatabase.connect(maxConnections: 3);
-    activitiesHere = await const ActivityRepository().available(db);
+    activitiesHere = true;
     final schedules = ScheduleRepository(db);
     final records = TimeRecordRepository(db);
     final days = TimeRecordService(
@@ -123,6 +124,7 @@ void main() {
     final activities = activitiesHere
         ? ActivityService(
             activities: const ActivityRepository(),
+            projects: const ProjectRepository(),
             writes: const TimeRegistrationWriteRepository(),
             myDay: myDay,
             locations: const LocationRepository(),

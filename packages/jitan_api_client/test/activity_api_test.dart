@@ -7,7 +7,7 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
 void main() {
-  const project = MyProject(id: 3, name: 'Cooling towers', companyId: 7, companyName: 'Almeco', isClient: true, isCurrent: true);
+  const project = MyProject(id: 3, name: 'P-1057 Cooling towers', isClient: true, placeName: 'Engis');
   final mine = MyActivity(
     enabled: true,
     current: CurrentActivity(kind: ActivityKind.clientOnSite, since: DateTime.utc(2026, 10, 22, 6), project: project),
@@ -27,11 +27,11 @@ void main() {
       ),
     );
 
-    expect((await api.mine()).current?.project?.name, 'Cooling towers');
+    expect((await api.mine()).current?.project?.name, 'P-1057 Cooling towers');
     await api.switchTo(SwitchActivityRequest(kind: ActivityKind.transport, at: DateTime.utc(2026, 10, 22, 8), projectId: 3));
 
     expect(requests.map((r) => '${r.method} ${r.url.path}'), ['GET /me/activity', 'POST /me/activity']);
-    expect(jsonDecode(requests.last.body), {'kind': 'transport', 'at': '2026-10-22T08:00:00.000Z', 'projectId': 3, 'companyId': null});
+    expect(jsonDecode(requests.last.body), {'kind': 'transport', 'at': '2026-10-22T08:00:00.000Z', 'projectId': 3});
   });
 
   test('every activity survives JSON, and an unknown one is refused', () {

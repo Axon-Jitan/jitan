@@ -39,6 +39,7 @@ import 'package:jitan_api/src/terminals/terminal_presence.dart';
 import 'package:jitan_api/src/terminals/terminal_repository.dart';
 import 'package:jitan_api/src/terminals/terminal_service.dart';
 import 'package:jitan_api/src/terminals/terminal_routes.dart';
+import 'package:jitan_api/src/projects/project_repository.dart';
 import 'package:jitan_api/src/projects/project_routes.dart';
 import 'package:jitan_api/src/projects/project_service.dart';
 import 'package:jitan_api/src/reports/dashboard_service.dart';
@@ -68,7 +69,6 @@ import 'package:jitan_api/src/onboarding/onboarding_service.dart';
 import 'package:shelf/shelf.dart';
 
 import 'fake_locations.dart';
-import 'fake_projects.dart';
 import 'fakes.dart';
 
 /// The full request pipeline wired to fakes.
@@ -242,12 +242,11 @@ class TestApp {
           clock: WorkplaceClock('Europe/Brussels'),
         ),
       ),
+      // Not called by these tests: projects are tested against MySQL.
       projects: ProjectRoutes(
         Authorizer(permissions),
         ProjectService(
-          projects: projects,
-          companies: companies,
-          employees: employees,
+          projects: const ProjectRepository(),
           locations: locations,
           audit: audit,
           transactions: transactions,
@@ -336,7 +335,6 @@ class TestApp {
   final scheduleSync = FakeEmployeeScheduleSync();
   late final scheduleService = ScheduleService(schedules: schedules, groups: groups);
   final locations = FakeLocationRepository();
-  final projects = FakeProjectRepository();
   final audit = FakeAuditLog();
   final transactions = FakeTransactions();
   final onboarding = FakeOnboardingRepository();

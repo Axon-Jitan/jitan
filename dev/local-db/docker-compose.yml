@@ -30,7 +30,6 @@ services:
       - ./seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
       # PROPOSAL awaiting IT (ERD_GAPS GAP-15): local only, see proposals/.
       - ./proposals/gap15_group_schedule.sql:/docker-entrypoint-initdb.d/03-gap15-group-schedule.sql:ro
-      - ./proposals/projects_terminals.sql:/docker-entrypoint-initdb.d/04-projects-terminals.sql:ro
       # The fixed lists (development data here; on IT's database HR adds them in Jitan).
       - ../../docs/database/reference_data.sql:/docker-entrypoint-initdb.d/05-reference-data.sql:ro
       - jitan-local-db-data:/var/lib/mysql
