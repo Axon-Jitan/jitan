@@ -1,29 +1,24 @@
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
-const office = TerminalTypeChoice(id: 1, name: 'Office');
-const vehicle = TerminalTypeChoice(id: 2, name: 'Vehicle');
+const office = TerminalTypeChoice(id: 1, name: 'Office terminal');
+const vehicle = TerminalTypeChoice(id: 2, name: 'Vehicle terminal');
 
 Terminal officeTerminal({
   int id = 1,
   String name = 'Almeco Reception',
-  int companyId = 1,
   TerminalStatus status = TerminalStatus.online,
-  bool scanningEnabled = true,
   DateTime? lastSeen,
+  DateTime? lastScan,
   String? connectionTag = 'tag-1',
 }) => Terminal(
   id: id,
   name: name,
   type: office,
-  companyId: companyId,
-  companyName: 'Almeco',
-  scanningEnabled: scanningEnabled,
+  serialNumber: 'R9TW40-$id',
   status: status,
-  addressId: 1,
-  addressName: 'Almeco office',
-  deviceName: 'Tab A9',
   lastSeen: lastSeen,
+  lastScan: lastScan,
   connectionTag: connectionTag,
 );
 
@@ -32,7 +27,7 @@ class FakeTerminalsApi implements TerminalsApi {
   List<Terminal> terminals = [];
   ApiClientException? fail;
   final created = <TerminalRequest>[];
-  final updated = <(int, int, TerminalRequest)>[];
+  final updated = <(int, TerminalRequest)>[];
   final calls = <String>[];
 
   /// What `find` answers while the dialog waits for the tablet.
@@ -51,7 +46,7 @@ class FakeTerminalsApi implements TerminalsApi {
   }
 
   @override
-  Future<Terminal> find(int companyId, int terminalId) async =>
+  Future<Terminal> find(int terminalId) async =>
       found ?? terminals.firstWhere((t) => t.id == terminalId);
 
   @override
@@ -64,16 +59,9 @@ class FakeTerminalsApi implements TerminalsApi {
   }
 
   @override
-  Future<Terminal> update(int companyId, int terminalId, TerminalRequest request) async {
-    updated.add((companyId, terminalId, request));
+  Future<Terminal> update(int terminalId, TerminalRequest request) async {
+    updated.add((terminalId, request));
     return terminals.firstWhere((t) => t.id == terminalId);
-  }
-
-  @override
-  Future<Terminal> setScanning(Terminal terminal, {required bool enabled}) async {
-    if (fail case final failure?) throw failure;
-    calls.add('scanning $enabled');
-    return officeTerminal(id: terminal.id, name: terminal.name, status: terminal.status, scanningEnabled: enabled);
   }
 
   @override

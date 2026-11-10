@@ -149,7 +149,7 @@ void main() {
       await _pump(
         tester,
         width,
-        TerminalsScreen(api: api, companiesApi: FakeCompaniesApi(), locationsApi: FakeLocationsApi(), clock: () => DateTime(2026, 11, 1, 9)),
+        TerminalsScreen(api: api, clock: () => DateTime(2026, 11, 1, 9)),
       );
       await tester.pumpAndSettle();
       _fitsTheWindow(tester, width, 'Terminals');

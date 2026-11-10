@@ -115,11 +115,7 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
           GoRoute(
             path: AdminRoutes.terminals,
             pageBuilder: (context, state) => NoTransitionPage(
-              child: TerminalsScreen(
-                api: services.terminalsApi,
-                companiesApi: services.companiesApi,
-                locationsApi: services.locationsApi,
-              ),
+              child: TerminalsScreen(api: services.terminalsApi),
             ),
           ),
           GoRoute(

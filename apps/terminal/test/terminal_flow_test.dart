@@ -195,7 +195,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       final h = Harness(token: '1.secret');
-      h.api.info_ = const TerminalInfo(id: 1, name: 'Almeco Reception', companyName: 'Almeco', canScan: false);
+      h.api.info_ = const TerminalInfo(id: 1, name: 'Almeco Reception', canScan: false);
 
       await tester.pumpWidget(h.app());
       await tester.pump();

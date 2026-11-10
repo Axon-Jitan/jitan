@@ -6,7 +6,7 @@ import 'package:terminal/src/app/terminal_app.dart';
 import 'package:terminal/src/device/terminal_store.dart';
 import 'package:terminal/src/flow/terminal_controller.dart';
 
-const info = TerminalInfo(id: 1, name: 'Almeco Reception', companyName: 'Almeco', canScan: true, placeName: 'Almeco office');
+const info = TerminalInfo(id: 1, name: 'Almeco Reception', canScan: true);
 
 const towers = MyProject(id: 1, name: 'Cooling towers', companyId: 1, companyName: 'Almeco', isClient: true, isCurrent: true);
 const workshop = MyProject(id: 2, name: 'Clean the workshop', companyId: 1, companyName: 'Almeco', isClient: false, isCurrent: true);

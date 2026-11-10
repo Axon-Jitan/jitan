@@ -8,26 +8,21 @@ import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 
 /// Adds a terminal, or changes [terminal]. Returns what the server saved.
-Future<Terminal?> showTerminalDialog(
-  BuildContext context, {
-  required TerminalsApi api,
-  required CompaniesApi companiesApi,
-  required LocationsApi locationsApi,
-  Terminal? terminal,
-}) => showJitanModal<Terminal>(
-  context,
-  barrierDismissible: false,
-  builder: (_) => _TerminalDialog(api: api, companiesApi: companiesApi, locationsApi: locationsApi, terminal: terminal),
-);
+Future<Terminal?> showTerminalDialog(BuildContext context, {required TerminalsApi api, Terminal? terminal}) =>
+    showJitanModal<Terminal>(
+      context,
+      barrierDismissible: false,
+      builder: (_) => _TerminalDialog(api: api, terminal: terminal),
+    );
 
-/// Figma `HR / Terminals V2 — Add terminal` (`1488:270`), vehicle (`1494:119`)
-/// and Edit (`1494:272`). An office has a location, a vehicle a number plate.
+/// Figma `HR / Terminals V3 — Add terminal` (`1507:126`), vehicle (`1507:280`)
+/// and Edit (`1507:595`): the kind, a name and the tablet's serial number. A
+/// terminal is shared by every company, so it has no company; a van's number
+/// plate goes in its name.
 class _TerminalDialog extends StatefulWidget {
-  const _TerminalDialog({required this.api, required this.companiesApi, required this.locationsApi, this.terminal});
+  const _TerminalDialog({required this.api, this.terminal});
 
   final TerminalsApi api;
-  final CompaniesApi companiesApi;
-  final LocationsApi locationsApi;
   final Terminal? terminal;
 
   @override
@@ -36,14 +31,10 @@ class _TerminalDialog extends StatefulWidget {
 
 class _TerminalDialogState extends State<_TerminalDialog> {
   late final _name = TextEditingController(text: widget.terminal?.name);
-  late final _plate = TextEditingController(text: widget.terminal?.plateNumber);
+  late final _serial = TextEditingController(text: widget.terminal?.serialNumber);
   late int? _typeId = widget.terminal?.type.id;
-  late int? _companyId = widget.terminal?.companyId;
-  late int? _addressId = widget.terminal?.addressId;
 
   TerminalOptions? _options;
-  List<CompanySummary> _companies = const [];
-  List<Location> _locations = const [];
   ApiClientException? _failure;
   bool _busy = false;
   final _errors = <String, String>{};
@@ -60,7 +51,7 @@ class _TerminalDialogState extends State<_TerminalDialog> {
   @override
   void dispose() {
     _name.dispose();
-    _plate.dispose();
+    _serial.dispose();
     super.dispose();
   }
 
@@ -68,21 +59,10 @@ class _TerminalDialogState extends State<_TerminalDialog> {
     setState(() => _failure = null);
     try {
       final options = await widget.api.options();
-      final companies = await widget.companiesApi.listCompanies();
-      final locations = await widget.locationsApi.list();
       if (!mounted) return;
       setState(() {
         _options = options;
         _typeId ??= options.types.firstOrNull?.id;
-        _companies = [
-          for (final company in companies)
-            if (company.isActive) company,
-        ];
-        _companyId ??= _companies.length == 1 ? _companies.single.id : null;
-        _locations = [
-          for (final location in locations)
-            if (location.isActive) location,
-        ];
       });
     } on ApiClientException catch (e) {
       if (mounted) setState(() => _failure = e);
@@ -93,9 +73,7 @@ class _TerminalDialogState extends State<_TerminalDialog> {
   bool _check() {
     _errors.clear();
     if (_name.text.trim().isEmpty) _errors[TerminalRequest.fieldName] = AdminTextKeys.terminalErrorName;
-    if (_companyId == null) _errors[TerminalRequest.fieldCompany] = AdminTextKeys.terminalErrorCompany;
-    if (_isVehicle && _plate.text.trim().isEmpty) _errors[TerminalRequest.fieldPlate] = AdminTextKeys.terminalErrorPlate;
-    if (!_isVehicle && _addressId == null) _errors[TerminalRequest.fieldAddress] = AdminTextKeys.terminalErrorLocation;
+    if (_serial.text.trim().isEmpty) _errors[TerminalRequest.fieldSerialNumber] = AdminTextKeys.terminalErrorSerial;
     return _errors.isEmpty;
   }
 
@@ -107,24 +85,21 @@ class _TerminalDialogState extends State<_TerminalDialog> {
       _busy = true;
       _failure = null;
     });
-    final request = TerminalRequest(
-      name: _name.text,
-      typeId: _typeId!,
-      companyId: _companyId!,
-      addressId: _isVehicle ? null : _addressId,
-      plateNumber: _isVehicle ? _plate.text : null,
-    );
+    final request = TerminalRequest(name: _name.text, typeId: _typeId!, serialNumber: _serial.text);
     try {
       final current = widget.terminal;
-      final saved = current == null
-          ? await widget.api.create(request)
-          : await widget.api.update(current.companyId, current.id, request);
+      final saved = current == null ? await widget.api.create(request) : await widget.api.update(current.id, request);
       if (mounted) Navigator.of(context).pop(saved);
     } on ApiClientException catch (e) {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _failure = e;
+        // A serial number in use belongs under its field.
+        if (e.error?.code == ApiErrorCode.duplicateSerialNumber) {
+          _errors[TerminalRequest.fieldSerialNumber] = AdminTextKeys.terminalSerialTaken;
+        } else {
+          _failure = e;
+        }
       });
     }
   }
@@ -139,44 +114,44 @@ class _TerminalDialogState extends State<_TerminalDialog> {
     return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
   }
 
-  Widget _form(TerminalOptions options) => Column(
+  /// A field with a quiet line under it (Figma `1507:126`).
+  Widget _withNote(Widget field, String note) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
-    spacing: 16,
+    spacing: 6,
     children: [
-      _TypeSwitch(types: options.types, selected: _typeId, onChanged: (id) => setState(() => _typeId = id)),
-      JitanTextField(
-        label: context.t(AdminTextKeys.terminalName),
-        controller: _name,
-        maxLength: TerminalRequest.maxNameLength,
-        errorText: _error(TerminalRequest.fieldName),
-      ),
-      JitanSelectField<int>(
-        label: context.t(AdminTextKeys.terminalCompany),
-        value: _companyId,
-        errorText: _error(TerminalRequest.fieldCompany),
-        hintText: context.t(AdminTextKeys.projectChoose),
-        options: [for (final c in _companies) JitanSelectOption(value: c.id, label: c.name)],
-        onChanged: (id) => setState(() => _companyId = id),
-      ),
-      if (_isVehicle)
-        JitanTextField(
-          label: context.t(AdminTextKeys.terminalPlate),
-          controller: _plate,
-          maxLength: TerminalRequest.maxPlateLength,
-          errorText: _error(TerminalRequest.fieldPlate),
-        )
-      else
-        JitanSelectField<int>(
-          label: context.t(AdminTextKeys.terminalLocation),
-          value: _addressId,
-          errorText: _error(TerminalRequest.fieldAddress),
-          hintText: context.t(AdminTextKeys.projectChoose),
-          options: [for (final l in _locations) JitanSelectOption(value: l.id, label: l.name)],
-          onChanged: (id) => setState(() => _addressId = id),
-        ),
-      if (_failure case final failure?) _failureNote(failure),
+      field,
+      Text(note, style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
     ],
   );
+
+  Widget _form(TerminalOptions options) {
+    final name = JitanTextField(
+      label: context.t(AdminTextKeys.terminalName),
+      controller: _name,
+      maxLength: TerminalRequest.maxNameLength,
+      errorText: _error(TerminalRequest.fieldName),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 16,
+      children: [
+        _TypeSwitch(types: options.types, selected: _typeId, onChanged: (id) => setState(() => _typeId = id)),
+        if (_isVehicle) _withNote(name, context.t(AdminTextKeys.terminalVehicleNameHint)) else name,
+        _withNote(
+          JitanTextField(
+            label: context.t(AdminTextKeys.terminalSerial),
+            controller: _serial,
+            maxLength: TerminalRequest.maxSerialNumberLength,
+            errorText: _error(TerminalRequest.fieldSerialNumber),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _busy ? null : _save(),
+          ),
+          context.t(AdminTextKeys.terminalSerialHint),
+        ),
+        if (_failure case final failure?) _failureNote(failure),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -6,8 +6,6 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import '../support/fake_auth.dart';
-import '../support/fake_locations.dart';
 import '../support/fake_terminals.dart';
 
 void main() {
@@ -17,7 +15,7 @@ void main() {
   setUp(() {
     api = FakeTerminalsApi()
       ..terminals = [
-        officeTerminal(lastSeen: now.subtract(const Duration(minutes: 2)).toUtc()),
+        officeTerminal(lastSeen: now.subtract(const Duration(minutes: 2)).toUtc(), lastScan: DateTime(2026, 11, 1, 7, 12).toUtc()),
         officeTerminal(id: 2, name: 'Van 1-DEF-456', status: TerminalStatus.offline),
         officeTerminal(id: 3, name: 'Front desk', status: TerminalStatus.notConnected, connectionTag: null),
       ];
@@ -33,12 +31,7 @@ void main() {
         child: MaterialApp(
           theme: JitanTheme.web(),
           home: Scaffold(
-            body: TerminalsScreen(
-              api: api,
-              companiesApi: AllCompaniesApi(),
-              locationsApi: FakeLocationsApi(),
-              clock: () => now,
-            ),
+            body: TerminalsScreen(api: api, clock: () => now),
           ),
         ),
       ),
@@ -72,34 +65,51 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Give the terminal a name.'), findsOneWidget);
-    expect(find.text('Choose a location.'), findsOneWidget);
+    expect(find.text('Give the serial number on the tablet’s label.'), findsOneWidget);
     expect(api.created, isEmpty);
   });
 
-  testWidgets('a vehicle asks for its number plate instead of a location', (tester) async {
+  testWidgets('Add terminal: a name, the kind and the serial number; no company (Figma 1507:126)', (tester) async {
     await pump(tester);
     await tester.tap(find.text('Add terminal'));
     await tester.pumpAndSettle();
-    expect(find.text('Location'), findsOneWidget);
 
-    await tester.tap(find.text('Vehicle'));
+    expect(find.text('On the label on the back of the tablet.'), findsOneWidget);
+    expect(find.text('Company'), findsNothing);
+    await tester.enterText(find.byType(TextField).at(1), 'Workshop entrance');
+    await tester.enterText(find.byType(TextField).at(2), ' R9TW40ABCDE ');
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Location'), findsNothing);
-    expect(find.text('Number plate'), findsOneWidget);
+    expect(api.created.single.serialNumber, ' R9TW40ABCDE ', reason: 'the server trims');
+    expect(api.created.single.typeId, office.id);
+    await tester.tap(find.text('Finish later'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('Manage: the switch saves at once', (tester) async {
+  testWidgets('a vehicle says to put the number plate in the name (Figma 1507:280)', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Add terminal'));
+    await tester.pumpAndSettle();
+    expect(find.text('Include the number plate, so drivers find their van.'), findsNothing);
+
+    await tester.tap(find.text('Vehicle terminal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Include the number plate, so drivers find their van.'), findsOneWidget);
+    expect(find.text('Number plate'), findsNothing);
+  });
+
+  testWidgets('Manage: the kind, the serial number and the last scan (Figma 1507:434)', (tester) async {
     await pump(tester);
     await tester.tap(find.text('Almeco Reception'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Almeco office'), findsOneWidget);
-    expect(find.text('Tab A9'), findsOneWidget);
-    await tester.tap(find.byType(Switch));
-    await tester.pumpAndSettle();
-
-    expect(api.calls, ['scanning false']);
+    expect(find.text('R9TW40-1'), findsOneWidget);
+    expect(find.text('Last scan'), findsOneWidget);
+    expect(find.text('07:12'), findsOneWidget);
+    expect(find.byType(Switch), findsNothing);
   });
 
   testWidgets('Deactivate asks first, and Cancel changes nothing', (tester) async {

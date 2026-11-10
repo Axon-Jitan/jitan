@@ -102,10 +102,8 @@ class _TerminalAppState extends State<TerminalApp> {
       TabletReady(:final terminal) => MessageScreen(
         tone: MessageTone.good,
         title: context.t(TerminalTextKeys.readyTitle),
-        text: context.t(
-          TerminalTextKeys.readyPlace,
-          args: {'terminal': terminal.name, 'company': terminal.companyName},
-        ),
+        // Shared by every company (GAP-09): the tablet says only its name.
+        text: context.t(TerminalTextKeys.readyPlace, args: {'terminal': terminal.name}),
       ),
       Scanning(:final unreadable) => ScanHomeScreen(
         camera: widget.camera,

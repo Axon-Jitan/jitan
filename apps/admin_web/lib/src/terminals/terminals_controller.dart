@@ -48,7 +48,7 @@ class TerminalsController extends ChangeNotifier {
 
   bool _matches(Terminal terminal) {
     if (_search.isEmpty) return true;
-    final text = '${terminal.name} ${terminal.companyName} ${terminal.plateNumber ?? ''}';
+    final text = '${terminal.name} ${terminal.serialNumber}';
     return text.toLowerCase().contains(_search.toLowerCase());
   }
 

@@ -81,7 +81,7 @@ class _ConnectTerminalDialogState extends State<ConnectTerminalDialog> {
   Future<void> _check() async {
     if (_qr == null || _expired || _connected) return;
     try {
-      final now = await widget.api.find(widget.terminal.companyId, widget.terminal.id);
+      final now = await widget.api.find(widget.terminal.id);
       if (!mounted || now.connectionTag == null || now.connectionTag == widget.terminal.connectionTag) return;
       _checkTimer?.cancel();
       setState(() => _connected = true);

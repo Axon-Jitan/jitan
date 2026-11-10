@@ -5,7 +5,8 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 import 'terminal_text.dart';
 
-/// The Terminals table (Figma `1488:2`): a row opens Manage. A phone keeps the
+/// The Terminals table (Figma `1507:2`): a row opens Manage. Terminals are
+/// shared by every company, so there is no company column. A phone keeps the
 /// name and the status.
 class TerminalsTable extends StatelessWidget {
   const TerminalsTable({super.key, required this.terminals, required this.now, required this.onOpen});
@@ -15,9 +16,8 @@ class TerminalsTable extends StatelessWidget {
   final ValueChanged<Terminal> onOpen;
 
   // Column widths proportional to Figma.
-  static const _flexTerminal = 310;
+  static const _flexTerminal = 480;
   static const _flexType = 150;
-  static const _flexCompany = 170;
   static const _flexStatus = 190;
   static const _flexSeen = 226;
   static const _flexOpen = 30;
@@ -36,7 +36,6 @@ class TerminalsTable extends StatelessWidget {
         JitanTableColumn(label: t.t(AdminTextKeys.terminalColumnTerminal), flex: phone ? _flexPhoneTerminal : _flexTerminal),
         if (!phone) ...[
           JitanTableColumn(label: t.t(AdminTextKeys.terminalColumnType), flex: _flexType),
-          JitanTableColumn(label: t.t(AdminTextKeys.terminalColumnCompany), flex: _flexCompany),
         ],
         JitanTableColumn(label: t.t(AdminTextKeys.terminalColumnStatus), flex: phone ? _flexPhoneStatus : _flexStatus),
         if (!phone) JitanTableColumn(label: t.t(AdminTextKeys.terminalColumnSeen), flex: _flexSeen),
@@ -49,7 +48,6 @@ class TerminalsTable extends StatelessWidget {
           Text(terminal.name, overflow: TextOverflow.ellipsis, style: JitanTextStyles.tableCellStrong),
           if (!phone) ...[
             Text(terminal.type.name, overflow: TextOverflow.ellipsis, style: JitanTextStyles.tableCell),
-            Text(terminal.companyName, overflow: TextOverflow.ellipsis, style: JitanTextStyles.tableCell),
           ],
           TerminalStatusLabel(status: terminal.status),
           if (!phone)

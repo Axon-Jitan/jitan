@@ -12,20 +12,12 @@ import 'terminal_dialog.dart';
 import 'terminals_controller.dart';
 import 'terminals_table.dart';
 
-/// HR/Admin "Terminals" (Figma `1488:2`): the shared tablets of every company
-/// the viewer may see.
+/// HR/Admin "Terminals" (Figma `1507:2`): the shared tablets, used by
+/// employees of every company.
 class TerminalsScreen extends StatefulWidget {
-  const TerminalsScreen({
-    super.key,
-    required this.api,
-    required this.companiesApi,
-    required this.locationsApi,
-    this.clock,
-  });
+  const TerminalsScreen({super.key, required this.api, this.clock});
 
   final TerminalsApi api;
-  final CompaniesApi companiesApi;
-  final LocationsApi locationsApi;
   final DateTime Function()? clock;
 
   @override
@@ -45,13 +37,7 @@ class _TerminalsScreenState extends State<TerminalsScreen> {
 
   void _say(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
 
-  Future<Terminal?> _edit([Terminal? terminal]) => showTerminalDialog(
-    context,
-    api: widget.api,
-    companiesApi: widget.companiesApi,
-    locationsApi: widget.locationsApi,
-    terminal: terminal,
-  );
+  Future<Terminal?> _edit([Terminal? terminal]) => showTerminalDialog(context, api: widget.api, terminal: terminal);
 
   Future<void> _connect(Terminal terminal) async {
     await showConnectTerminalDialog(context, api: widget.api, terminal: terminal);

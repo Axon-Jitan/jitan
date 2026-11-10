@@ -10,8 +10,8 @@ import 'terminal_text.dart';
 
 enum TerminalAction { edit, connect, deactivate, remove }
 
-/// Opens Manage for [terminal]. Scanning and turning it back on are saved
-/// here; the rest comes back as a [TerminalAction].
+/// Opens Manage for [terminal]. Turning it back on is saved here; the rest
+/// comes back as a [TerminalAction].
 Future<TerminalAction?> showManageTerminalDialog(
   BuildContext context, {
   required TerminalsApi api,
@@ -22,8 +22,8 @@ Future<TerminalAction?> showManageTerminalDialog(
   builder: (_) => _ManageTerminalDialog(api: api, terminal: terminal, now: now),
 );
 
-/// Figma `HR / Terminals V2 — Manage` (`1488:1164`): one calm window instead
-/// of Terminal details and Manage terminal.
+/// Figma `HR / Terminals V3 — Manage` (`1507:434`): one calm window with the
+/// kind, the serial number and the last scan.
 class _ManageTerminalDialog extends StatefulWidget {
   const _ManageTerminalDialog({required this.api, required this.terminal, required this.now});
 
@@ -40,7 +40,6 @@ class _ManageTerminalDialogState extends State<_ManageTerminalDialog> {
   ApiClientException? _failure;
   bool _busy = false;
 
-  bool get _isVehicle => _terminal.plateNumber != null;
   bool get _isInactive => _terminal.status == TerminalStatus.inactive;
   bool get _isConnected => _terminal.status == TerminalStatus.online || _terminal.status == TerminalStatus.offline;
 
@@ -90,33 +89,8 @@ class _ManageTerminalDialogState extends State<_ManageTerminalDialog> {
   Widget _details() {
     final rows = [
       _row(context.t(AdminTextKeys.terminalColumnType), _value(_terminal.type.name)),
-      _row(context.t(AdminTextKeys.terminalColumnCompany), _value(_terminal.companyName)),
-      if (_isVehicle)
-        _row(context.t(AdminTextKeys.terminalPlate), _value(_terminal.plateNumber!))
-      else
-        _row(context.t(AdminTextKeys.terminalLocation), _value(_terminal.addressName ?? '—')),
-      if (_terminal.deviceName case final device?) _row(context.t(AdminTextKeys.terminalTablet), _value(device)),
-      _row(
-        context.t(AdminTextKeys.terminalCanScan),
-        SizedBox(
-          height: 24,
-          child: Transform.scale(
-            scale: 0.7,
-            alignment: Alignment.centerRight,
-            child: Switch(
-              value: _terminal.scanningEnabled,
-              activeThumbColor: JitanColors.surface,
-              activeTrackColor: JitanColors.ink,
-              inactiveTrackColor: JitanColors.inputBorder,
-              inactiveThumbColor: JitanColors.surface,
-              trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
-              onChanged: _busy || _isInactive
-                  ? null
-                  : (enabled) => _save(() => widget.api.setScanning(_terminal, enabled: enabled)),
-            ),
-          ),
-        ),
-      ),
+      _row(context.t(AdminTextKeys.terminalSerial), _value(_terminal.serialNumber)),
+      _row(context.t(AdminTextKeys.terminalLastScan), _value(TerminalText.lastSeen(context, _terminal.lastScan, widget.now))),
     ];
     return Container(
       decoration: BoxDecoration(color: JitanColors.tableHeader, borderRadius: BorderRadius.circular(14)),

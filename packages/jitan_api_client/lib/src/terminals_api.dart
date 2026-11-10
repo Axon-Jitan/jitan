@@ -18,7 +18,7 @@ class TerminalsApi {
     }
   }
 
-  /// Every terminal the viewer may see.
+  /// Every terminal: they are shared by every company.
   Future<List<Terminal>> list() async {
     final json = await _transport.getJson('terminals');
     try {
@@ -28,34 +28,24 @@ class TerminalsApi {
     }
   }
 
-  Future<Terminal> find(int companyId, int terminalId) async =>
-      _terminal(await _transport.getJson('companies/$companyId/terminals/$terminalId'));
+  Future<Terminal> find(int terminalId) async => _terminal(await _transport.getJson('terminals/$terminalId'));
 
-  Future<Terminal> create(TerminalRequest request) async =>
-      _terminal(await _transport.postJson('companies/${request.companyId}/terminals', request.toJson()));
+  Future<Terminal> create(TerminalRequest request) async => _terminal(await _transport.postJson('terminals', request.toJson()));
 
-  /// [companyId] is where it is now; [request] may move it.
-  Future<Terminal> update(int companyId, int terminalId, TerminalRequest request) async =>
-      _terminal(await _transport.putJson('companies/$companyId/terminals/$terminalId', request.toJson()));
-
-  Future<Terminal> setScanning(Terminal terminal, {required bool enabled}) async => _terminal(
-    await _transport.putJson(
-      'companies/${terminal.companyId}/terminals/${terminal.id}/scanning',
-      TerminalScanningRequest(enabled: enabled).toJson(),
-    ),
-  );
+  Future<Terminal> update(int terminalId, TerminalRequest request) async =>
+      _terminal(await _transport.putJson('terminals/$terminalId', request.toJson()));
 
   Future<Terminal> deactivate(Terminal terminal) async => _action(terminal, 'deactivate');
 
   Future<Terminal> reactivate(Terminal terminal) async => _action(terminal, 'reactivate');
 
   Future<void> remove(Terminal terminal) async {
-    await _transport.postJson('companies/${terminal.companyId}/terminals/${terminal.id}/remove', const {});
+    await _transport.postJson('terminals/${terminal.id}/remove', const {});
   }
 
   /// A new temporary QR to connect a tablet; the previous one stops working.
   Future<TemporaryQrResponse> pairingQr(Terminal terminal) async {
-    final json = await _transport.postJson('companies/${terminal.companyId}/terminals/${terminal.id}/pairing-qr', const {});
+    final json = await _transport.postJson('terminals/${terminal.id}/pairing-qr', const {});
     try {
       return TemporaryQrResponse.fromJson(json);
     } on FormatException catch (e) {
@@ -64,7 +54,7 @@ class TerminalsApi {
   }
 
   Future<Terminal> _action(Terminal terminal, String action) async =>
-      _terminal(await _transport.postJson('companies/${terminal.companyId}/terminals/${terminal.id}/$action', const {}));
+      _terminal(await _transport.postJson('terminals/${terminal.id}/$action', const {}));
 
   static Terminal _terminal(Map<String, Object?> json) {
     try {

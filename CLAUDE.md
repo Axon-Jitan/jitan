@@ -68,7 +68,7 @@ The ERD is the source of truth. **Never** create migrations, add tables or colum
 columns, repurpose a field, or invent backend-only storage to cover a missing
 relationship. Schema changes happen only after discussion with IT and explicit approval.
 
-**Approved exception (product owner, 2026-10-31):** projects, transport and terminals
+**Approved exception (product owner, 2026-10-31):** projects and transport
 are built on proposed tables (visitors are left out of this version, 2026-11-01), in `dev/local-db/proposals/` and the local database
 only, each recorded in [PROPOSED_TABLES.md](docs/database/PROPOSED_TABLES.md) for IT to add.
 `schema.sql` and IT's databases are never touched. Anything else still follows the steps below.
@@ -264,8 +264,13 @@ no schedule; several: kept while it belongs to one, else HR picks "Schedules com
 
 Modules waiting on ERD gaps, not to be built until resolved: `devices` (GAP-05),
 `exceptions` (GAP-08, detection-only is fine). `visitors` is left out of this version.
-`terminals` runs on proposed tables. A tablet proves itself with its own secret
-(`Authorization: Bearer`, stored hashed), which `TokenAuthenticationMiddleware` leaves to
+`terminals` runs on IT's tables (GAP-09): a terminal is a `tblDevice` with
+`deviceMultiUser = 1`, shared by every company (no company on it, `/terminals/…` paths), its
+kind a `tblDeviceType` row ("Office terminal", "Vehicle terminal"), and its tablet's secret
+the hashed `userPassword` of a kiosk `tblUser` (`userKioskMode = 1`) linked through
+`tblUserDevice`. Kiosk users never sign in and are in no company. A scan names the terminal
+on its audit row (`tblEventLog.deviceID`); last seen is kept in memory. The tablet sends
+`Authorization: Bearer <deviceID>.<secret>`, which `TokenAuthenticationMiddleware` leaves to
 the `/terminal/` routes.
 `policies` from the roadmap is **not** a module: its concerns live in `schedules`,
 `geofences` and `employees` (groups).
