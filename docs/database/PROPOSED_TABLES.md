@@ -19,11 +19,9 @@ questions wait. Nothing below blocks that work.
 2. **Transport.** May a trip be stored as a `tblTimeReg` row of type "Activity – Transport"
    (D22, D40)? HR adds the type in Jitan's Lists page; the question is only whether IT
    agrees with the meaning.
-3. **Travel as work.** May a group's "travel counts as work" be a "Travel" row in its
-   schedule (D39)?
-4. **SAP.** How does Jitan's server reach SAP's API for projects, and which fields does it
+3. **SAP.** How does Jitan's server reach SAP's API for projects, and which fields does it
    return (D43)?
-5. **Database certificate.** IT's CA certificate or fingerprint, so the API can verify the
+4. **Database certificate.** IT's CA certificate or fingerprint, so the API can verify the
    connection (SEC-01).
 
 ## New tables

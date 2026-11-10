@@ -15,7 +15,6 @@ table: where IT already has a row with another name, Jitan uses IT's name instea
 |---|---|---|---|
 | 1 | `tblTimeRegType` | Activity – Work, Activity – Client on site, Activity – Client in-house, Activity – Internal, Activity – Transport | Switching project or activity, transport, kilometres (D37, D22, D40) |
 | 2 | `tblLocationType` | Project location | Projects as address rows (D44) |
-| 3 | `tblScheduleType` | Travel | Travel counting as work per group (D39) |
 | 4 | `tblEventType` | Every name in `AuditEventType` (`server/jitan_api/lib/src/audit/audit_event.dart`) that IT lacks | Event names on audit rows |
 
 Plus the SAP API connection for projects (D43).
