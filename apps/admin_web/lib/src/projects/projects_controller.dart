@@ -34,10 +34,6 @@ class ProjectsController extends ChangeNotifier {
   ProjectsState get state => _state;
 
   String _search = '';
-  int? _companyId;
-  int? get companyId => _companyId;
-  int? _statusId;
-  int? get statusId => _statusId;
   bool _disposed = false;
 
   List<ProjectSummary> get all => switch (_state) {
@@ -45,17 +41,12 @@ class ProjectsController extends ChangeNotifier {
     _ => const [],
   };
 
+  /// Searched by SAP number, name and place.
   List<ProjectSummary> get visible => [
     for (final project in all)
-      if (_matches(project)) project,
+      if (_search.isEmpty || '${project.fullName} ${project.placeName ?? ''}'.toLowerCase().contains(_search.toLowerCase()))
+        project,
   ];
-
-  bool _matches(ProjectSummary project) {
-    if (_companyId != null && project.companyId != _companyId) return false;
-    if (_statusId != null && project.status.id != _statusId) return false;
-    if (_search.isEmpty) return true;
-    return '${project.name} ${project.reference ?? ''}'.toLowerCase().contains(_search.toLowerCase());
-  }
 
   Future<void> load() async {
     if (_state is! ProjectsLoaded) _emit(const ProjectsLoading());
@@ -68,16 +59,6 @@ class ProjectsController extends ChangeNotifier {
 
   void updateSearch(String text) {
     _search = text.trim();
-    _notify();
-  }
-
-  void updateCompany(int? companyId) {
-    _companyId = companyId;
-    _notify();
-  }
-
-  void updateStatus(int? statusId) {
-    _statusId = statusId;
     _notify();
   }
 

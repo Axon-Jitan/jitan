@@ -8,8 +8,8 @@ import 'package:terminal/src/flow/terminal_controller.dart';
 
 const info = TerminalInfo(id: 1, name: 'Almeco Reception', canScan: true);
 
-const towers = MyProject(id: 1, name: 'Cooling towers', companyId: 1, companyName: 'Almeco', isClient: true, isCurrent: true);
-const workshop = MyProject(id: 2, name: 'Clean the workshop', companyId: 1, companyName: 'Almeco', isClient: false, isCurrent: true);
+const towers = MyProject(id: 1, name: 'Cooling towers', isClient: true, placeName: 'Engis');
+const workshop = MyProject(id: 2, name: 'Clean the workshop', isClient: false, placeName: 'Almeco');
 
 TerminalScanResult scanResult(TerminalScanOutcome outcome, {MyProject? project = towers, String? name = 'Disan'}) => TerminalScanResult(
   outcome: outcome,

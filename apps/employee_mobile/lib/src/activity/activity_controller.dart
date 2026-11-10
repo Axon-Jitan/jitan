@@ -18,17 +18,8 @@ class ActivityController extends ChangeNotifier {
 
   bool _disposed = false;
 
-  /// Assigned now.
-  List<MyProject> get currentProjects => [
-    for (final project in _activity.projects)
-      if (project.isCurrent) project,
-  ];
-
   /// Worth a card: something to show, or something to choose from.
-  bool get showsCard => _activity.enabled && (_activity.current?.project != null || currentProjects.isNotEmpty);
-
-  /// Someone in several companies can choose one for today.
-  bool get showsCompanies => _activity.enabled && _activity.companies.length > 1;
+  bool get showsCard => _activity.enabled && (_activity.current?.project != null || _activity.projects.isNotEmpty);
 
   Future<void> load() async {
     try {
@@ -39,12 +30,8 @@ class ActivityController extends ChangeNotifier {
   }
 
   /// Throws what the server refused, for the screen to show.
-  Future<void> switchTo({required ActivityKind kind, int? projectId, int? companyId}) async {
-    _set(
-      await _api.switchTo(
-        SwitchActivityRequest(kind: kind, at: _clock().toUtc(), projectId: projectId, companyId: companyId),
-      ),
-    );
+  Future<void> switchTo({required ActivityKind kind, int? projectId}) async {
+    _set(await _api.switchTo(SwitchActivityRequest(kind: kind, at: _clock().toUtc(), projectId: projectId)));
     onSwitched?.call();
   }
 

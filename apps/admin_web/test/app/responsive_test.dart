@@ -132,11 +132,7 @@ void main() {
   for (final width in _widths) {
     testWidgets('Projects and Add project at $width px', (tester) async {
       final api = FakeProjectsApi()..projects = [projectDetails(), projectDetails(id: 4, name: 'A project with a really rather long name indeed')];
-      await _pump(
-        tester,
-        width,
-        ProjectsScreen(api: api, companiesApi: FakeCompaniesApi(), employeesApi: FakeEmployeesApi(), locationsApi: FakeLocationsApi()),
-      );
+      await _pump(tester, width, ProjectsScreen(api: api, locationsApi: FakeLocationsApi(), maps: null));
       await tester.pumpAndSettle();
       _fitsTheWindow(tester, width, 'Projects');
 

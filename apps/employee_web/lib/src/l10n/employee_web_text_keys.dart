@@ -59,7 +59,6 @@ abstract final class EmployeeWebTextKeys {
   static const qrMissing = 'web.qr.missing';
   static const switchTitle = 'web.switch.title';
   static const switchText = 'web.switch.text';
-  static const switchCompany = 'web.switch.company';
   static const transportHint = 'web.switch.transportHint';
 
   static const periodTitle = 'web.period.title';
@@ -106,13 +105,14 @@ abstract final class EmployeeWebTextKeys {
 
   static const projectsTitle = 'web.projects.title';
   static const projectsSubtitle = 'web.projects.subtitle';
-  static const projectsCurrent = 'web.projects.current';
-  static const projectsEarlier = 'web.projects.earlier';
   static const projectsNone = 'web.projects.none';
-  static const projectReference = 'web.project.reference';
-  static const projectAddress = 'web.project.address';
-  static const projectDates = 'web.project.dates';
-  static const projectDatesOpen = 'web.project.datesOpen';
+  static const projectsRecent = 'web.projects.recent';
+  static const projectsAll = 'web.projects.all';
+  static const projectsNow = 'web.projects.now';
+  static const projectsSearch = 'web.projects.search';
+  static const projectsNoMatch = 'web.projects.noMatch';
+  static const projectClientSite = 'web.project.clientSite';
+  static const projectOurWorkshop = 'web.project.ourWorkshop';
 
   static const profileTitle = 'web.profile.title';
   static const profileCompany = 'web.profile.company';

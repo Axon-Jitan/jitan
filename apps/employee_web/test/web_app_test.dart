@@ -43,7 +43,7 @@ void main() {
     await open(tester, h);
 
     expect(find.byType(JitanNavItem), findsNWidgets(4));
-    for (final (item, shows) in [('Period', 'Your registered time.'), ('Projects', 'The work you’re assigned to.'), ('Profile', 'Password')]) {
+    for (final (item, shows) in [('Period', 'Your registered time.'), ('Projects', 'Every project you can work on.'), ('Profile', 'Password')]) {
       await tester.tap(find.widgetWithText(JitanNavItem, item));
       await tester.pumpAndSettle();
       expect(find.text(shows), findsOneWidget, reason: item);

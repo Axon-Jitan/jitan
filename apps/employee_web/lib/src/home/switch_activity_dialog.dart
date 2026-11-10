@@ -16,9 +16,9 @@ Future<void> showSwitchActivityDialog(
   builder: (_) => _SwitchActivityDialog(api: api, activity: activity, at: clock),
 );
 
-/// What are you working on? (Figma `1499:1171`, several companies `1501:587`):
-/// one list, and a tap saves it. The Company field shows only for someone in
-/// more than one.
+/// What are you working on? (Figma `1499:1171`): one list, and a tap saves
+/// it. Every active project can be chosen (D44), so a search narrows it; the
+/// recently used ones come first.
 class _SwitchActivityDialog extends StatefulWidget {
   const _SwitchActivityDialog({required this.api, required this.activity, required this.at});
 
@@ -33,18 +33,17 @@ class _SwitchActivityDialog extends StatefulWidget {
 class _SwitchActivityDialogState extends State<_SwitchActivityDialog> {
   bool _busy = false;
   bool _failed = false;
+  String _search = '';
 
   CurrentActivity? get _current => widget.activity.current;
 
-  Future<void> _go(ActivityKind kind, {int? projectId, int? companyId}) async {
+  Future<void> _go(ActivityKind kind, {int? projectId}) async {
     setState(() {
       _busy = true;
       _failed = false;
     });
     try {
-      await widget.api.switchTo(
-        SwitchActivityRequest(kind: kind, at: widget.at.toUtc(), projectId: projectId, companyId: companyId),
-      );
+      await widget.api.switchTo(SwitchActivityRequest(kind: kind, at: widget.at.toUtc(), projectId: projectId));
       if (mounted) Navigator.of(context).pop();
     } on ApiClientException {
       if (mounted) {
@@ -91,26 +90,23 @@ class _SwitchActivityDialogState extends State<_SwitchActivityDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 18,
         children: [
-          if (activity.companies.length > 1)
-            JitanSelectField<int>(
-              label: context.t(EmployeeWebTextKeys.switchCompany),
-              value: current?.company?.id,
-              options: [for (final c in activity.companies) JitanSelectOption(value: c.id, label: c.name)],
-              onChanged: _busy ? null : (id) => _go(ActivityKind.work, companyId: id),
+          if (activity.projects.isNotEmpty)
+            JitanSearchField(
+              hintText: context.t(EmployeeWebTextKeys.projectsSearch),
+              onChanged: (value) => setState(() => _search = value),
             ),
           WebList(
             color: JitanColors.tableHeader,
             radius: 14,
             rows: [
-              for (final project in activity.projects)
-                if (project.isCurrent)
-                  _row(
-                    title: project.name,
-                    detail: WebText.project(context, project),
-                    selected: project.id == current?.project?.id && !onTransport,
-                    onTap: () =>
-                        _go(project.isClient ? ActivityKind.clientOnSite : ActivityKind.internal, projectId: project.id),
-                  ),
+              for (final project in WebText.matching(activity.projects, _search))
+                _row(
+                  title: project.name,
+                  detail: WebText.project(context, project),
+                  selected: project.id == current?.project?.id && !onTransport,
+                  onTap: () =>
+                      _go(project.isClient ? ActivityKind.clientOnSite : ActivityKind.internal, projectId: project.id),
+                ),
               _row(
                 title: context.t(EmployeeWebTextKeys.entryTransport),
                 detail: context.t(EmployeeWebTextKeys.transportHint),

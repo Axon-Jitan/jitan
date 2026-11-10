@@ -29,7 +29,7 @@ void main() {
     );
     h.server.activity = MyActivity(
       enabled: true,
-      projects: const [towers, workshop, warehouse],
+      projects: [towers, workshop, warehouse],
       companies: const [almeco],
       current: CurrentActivity(kind: ActivityKind.clientOnSite, since: started, project: towers),
       today: const [
@@ -61,7 +61,7 @@ void main() {
       expect(find.text('You’re working'), findsOneWidget);
       expect(find.text('Since 08:00 at Almeco office'), findsOneWidget);
       expect(find.text('4h 18m'), findsOneWidget);
-      expect(find.text('Office refurbishment'), findsOneWidget);
+      expect(find.text('P-1042 Office refurbishment'), findsOneWidget);
       expect(find.text('Started'), findsOneWidget);
       expect(find.text('To Cooling towers  ·  50m  ·  36 km'), findsOneWidget, reason: 'travel time to the next line (D46)');
     });
@@ -120,33 +120,25 @@ void main() {
       await tester.tap(find.text('Switch activity'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Clean the workshop'));
+      await tester.tap(find.text('P-0990 Clean the workshop'));
       await tester.pumpAndSettle();
 
       final sent = h.server.posts['/me/activity']!.single;
       expect((sent['kind'], sent['projectId']), ('internal', 2));
     });
 
-    testWidgets('Company shows only for someone in several', (tester) async {
+    testWidgets('every project can be chosen; a search narrows the list', (tester) async {
       working();
       await h.show(tester, home());
       await tester.tap(find.text('Switch activity'));
       await tester.pumpAndSettle();
-      expect(find.text('Company'), findsNothing);
-      await tester.tap(find.text('Close'));
-      await tester.pumpAndSettle();
+      expect(find.text('P-1063 Warehouse fit-out'), findsOneWidget);
 
-      h.server.activity = MyActivity(
-        enabled: true,
-        projects: const [towers],
-        companies: const [almeco, pca],
-        current: h.server.activity.current,
-      );
-      await tester.pumpWidget(const SizedBox());
-      await h.show(tester, home());
-      await tester.tap(find.text('Switch activity'));
+      await tester.enterText(find.byType(TextField), 'p-0990');
       await tester.pumpAndSettle();
-      expect(find.text('Company'), findsOneWidget);
+      expect(find.text('P-1063 Warehouse fit-out'), findsNothing);
+      expect(find.text('P-0990 Clean the workshop'), findsOneWidget);
+      expect(find.text('Company'), findsNothing);
     });
   });
 
@@ -249,25 +241,26 @@ void main() {
   });
 
   group('Projects', () {
-    testWidgets('current and earlier, and a project’s details', (tester) async {
+    testWidgets('recent first, Now on the current one, then all projects; search narrows', (tester) async {
+      working();
       await h.show(tester, ProjectsScreen(services: h.services));
 
-      expect(find.text('Current'), findsOneWidget);
-      expect(find.text('Earlier'), findsOneWidget);
-      expect(find.text('Completed · Almeco'), findsOneWidget);
+      expect(find.text('Recent'), findsOneWidget);
+      expect(find.text('All projects'), findsOneWidget);
+      expect(find.text('Now'), findsOneWidget);
+      expect(find.text('Client site · Mouscron'), findsOneWidget);
+      expect(find.text('Our workshop · Almeco'), findsOneWidget);
 
-      await tester.tap(find.text('Office refurbishment'));
+      await tester.enterText(find.byType(TextField), 'nothing like it');
       await tester.pumpAndSettle();
-
-      expect(find.text('PRJ-001'), findsOneWidget);
-      expect(find.text('From 19 October 2026'), findsOneWidget);
+      expect(find.text('No projects match your search.'), findsOneWidget);
     });
 
     testWidgets('none yet says so', (tester) async {
       h.server.activity = const MyActivity(enabled: false, projects: [], companies: []);
       await h.show(tester, ProjectsScreen(services: h.services));
 
-      expect(find.text('You’re not on a project yet.'), findsOneWidget);
+      expect(find.text('No projects yet.'), findsOneWidget);
     });
   });
 

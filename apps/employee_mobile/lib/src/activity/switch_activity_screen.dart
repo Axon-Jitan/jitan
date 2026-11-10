@@ -8,13 +8,18 @@ import '../today/today_widgets.dart';
 import '../widgets/mobile_widgets.dart';
 import 'activity_controller.dart';
 import 'activity_text.dart';
+import 'choose_project_screen.dart';
 
 /// Home / Switch activity (Figma `1088:2`, chosen `1109:269`): a project and
-/// what they're doing on it, travelling included. The workday goes on.
+/// what they're doing on it, travelling included. The workday goes on. The
+/// project is picked on Choose a project (Figma `1512:502`).
 class SwitchActivityScreen extends StatefulWidget {
-  const SwitchActivityScreen({super.key, required this.controller});
+  const SwitchActivityScreen({super.key, required this.controller, this.project});
 
   final ActivityController controller;
+
+  /// Already chosen on Choose a project.
+  final MyProject? project;
 
   @override
   State<SwitchActivityScreen> createState() => _SwitchActivityScreenState();
@@ -22,7 +27,8 @@ class SwitchActivityScreen extends StatefulWidget {
 
 class _SwitchActivityScreenState extends State<SwitchActivityScreen> {
   late final _current = widget.controller.activity.current;
-  late MyProject? _project = _current?.project ?? widget.controller.currentProjects.firstOrNull;
+  late MyProject? _project =
+      widget.project ?? _current?.project ?? widget.controller.activity.projects.where((p) => p.isRecent).firstOrNull;
   late ActivityKind? _kind = _current?.kind;
   bool _busy = false;
   bool _failed = false;
@@ -37,6 +43,22 @@ class _SwitchActivityScreenState extends State<SwitchActivityScreen> {
     final kind = _kind;
     if (kind == null || !_kinds.contains(kind)) return false;
     return kind != _current?.kind || _project?.id != _current?.project?.id;
+  }
+
+  Future<void> _choose() async {
+    final chosen = await Navigator.of(context).push<MyProject>(
+      MaterialPageRoute(
+        builder: (_) => ChooseProjectScreen(
+          projects: widget.controller.activity.projects,
+          currentId: _current?.project?.id,
+        ),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    setState(() {
+      _project = chosen;
+      if (!_kinds.contains(_kind)) _kind = null;
+    });
   }
 
   Future<void> _save() async {
@@ -59,7 +81,6 @@ class _SwitchActivityScreenState extends State<SwitchActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final projects = widget.controller.currentProjects;
     final current = _current;
     final currentProject = current?.project;
     return Scaffold(
@@ -93,15 +114,9 @@ class _SwitchActivityScreenState extends State<SwitchActivityScreen> {
                         const Divider(height: 1, color: JitanColors.inputBorder),
                         const SizedBox(height: 18),
                       ],
-                      JitanSelectField<int>(
-                        label: context.t(EmployeeTextKeys.activityProject),
-                        value: _project?.id,
-                        options: [for (final p in projects) JitanSelectOption(value: p.id, label: p.name)],
-                        onChanged: (id) => setState(() {
-                          _project = projects.where((p) => p.id == id).firstOrNull;
-                          if (!_kinds.contains(_kind)) _kind = null;
-                        }),
-                      ),
+                      Text(context.t(EmployeeTextKeys.activityProject), style: JitanMobileTextStyles.fieldLabel),
+                      const SizedBox(height: 8),
+                      _ProjectField(project: _project, onTap: _choose),
                       const SizedBox(height: 20),
                       Text(context.t(EmployeeTextKeys.activityKind), style: JitanMobileTextStyles.fieldLabel),
                       const SizedBox(height: 8),
@@ -152,6 +167,54 @@ class _SwitchActivityScreenState extends State<SwitchActivityScreen> {
                 onPressed: _changed ? _save : null,
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The chosen project, or "Choose a project"; tapping opens the list.
+class _ProjectField extends StatelessWidget {
+  const _ProjectField({required this.project, required this.onTap});
+
+  final MyProject? project;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final chosen = project;
+    return Semantics(
+      button: true,
+      child: TodayCard(
+        padding: EdgeInsets.zero,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
+              spacing: 12,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        chosen?.name ?? context.t(EmployeeTextKeys.activityChooseProject),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: chosen == null ? JitanMobileTextStyles.body : JitanMobileTextStyles.cardTitle,
+                      ),
+                      if (chosen != null) ...[
+                        const SizedBox(height: 3),
+                        Text(ActivityText.project(context, chosen), style: JitanMobileTextStyles.cardText),
+                      ],
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, size: 18, color: JitanColors.inkMuted),
+              ],
+            ),
           ),
         ),
       ),

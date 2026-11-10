@@ -40,14 +40,24 @@ abstract final class WebText {
     return '${parsed.day} ${context.t(CommonTextKeys.monthLong[parsed.month - 1])} ${parsed.year}';
   }
 
-  /// "On site · Almeco".
-  static String project(BuildContext context, MyProject project) => context.t(
-    EmployeeWebTextKeys.projectDetail,
-    args: {
-      'kind': context.t(project.isClient ? EmployeeWebTextKeys.entryOnSite : EmployeeWebTextKeys.entryInternal),
-      'company': project.companyName,
-    },
-  );
+  /// "Client site · Mouscron", "Our workshop · Almeco".
+  static String project(BuildContext context, MyProject project) {
+    final kind = context.t(project.isClient ? EmployeeWebTextKeys.projectClientSite : EmployeeWebTextKeys.projectOurWorkshop);
+    final place = project.placeName;
+    if (place == null || place.isEmpty) return kind;
+    return context.t(EmployeeWebTextKeys.projectDetail, args: {'kind': kind, 'place': place});
+  }
+
+  /// The projects whose SAP number or name holds [search]: the SAP number
+  /// starts the name, so one search finds both.
+  static List<MyProject> matching(List<MyProject> projects, String search) {
+    final words = search.trim().toLowerCase();
+    if (words.isEmpty) return projects;
+    return [
+      for (final project in projects)
+        if (project.name.toLowerCase().contains(words)) project,
+    ];
+  }
 
   static String kind(BuildContext context, ActivityKind kind) => context.t(switch (kind) {
     ActivityKind.work => EmployeeWebTextKeys.entryWork,

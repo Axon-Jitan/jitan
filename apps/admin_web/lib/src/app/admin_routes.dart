@@ -19,9 +19,6 @@ abstract final class AdminRoutes {
   static const terminals = '/terminals';
   static const lists = '/lists';
 
-  /// One project's page.
-  static String project(int companyId, int id) => '$projects/$companyId/$id';
-
   /// One group's page.
   static String group(int id) => '$groups/$id';
 }

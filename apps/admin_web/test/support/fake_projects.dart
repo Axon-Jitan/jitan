@@ -1,50 +1,37 @@
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
-const client = ProjectChoice(id: 1, name: 'Client');
-const internal = ProjectChoice(id: 2, name: 'Internal');
-const planned = ProjectChoice(id: 1, name: 'Planned');
-const active = ProjectChoice(id: 2, name: 'Active');
+import 'fake_locations.dart';
 
+/// A project as the server describes it: a client site in Mouscron, or (with
+/// [workshopId]) internal work there.
 ProjectDetails projectDetails({
   int id = 3,
+  String sapNumber = 'P-1042',
   String name = 'Office refurbishment',
-  int companyId = 7,
-  String companyName = 'Almeco',
-  ProjectChoice type = internal,
-  ProjectChoice status = active,
-  String? reference = 'PRJ-001',
-  int? addressId,
-  String? addressName,
-  List<ProjectEmployee> employees = const [],
+  bool active = true,
+  int? workshopId,
+  DateTime? lastUsed,
 }) => ProjectDetails(
   summary: ProjectSummary(
     id: id,
+    sapNumber: sapNumber,
     name: name,
-    reference: reference,
-    companyId: companyId,
-    companyName: companyName,
-    type: type,
-    status: status,
-    teamSize: employees.length,
+    isClientSite: workshopId == null,
+    isActive: active,
+    placeName: workshopId == null ? 'Mouscron' : 'Almeco workshop',
+    lastUsed: lastUsed,
   ),
-  startDate: DateTime.utc(2026, 10, 19),
-  addressId: addressId,
-  addressName: addressName,
-  employees: employees,
+  site: workshopId == null ? location(id, '$sapNumber $name') : null,
+  workshopId: workshopId,
 );
 
-/// Stand-in for [ProjectsApi].
+/// Stand-in for [ProjectsApi]: an in-memory list; every call is recorded.
 class FakeProjectsApi implements ProjectsApi {
   List<ProjectDetails> projects = [];
+  final calls = <String>[];
+  final saved = <ProjectRequest>[];
   ApiClientException? fail;
-  final created = <(int, ProjectRequest)>[];
-  final updated = <(int, int, ProjectRequest)>[];
-  final assigned = <(int, int, List<int>)>[];
-
-  @override
-  Future<ProjectOptions> options() async =>
-      const ProjectOptions(types: [client, internal], statuses: [planned, active], addressTypeIds: [1]);
 
   @override
   Future<List<ProjectSummary>> list() async {
@@ -53,35 +40,46 @@ class FakeProjectsApi implements ProjectsApi {
   }
 
   @override
-  Future<ProjectDetails> find(int companyId, int projectId) async {
-    if (fail case final failure?) throw failure;
-    return projects.firstWhere((p) => p.summary.id == projectId);
+  Future<ProjectDetails> find(int projectId) async => projects.firstWhere((p) => p.summary.id == projectId);
+
+  @override
+  Future<ProjectDetails> create(ProjectRequest request) async {
+    calls.add('create');
+    saved.add(request);
+    final created = projectDetails(id: 9, sapNumber: request.sapNumber, name: request.name, workshopId: request.workshopId);
+    projects = [...projects, created];
+    return created;
   }
 
   @override
-  Future<ProjectDetails> create(int companyId, ProjectRequest request) async {
-    if (fail case final failure?) throw failure;
-    created.add((companyId, request));
-    final project = projectDetails(id: projects.length + 100, name: request.name, companyId: companyId);
-    projects.add(project);
-    return project;
+  Future<ProjectDetails> update(int projectId, ProjectRequest request) async {
+    calls.add('update $projectId');
+    saved.add(request);
+    return find(projectId);
   }
 
   @override
-  Future<ProjectDetails> update(int companyId, int projectId, ProjectRequest request) async {
-    if (fail case final failure?) throw failure;
-    updated.add((companyId, projectId, request));
-    return projectDetails(id: projectId, name: request.name, companyId: companyId);
+  Future<ProjectDetails> deactivate(int projectId) async {
+    calls.add('deactivate $projectId');
+    return _setActive(projectId, active: false);
   }
 
   @override
-  Future<ProjectDetails> assign(int companyId, int projectId, List<int> employeeIds) async {
-    if (fail case final failure?) throw failure;
-    assigned.add((companyId, projectId, employeeIds));
-    return projectDetails(
+  Future<ProjectDetails> reactivate(int projectId) async {
+    calls.add('reactivate $projectId');
+    return _setActive(projectId, active: true);
+  }
+
+  ProjectDetails _setActive(int projectId, {required bool active}) {
+    final current = projects.firstWhere((p) => p.summary.id == projectId);
+    final changed = projectDetails(
       id: projectId,
-      companyId: companyId,
-      employees: [for (final id in employeeIds) ProjectEmployee(id: id, code: 'U$id')],
+      sapNumber: current.summary.sapNumber,
+      name: current.summary.name,
+      active: active,
+      workshopId: current.workshopId,
     );
+    projects = [for (final p in projects) p.summary.id == projectId ? changed : p];
+    return changed;
   }
 }

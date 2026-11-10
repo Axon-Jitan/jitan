@@ -1,21 +1,26 @@
 import 'package:flutter/widgets.dart';
-import 'package:jitan_core/jitan_core.dart';
-import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
+import 'package:jitan_models/jitan_models.dart';
 
-/// The words of the Projects pages.
+import '../l10n/admin_text_keys.dart';
+import '../terminals/terminal_text.dart';
+
+/// The words of the Projects page (Figma `1512:2`).
 abstract final class ProjectText {
-  /// `tblProjectStatus` row shown as running, in the green of "Active".
-  static const _runningStatus = 'Active';
-
-  static bool isRunning(ProjectChoice status) => status.name == _runningStatus;
-
-  /// "19 October 2026".
-  static String date(BuildContext context, DateTime date) =>
-      '${date.day} ${context.t(CommonTextKeys.monthLong[date.month - 1])} ${date.year}';
-
-  static String employeeName(String? first, String? last, String code) {
-    final name = [first, last].whereType<String>().where((n) => n.isNotEmpty).join(' ');
-    return name.isEmpty ? code : name;
+  /// "Client site · Mouscron", "Our workshop · Almeco".
+  static String place(BuildContext context, ProjectSummary project) {
+    final place = project.placeName;
+    if (place == null || place.isEmpty) {
+      return context.t(project.isClientSite ? AdminTextKeys.projectPlaceClientOnly : AdminTextKeys.projectPlaceWorkshopOnly);
+    }
+    return context.t(
+      project.isClientSite ? AdminTextKeys.projectPlaceClient : AdminTextKeys.projectPlaceWorkshop,
+      args: {'place': place},
+    );
   }
+
+  /// "Today", "Yesterday, 16:42", "3 November, 09:12", "—": said like the
+  /// Terminals page says it.
+  static String lastUsed(BuildContext context, DateTime? used, DateTime now) =>
+      used == null ? context.t(AdminTextKeys.projectNeverUsed) : TerminalText.lastSeen(context, used, now);
 }

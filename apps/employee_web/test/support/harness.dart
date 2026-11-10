@@ -11,28 +11,15 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-const towers = MyProject(
+final towers = MyProject(
   id: 1,
-  name: 'Office refurbishment',
-  companyId: 7,
-  companyName: 'Almeco',
+  name: 'P-1042 Office refurbishment',
   isClient: true,
-  isCurrent: true,
-  statusName: 'Active',
-  reference: 'PRJ-001',
-  addressName: 'Rue du Progrès',
-  startDate: '2026-10-19',
+  placeName: 'Mouscron',
+  lastUsed: DateTime.utc(2026, 11, 2, 7),
 );
-const workshop = MyProject(id: 2, name: 'Clean the workshop', companyId: 7, companyName: 'Almeco', isClient: false, isCurrent: true);
-const warehouse = MyProject(
-  id: 3,
-  name: 'Warehouse fit-out',
-  companyId: 7,
-  companyName: 'Almeco',
-  isClient: true,
-  isCurrent: false,
-  statusName: 'Completed',
-);
+const workshop = MyProject(id: 2, name: 'P-0990 Clean the workshop', isClient: false, placeName: 'Almeco');
+const warehouse = MyProject(id: 3, name: 'P-1063 Warehouse fit-out', isClient: true, placeName: 'Kortrijk');
 const almeco = MyCompany(id: 7, name: 'Almeco', isDefault: true);
 const pca = MyCompany(id: 8, name: 'PCA', isDefault: false);
 
@@ -44,7 +31,7 @@ TimeRecordDay record({required DateTime date, TimeRecordStatus status = TimeReco
 /// A stand-in server: what each path answers, and what was sent to it.
 class FakeWebServer {
   MyDay today = MyDay(date: DateTime.utc(2026, 11, 2), firstDay: false, scheduledStart: '08:00', scheduledFinish: '16:30', breakMinutes: 30);
-  MyActivity activity = const MyActivity(enabled: true, projects: [towers, workshop, warehouse], companies: [almeco]);
+  MyActivity activity = MyActivity(enabled: true, projects: [towers, workshop, warehouse], companies: const [almeco]);
   List<MyPeriodDay> days = [];
   String? qr = 'employee-qr';
   bool offline = false;

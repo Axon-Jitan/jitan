@@ -1,6 +1,6 @@
 import 'package:employee_mobile/src/activity/activity_controller.dart';
 import 'package:employee_mobile/src/activity/current_project_card.dart';
-import 'package:employee_mobile/src/activity/my_projects_screen.dart';
+import 'package:employee_mobile/src/activity/choose_project_screen.dart';
 import 'package:employee_mobile/src/activity/switch_activity_screen.dart';
 import 'package:employee_mobile/src/activity/today_breakdown_card.dart';
 import 'package:flutter/material.dart';
@@ -10,10 +10,10 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-const _towers = MyProject(id: 1, name: 'Cooling towers', companyId: 7, companyName: 'Almeco', isClient: true, isCurrent: true);
-const _workshop = MyProject(id: 2, name: 'Clean the workshop', companyId: 7, companyName: 'Almeco', isClient: false, isCurrent: true);
-const _old = MyProject(id: 3, name: 'Motor testing', companyId: 8, companyName: 'PCA', isClient: false, isCurrent: false);
 final _since = DateTime.utc(2026, 10, 22, 6);
+final _towers = MyProject(id: 1, name: 'P-1057 Cooling towers', isClient: true, placeName: 'Engis', lastUsed: _since);
+const _workshop = MyProject(id: 2, name: 'P-0990 Clean the workshop', isClient: false, placeName: 'Almeco');
+const _roof = MyProject(id: 3, name: 'P-1071 Roof repairs', isClient: true, placeName: 'Tournai');
 
 class _FakeActivityApi implements ActivityApi {
   _FakeActivityApi(this.answer);
@@ -42,7 +42,7 @@ class _FakeActivityApi implements ActivityApi {
 MyActivity _on(MyProject? project, {ActivityKind kind = ActivityKind.clientOnSite}) => MyActivity(
   enabled: true,
   current: CurrentActivity(kind: kind, since: _since, project: project),
-  projects: const [_towers, _workshop, _old],
+  projects: [_towers, _workshop, _roof],
   companies: const [MyCompany(id: 7, name: 'Almeco', isDefault: true)],
 );
 
@@ -69,7 +69,7 @@ void main() {
       _FakeActivityApi(const MyActivity(enabled: true, projects: [], companies: [MyCompany(id: 7, name: 'Almeco', isDefault: true)])),
     );
     await nothing.load();
-    expect((nothing.showsCard, nothing.showsCompanies), (false, false));
+    expect(nothing.showsCard, isFalse);
   });
 
   test('a saved switch tells Home, so the totals follow', () async {
@@ -102,8 +102,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Cooling towers'), findsOneWidget);
-    expect(find.text('Client project · Almeco'), findsOneWidget);
+    expect(find.text('P-1057 Cooling towers'), findsOneWidget);
+    expect(find.text('Client site · Engis'), findsOneWidget);
     expect(find.text('Client · On site'), findsOneWidget);
   });
 
@@ -150,6 +150,25 @@ void main() {
       expect(api.switches.single.kind, ActivityKind.clientInHouse);
       expect(api.switches.single.projectId, _towers.id);
       expect(api.switches.single.at, _since.add(const Duration(hours: 2)));
+    });
+
+    testWidgets('the project field opens Choose a project; the chosen one is sent', (tester) async {
+      final (api, _) = await open(tester, _on(_towers));
+
+      await tester.tap(find.text('P-1057 Cooling towers').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a project'), findsOneWidget);
+      await tester.tap(find.text('P-0990 Clean the workshop'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Our workshop · Almeco'), findsOneWidget);
+      expect(find.text('Client · In-house'), findsNothing, reason: 'internal work has no client activities');
+      await tester.tap(find.text('Internal work'));
+      await tester.pump();
+      await tester.tap(find.byType(JitanMobileButton));
+      await tester.pump();
+
+      expect((api.switches.single.kind, api.switches.single.projectId), (ActivityKind.internal, _workshop.id));
     });
 
     testWidgets('a refused switch says so and stays', (tester) async {
@@ -212,13 +231,37 @@ void main() {
     expect(const ActivityBreakdown(clientMinutes: 60, transportMinutes: 5).isMixed, isTrue);
   });
 
-  testWidgets('My projects: current and earlier; none says so', (tester) async {
-    await _show(tester, const MyProjectsScreen(projects: [_towers, _old]));
+  group('Choose a project (Figma 1512:502)', () {
+    testWidgets('Recent first, "Now" on the current one, then all projects', (tester) async {
+      await _show(tester, ChooseProjectScreen(projects: [_towers, _workshop, _roof], currentId: _towers.id));
 
-    expect(find.text('Almeco · Active'), findsOneWidget);
-    expect(find.text('PCA · Previously assigned'), findsOneWidget);
+      expect(find.text('RECENT'), findsOneWidget);
+      expect(find.text('ALL PROJECTS'), findsOneWidget);
+      expect(find.text('Now'), findsOneWidget);
+      expect(find.text('Client site · Tournai'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('P-1057 Cooling towers')).dy,
+        lessThan(tester.getTopLeft(find.text('P-1071 Roof repairs')).dy),
+      );
+    });
 
-    await _show(tester, const MyProjectsScreen(projects: []));
-    expect(find.text('No projects yet.'), findsOneWidget);
+    testWidgets('search finds the SAP number or the name, and says when nothing matches', (tester) async {
+      await _show(tester, ChooseProjectScreen(projects: [_towers, _workshop, _roof]));
+
+      await tester.enterText(find.byType(TextField), 'p-1071');
+      await tester.pump();
+      expect(find.text('P-1071 Roof repairs'), findsOneWidget);
+      expect(find.text('P-1057 Cooling towers'), findsNothing);
+
+      await tester.enterText(find.byType(TextField), 'nothing like it');
+      await tester.pump();
+      expect(find.text('No projects match your search.'), findsOneWidget);
+    });
+
+    testWidgets('no projects yet says so', (tester) async {
+      await _show(tester, const ChooseProjectScreen(projects: []));
+      expect(find.text('No projects yet.'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+    });
   });
 }

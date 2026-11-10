@@ -6,9 +6,9 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
-import 'location_area_control.dart';
 import 'location_form_controller.dart';
 import 'location_map.dart';
+import 'location_map_panel.dart';
 
 /// How the location dialog ended.
 sealed class LocationDialogResult {
@@ -288,71 +288,5 @@ class _LocationDialogState extends State<LocationDialog> {
     );
   }
 
-  Widget _map(BuildContext context) {
-    final maps = widget.maps;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (maps == null)
-          ColoredBox(
-            color: JitanColors.warmWhite,
-            child: Center(
-              child: Text(context.t(AdminTextKeys.locationMapNotSetUp), style: JitanTextStyles.stateMessage),
-            ),
-          )
-        else
-          maps.map(_form.point, _form.radiusMeters, _form.placePin),
-        Positioned(
-          top: 20,
-          left: 20,
-          child: _Hint(context.t(_form.point == null ? AdminTextKeys.locationMapPlace : AdminTextKeys.locationMapDrag)),
-        ),
-        Positioned(
-          top: 20,
-          right: 20,
-          child: Material(
-            color: JitanColors.surface,
-            shape: const CircleBorder(),
-            child: IconButton(
-              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-              iconSize: 16,
-              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
-              padding: EdgeInsets.zero,
-              onPressed: _form.busy ? null : () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close, color: JitanColors.ink),
-            ),
-          ),
-        ),
-        Positioned(
-          left: 20,
-          right: 20,
-          bottom: 28,
-          child: LocationAreaControl(
-            meters: _form.radiusMeters,
-            onChanged: _form.busy ? null : _form.setRadius,
-          ),
-        ),
-        const Positioned(left: 22, bottom: 8, child: Text(_attribution, style: TextStyle(fontSize: 9, color: JitanColors.inkMuted))),
-      ],
-    );
-  }
-
-  /// Required by Mapbox, in every language.
-  static const _attribution = '© Mapbox © OpenStreetMap';
-}
-
-class _Hint extends StatelessWidget {
-  const _Hint(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-    decoration: BoxDecoration(
-      color: JitanColors.surface.withValues(alpha: 0.94),
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Text(text, style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 12)),
-  );
+  Widget _map(BuildContext context) => LocationMapPanel(form: _form, maps: widget.maps, busy: _form.busy);
 }

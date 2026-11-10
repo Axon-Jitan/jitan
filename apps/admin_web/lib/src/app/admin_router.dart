@@ -14,7 +14,6 @@ import '../groups/group_page.dart';
 import '../groups/groups_screen.dart';
 import '../locations/locations_screen.dart';
 import '../lists/lists_screen.dart';
-import '../projects/project_page.dart';
 import '../projects/projects_screen.dart';
 import '../terminals/terminals_screen.dart';
 import '../reports/reports_screen.dart';
@@ -128,32 +127,10 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
             pageBuilder: (context, state) => NoTransitionPage(
               child: ProjectsScreen(
                 api: services.projectsApi,
-                companiesApi: services.companiesApi,
-                employeesApi: services.employeesApi,
                 locationsApi: services.locationsApi,
+                maps: services.locationMaps,
               ),
             ),
-            routes: [
-              GoRoute(
-                path: ':companyId/:projectId',
-                pageBuilder: (context, state) {
-                  final company = int.tryParse(state.pathParameters['companyId'] ?? '') ?? 0;
-                  final project = int.tryParse(state.pathParameters['projectId'] ?? '') ?? 0;
-                  return NoTransitionPage(
-                    key: ValueKey('project-$project'),
-                    child: ProjectPage(
-                      key: ValueKey(project),
-                      companyId: company,
-                      projectId: project,
-                      api: services.projectsApi,
-                      companiesApi: services.companiesApi,
-                      employeesApi: services.employeesApi,
-                      locationsApi: services.locationsApi,
-                    ),
-                  );
-                },
-              ),
-            ],
           ),
           GoRoute(
             path: AdminRoutes.locations,

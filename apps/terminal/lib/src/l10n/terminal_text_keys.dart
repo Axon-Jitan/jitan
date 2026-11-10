@@ -28,8 +28,8 @@ abstract final class TerminalTextKeys {
   static const chooseFailed = 'tablet.choose.failed';
   static const keepProject = 'tablet.choose.keep';
   static const keepCurrent = 'tablet.choose.keepCurrent';
-  static const onSite = 'tablet.kind.onSite';
-  static const internal = 'tablet.kind.internal';
+  static const clientSite = 'tablet.project.clientSite';
+  static const ourWorkshop = 'tablet.project.ourWorkshop';
   static const transport = 'tablet.kind.transport';
   static const transportHint = 'tablet.kind.transportHint';
   static const projectDetail = 'tablet.projectDetail';

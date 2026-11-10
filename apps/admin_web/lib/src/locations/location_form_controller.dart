@@ -66,6 +66,27 @@ class LocationFormController extends ChangeNotifier {
   bool get canSave =>
       !_busy && name.text.trim().isNotEmpty && street.text.trim().isNotEmpty && _point != null;
 
+  /// A street and a pin: enough for a place another form names (a project's
+  /// client site, D44).
+  bool get hasPlace => street.text.trim().isNotEmpty && _point != null;
+
+  /// The address, pin and area as a request named [placeName]; `null`
+  /// without a pin.
+  LocationRequest? request(String placeName) {
+    final point = _point;
+    if (point == null) return null;
+    return LocationRequest(
+      name: placeName,
+      street: street.text,
+      number: number.text,
+      box: box.text,
+      zipcode: zipcode.text,
+      city: city.text,
+      point: point,
+      radiusMeters: _radius,
+    );
+  }
+
   void placePin(GeoPoint point) {
     _pinPlaced = true;
     _search?.cancel();
@@ -106,16 +127,7 @@ class LocationFormController extends ChangeNotifier {
     nameError = streetError = null;
     failure = null;
     notifyListeners();
-    final request = LocationRequest(
-      name: name.text,
-      street: street.text,
-      number: number.text,
-      box: box.text,
-      zipcode: zipcode.text,
-      city: city.text,
-      point: point,
-      radiusMeters: _radius,
-    );
+    final request = this.request(name.text)!;
     try {
       final current = location;
       return current == null ? await _api.create(request) : await _api.update(current.id, request);

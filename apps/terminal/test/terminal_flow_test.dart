@@ -94,7 +94,7 @@ void main() {
       expect(find.text('Good morning, Disan'), findsOneWidget);
       expect(find.text('Checked in at 09:42'), findsOneWidget);
       expect(find.text('Cooling towers'), findsOneWidget);
-      expect(find.text('On site · Almeco'), findsOneWidget);
+      expect(find.text('Client site · Engis'), findsOneWidget);
 
       await tester.pump(TerminalController.resultFor);
       await tester.pump(const Duration(milliseconds: 300));
@@ -221,7 +221,7 @@ void main() {
 
       expect(find.text('What are you working on?'), findsOneWidget);
       expect(find.text('Clean the workshop'), findsOneWidget);
-      expect(find.text('Internal · Almeco'), findsOneWidget);
+      expect(find.text('Our workshop · Almeco'), findsOneWidget);
       expect(find.text('Transport'), findsOneWidget);
 
       await tester.pump(TerminalController.resultFor * 2);

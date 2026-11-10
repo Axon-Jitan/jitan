@@ -14,9 +14,15 @@ abstract final class ActivityText {
     ActivityKind.transport => EmployeeTextKeys.activityTransport,
   });
 
-  /// "Client project · Almeco".
-  static String project(BuildContext context, MyProject project) => context.t(
-    project.isClient ? EmployeeTextKeys.activityClientProject : EmployeeTextKeys.activityInternalProject,
-    args: {'company': project.companyName},
-  );
+  /// "Client site · Mouscron", "Our workshop · Almeco".
+  static String project(BuildContext context, MyProject project) {
+    final place = project.placeName;
+    if (place == null || place.isEmpty) {
+      return context.t(project.isClient ? EmployeeTextKeys.activityClientSite : EmployeeTextKeys.activityOurWorkshop);
+    }
+    return context.t(
+      project.isClient ? EmployeeTextKeys.activityClientProject : EmployeeTextKeys.activityInternalProject,
+      args: {'place': place},
+    );
+  }
 }

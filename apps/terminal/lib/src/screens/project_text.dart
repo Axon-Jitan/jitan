@@ -8,12 +8,11 @@ abstract final class ProjectText {
   /// What a project means at this tablet: a client project is on site.
   static ActivityKind kindOf(MyProject project) => project.isClient ? ActivityKind.clientOnSite : ActivityKind.internal;
 
-  /// "On site · Almeco".
-  static String detail(BuildContext context, MyProject project) => context.t(
-    TerminalTextKeys.projectDetail,
-    args: {
-      'kind': context.t(project.isClient ? TerminalTextKeys.onSite : TerminalTextKeys.internal),
-      'company': project.companyName,
-    },
-  );
+  /// "Client site · Mouscron", "Our workshop · Almeco".
+  static String detail(BuildContext context, MyProject project) {
+    final kind = context.t(project.isClient ? TerminalTextKeys.clientSite : TerminalTextKeys.ourWorkshop);
+    final place = project.placeName;
+    if (place == null || place.isEmpty) return kind;
+    return context.t(TerminalTextKeys.projectDetail, args: {'kind': kind, 'place': place});
+  }
 }

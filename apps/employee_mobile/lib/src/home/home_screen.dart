@@ -7,9 +7,8 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../activity/activity_controller.dart';
-import '../activity/company_picker.dart';
 import '../activity/current_project_card.dart';
-import '../activity/my_projects_screen.dart';
+import '../activity/choose_project_screen.dart';
 import '../activity/switch_activity_screen.dart';
 import '../activity/today_breakdown_card.dart';
 import '../geofencing/away_reminder.dart';
@@ -184,9 +183,22 @@ class _HomeScreenState extends State<HomeScreen> {
     context,
   ).push(MaterialPageRoute<void>(builder: (_) => SwitchActivityScreen(controller: _activity)));
 
-  Future<void> _openProjects() => Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => MyProjectsScreen(projects: _activity.activity.projects)),
-  );
+  /// Choose a project first, then what they're doing on it.
+  Future<void> _openProjects() async {
+    final navigator = Navigator.of(context);
+    final chosen = await navigator.push<MyProject>(
+      MaterialPageRoute(
+        builder: (_) => ChooseProjectScreen(
+          projects: _activity.activity.projects,
+          currentId: _activity.activity.current?.project?.id,
+        ),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    await navigator.push(
+      MaterialPageRoute<void>(builder: (_) => SwitchActivityScreen(controller: _activity, project: chosen)),
+    );
+  }
 
   Widget _home(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([_today, _activity]),
@@ -471,7 +483,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final light = JitanMobileTextStyles.cardText.copyWith(color: JitanColors.sidebarText);
     return _page(
       context,
-      corner: _activity.showsCompanies ? CompanyPicker(controller: _activity) : null,
       children: [
         _title(context.t(EmployeeTextKeys.todayWorkingTitle)),
         const SizedBox(height: 14),
