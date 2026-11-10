@@ -12,6 +12,7 @@ import 'fake_locations.dart';
 import 'fake_projects.dart';
 import 'fake_reports.dart';
 import 'fake_schedules_api.dart';
+import 'fake_lists.dart';
 import 'fake_terminals.dart';
 import 'fake_time_records_api.dart';
 
@@ -33,6 +34,7 @@ class TestServices {
       dashboardApi: dashboard,
       projectsApi: projects,
       terminalsApi: FakeTerminalsApi(),
+      listsApi: FakeListsApi(),
       session: session ??
           AdminSession.signedIn(
             auth: FakeAuthApi(),

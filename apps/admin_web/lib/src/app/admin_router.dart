@@ -13,6 +13,7 @@ import '../employees/import/employee_import_screen.dart';
 import '../groups/group_page.dart';
 import '../groups/groups_screen.dart';
 import '../locations/locations_screen.dart';
+import '../lists/lists_screen.dart';
 import '../projects/project_page.dart';
 import '../projects/projects_screen.dart';
 import '../terminals/terminals_screen.dart';
@@ -111,6 +112,10 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
             pageBuilder: (context, state) => NoTransitionPage(
               child: ReportsScreen(api: services.reportsApi, companiesApi: services.companiesApi),
             ),
+          ),
+          GoRoute(
+            path: AdminRoutes.lists,
+            pageBuilder: (context, state) => NoTransitionPage(child: ListsScreen(api: services.listsApi)),
           ),
           GoRoute(
             path: AdminRoutes.terminals,

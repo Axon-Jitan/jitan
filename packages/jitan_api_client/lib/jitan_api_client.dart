@@ -9,6 +9,7 @@ export 'src/companies_api.dart';
 export 'src/dashboard_api.dart';
 export 'src/employee_assignments_api.dart';
 export 'src/employees_api.dart';
+export 'src/fixed_lists_api.dart';
 export 'src/group_management_api.dart';
 export 'src/group_members_api.dart';
 export 'src/groups_api.dart';

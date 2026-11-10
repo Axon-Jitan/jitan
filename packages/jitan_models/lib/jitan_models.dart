@@ -10,6 +10,7 @@ export 'src/create_group_request.dart';
 export 'src/dashboard.dart';
 export 'src/employee_assignments.dart';
 export 'src/employee_code.dart';
+export 'src/fixed_list.dart';
 export 'src/employee_details.dart';
 export 'src/employee_import.dart';
 export 'src/employee_summary.dart';

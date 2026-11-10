@@ -84,4 +84,10 @@ enum Permission {
 
   /// Add, change, connect and remove terminals (company-scoped).
   manageTerminals,
+
+  /// See the fixed lists Jitan reads by name (the Lists page).
+  viewLists,
+
+  /// Add the entries those lists are missing.
+  manageLists,
 }

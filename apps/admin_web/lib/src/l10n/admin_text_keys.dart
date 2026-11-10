@@ -807,6 +807,34 @@ abstract final class AdminTextKeys {
 
   // Reports (Figma HR / Reports V1 1467:2 to 1467:631)
   static const navReports = 'nav.reports';
+  static const navLists = 'nav.lists';
+  static const listsTitle = 'lists.title';
+  static const listsSubtitle = 'lists.subtitle';
+  static const listsMissingTitle = 'lists.missingTitle';
+  static const listsMissingText = 'lists.missingText';
+  static const listsAddMissing = 'lists.addMissing';
+  static const listsColumnList = 'lists.column.list';
+  static const listsColumnEntries = 'lists.column.entries';
+  static const listsColumnStatus = 'lists.column.status';
+  static const listsReady = 'lists.ready';
+  static const listsMissingCount = 'lists.missingCount';
+  static const listsEntriesOf = 'lists.entriesOf';
+  static const listsNote = 'lists.note';
+  static const listsLoading = 'lists.loading';
+  static const listsLoadFailed = 'lists.loadFailed';
+  static const listsAddFailed = 'lists.addFailed';
+  static const listsEntryMissing = 'lists.entryMissing';
+  static const listsEntryAdded = 'lists.entryAdded';
+  static const listsReadsByName = 'lists.readsByName';
+  static const listsFree = 'lists.free';
+  static const listsAddIt = 'lists.addIt';
+  static const listsAddBoth = 'lists.addBoth';
+  static const listsAddAll = 'lists.addAll';
+  static const listsClose = 'lists.close';
+
+  /// One list's name and what it is for: `lists.kind.<kind>` and `….text`.
+  static String listName(String kind) => 'lists.kind.$kind';
+  static String listText(String kind) => 'lists.kind.$kind.text';
   static const navDashboard = 'nav.dashboard';
   static const navProjects = 'nav.projects';
   static const navTerminals = 'nav.terminals';

@@ -21,6 +21,7 @@ class AdminServices {
     required this.dashboardApi,
     required this.projectsApi,
     required this.terminalsApi,
+    required this.listsApi,
     required this.session,
     this.locationMaps,
   });
@@ -41,6 +42,9 @@ class AdminServices {
   final DashboardApi dashboardApi;
   final ProjectsApi projectsApi;
   final TerminalsApi terminalsApi;
+
+  /// The fixed lists (the Lists page).
+  final FixedListsApi listsApi;
   final AdminSession session;
 
   /// The Locations map; `null` when the build has no Mapbox token.

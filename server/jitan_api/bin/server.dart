@@ -50,6 +50,9 @@ import 'package:jitan_api/src/projects/project_routes.dart';
 import 'package:jitan_api/src/projects/project_service.dart';
 import 'package:jitan_api/src/routing/driving_distance.dart';
 import 'package:jitan_api/src/terminals/terminal_device_routes.dart';
+import 'package:jitan_api/src/lists/fixed_list_repository.dart';
+import 'package:jitan_api/src/lists/fixed_list_routes.dart';
+import 'package:jitan_api/src/lists/fixed_list_service.dart';
 import 'package:jitan_api/src/terminals/terminal_device_service.dart';
 import 'package:jitan_api/src/terminals/terminal_presence.dart';
 import 'package:jitan_api/src/terminals/terminal_repository.dart';
@@ -381,6 +384,15 @@ Future<void> main() async {
         terminals: const TerminalRepository(),
         presence: terminalPresence,
         temporaryQr: temporaryQr,
+        audit: const AuditLogRepository(),
+        transactions: db,
+        executor: db,
+      ),
+    ),
+    lists: FixedListRoutes(
+      authorizer,
+      FixedListService(
+        lists: const FixedListRepository(),
         audit: const AuditLogRepository(),
         transactions: db,
         executor: db,

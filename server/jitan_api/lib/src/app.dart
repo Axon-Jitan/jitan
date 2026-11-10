@@ -18,6 +18,7 @@ import 'http/api_exception.dart';
 import 'http/cors_middleware.dart';
 import 'http/error_middleware.dart';
 import 'languages/language_routes.dart';
+import 'lists/fixed_list_routes.dart';
 import 'onboarding/onboarding_routes.dart';
 import 'recovery/recovery_routes.dart';
 import 'schedules/schedule_routes.dart';
@@ -50,6 +51,7 @@ Handler buildApp({
   required ActivityRoutes activities,
   required TerminalRoutes terminals,
   required TerminalDeviceRoutes terminalDevices,
+  required FixedListRoutes lists,
   required ReportRoutes reports,
   required OnboardingRoutes onboarding,
   required RecoveryRoutes recovery,
@@ -70,6 +72,7 @@ Handler buildApp({
     ..mount('/', activities.router.call)
     ..mount('/', terminals.router.call)
     ..mount('/', terminalDevices.router.call)
+    ..mount('/', lists.router.call)
     ..mount('/', reports.router.call)
     ..mount('/', languages.authenticatedRouter.call)
     ..mount('/', me.router.call)

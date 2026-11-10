@@ -29,6 +29,9 @@ abstract final class DayNames {
     'Sunday': DateTime.sunday,
   };
 
+  /// Every day name Jitan relies on, Monday first.
+  static Iterable<String> get all => _weekdays.keys;
+
   /// The weekday of [dayName], or `null` for a name Jitan doesn't know.
   static int? weekdayOf(String dayName) => _weekdays[dayName];
 }

@@ -14,6 +14,7 @@ import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/locations/locations_screen.dart';
 import 'package:admin_web/src/dashboard/dashboard_screen.dart';
 import 'package:admin_web/src/projects/projects_screen.dart';
+import 'package:admin_web/src/lists/lists_screen.dart';
 import 'package:admin_web/src/terminals/terminals_screen.dart';
 import 'package:admin_web/src/reports/reports_screen.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
@@ -34,6 +35,7 @@ import '../support/fake_group_apis.dart';
 import '../support/fake_locations.dart';
 import '../support/fake_dashboard.dart';
 import '../support/fake_projects.dart';
+import '../support/fake_lists.dart';
 import '../support/fake_terminals.dart';
 import '../support/fake_reports.dart';
 import '../support/fake_schedules_api.dart';
@@ -141,6 +143,18 @@ void main() {
       await tester.tap(find.text('Add project'));
       await _settle(tester);
       _fitsTheWindow(tester, width, 'Add project');
+    });
+
+    testWidgets('Lists and one list at $width px', (tester) async {
+      await _pump(tester, width, ListsScreen(api: FakeListsApi()));
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'Lists');
+
+      await tester.tap(find.text('Terminal kinds'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Terminal kinds');
+      await tester.tap(find.text('Cancel'));
+      await _settle(tester);
     });
 
     testWidgets('Terminals, Add terminal and Manage at $width px', (tester) async {

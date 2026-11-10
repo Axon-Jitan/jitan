@@ -139,6 +139,9 @@ enum AuditEventType {
   terminalReactivated('terminal.reactivated'),
   terminalRemoved('terminal.removed'),
 
+  /// HR/Admin added an entry a fixed list was missing (the Lists page).
+  listEntryAdded('list.entry.added'),
+
   /// The employee switched activity, project or company; the day goes on.
   activitySwitched('time.activity.switched');
 
@@ -170,6 +173,8 @@ enum EventLogReference {
 
   /// Terminals (GAP-09): the device, its kind and its kiosk user's link.
   device('deviceID'),
+  deviceType('deviceTypeID'),
+  locationType('locationTypeID'),
   deviceDeviceType('deviceDeviceTypeID'),
   userDevice('userDeviceID'),
 

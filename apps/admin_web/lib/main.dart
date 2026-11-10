@@ -49,6 +49,7 @@ void main() {
         dashboardApi: DashboardApi(transport),
         projectsApi: ProjectsApi(transport),
         terminalsApi: TerminalsApi(transport),
+        listsApi: FixedListsApi(transport),
         session: session,
         locationMaps: switch (config.mapboxToken) {
           null => null,

@@ -46,6 +46,9 @@ class ActivityService {
   /// How far ahead of the server's clock a time may be.
   static const _allowedClockSkew = Duration(minutes: 2);
 
+  /// The `tblTimeRegType` names of activities, for the Lists page.
+  static Iterable<String> get typeNames => _typeNames.values;
+
   static const _typeNames = {
     ActivityKind.work: 'Activity – Work',
     ActivityKind.clientOnSite: 'Activity – Client on site',

@@ -31,6 +31,9 @@ import 'package:jitan_api/src/locations/location_routes.dart';
 import 'package:jitan_api/src/locations/location_service.dart';
 import 'package:jitan_api/src/activities/activity_routes.dart';
 import 'package:jitan_api/src/terminals/terminal_device_routes.dart';
+import 'package:jitan_api/src/lists/fixed_list_repository.dart';
+import 'package:jitan_api/src/lists/fixed_list_routes.dart';
+import 'package:jitan_api/src/lists/fixed_list_service.dart';
 import 'package:jitan_api/src/terminals/terminal_device_service.dart';
 import 'package:jitan_api/src/terminals/terminal_presence.dart';
 import 'package:jitan_api/src/terminals/terminal_repository.dart';
@@ -204,6 +207,15 @@ class TestApp {
           terminals: const TerminalRepository(),
           presence: TerminalPresence(),
           temporaryQr: temporaryQr,
+          audit: audit,
+          transactions: transactions,
+          executor: unusedExecutor,
+        ),
+      ),
+      lists: FixedListRoutes(
+        Authorizer(permissions),
+        FixedListService(
+          lists: const FixedListRepository(),
           audit: audit,
           transactions: transactions,
           executor: unusedExecutor,
