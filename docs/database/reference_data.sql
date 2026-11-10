@@ -17,6 +17,8 @@
 --  ("Decisions 2026-10-12/13").
 -- =====================================================================
 
+SET NAMES utf8mb4; -- the names below contain "–" (en dash)
+
 -- ---------- Days (tblDays) -------------------------------------------
 
 INSERT INTO tblDays (dayName, dayActive, dayMFD)

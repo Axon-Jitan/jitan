@@ -4,6 +4,8 @@
 -- changes to match; if IT declines, it is deleted. Never run it against IT's
 -- databases. schema.sql stays IT's export and does not contain this.
 
+SET NAMES utf8mb4; -- the names below contain "–" (en dash)
+
 CREATE TABLE IF NOT EXISTS tblGroupSchedule (
   groupScheduleID     INT NOT NULL AUTO_INCREMENT,
   groupID             INT NOT NULL,

@@ -4,6 +4,8 @@
 -- contain this. If IT chooses another structure, this file changes to match.
 -- Run once, after schema.sql.
 
+SET NAMES utf8mb4; -- the names below contain "–" (en dash)
+
 -- ── Defaults (GAP-03) ──────────────────────
 
 -- tblUserCompany.userCompanyDefault is in IT's ERD since 2026-11-09.
