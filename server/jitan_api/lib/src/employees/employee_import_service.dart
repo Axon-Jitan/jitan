@@ -111,7 +111,7 @@ class EmployeeImportService {
 
   static List<String> _codes(EmployeeImportRequest request) => {
         for (final row in request.rows)
-          if (row.code.trim().isNotEmpty) row.code.trim(),
+          if (row.code.trim().isNotEmpty) EmployeeCodes.normalize(row.code),
       }.toList();
 
   /// Active groups by lower-case name; a name shared by several groups maps
@@ -143,7 +143,7 @@ class EmployeeImportService {
 
     final firstName = row.firstName.trim();
     final lastName = row.lastName.trim();
-    final code = row.code.trim();
+    final code = EmployeeCodes.normalize(row.code);
     var phone = _blankToNull(row.phone);
     final email = _blankToNull(row.email);
     if (firstName.isEmpty) return problem(EmployeeImportProblemKind.firstNameMissing);

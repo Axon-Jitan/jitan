@@ -4,6 +4,7 @@ import '../database/database.dart';
 import '../database/db_row.dart';
 import '../database/like_pattern.dart';
 import '../employees/membership_filters.dart';
+import '../database/loose_text.dart';
 
 /// Data access for `tblCompany` and the company list's derived columns.
 class CompanyRepository {
@@ -21,7 +22,7 @@ class CompanyRepository {
   /// [nameContains] filters case-insensitively (per the column collation) on
   /// `companyName`; LIKE wildcards in it are matched literally.
   Future<List<CompanySummary>> listCompanies({String? nameContains}) async {
-    final filter = nameContains == null ? '' : 'AND c.companyName LIKE :namePattern ';
+    final filter = nameContains == null ? '' : 'AND c.companyName $ignoringCaseAndAccents LIKE :namePattern ';
     final rows = await _db.query(
       'SELECT c.companyID, c.companyName, c.companyActive, '
       '(SELECT COUNT(*) FROM tblUserCompany uc '

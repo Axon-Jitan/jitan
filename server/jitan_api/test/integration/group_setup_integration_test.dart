@@ -62,7 +62,7 @@ void main() {
   );
 
   Future<int> groupsNamed(String name) async => (await db.query(
-    'SELECT COUNT(*) AS n FROM tblGroup WHERE groupName = :n',
+    'SELECT COUNT(*) AS n FROM tblGroup WHERE groupName COLLATE utf8mb4_0900_ai_ci = :n',
     {'n': '$prefix $name'},
   )).single.readInt('n');
 

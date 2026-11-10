@@ -2,6 +2,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../database/db_row.dart';
 import '../database/sql_executor.dart';
+import '../database/loose_text.dart';
 
 /// A location's row IDs: what its audit events reference.
 typedef LocationKeys = ({int addressId, int geofenceId, int geofenceAddressId});
@@ -47,6 +48,17 @@ class LocationRepository {
       (addressId: addressId, geofenceId: row.readInt('geofenceID'), geofenceAddressId: row.readInt('geofenceAddressID')),
     );
   }
+
+  /// Whether another address, including deactivated and MFD ones (the
+  /// name's unique key covers them all), has [name] ignoring capitals and
+  /// accents (CLARIFY-16). A locking read: two adds of the same name wait for
+  /// each other instead of both passing.
+  Future<bool> nameTaken(SqlExecutor tx, String name, {int? exceptAddressId}) async => (await tx.query(
+        'SELECT addressID FROM tblAddress WHERE addressLogicalName $ignoringCaseAndAccents = :name '
+        '${exceptAddressId == null ? '' : 'AND addressID <> :except '}FOR UPDATE',
+        {'name': name, 'except': ?exceptAddressId},
+      ))
+          .isNotEmpty;
 
   /// Adds the address, its geofence and their link.
   Future<LocationKeys> insert(SqlExecutor tx, LocationRequest location) async {

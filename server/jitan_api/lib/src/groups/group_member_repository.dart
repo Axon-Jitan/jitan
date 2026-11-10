@@ -3,6 +3,7 @@ import '../database/like_pattern.dart';
 import '../database/sql_executor.dart';
 import '../database/sql_in_list.dart';
 import '../employees/membership_filters.dart';
+import '../database/loose_text.dart';
 
 /// An employee row of the group page, before companies and groups are
 /// attached.
@@ -36,8 +37,9 @@ class GroupMemberRepository {
   Future<List<GroupMemberRow>> candidates(int? groupId, {String? search}) async {
     final searchFilter = search == null
         ? ''
-        : 'AND (u.userName LIKE :pattern OR u.userSurname LIKE :pattern OR u.userCode LIKE :pattern '
-            "OR CONCAT_WS(' ', u.userName, u.userSurname) LIKE :pattern) ";
+        : 'AND (u.userName $ignoringCaseAndAccents LIKE :pattern OR u.userSurname $ignoringCaseAndAccents LIKE :pattern '
+            'OR u.userCode $ignoringCaseAndAccents LIKE :pattern '
+            "OR CONCAT_WS(' ', u.userName, u.userSurname) $ignoringCaseAndAccents LIKE :pattern) ";
     return _rows(await _executor.query(
       'SELECT u.userID, u.userName, u.userSurname, u.userCode FROM tblUser u '
       'WHERE u.userMFD = 0 AND u.userActive = 1 '

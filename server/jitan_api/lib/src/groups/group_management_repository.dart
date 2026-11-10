@@ -3,6 +3,7 @@ import 'package:jitan_models/jitan_models.dart';
 import '../database/db_row.dart';
 import '../database/sql_executor.dart';
 import '../employees/membership_filters.dart';
+import '../database/loose_text.dart';
 
 /// Data access for HR/Admin managing employee groups (`tblGroup`). Writes
 /// run in the caller's transaction. Groups are never deleted: deactivating
@@ -35,11 +36,11 @@ class GroupManagementRepository {
   }
 
   /// Whether another non-MFD group (active or not) has [name], ignoring
-  /// upper/lower case. A locking read over the whole table: there is no
+  /// capitals and accents (CLARIFY-16). A locking read over the whole table: there is no
   /// unique key on `groupName`, so concurrent adds or renames of the same
   /// name wait for each other instead of both passing the check.
   Future<bool> nameTaken(SqlExecutor tx, String name, {int? exceptGroupId}) async => (await tx.query(
-        'SELECT groupID FROM tblGroup WHERE groupMFD = 0 AND LOWER(groupName) = LOWER(:name) '
+        'SELECT groupID FROM tblGroup WHERE groupMFD = 0 AND groupName $ignoringCaseAndAccents = :name '
         '${exceptGroupId == null ? '' : 'AND groupID <> :except '}FOR UPDATE',
         {'name': name, 'except': ?exceptGroupId},
       ))

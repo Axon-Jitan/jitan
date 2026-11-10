@@ -41,6 +41,11 @@ class FakeLocationRepository implements LocationRepository {
     return location == null ? null : (location, _keys(addressId));
   }
 
+  /// Ignores capitals, as the real query does (it also ignores accents).
+  @override
+  Future<bool> nameTaken(SqlExecutor tx, String name, {int? exceptAddressId}) async =>
+      locations.values.any((l) => l.id != exceptAddressId && l.name.toLowerCase() == name.toLowerCase());
+
   @override
   Future<LocationKeys> insert(SqlExecutor tx, LocationRequest location) async {
     _checkName(location.name);

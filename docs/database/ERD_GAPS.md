@@ -588,7 +588,7 @@ order), with the general value in `tblConfiguration` and the user's own value in
 settings keep their own tables, and the 2-hour short-exit limit (GAP-06) stays in the
 server's configuration. Server addresses and secrets never go in the database.
 
-## CLARIFY-16: Case- and accent-sensitive collation (`utf8mb4_0900_as_cs`) · `DECIDED`, not built yet (product owner, 2026-11-10)
+## CLARIFY-16: Case- and accent-sensitive collation (`utf8mb4_0900_as_cs`) · `DONE` (product owner, 2026-11-10; built the same day: `EmployeeCodes.normalize`, `ignoringCaseAndAccents` in `database/loose_text.dart`)
 IT's ERD of 2026-11-09 sets `utf8mb4_0900_as_cs`, so `SBW` ≠ `sbw` and `Rene` ≠ `René`.
 Jitan handles it itself, without asking IT, and works with either collation:
 1. Employee codes are stored and compared in capitals (create, import, sign-in, recovery,

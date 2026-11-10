@@ -140,6 +140,8 @@ void main() {
     expect(await search('disan'), ['Ssebowa']);
     expect(await search('Vermeulen'), ['Vermeulen']);
     expect(await search('Disan Sse'), ['Ssebowa']);
+    expect(await search('SSEBOWA'), ['Ssebowa'], reason: 'capitals are ignored (CLARIFY-16)');
+    expect(await search('Dísan'), ['Ssebowa'], reason: 'accents are ignored (CLARIFY-16)');
     expect(await search('${stamp}KOB'), ["O'Brien"]);
     expect(await search("O'Bri"), ["O'Brien"], reason: 'quote in search');
     expect(await search('%'), isEmpty, reason: 'wildcards are literal');

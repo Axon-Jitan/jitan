@@ -174,6 +174,17 @@ void main() {
     );
   });
 
+  test('the code is stored in capitals, and the same code in other capitals is refused (CLARIFY-16)', () async {
+    final created = await service().create(actorId, companyId, request('cap$stamp'.toLowerCase()));
+
+    final row = (await db.query('SELECT userCode FROM tblUser WHERE userID = :id', {'id': created.id})).single;
+    expect(row.readString('userCode'), 'DT${stamp}CAP$stamp');
+    await expectLater(
+      service().create(actorId, companyId, request('Cap$stamp')),
+      throwsA(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.duplicateEmployeeCode)),
+    );
+  });
+
   test('Remove employee: userMFD = 1, gone from the list, row and memberships kept, audited', () async {
     final created = await service().create(actorId, companyId, request('RM1'));
 

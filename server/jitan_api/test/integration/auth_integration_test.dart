@@ -130,6 +130,8 @@ void main() {
 
     expect(sessions.verify(result.session.accessToken)!.userId, id);
     await expectLater(signIn().signIn(request(code, 'wrong password')), fails('invalid_credentials'));
+    final lowerCase = await signIn().signIn(request(code.toLowerCase(), 'first password'));
+    expect(sessions.verify(lowerCase.session.accessToken)!.userId, id, reason: 'the code in any capitals (CLARIFY-16)');
     await expectLater(signIn().signIn(request('DTA-unknown-$stamp', 'first password')), fails('invalid_credentials'));
   });
 

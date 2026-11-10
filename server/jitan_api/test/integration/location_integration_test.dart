@@ -119,6 +119,13 @@ void main() {
     expect((await db.query('SELECT COUNT(*) AS n FROM tblGeofence')).single.readInt('n'), before);
   });
 
+  test('the same name in other capitals is refused too (CLARIFY-16)', () async {
+    await expectLater(
+      locations.create(actor, request(name_: name.toUpperCase())),
+      throwsA(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.duplicateLocationName)),
+    );
+  });
+
   test('change updates both tables; the same values again are not audited', () async {
     final changed = await locations.update(actor, locationId, request(radius: 100));
     await locations.update(actor, locationId, request(radius: 100));

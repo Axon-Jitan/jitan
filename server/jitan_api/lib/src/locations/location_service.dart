@@ -48,6 +48,7 @@ class LocationService {
   Future<Location> create(int actorUserId, LocationRequest request) async {
     final location = validated(request);
     final keys = await _write(location, (tx) async {
+      if (await _locations.nameTaken(tx, location.name)) throw _nameTaken(location);
       final keys = await _locations.insert(tx, location);
       await _record(tx, AuditEventType.locationCreated, actorUserId, keys);
       return keys;
@@ -60,6 +61,7 @@ class LocationService {
     await _write(location, (tx) async {
       final (current, keys) = await _lock(tx, locationId);
       if (_same(current, location)) return;
+      if (await _locations.nameTaken(tx, location.name, exceptAddressId: keys.addressId)) throw _nameTaken(location);
       await _locations.update(tx, keys, location);
       await _record(tx, AuditEventType.locationChanged, actorUserId, keys);
     });
@@ -87,24 +89,24 @@ class LocationService {
   Future<(Location, LocationKeys)> _lock(SqlExecutor tx, int locationId) async =>
       await _locations.lock(tx, locationId) ?? (throw _notFound(locationId));
 
-  /// The name's unique key covers every address, so a name in use is only
-  /// known from the insert or update itself.
+  /// A name in use is checked first, ignoring capitals and accents
+  /// (CLARIFY-16); the unique key still catches an exact race.
   Future<T> _write<T>(LocationRequest location, Future<T> Function(SqlExecutor tx) action) async {
     try {
       return await _transactions.transaction(action);
     } on DatabaseQueryException catch (e) {
-      if (e.isDuplicateKey) {
-        throw ApiException(
-          409,
-          ApiErrorCode.duplicateLocationName,
-          'A location named "${location.name}" already exists.',
-          field: LocationRequest.fieldName,
-        );
-      }
+      if (e.isDuplicateKey) throw _nameTaken(location);
       if (e.isValueTooLong) throw const ApiException.badRequest('A value is longer than allowed.');
       rethrow;
     }
   }
+
+  static ApiException _nameTaken(LocationRequest location) => ApiException(
+        409,
+        ApiErrorCode.duplicateLocationName,
+        'A location named "${location.name}" already exists.',
+        field: LocationRequest.fieldName,
+      );
 
   Future<void> _record(SqlExecutor tx, AuditEventType type, int actorUserId, LocationKeys keys) => _audit.record(
     tx,

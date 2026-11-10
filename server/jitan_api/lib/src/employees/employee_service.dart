@@ -264,7 +264,9 @@ class EmployeeService {
       'Last name',
       CreateEmployeeRequest.maxLastNameLength,
     );
-    final code = _required(request.code, CreateEmployeeRequest.fieldCode, 'Employee code', CreateEmployeeRequest.maxCodeLength);
+    final code = EmployeeCodes.normalize(
+      _required(request.code, CreateEmployeeRequest.fieldCode, 'Employee code', CreateEmployeeRequest.maxCodeLength),
+    );
     final phone = phoneOf(request.phone);
     final email = _optional(request.email, CreateEmployeeRequest.fieldEmail, 'Email', CreateEmployeeRequest.maxEmailLength);
     if (email != null && !emailShape.hasMatch(email)) {

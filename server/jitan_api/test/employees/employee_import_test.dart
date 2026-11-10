@@ -73,7 +73,7 @@ void main() {
         (3, EmployeeImportProblemKind.firstNameMissing, null),
         (4, EmployeeImportProblemKind.lastNameMissing, null),
         (5, EmployeeImportProblemKind.codeMissing, null),
-        (6, EmployeeImportProblemKind.codeUsed, 'sbw'),
+        (6, EmployeeImportProblemKind.codeUsed, 'SBW'),
         (7, EmployeeImportProblemKind.codeRepeated, '2'),
         (8, EmployeeImportProblemKind.emailInvalid, null),
         (9, EmployeeImportProblemKind.groupUnknown, 'Cleaners'),

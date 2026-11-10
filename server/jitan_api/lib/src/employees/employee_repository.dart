@@ -5,6 +5,7 @@ import '../database/like_pattern.dart';
 import '../database/sql_in_list.dart';
 import '../database/sql_executor.dart';
 import 'membership_filters.dart';
+import '../database/loose_text.dart';
 
 /// Data access for a company's employees: `tblUser` via `tblUserCompany`,
 /// with groups from `tblUserGroup` → `tblGroup`.
@@ -77,16 +78,15 @@ class EmployeeRepository {
   /// Whether any user, in any company and including MFD users, has [code]
   /// (`tblUser.userCode` is unique across the table).
   Future<bool> codeExists(SqlExecutor executor, String code) async =>
-      (await executor.query('SELECT 1 AS found FROM tblUser WHERE userCode = :code', {'code': code})).isNotEmpty;
+      (await executor.query('SELECT 1 AS found FROM tblUser WHERE userCode $ignoringCaseAndAccents = :code', {'code': code})).isNotEmpty;
 
   /// Which of [codes] some user already has, in any company and including
-  /// MFD users, as stored (`tblUser.userCode` is unique; MySQL compares it
-  /// without regard to case). Reads through [executor] (a transaction) when
+  /// MFD users, as stored, ignoring capitals and accents (CLARIFY-16). Reads through [executor] (a transaction) when
   /// given.
   Future<List<String>> existingCodes(Iterable<String> codes, {SqlExecutor? executor}) async {
     if (codes.isEmpty) return const [];
     final list = SqlInList('c', codes);
-    final rows = await (executor ?? _db).query('SELECT userCode FROM tblUser WHERE userCode IN (${list.placeholders})', list.params);
+    final rows = await (executor ?? _db).query('SELECT userCode FROM tblUser WHERE userCode $ignoringCaseAndAccents IN (${list.placeholders})', list.params);
     return [for (final row in rows) row.readString('userCode')];
   }
 
@@ -141,8 +141,9 @@ class EmployeeRepository {
     final companies = SqlInList('co', companyIds);
     final searchFilter = nameOrCodeContains == null
         ? ''
-        : 'AND (u.userName LIKE :pattern OR u.userSurname LIKE :pattern OR u.userCode LIKE :pattern '
-            "OR CONCAT_WS(' ', u.userName, u.userSurname) LIKE :pattern) ";
+        : 'AND (u.userName $ignoringCaseAndAccents LIKE :pattern OR u.userSurname $ignoringCaseAndAccents LIKE :pattern '
+            'OR u.userCode $ignoringCaseAndAccents LIKE :pattern '
+            "OR CONCAT_WS(' ', u.userName, u.userSurname) $ignoringCaseAndAccents LIKE :pattern) ";
     final userFilter = userId == null ? '' : 'AND u.userID = :userId ';
     // One row per membership; an employee of several listed companies is
     // merged below.
