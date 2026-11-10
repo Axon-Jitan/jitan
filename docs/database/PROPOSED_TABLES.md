@@ -1,13 +1,21 @@
 # Tables and columns proposed to IT
 
-Jitan needs these to support projects and transport (terminals use IT's `tblDevice` since 2026-11-10, GAP-09). They do not exist in
-IT's database. The product owner decided on 2026-10-31 to build on them locally and ask
-IT to add them. SQL: [projects_terminals.sql](../../dev/local-db/proposals/projects_terminals.sql).
+**Status (2026-11-10, D44): nothing is proposed for projects, transport or terminals any
+more.** Jitan now runs on IT's ERD of 2026-11-09:
 
-**Status: not yet sent to IT, and being revised** after IT's ERD of 2026-11-09: terminals are IT's `tblDevice` (GAP-09), the default company is in IT's ERD, projects come live from SAP and are `tblAddress` rows (D43, D44), so the project, terminal and `tblTimeReg` items below are no longer requested. The list is rewritten once IT confirms the ERD is in `jitandev`. They exist only in the local development database.
-Features using them are off on IT's database until IT has added them; registering
-starts and finishes keeps working there, because the server checks at startup. If IT
-prefers another structure, Jitan changes to match.
+- **Projects** are `tblAddress` rows of the kind "Project location"
+  (`tblAddressLocationType`), named "<SAP number> <name>" (D43, D44). A client site has a
+  geofence; internal work points at a workshop's coordinates. HR adds them on the Projects
+  page until SAP's API delivers them.
+- **Activities and transport** are `tblTimeReg` rows of an "Activity – …" type; their
+  `addressID` is the project or the place (D19, D22, D44).
+- **Terminals** are IT's `tblDevice` (GAP-09).
+- The default company is in IT's ERD (`tblUserCompany.userCompanyDefault`).
+
+The local project tables (`tblProject`, `tblUserProject`, `tblProjectType`,
+`tblProjectStatus`) and the `tblTimeReg` / `tblEventLog` project and company columns are
+gone. What they held and `tblAddress` cannot (a project's company, type, status, dates,
+description and assigned employees) is left out of this version; SAP holds it.
 
 ## Questions for IT (parked)
 
@@ -24,33 +32,12 @@ questions wait. Nothing below blocks that work.
 4. **Database certificate.** IT's CA certificate or fingerprint, so the API can verify the
    connection (SEC-01).
 
-## New tables
+## Lookup rows
 
-| Table | Purpose | Why existing tables don't fit | Gap / decision |
-|---|---|---|---|
-| `tblProject` | A client or internal project of a company: name, reference, status, dates, description, client address | No project concept exists | D16, D17, D21 |
-| `tblUserProject` | Who is assigned to a project | No link between employees and projects | D16, D27 |
-| `tblProjectType` | Lookup: Client, Internal | Lookup values are read from the database, not hardcoded | D17 |
-| `tblProjectStatus` | Lookup: Planned, Active, Completed | Same | Figma `647:3452` |
-
-Terminal pairing codes are temporary, so they stay out of the database, like
-temporary QR codes.
-
-## New columns on existing tables
-
-| Column | Purpose | Gap / decision |
-|---|---|---|
-| `tblUserCompany.userCompanyDefault` | An employee's default company | D16 |
-| `tblTimeReg.companyID` | Which company an activity counts for, for people in several companies | GAP-03, D16 |
-| `tblTimeReg.projectID` | Which project an activity belongs to | D16, D19 |
-| `tblEventLog.projectID`, `userProjectID` | Audit of changes to these, like the existing ID columns | Rule 6 |
-
-## New lookup rows
-
-| Table | Rows | Why |
-|---|---|---|
-| `tblTimeRegType` | `Activity – Work`, `Activity – Client on site`, `Activity – Client in-house`, `Activity – Internal`, `Activity – Transport` | One row per switch, so Start and Finish rows stay as they are (D37). Transport is recorded but is not working time (D22) |
-| `tblEventType` | Event names for the new changes, added as they are built | Audit |
+IT adds no rows: HR adds the fixed lists in Jitan's Lists page (D45). For the record,
+the activity types are `Activity – Work`, `Activity – Client on site`,
+`Activity – Client in-house`, `Activity – Internal` and `Activity – Transport` in
+`tblTimeRegType` (D37), and projects need `Project location` in `tblLocationType`.
 
 ## Already proposed
 

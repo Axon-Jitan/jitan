@@ -68,10 +68,14 @@ The ERD is the source of truth. **Never** create migrations, add tables or colum
 columns, repurpose a field, or invent backend-only storage to cover a missing
 relationship. Schema changes happen only after discussion with IT and explicit approval.
 
-**Approved exception (product owner, 2026-10-31):** projects and transport
-are built on proposed tables (visitors are left out of this version, 2026-11-01), in `dev/local-db/proposals/` and the local database
-only, each recorded in [PROPOSED_TABLES.md](docs/database/PROPOSED_TABLES.md) for IT to add.
-`schema.sql` and IT's databases are never touched. Anything else still follows the steps below.
+**Approved exception (product owner, 2026-10-31):** a feature IT's ERD can't hold may be
+built on proposed tables in `dev/local-db/proposals/` and the local database only, each
+recorded in [PROPOSED_TABLES.md](docs/database/PROPOSED_TABLES.md) for IT to add.
+`schema.sql` and IT's databases are never touched. Projects and transport no longer need
+one: a project is a `tblAddress` row of the kind "Project location", and an activity is a
+`tblTimeReg` row of an "Activity – …" type whose `addressID` is its project or place (D44).
+Visitors are left out of this version (2026-11-01). Anything else still follows the steps
+below.
 
 Before adding any model, service, endpoint or query, map the concept to the ERD:
 
@@ -252,8 +256,10 @@ named so it can be found:
 | Cleartext `http://` in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`) | HTTPS API; release builds already refuse cleartext | production hosting |
 
 Backend modules today (routes / service / repository where they have endpoints and data):
-`audit auth companies employees groups health languages lists locations onboarding recovery reports routing
-schedules temporary_qr terminals time_registration users`. `lists` is the Lists page: the fixed lists Jitan
+`activities audit auth companies employees groups health languages lists locations onboarding projects recovery
+reports routing schedules temporary_qr terminals time_records time_registration users`. `projects` is a
+`tblAddress` row of the kind "Project location" (D44); `activities` stores what the day goes on as
+"Activity – …" `tblTimeReg` rows. `lists` is the Lists page: the fixed lists Jitan
 reads by name (registration and schedule types, days, kinds of place, terminal kinds, audit names), which
 HR completes in Jitan (`FixedListCatalog`); IT adds no rows (D45). `audit` is the event-log writer (there is no `events` module).
 `schedules`: a group's schedules are derived from its employees who are only in that group

@@ -357,6 +357,20 @@ older Reports frames were demos with dummy data.
 
 Later, with IT's update: transports and kilometres (D23), the project report (D24).
 
+## PROJ-01: Projects as address rows (D44) · `DONE` 2026-11-10
+
+A project is a `tblAddress` row of the kind "Project location", named "<SAP number>
+<name>". HR's Projects page (Figma `1512:2`) lists them with their place, status and when
+last used; Add project is a client site (address, pin, area) or internal work at one of
+our workshops (`1512:114`, `1512:305`). Employees pick any active project: the phone's
+Choose a project (`1512:502`), the website's Projects page and switch, and the tablet.
+The one used last is the default and the project a day starts on.
+
+Left out of this version, because `tblAddress` has no place for it: a project's company
+(the day counts for the default company, so company switching is gone), type, status,
+start and end dates, description, and assigned employees. The local proposal tables are
+removed. Waiting: SAP's API (D43), which will add the projects instead of HR.
+
 ## WEB-01: Employee Web
 Status: `DONE` on the approved redesign (Figma `1499:*`, `1501:*`, 2026-11-01)
 
