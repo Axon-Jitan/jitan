@@ -18,12 +18,11 @@ import 'terminal_repository.dart';
 /// - `POST /terminal/scan` (`TerminalScanRequest`).
 /// - `POST /terminal/switch` (`TerminalSwitchRequest`).
 ///
-/// Every answer is `no-store`. With [_device] `null` (a database without the
-/// proposed tables) all of this is 404.
+/// Every answer is `no-store`.
 class TerminalDeviceRoutes {
-  const TerminalDeviceRoutes(this._device);
+  const TerminalDeviceRoutes(this._service);
 
-  final TerminalDeviceService? _device;
+  final TerminalDeviceService _service;
 
   Router get router => Router()
     ..post('/terminal/pair', _pair)
@@ -31,14 +30,12 @@ class TerminalDeviceRoutes {
     ..post('/terminal/scan', _scan)
     ..post('/terminal/switch', _switch);
 
-  TerminalDeviceService get _service => _device ?? (throw const ApiException.notFound('Terminals are not available.'));
-
   Future<Response> _pair(Request request) async {
     final body = await _read(request, TerminalPairRequest.fromJson);
     return _answer((await _service.pair(body)).toJson());
   }
 
-  Future<Response> _me(Request request) async => _answer((await _service.seen(await _terminal(request))).toJson());
+  Future<Response> _me(Request request) async => _answer(_service.seen(await _terminal(request)).toJson());
 
   Future<Response> _scan(Request request) async {
     final terminal = await _terminal(request);

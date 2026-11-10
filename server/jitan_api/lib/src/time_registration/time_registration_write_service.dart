@@ -65,8 +65,9 @@ class TimeRegistrationWriteService {
   ///   stored the first time; [created] is then `false`
   /// - a geofence start while the day is already running (back from a short
   ///   exit, or at another location: D32) adds nothing and returns that start
-  /// - from a terminal: [terminalId] says which took the scan, and [companyId]
-  ///   what the day counts for
+  /// - from a terminal: [terminalId] (its `deviceID`) says which took the
+  ///   scan, on the registration's audit row (GAP-09)
+  /// - [companyId]: what the day counts for, when not the default
   Future<({RegisteredTime registered, bool created})> register(
     int userId,
     RegisterTimeRequest request, {
@@ -148,7 +149,6 @@ class TimeRegistrationWriteService {
         manualEntry: request.entry != RegistrationEntry.now,
         comment: reason,
         addressId: addressId,
-        terminalId: terminalId,
       );
       // D31: a correction waits for HR; it gets its rounded row when approved.
       if (pending) {
@@ -187,6 +187,7 @@ class TimeRegistrationWriteService {
             EventLogReference.user: userId,
             EventLogReference.timeReg: actualId,
             EventLogReference.timeRegType: actualType,
+            EventLogReference.device: ?terminalId,
           },
         ),
       );

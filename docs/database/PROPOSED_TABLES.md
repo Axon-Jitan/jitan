@@ -1,6 +1,6 @@
 # Tables and columns proposed to IT
 
-Jitan needs these to support projects, transport and terminals. They do not exist in
+Jitan needs these to support projects and transport (terminals use IT's `tblDevice` since 2026-11-10, GAP-09). They do not exist in
 IT's database. The product owner decided on 2026-10-31 to build on them locally and ask
 IT to add them. SQL: [projects_terminals.sql](../../dev/local-db/proposals/projects_terminals.sql).
 
@@ -32,8 +32,6 @@ questions wait. Nothing below blocks that work.
 | `tblUserProject` | Who is assigned to a project | No link between employees and projects | D16, D27 |
 | `tblProjectType` | Lookup: Client, Internal | Lookup values are read from the database, not hardcoded | D17 |
 | `tblProjectStatus` | Lookup: Planned, Active, Completed | Same | Figma `647:3452` |
-| `tblTerminal` | A shared tablet: name, type, company, location or plate number, QR enabled, device, last seen, device secret (hashed) | A kiosk user has no type, location, last seen or plate number | GAP-09, D18, D20 |
-| `tblTerminalType` | Lookup: Office, Vehicle | Lookup values are read from the database | Figma `153:1389` |
 
 Terminal pairing codes are temporary, so they stay out of the database, like
 temporary QR codes.
@@ -45,8 +43,7 @@ temporary QR codes.
 | `tblUserCompany.userCompanyDefault` | An employee's default company | D16 |
 | `tblTimeReg.companyID` | Which company an activity counts for, for people in several companies | GAP-03, D16 |
 | `tblTimeReg.projectID` | Which project an activity belongs to | D16, D19 |
-| `tblTimeReg.terminalID` | Which terminal took the scan | GAP-09 |
-| `tblEventLog.projectID`, `userProjectID`, `terminalID` | Audit of changes to these, like the existing ID columns | Rule 6 |
+| `tblEventLog.projectID`, `userProjectID` | Audit of changes to these, like the existing ID columns | Rule 6 |
 
 ## New lookup rows
 

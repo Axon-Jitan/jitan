@@ -10,29 +10,28 @@ void main() {
     final terminal = Terminal(
       id: 1,
       name: 'Almeco Reception',
-      type: const TerminalTypeChoice(id: 1, name: 'Office'),
-      companyId: 2,
-      companyName: 'Almeco',
-      scanningEnabled: true,
+      type: const TerminalTypeChoice(id: 1, name: 'Office terminal'),
+      serialNumber: 'R9TW40ABCDE',
       status: TerminalStatus.notConnected,
-      addressId: 3,
-      addressName: 'Almeco office',
       lastSeen: DateTime.utc(2026, 11, 1, 9),
+      lastScan: DateTime.utc(2026, 11, 1, 8, 12),
     );
 
     final back = Terminal.fromJson(_wire(terminal.toJson()));
 
     expect(back.status, TerminalStatus.notConnected);
     expect(back.lastSeen, DateTime.utc(2026, 11, 1, 9));
-    expect(back.type.name, 'Office');
+    expect(back.lastScan, DateTime.utc(2026, 11, 1, 8, 12));
+    expect(back.serialNumber, 'R9TW40ABCDE');
+    expect(back.type.name, 'Office terminal');
     expect(back.toJson().keys, isNot(contains('secretHash')));
   });
 
-  test('a request is trimmed; an empty plate is no plate', () {
-    const request = TerminalRequest(name: ' Van ', typeId: 2, companyId: 1, plateNumber: '  ');
+  test('a request is trimmed', () {
+    const request = TerminalRequest(name: ' Van 1-ABC-123 ', typeId: 2, serialNumber: ' R9TW51 ');
 
-    expect(request.trimmed().name, 'Van');
-    expect(request.trimmed().plateNumber, isNull);
+    expect(request.trimmed().name, 'Van 1-ABC-123');
+    expect(request.trimmed().serialNumber, 'R9TW51');
   });
 
   test('a scan says its moment with an offset', () {
@@ -51,7 +50,7 @@ void main() {
     expect('$pair$scan', isNot(contains('secret-qr')));
     const answer = TerminalPairResponse(
       token: 'secret-token',
-      terminal: TerminalInfo(id: 1, name: 'A', companyName: 'B', canScan: true),
+      terminal: TerminalInfo(id: 1, name: 'A', canScan: true),
     );
     expect('$answer', isNot(contains('secret-token')));
   });

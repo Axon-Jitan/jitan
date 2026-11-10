@@ -22,7 +22,7 @@ enum TerminalStatus {
   );
 }
 
-/// One `tblTerminalType` row.
+/// A kind of terminal: a `tblDeviceType` row such as "Office terminal".
 class TerminalTypeChoice {
   const TerminalTypeChoice({required this.id, required this.name});
 
@@ -35,8 +35,8 @@ class TerminalTypeChoice {
   Map<String, Object?> toJson() => {'id': id, 'name': name};
 }
 
-/// `GET /terminal-options`. [vehicleTypeIds]: the types with a number plate
-/// instead of a location.
+/// `GET /terminal-options`. [vehicleTypeIds]: the types that sit in a van, so
+/// the form says to put the number plate in the name.
 class TerminalOptions {
   const TerminalOptions({required this.types, required this.vehicleTypeIds});
 
@@ -54,21 +54,18 @@ class TerminalOptions {
   };
 }
 
-/// A terminal on the HR page. Never carries its device secret.
+/// A terminal on the HR page (Figma `1507:2`): a shared tablet (`tblDevice`
+/// with `deviceMultiUser = 1`) that employees of every company can use. Never
+/// carries its secret.
 class Terminal {
   const Terminal({
     required this.id,
     required this.name,
     required this.type,
-    required this.companyId,
-    required this.companyName,
-    required this.scanningEnabled,
+    required this.serialNumber,
     required this.status,
-    this.addressId,
-    this.addressName,
-    this.plateNumber,
-    this.deviceName,
     this.lastSeen,
+    this.lastScan,
     this.connectionTag,
   });
 
@@ -76,32 +73,24 @@ class Terminal {
     id: json.readInt('id'),
     name: json.readString('name'),
     type: TerminalTypeChoice.fromJson(json.readObject('type')),
-    companyId: json.readInt('companyId'),
-    companyName: json.readString('companyName'),
-    scanningEnabled: json.readBool('scanningEnabled'),
+    serialNumber: json.readString('serialNumber'),
     status: TerminalStatus.fromWire(json.readString('status')),
-    addressId: json.readOptionalInt('addressId'),
-    addressName: json.readOptionalString('addressName'),
-    plateNumber: json.readOptionalString('plateNumber'),
-    deviceName: json.readOptionalString('deviceName'),
     lastSeen: json.readOptionalDateTime('lastSeen')?.toUtc(),
+    lastScan: json.readOptionalDateTime('lastScan')?.toUtc(),
     connectionTag: json.readOptionalString('connectionTag'),
   );
 
   final int id;
   final String name;
   final TerminalTypeChoice type;
-  final int companyId;
-  final String companyName;
-
-  /// "Employees can scan".
-  final bool scanningEnabled;
+  final String serialNumber;
   final TerminalStatus status;
-  final int? addressId;
-  final String? addressName;
-  final String? plateNumber;
-  final String? deviceName;
+
+  /// The tablet's last check-in since the server started; kept in memory.
   final DateTime? lastSeen;
+
+  /// The last scan registered there, from the audit log.
+  final DateTime? lastScan;
 
   /// Changes each time a tablet connects, so HR sees that this one did. Says
   /// nothing about the secret.
@@ -111,15 +100,10 @@ class Terminal {
     'id': id,
     'name': name,
     'type': type.toJson(),
-    'companyId': companyId,
-    'companyName': companyName,
-    'scanningEnabled': scanningEnabled,
+    'serialNumber': serialNumber,
     'status': status.wireName,
-    'addressId': addressId,
-    'addressName': addressName,
-    'plateNumber': plateNumber,
-    'deviceName': deviceName,
     'lastSeen': lastSeen?.toUtc().toIso8601String(),
+    'lastScan': lastScan?.toUtc().toIso8601String(),
     'connectionTag': connectionTag,
   };
 }
@@ -138,65 +122,32 @@ class TerminalListResponse {
   };
 }
 
-/// Body of adding or changing a terminal. An office has a location, a vehicle
-/// a number plate.
+/// Body of adding or changing a terminal (Figma `1507:126`, `1507:280`): a
+/// van's number plate goes in its name.
 class TerminalRequest {
-  const TerminalRequest({required this.name, required this.typeId, required this.companyId, this.addressId, this.plateNumber});
+  const TerminalRequest({required this.name, required this.typeId, required this.serialNumber});
 
   factory TerminalRequest.fromJson(Map<String, Object?> json) => TerminalRequest(
     name: json.readString(fieldName),
     typeId: json.readInt(fieldType),
-    companyId: json.readInt(fieldCompany),
-    addressId: json.readOptionalInt(fieldAddress),
-    plateNumber: json.readOptionalString(fieldPlate),
+    serialNumber: json.readString(fieldSerialNumber),
   );
 
   static const fieldName = 'name';
   static const fieldType = 'typeId';
-  static const fieldCompany = 'companyId';
-  static const fieldAddress = 'addressId';
-  static const fieldPlate = 'plateNumber';
+  static const fieldSerialNumber = 'serialNumber';
 
-  /// Column sizes of `tblTerminal`.
+  /// Column sizes of `tblDevice` (`deviceName`, `deviceSN`).
   static const maxNameLength = 100;
-  static const maxPlateLength = 20;
+  static const maxSerialNumberLength = 100;
 
   final String name;
   final int typeId;
-  final int companyId;
-  final int? addressId;
-  final String? plateNumber;
+  final String serialNumber;
 
-  TerminalRequest trimmed() {
-    final plate = plateNumber?.trim();
-    return TerminalRequest(
-      name: name.trim(),
-      typeId: typeId,
-      companyId: companyId,
-      addressId: addressId,
-      plateNumber: plate == null || plate.isEmpty ? null : plate,
-    );
-  }
+  TerminalRequest trimmed() => TerminalRequest(name: name.trim(), typeId: typeId, serialNumber: serialNumber.trim());
 
-  Map<String, Object?> toJson() => {
-    fieldName: name,
-    fieldType: typeId,
-    fieldCompany: companyId,
-    fieldAddress: addressId,
-    fieldPlate: plateNumber,
-  };
-}
-
-/// Body of `PUT …/terminals/{id}/scanning`.
-class TerminalScanningRequest {
-  const TerminalScanningRequest({required this.enabled});
-
-  factory TerminalScanningRequest.fromJson(Map<String, Object?> json) =>
-      TerminalScanningRequest(enabled: json.readBool('enabled'));
-
-  final bool enabled;
-
-  Map<String, Object?> toJson() => {'enabled': enabled};
+  Map<String, Object?> toJson() => {fieldName: name, fieldType: typeId, fieldSerialNumber: serialNumber};
 }
 
 /// Body of `POST /terminal/pair`: the scanned pairing QR. It is a credential:
@@ -223,33 +174,18 @@ class TerminalPairRequest {
 }
 
 /// What a tablet knows about itself. [canScan] is `false` while HR has
-/// deactivated it or switched scanning off.
+/// deactivated it.
 class TerminalInfo {
-  const TerminalInfo({required this.id, required this.name, required this.companyName, required this.canScan, this.placeName});
+  const TerminalInfo({required this.id, required this.name, required this.canScan});
 
-  factory TerminalInfo.fromJson(Map<String, Object?> json) => TerminalInfo(
-    id: json.readInt('id'),
-    name: json.readString('name'),
-    companyName: json.readString('companyName'),
-    canScan: json.readBool('canScan'),
-    placeName: json.readOptionalString('placeName'),
-  );
+  factory TerminalInfo.fromJson(Map<String, Object?> json) =>
+      TerminalInfo(id: json.readInt('id'), name: json.readString('name'), canScan: json.readBool('canScan'));
 
   final int id;
   final String name;
-  final String companyName;
   final bool canScan;
 
-  /// The location; `null` for a vehicle.
-  final String? placeName;
-
-  Map<String, Object?> toJson() => {
-    'id': id,
-    'name': name,
-    'companyName': companyName,
-    'canScan': canScan,
-    'placeName': placeName,
-  };
+  Map<String, Object?> toJson() => {'id': id, 'name': name, 'canScan': canScan};
 }
 
 /// Response of `POST /terminal/pair`. [token] is the tablet's own credential:

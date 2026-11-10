@@ -69,6 +69,9 @@ abstract final class ApiErrorCode {
   /// Another location (active or inactive) already has this name.
   static const duplicateLocationName = 'duplicate_location_name';
 
+  /// Another terminal has this serial number (`tblDevice.deviceSN`).
+  static const duplicateSerialNumber = 'duplicate_serial_number';
+
   /// The employee group still has employees, so it can't be deactivated.
   static const groupInUse = 'group_in_use';
 

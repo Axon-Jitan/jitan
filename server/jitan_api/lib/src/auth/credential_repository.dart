@@ -7,7 +7,9 @@ typedef SignInCandidate = ({int userId, String passwordHash, bool isActive, bool
 
 /// Sign-in lookups and password writes on `tblUser.userPassword` after
 /// onboarding (onboarding's first password is `OnboardingRepository`):
-/// change, reset, and the new password after a reset (recovery).
+/// change, reset, and the new password after a reset (recovery). A
+/// terminal's kiosk user (`userKioskMode = 1`) is never found here: its
+/// password is the tablet's secret, not a way to sign in (GAP-09).
 class CredentialRepository {
   const CredentialRepository();
 
@@ -18,7 +20,8 @@ class CredentialRepository {
   Future<List<SignInCandidate>> candidatesByCode(SqlExecutor executor, String code) async {
     final rows = await executor.query(
       'SELECT userID, userPassword, userActive, userMFD FROM tblUser '
-      'WHERE userCode $ignoringCaseAndAccents = :code AND userPassword IS NOT NULL ORDER BY userID LIMIT 5',
+      'WHERE userCode $ignoringCaseAndAccents = :code AND userPassword IS NOT NULL AND userKioskMode = 0 '
+      'ORDER BY userID LIMIT 5',
       {'code': code},
     );
     return [
@@ -35,7 +38,8 @@ class CredentialRepository {
   /// The active, non-deleted users with employee code [code].
   Future<List<int>> activeByCode(SqlExecutor tx, String code) async => [
     for (final row in await tx.query(
-      'SELECT userID FROM tblUser WHERE userCode $ignoringCaseAndAccents = :code AND userActive = 1 AND userMFD = 0 LIMIT 5',
+      'SELECT userID FROM tblUser WHERE userCode $ignoringCaseAndAccents = :code AND userActive = 1 AND userMFD = 0 '
+      'AND userKioskMode = 0 LIMIT 5',
       {'code': code},
     ))
       row.readInt('userID'),

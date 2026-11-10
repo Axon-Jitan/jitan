@@ -31,6 +31,10 @@ import 'package:jitan_api/src/locations/location_routes.dart';
 import 'package:jitan_api/src/locations/location_service.dart';
 import 'package:jitan_api/src/activities/activity_routes.dart';
 import 'package:jitan_api/src/terminals/terminal_device_routes.dart';
+import 'package:jitan_api/src/terminals/terminal_device_service.dart';
+import 'package:jitan_api/src/terminals/terminal_presence.dart';
+import 'package:jitan_api/src/terminals/terminal_repository.dart';
+import 'package:jitan_api/src/terminals/terminal_service.dart';
 import 'package:jitan_api/src/terminals/terminal_routes.dart';
 import 'package:jitan_api/src/projects/project_routes.dart';
 import 'package:jitan_api/src/projects/project_service.dart';
@@ -193,8 +197,39 @@ class TestApp {
       ),
       timeRecords: TimeRecordRoutes(Authorizer(permissions), timeRecordService, timeCorrections, myDays),
       activities: ActivityRoutes(null),
-      terminals: TerminalRoutes(Authorizer(permissions), null),
-      terminalDevices: const TerminalDeviceRoutes(null),
+      // Not called by these tests: terminals are tested against MySQL.
+      terminals: TerminalRoutes(
+        Authorizer(permissions),
+        TerminalService(
+          terminals: const TerminalRepository(),
+          presence: TerminalPresence(),
+          temporaryQr: temporaryQr,
+          audit: audit,
+          transactions: transactions,
+          executor: unusedExecutor,
+        ),
+      ),
+      terminalDevices: TerminalDeviceRoutes(
+        TerminalDeviceService(
+          terminals: const TerminalRepository(),
+          presence: TerminalPresence(),
+          temporaryQr: temporaryQr,
+          writes: TimeRegistrationWriteService(
+            transactions: transactions,
+            rounding: RegistrationRounding(schedules),
+            clock: WorkplaceClock('Europe/Brussels'),
+            repository: timeRegistrationWrites,
+            audit: audit,
+            locations: locations,
+            now: () => now,
+          ),
+          myDay: myDays,
+          audit: audit,
+          transactions: transactions,
+          executor: unusedExecutor,
+          clock: WorkplaceClock('Europe/Brussels'),
+        ),
+      ),
       projects: ProjectRoutes(
         Authorizer(permissions),
         ProjectService(

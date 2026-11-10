@@ -51,6 +51,7 @@ import 'package:jitan_api/src/projects/project_service.dart';
 import 'package:jitan_api/src/routing/driving_distance.dart';
 import 'package:jitan_api/src/terminals/terminal_device_routes.dart';
 import 'package:jitan_api/src/terminals/terminal_device_service.dart';
+import 'package:jitan_api/src/terminals/terminal_presence.dart';
 import 'package:jitan_api/src/terminals/terminal_repository.dart';
 import 'package:jitan_api/src/terminals/terminal_routes.dart';
 import 'package:jitan_api/src/terminals/terminal_service.dart';
@@ -256,6 +257,8 @@ Future<void> main() async {
           clock: workplaceClock,
         )
       : null;
+  // Which tablets checked in lately: kept in memory only (GAP-09).
+  final terminalPresence = TerminalPresence();
   final employeeService = EmployeeService(
     employees: EmployeeRepository(db),
     companies: companyRepository,
@@ -374,37 +377,33 @@ Future<void> main() async {
     activities: ActivityRoutes(activityService),
     terminals: TerminalRoutes(
       authorizer,
-      hasActivities
-          ? TerminalService(
-              terminals: const TerminalRepository(),
-              companies: companyRepository,
-              locations: const LocationRepository(),
-              temporaryQr: temporaryQr,
-              audit: const AuditLogRepository(),
-              transactions: db,
-              executor: db,
-            )
-          : null,
+      TerminalService(
+        terminals: const TerminalRepository(),
+        presence: terminalPresence,
+        temporaryQr: temporaryQr,
+        audit: const AuditLogRepository(),
+        transactions: db,
+        executor: db,
+      ),
     ),
     terminalDevices: TerminalDeviceRoutes(
-      activityService == null
-          ? null
-          : TerminalDeviceService(
-              terminals: const TerminalRepository(),
-              temporaryQr: temporaryQr,
-              writes: TimeRegistrationWriteService(
-                transactions: db,
-                rounding: RegistrationRounding(ScheduleRepository(db)),
-                clock: workplaceClock,
-                onDayStart: activityService.dayStarted,
-              ),
-              activities: activityService,
-              myDay: myDayService,
-              audit: const AuditLogRepository(),
-              transactions: db,
-              executor: db,
-              clock: workplaceClock,
-            ),
+      TerminalDeviceService(
+        terminals: const TerminalRepository(),
+        presence: terminalPresence,
+        temporaryQr: temporaryQr,
+        writes: TimeRegistrationWriteService(
+          transactions: db,
+          rounding: RegistrationRounding(ScheduleRepository(db)),
+          clock: workplaceClock,
+          onDayStart: activityService?.dayStarted,
+        ),
+        activities: activityService,
+        myDay: myDayService,
+        audit: const AuditLogRepository(),
+        transactions: db,
+        executor: db,
+        clock: workplaceClock,
+      ),
     ),
     schedules: ScheduleRoutes(
       authorizer,

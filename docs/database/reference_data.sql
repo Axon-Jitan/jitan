@@ -133,7 +133,23 @@ SELECT e.name FROM (
   UNION ALL SELECT 'location.changed'
   UNION ALL SELECT 'location.deactivated'
   UNION ALL SELECT 'location.reactivated'
+  UNION ALL SELECT 'terminal.created'
+  UNION ALL SELECT 'terminal.changed'
+  UNION ALL SELECT 'terminal.pairing.started'
+  UNION ALL SELECT 'terminal.paired'
+  UNION ALL SELECT 'terminal.deactivated'
+  UNION ALL SELECT 'terminal.reactivated'
+  UNION ALL SELECT 'terminal.removed'
 ) e WHERE NOT EXISTS (SELECT 1 FROM tblEventType x WHERE x.eventTypeName = e.name);
+
+-- ---------- Terminal kinds (tblDeviceType) ---------------------------
+-- A terminal is a shared tablet (tblDevice, deviceMultiUser = 1) of one of
+-- these kinds (GAP-09). Phones and other devices would be other rows.
+
+INSERT INTO tblDeviceType (deviceTypeName, deviceTypeOS, deviceTypeActive, deviceTypeMFD)
+SELECT d.name, 'Android', 1, 0 FROM (
+  SELECT 'Office terminal' AS name UNION ALL SELECT 'Vehicle terminal'
+) d WHERE NOT EXISTS (SELECT 1 FROM tblDeviceType x WHERE x.deviceTypeName = d.name);
 
 -- ---------- Not proposed yet -----------------------------------------
 -- tblAppModules, tblFunction, tblAppModulesCredGroup: what each role may

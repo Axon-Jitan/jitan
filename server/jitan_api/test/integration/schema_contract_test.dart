@@ -24,6 +24,7 @@ const _usedColumns = {
     'eventLogID', 'eventLogTimestamp', 'userIDInit', 'userIDTarget', 'companyID', 'userCompanyID',
     'groupID', 'userGroupID', 'credGroupID', 'userCredGroupID', 'scheduleID', 'scheduleTypeID', 'dayID',
     'roundingRuleID', 'scheduleRoundingRuleID', 'addressID', 'geofenceID', 'geofenceAddressID',
+    'deviceID', 'deviceDeviceTypeID', 'userDeviceID',
   ],
   'tblTimeReg': [
     'timeRegID', 'userID', 'addressID', 'timeRegTypeID', 'timeRegTimestamp', 'timeRegManualEntry',
@@ -46,6 +47,11 @@ const _usedColumns = {
   'tblEventLogEventType': [
     'eventLogEventTypeID', 'eventTypeID', 'eventLogID', 'eventLogEventTypeActive', 'eventLogEventTypeMFD',
   ],
+  // Terminals (GAP-09).
+  'tblDevice': ['deviceID', 'deviceName', 'deviceSN', 'deviceMultiUser', 'deviceActive', 'deviceMFD'],
+  'tblDeviceType': ['deviceTypeID', 'deviceTypeName', 'deviceTypeOS', 'deviceTypeActive', 'deviceTypeMFD'],
+  'tblDeviceDeviceType': ['deviceDeviceTypeID', 'deviceID', 'deviceTypeID', 'deviceDeviceTypeActive', 'deviceDeviceTypeMFD'],
+  'tblUserDevice': ['userDeviceID', 'deviceID', 'userID', 'userDeviceActive', 'userDeviceMFD'],
   'tblLanguage': ['languageID', 'languageName', 'languageCode', 'languageActive', 'languageMFD'],
   'tblTranslation': ['translationID', 'languageID', 'translationUIName', 'translationUIText'],
   'tblUserLanguage': ['userLanguageID', 'userID', 'languageID', 'userLanguageActive', 'userLanguageMFD'],

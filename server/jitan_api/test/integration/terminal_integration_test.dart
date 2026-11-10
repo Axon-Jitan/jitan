@@ -5,6 +5,7 @@ import 'package:jitan_api/src/activities/activity_repository.dart';
 import 'package:jitan_api/src/activities/activity_service.dart';
 import 'package:jitan_api/src/activities/trip_kilometres.dart';
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
+import 'package:jitan_api/src/auth/credential_repository.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
 import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
@@ -16,6 +17,7 @@ import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart'
 import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_api/src/terminals/terminal_device_service.dart';
+import 'package:jitan_api/src/terminals/terminal_presence.dart';
 import 'package:jitan_api/src/terminals/terminal_repository.dart';
 import 'package:jitan_api/src/terminals/terminal_service.dart';
 import 'package:jitan_api/src/time_records/my_day_service.dart';
@@ -31,8 +33,10 @@ import 'package:test/test.dart';
 
 import '../support/test_database.dart';
 
-/// PROPOSAL (docs/database/PROPOSED_TABLES.md, D18, D41): terminals against
-/// the local database. Skipped where the proposed tables are missing.
+/// Terminals on IT's tables (GAP-09, D18, D41): a shared `tblDevice`, its
+/// kind through `tblDeviceDeviceType`, and a kiosk `tblUser` holding the
+/// tablet's hashed secret. Switching project needs the proposed activity
+/// tables and is skipped without them.
 void main() {
   final skip = TestDatabase.skipReason;
   if (skip != null) {
@@ -41,17 +45,18 @@ void main() {
   }
 
   late Database db;
-  late bool available;
+  late bool activitiesHere;
   late TerminalService terminals;
   late TerminalDeviceService device;
   late TemporaryQrService temporaryQr;
   late TerminalRepository repository;
+  late TerminalPresence presence;
   late int company;
   late int otherCompany;
   late int officeType;
   late int vehicleType;
-  late int location;
   final users = <int>[];
+  final devices = <int>[];
   final clock = WorkplaceClock('Europe/Brussels');
   final stamp = DateTime.now().microsecondsSinceEpoch % 100000000;
   final prefix = '[DEV-TEST] $stamp';
@@ -66,7 +71,7 @@ void main() {
 
   /// An employee of [inCompany]; returns their id and Terminal QR.
   Future<(int, String)> newEmployee({int? inCompany, bool active = true}) async {
-    final code = '$stamp${++counter}';
+    final code = 'DT$stamp${++counter}';
     final qr = 'QR-$code';
     final id = (await db.execute(
       'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) VALUES (:n, :s, :c, :q, :a, 0)',
@@ -80,15 +85,21 @@ void main() {
     return (id, qr);
   }
 
+  TerminalRequest request(String name, {int? type, String? serial}) =>
+      TerminalRequest(name: '$prefix $name', typeId: type ?? officeType, serialNumber: serial ?? 'SN$stamp-${++counter}');
+
+  Future<Terminal> add(int actor, TerminalRequest terminal) async {
+    final created = await terminals.create(actor, terminal);
+    devices.add(created.id);
+    return created;
+  }
+
   /// Added and connected; returns the terminal and its tablet's token.
   Future<(Terminal, String)> connected({String name = 'Reception'}) async {
     final (actor, _) = await newEmployee();
-    final terminal = await terminals.create(
-      actor,
-      TerminalRequest(name: '$prefix $name', typeId: officeType, companyId: company, addressId: location),
-    );
-    final qr = await terminals.pairingQr(actor, company, terminal.id);
-    final paired = await device.pair(TerminalPairRequest(qrCode: qr.qrCode, deviceId: 'tablet-${++counter}', deviceName: 'Tab A9'));
+    final terminal = await add(actor, request(name));
+    final qr = await terminals.pairingQr(actor, terminal.id);
+    final paired = await device.pair(TerminalPairRequest(qrCode: qr.qrCode, deviceId: 'tablet-${++counter}'));
     return (terminal, paired.token);
   }
 
@@ -97,8 +108,7 @@ void main() {
 
   setUpAll(() async {
     db = TestDatabase.connect(maxConnections: 3);
-    available = await const ActivityRepository().available(db);
-    if (!available) return;
+    activitiesHere = await const ActivityRepository().available(db);
     final schedules = ScheduleRepository(db);
     final records = TimeRecordRepository(db);
     final days = TimeRecordService(
@@ -110,29 +120,31 @@ void main() {
       rounding: RegistrationRounding(schedules),
     );
     final myDay = MyDayService(days: days, records: records, plans: WeekPlans(schedules), clock: clock);
-    final activities = ActivityService(
-      activities: const ActivityRepository(),
-      writes: const TimeRegistrationWriteRepository(),
-      myDay: myDay,
-      locations: const LocationRepository(),
-      kilometres: TripKilometres(
-        activities: const ActivityRepository(),
-        locations: const LocationRepository(),
-        distance: const NoDrivingDistance(),
-        executor: db,
-        clock: clock,
-      ),
-      audit: const AuditLogRepository(),
-      transactions: db,
-      executor: db,
-      clock: clock,
-    );
+    final activities = activitiesHere
+        ? ActivityService(
+            activities: const ActivityRepository(),
+            writes: const TimeRegistrationWriteRepository(),
+            myDay: myDay,
+            locations: const LocationRepository(),
+            kilometres: TripKilometres(
+              activities: const ActivityRepository(),
+              locations: const LocationRepository(),
+              distance: const NoDrivingDistance(),
+              executor: db,
+              clock: clock,
+            ),
+            audit: const AuditLogRepository(),
+            transactions: db,
+            executor: db,
+            clock: clock,
+          )
+        : null;
     temporaryQr = TemporaryQrService(tokens: TemporaryQrTokens.withRandomKey(), store: InMemoryTemporaryTokenStore());
     repository = const TerminalRepository();
+    presence = TerminalPresence();
     terminals = TerminalService(
       terminals: repository,
-      companies: CompanyRepository(db),
-      locations: const LocationRepository(),
+      presence: presence,
       temporaryQr: temporaryQr,
       audit: const AuditLogRepository(),
       transactions: db,
@@ -140,12 +152,13 @@ void main() {
     );
     device = TerminalDeviceService(
       terminals: repository,
+      presence: presence,
       temporaryQr: temporaryQr,
       writes: TimeRegistrationWriteService(
         transactions: db,
         rounding: RegistrationRounding(schedules),
         clock: clock,
-        onDayStart: activities.dayStarted,
+        onDayStart: activities?.dayStarted,
       ),
       activities: activities,
       myDay: myDay,
@@ -155,127 +168,128 @@ void main() {
       clock: clock,
     );
     final types = await repository.types(db);
-    officeType = types.firstWhere((t) => t.name == 'Office').id;
-    vehicleType = types.firstWhere((t) => t.name == 'Vehicle').id;
+    officeType = types.firstWhere((t) => t.name == TerminalRepository.officeTypeName).id;
+    vehicleType = types.firstWhere((t) => t.name == TerminalRepository.vehicleTypeName).id;
     company = await newCompany('company');
     otherCompany = await newCompany('other');
-    location = (await db.execute(
-      'INSERT INTO tblAddress (addressStreet, addressLogicalName, addressCoordinates, addressActive, addressMFD) '
-      'VALUES (:s, :n, :c, 1, 0)',
-      {'s': 'Street', 'n': '$prefix site', 'c': '51.0,4.0'},
-    )).lastInsertId;
-    final geofence = (await db.execute(
-      'INSERT INTO tblGeofence (geofenceRadiusInMeter, geofenceActive, geofenceMFD) VALUES (100, 1, 0)',
-    )).lastInsertId;
-    await db.execute(
-      'INSERT INTO tblGeofenceAddress (geofenceID, addressID, geofenceAddressActive, geofenceAddressMFD) VALUES (:g, :a, 1, 0)',
-      {'g': geofence, 'a': location},
-    );
   });
 
   tearDownAll(() async {
-    if (available) {
+    Future<void> eventsWhere(String condition, Map<String, Object?> values) async {
       await db.execute(
-        'DELETE t FROM tblEventLogEventType t JOIN tblEventLog e ON e.eventLogID = t.eventLogID WHERE e.companyID IN (:a, :b)',
-        {'a': company, 'b': otherCompany},
+        'DELETE t FROM tblEventLogEventType t JOIN tblEventLog e ON e.eventLogID = t.eventLogID WHERE $condition',
+        values,
       );
-      await db.execute('DELETE FROM tblEventLog WHERE companyID IN (:a, :b)', {'a': company, 'b': otherCompany});
-      for (final user in users) {
-        await db.execute(
-          'DELETE t FROM tblEventLogEventType t JOIN tblEventLog e ON e.eventLogID = t.eventLogID WHERE e.userIDInit = :u',
-          {'u': user},
-        );
-        await db.execute('DELETE FROM tblEventLog WHERE userIDInit = :u OR userIDTarget = :u', {'u': user});
-        await db.execute('DELETE FROM tblTimeReg WHERE userID = :u', {'u': user});
-        await db.execute('DELETE FROM tblUserCompany WHERE userID = :u', {'u': user});
-        await db.execute('DELETE FROM tblUser WHERE userID = :u', {'u': user});
-      }
-      await db.execute('DELETE FROM tblTerminal WHERE companyID IN (:a, :b)', {'a': company, 'b': otherCompany});
-      await db.execute('DELETE FROM tblCompany WHERE companyID IN (:a, :b)', {'a': company, 'b': otherCompany});
-      final links = await db.query('SELECT geofenceID FROM tblGeofenceAddress WHERE addressID = :a', {'a': location});
-      await db.execute('DELETE FROM tblGeofenceAddress WHERE addressID = :a', {'a': location});
-      for (final link in links) {
-        await db.execute('DELETE FROM tblGeofence WHERE geofenceID = :g', {'g': link.readInt('geofenceID')});
-      }
-      await db.execute('DELETE FROM tblAddress WHERE addressID = :a', {'a': location});
+      await db.execute('DELETE e FROM tblEventLog e WHERE $condition', values);
     }
+
+    for (final id in devices) {
+      final kiosks = await db.query('SELECT userID FROM tblUserDevice WHERE deviceID = :d', {'d': id});
+      await eventsWhere('e.deviceID = :d', {'d': id});
+      await db.execute('DELETE FROM tblUserDevice WHERE deviceID = :d', {'d': id});
+      await db.execute('DELETE FROM tblDeviceDeviceType WHERE deviceID = :d', {'d': id});
+      for (final kiosk in kiosks) {
+        await eventsWhere('e.userIDTarget = :u', {'u': kiosk.readInt('userID')});
+        await db.execute('DELETE FROM tblUser WHERE userID = :u', {'u': kiosk.readInt('userID')});
+      }
+      await db.execute('DELETE FROM tblDevice WHERE deviceID = :d', {'d': id});
+    }
+    for (final user in users) {
+      await eventsWhere('e.userIDInit = :u OR e.userIDTarget = :u', {'u': user});
+      await db.execute('DELETE FROM tblTimeReg WHERE userID = :u', {'u': user});
+      await db.execute('DELETE FROM tblUserCompany WHERE userID = :u', {'u': user});
+      await db.execute('DELETE FROM tblUser WHERE userID = :u', {'u': user});
+    }
+    await db.execute('DELETE FROM tblCompany WHERE companyID IN (:a, :b)', {'a': company, 'b': otherCompany});
     await db.close();
   });
 
-  void onlyWithTables(String name, Future<void> Function() body) => test(name, () async {
-    if (!available) return markTestSkipped('The proposed tables are not here.');
-    await body();
-  });
-
   group('HR', () {
-    onlyWithTables('an office needs a location, a vehicle a number plate', () async {
+    test('a terminal is a shared tblDevice with its kind and a kiosk user without a password', () async {
       final (actor, _) = await newEmployee();
-      final office = TerminalRequest(name: '$prefix a', typeId: officeType, companyId: company);
-      await expectLater(terminals.create(actor, office), throwsA(isA<ApiException>().having((e) => e.field, 'field', 'addressId')));
 
-      final van = TerminalRequest(name: '$prefix van', typeId: vehicleType, companyId: company);
-      await expectLater(terminals.create(actor, van), throwsA(isA<ApiException>().having((e) => e.field, 'field', 'plateNumber')));
+      final created = await add(actor, request('van 1-ABC-123', type: vehicleType, serial: '  R9TW51-$stamp '));
 
-      final created = await terminals.create(
-        actor,
-        TerminalRequest(name: '$prefix van', typeId: vehicleType, companyId: company, plateNumber: ' 1-ABC-123 ', addressId: location),
-      );
-      expect(created.plateNumber, '1-ABC-123');
-      expect(created.addressId, isNull, reason: 'a vehicle has no location');
+      expect(created.serialNumber, 'R9TW51-$stamp');
+      expect(created.type.id, vehicleType);
       expect(created.status, TerminalStatus.notConnected);
+      final row = (await db.query(
+        'SELECT d.deviceMultiUser, u.userKioskMode, u.userPassword, u.userCode FROM tblDevice d '
+        'JOIN tblUserDevice ud ON ud.deviceID = d.deviceID JOIN tblUser u ON u.userID = ud.userID WHERE d.deviceID = :d',
+        {'d': created.id},
+      )).single;
+      expect(row.readBool('deviceMultiUser'), isTrue);
+      expect(row.readBool('userKioskMode'), isTrue);
+      expect(row.readOptionalString('userPassword'), isNull);
+      expect(row.readString('userCode'), TerminalRepository.kioskCode(created.id));
     });
 
-    onlyWithTables('a list shows only the companies the viewer may see', () async {
-      final (terminal, _) = await connected();
+    test('a serial number is needed, and one in use (in any capitals) is refused', () async {
+      final (actor, _) = await newEmployee();
+      await expectLater(
+        terminals.create(actor, request('no serial', serial: '  ')),
+        throwsA(isA<ApiException>().having((e) => e.field, 'field', TerminalRequest.fieldSerialNumber)),
+      );
+      final first = await add(actor, request('first', serial: 'abc-$stamp'));
 
-      expect((await terminals.list((id) async => id == otherCompany)).map((t) => t.id), isNot(contains(terminal.id)));
-      expect((await terminals.list((id) async => id == company)).map((t) => t.id), contains(terminal.id));
+      await expectLater(
+        terminals.create(actor, request('second', serial: 'ABC-$stamp')),
+        refusedWith(409, ApiErrorCode.duplicateSerialNumber),
+      );
+      expect(first.serialNumber, 'abc-$stamp');
     });
 
-    onlyWithTables('another company’s terminal does not exist', () async {
-      final (terminal, _) = await connected();
+    test('changing the kind relinks it, and the list shows every terminal', () async {
+      final (actor, _) = await newEmployee();
+      final created = await add(actor, request('kind'));
 
-      await expectLater(terminals.find(otherCompany, terminal.id), refusedWith(404, 'not_found'));
+      final changed = await terminals.update(actor, created.id, request('kind', type: vehicleType, serial: created.serialNumber));
+
+      expect(changed.type.id, vehicleType);
+      expect((await terminals.list()).where((t) => t.id == created.id).single.type.id, vehicleType);
     });
 
-    onlyWithTables('deactivate, reactivate, remove: audited once each, and an action that changes nothing is not', () async {
+    test('deactivate, reactivate, remove: audited once each, and an action that changes nothing is not', () async {
       final (actor, _) = await newEmployee();
       final (terminal, _) = await connected();
       Future<int> audited() async => (await db.query(
-        'SELECT COUNT(*) AS n FROM tblEventLog WHERE terminalID = :t AND userIDInit = :u',
+        'SELECT COUNT(*) AS n FROM tblEventLog WHERE deviceID = :t AND userIDInit = :u',
         {'t': terminal.id, 'u': actor},
       )).single.readInt('n');
 
-      expect((await terminals.setActive(actor, company, terminal.id, active: false)).status, TerminalStatus.inactive);
-      await terminals.setActive(actor, company, terminal.id, active: false);
+      expect((await terminals.setActive(actor, terminal.id, active: false)).status, TerminalStatus.inactive);
+      await terminals.setActive(actor, terminal.id, active: false);
       expect(await audited(), 1);
 
-      await terminals.setActive(actor, company, terminal.id, active: true);
-      await terminals.remove(actor, company, terminal.id);
+      await terminals.setActive(actor, terminal.id, active: true);
+      await terminals.remove(actor, terminal.id);
       expect(await audited(), 3);
-      await expectLater(terminals.find(company, terminal.id), refusedWith(404, 'not_found'));
+      await expectLater(terminals.find(terminal.id), refusedWith(404, 'not_found'));
+      final kiosk = (await db.query(
+        'SELECT u.userActive, u.userMFD, u.userPassword FROM tblUserDevice ud JOIN tblUser u ON u.userID = ud.userID '
+        'WHERE ud.deviceID = :d',
+        {'d': terminal.id},
+      )).single;
+      expect((kiosk.readBool('userActive'), kiosk.readBool('userMFD'), kiosk.readOptionalString('userPassword')), (false, true, null));
     });
   });
 
   group('connecting a tablet', () {
-    onlyWithTables('the secret is stored hashed, the tablet is online and a new QR ends the old one', () async {
+    test('the secret is stored hashed on the kiosk user, the tablet is online and a new QR ends the old one', () async {
       final (actor, _) = await newEmployee();
-      final terminal = await terminals.create(
-        actor,
-        TerminalRequest(name: '$prefix b', typeId: officeType, companyId: company, addressId: location),
-      );
-      final first = await terminals.pairingQr(actor, company, terminal.id);
-      final second = await terminals.pairingQr(actor, company, terminal.id);
+      final terminal = await add(actor, request('b'));
+      final first = await terminals.pairingQr(actor, terminal.id);
+      final second = await terminals.pairingQr(actor, terminal.id);
 
       await expectLater(device.pair(TerminalPairRequest(qrCode: first.qrCode, deviceId: 'x')), throwsA(isA<ApiException>()));
 
-      final paired = await device.pair(TerminalPairRequest(qrCode: second.qrCode, deviceId: 'x', deviceName: 'Tab A9'));
+      final paired = await device.pair(TerminalPairRequest(qrCode: second.qrCode, deviceId: 'x'));
 
       final stored = (await repository.find(db, terminal.id))!.secretHash!;
       expect(paired.token.split('.').last, isNot(stored));
-      final seen = await terminals.find(company, terminal.id);
+      final seen = await terminals.find(terminal.id);
       expect(seen.status, TerminalStatus.online);
-      expect(seen.deviceName, 'Tab A9');
+      expect(seen.lastSeen, isNotNull, reason: 'kept in memory');
       await expectLater(
         device.pair(TerminalPairRequest(qrCode: second.qrCode, deviceId: 'y')),
         throwsA(isA<ApiException>()),
@@ -283,18 +297,26 @@ void main() {
       );
     });
 
-    onlyWithTables('reconnecting cuts off the old tablet', () async {
+    test('a kiosk user can never sign in, even with its own code', () async {
+      final (terminal, _) = await connected();
+
+      final candidates = await const CredentialRepository().candidatesByCode(db, TerminalRepository.kioskCode(terminal.id));
+
+      expect(candidates, isEmpty);
+    });
+
+    test('reconnecting cuts off the old tablet', () async {
       final (actor, _) = await newEmployee();
       final (terminal, oldToken) = await connected();
 
-      final qr = await terminals.pairingQr(actor, company, terminal.id);
+      final qr = await terminals.pairingQr(actor, terminal.id);
       final paired = await device.pair(TerminalPairRequest(qrCode: qr.qrCode, deviceId: 'new'));
 
       await expectLater(device.authenticate(oldToken), refusedWith(401, 'unauthenticated'));
       expect((await device.authenticate(paired.token)).id, terminal.id);
     });
 
-    onlyWithTables('a forged or missing token is refused', () async {
+    test('a forged or missing token is refused', () async {
       final (terminal, _) = await connected();
 
       for (final token in [null, '', 'nonsense', '${terminal.id}.wrong', '999999.wrong']) {
@@ -302,10 +324,10 @@ void main() {
       }
     });
 
-    onlyWithTables('a pairing QR is not an onboarding QR', () async {
+    test('a pairing QR is not an onboarding QR', () async {
       final (actor, _) = await newEmployee();
       final (terminal, _) = await connected();
-      final qr = await terminals.pairingQr(actor, company, terminal.id);
+      final qr = await terminals.pairingQr(actor, terminal.id);
 
       await expectLater(temporaryQr.check(qr.qrCode, TemporaryQrPurpose.onboarding), refusedWith(400, 'qr_wrong_purpose'));
     });
@@ -314,7 +336,7 @@ void main() {
   group('scanning (D41)', () {
     Future<TerminalRow> tablet() async => device.authenticate((await connected()).$2);
 
-    onlyWithTables('first scan checks in, the next checks out, with the terminal on the rows', () async {
+    test('first scan checks in, the next checks out; the terminal is on the audit row, and is the last scan', () async {
       final terminal = await tablet();
       final (user, qr) = await newEmployee();
 
@@ -326,17 +348,19 @@ void main() {
       expect(second.outcome, TerminalScanOutcome.checkedOut);
 
       final rows = await db.query(
-        'SELECT t.timeRegTypeName, r.terminalID, r.addressID FROM tblTimeReg r '
+        'SELECT t.timeRegTypeName, e.deviceID FROM tblTimeReg r '
         'JOIN tblTimeRegType t ON t.timeRegTypeID = r.timeRegTypeID '
+        'JOIN tblEventLog e ON e.timeRegID = r.timeRegID '
         "WHERE r.userID = :u AND t.timeRegTypeName LIKE '%actual%' ORDER BY r.timeRegID",
         {'u': user},
       );
       expect(rows.map((r) => r.readString('timeRegTypeName')), ['Start – actual – QR', 'Finish – actual – QR']);
-      expect(rows.map((r) => r.readInt('terminalID')).toSet(), {terminal.id});
-      expect(rows.first.readInt('addressID'), location);
+      expect(rows.map((r) => r.readInt('deviceID')).toSet(), {terminal.id});
+      final lastScan = (await terminals.find(terminal.id)).lastScan!;
+      expect(lastScan.difference(moment(5)).inMinutes.abs(), lessThanOrEqualTo(1));
     });
 
-    onlyWithTables('a double scan changes nothing', () async {
+    test('a double scan changes nothing', () async {
       final terminal = await tablet();
       final (user, qr) = await newEmployee();
       await device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(30)));
@@ -352,72 +376,38 @@ void main() {
       expect(rows.single.readInt('n'), 0);
     });
 
-    onlyWithTables('the refusals', () async {
+    test('employees of every company may scan; unknown QRs and inactive employees may not', () async {
       final terminal = await tablet();
-      final (_, stranger) = await newEmployee(inCompany: otherCompany);
+      final (_, fromOther) = await newEmployee(inCompany: otherCompany);
       final (_, inactive) = await newEmployee(active: false);
 
+      final scanned = await device.scan(terminal, TerminalScanRequest(qrCode: fromOther, at: moment(1)));
+      expect(scanned.outcome, TerminalScanOutcome.checkedIn, reason: 'shared by every company');
       await expectLater(device.scan(terminal, TerminalScanRequest(qrCode: 'nonsense', at: moment(1))), refusedWith(400, 'qr_not_recognised'));
-      await expectLater(device.scan(terminal, TerminalScanRequest(qrCode: stranger, at: moment(1))), refusedWith(403, 'scan_not_allowed'));
       await expectLater(device.scan(terminal, TerminalScanRequest(qrCode: inactive, at: moment(1))), refusedWith(403, 'employee_unavailable'));
     });
 
-    onlyWithTables('nobody scans at a terminal switched off or deactivated', () async {
+    test('nobody scans at a deactivated terminal', () async {
       final (actor, _) = await newEmployee();
       final (terminal, token) = await connected();
       final (_, qr) = await newEmployee();
 
-      await terminals.setScanning(actor, company, terminal.id, enabled: false);
-      await expectLater(
-        device.scan(await device.authenticate(token), TerminalScanRequest(qrCode: qr, at: moment(1))),
-        refusedWith(409, 'terminal_off'),
-      );
-
-      await terminals.setScanning(actor, company, terminal.id, enabled: true);
-      await terminals.setActive(actor, company, terminal.id, active: false);
+      await terminals.setActive(actor, terminal.id, active: false);
       final off = await device.authenticate(token);
-      expect((await device.seen(off)).canScan, isFalse);
+
+      expect(device.seen(off).canScan, isFalse);
       await expectLater(device.scan(off, TerminalScanRequest(qrCode: qr, at: moment(1))), refusedWith(409, 'terminal_off'));
     });
 
-    onlyWithTables('the day counts for the terminal’s company', () async {
+    test('a day started at the terminal can change activity there', () async {
+      if (!activitiesHere) return markTestSkipped('The proposed activity tables are not here.');
       final terminal = await tablet();
-      final (user, qr) = await newEmployee();
-      await db.execute(
-        'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)',
-        {'u': user, 'c': otherCompany},
-      );
-
-      final result = await device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(10)));
-
-      expect(result.current?.company?.id, company);
-    });
-
-    onlyWithTables('a day started at the terminal can change project there', () async {
-      final terminal = await tablet();
-      final (user, qr) = await newEmployee();
-      final type = (await db.query("SELECT projectTypeID AS id FROM tblProjectType WHERE projectTypeName = 'Internal'")).first.readInt('id');
-      final status = (await db.query("SELECT projectStatusID AS id FROM tblProjectStatus WHERE projectStatusName = 'Active'")).first.readInt('id');
-      final project = (await db.execute(
-        'INSERT INTO tblProject (companyID, projectTypeID, projectStatusID, projectName, projectStartDate, projectActive, projectMFD) '
-        'VALUES (:c, :t, :s, :n, :d, 1, 0)',
-        {'c': company, 't': type, 's': status, 'n': '$prefix project', 'd': '2026-01-01'},
-      )).lastInsertId;
-      await db.execute(
-        'INSERT INTO tblUserProject (userID, projectID, userProjectActive, userProjectMFD) VALUES (:u, :p, 1, 0)',
-        {'u': user, 'p': project},
-      );
+      final (_, qr) = await newEmployee();
       await device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(10)));
 
-      final moved = await device.switchTo(
-        terminal,
-        TerminalSwitchRequest(qrCode: qr, kind: ActivityKind.transport, at: moment(5)),
-      );
+      final moved = await device.switchTo(terminal, TerminalSwitchRequest(qrCode: qr, kind: ActivityKind.transport, at: moment(5)));
 
       expect(moved.current?.kind, ActivityKind.transport);
-      await db.execute('DELETE FROM tblTimeReg WHERE projectID = :p', {'p': project});
-      await db.execute('DELETE FROM tblUserProject WHERE projectID = :p', {'p': project});
-      await db.execute('DELETE FROM tblProject WHERE projectID = :p', {'p': project});
     });
   });
 }

@@ -168,14 +168,18 @@ enum EventLogReference {
   geofence('geofenceID'),
   geofenceAddress('geofenceAddressID'),
 
+  /// Terminals (GAP-09): the device, its kind and its kiosk user's link.
+  device('deviceID'),
+  deviceDeviceType('deviceDeviceTypeID'),
+  userDevice('userDeviceID'),
+
   /// PROPOSAL (ERD_GAPS GAP-15): exists only in the local database; written
   /// only with `JITAN_DEV_GROUP_SCHEDULES=true`.
   groupSchedule('groupScheduleID'),
 
   /// PROPOSAL (PROPOSED_TABLES.md): exist only in the local database.
   project('projectID'),
-  userProject('userProjectID'),
-  terminal('terminalID');
+  userProject('userProjectID');
 
   const EventLogReference(this.column);
 

@@ -13,20 +13,23 @@ import '../temporary_qr/temporary_qr_service.dart';
 import '../time_records/my_day_service.dart';
 import '../time_registration/time_registration_write_service.dart';
 import '../time_registration/workplace_clock.dart';
+import 'terminal_presence.dart';
 import 'terminal_repository.dart';
 
-/// What the tablet itself does (Figma `1489:2` …, D18, D41, D42): connect with
-/// a temporary QR, then register whoever scans their Terminal QR. It holds a
-/// secret of its own, stored hashed. An employee's first scan of the day
+/// What the tablet itself does (Figma `1489:2` …, D18, D41, D42, GAP-09):
+/// connect with a temporary QR, then register whoever scans their Terminal QR,
+/// from any company. It holds a secret of its own, stored hashed as its kiosk
+/// user's password. An employee's first scan of the day
 /// checks in and the next checks out; a repeat within [repeatWindow] changes
 /// nothing, so a double scan can't end someone's day. Nothing works offline:
 /// a scan the server didn't answer registered nothing.
 class TerminalDeviceService {
   TerminalDeviceService({
     required this._terminals,
+    required this._presence,
     required this._temporaryQr,
     required this._writes,
-    required this._activities,
+    this._activities,
     required this._myDay,
     required this._audit,
     required this._transactions,
@@ -44,9 +47,13 @@ class TerminalDeviceService {
   static const _secretBytes = 32;
 
   final TerminalRepository _terminals;
+  final TerminalPresence _presence;
   final TemporaryQrService _temporaryQr;
   final TimeRegistrationWriteService _writes;
-  final ActivityService _activities;
+
+  /// `null` on a database without the proposed activity tables: a scan still
+  /// starts and finishes the day, but nobody switches project there.
+  final ActivityService? _activities;
   final MyDayService _myDay;
   final AuditLogRepository _audit;
   final TransactionRunner _transactions;
@@ -65,20 +72,18 @@ class TerminalDeviceService {
       final secret = base64Url.encode(List<int>.generate(_secretBytes, (_) => _random.nextInt(256))).replaceAll('=', '');
       final row = await _transactions.transaction((tx) async {
         final row = await _terminals.find(tx, terminalId);
-        if (row == null || !row.isActive) {
+        final kiosk = row?.kioskUserId;
+        if (row == null || !row.isActive || kiosk == null) {
           throw const ApiException(410, ApiErrorCode.qrExpired, 'This terminal is no longer available.');
         }
-        await _terminals.setDevice(tx, terminalId, secretHash: _hash(secret), deviceName: _deviceName(request.deviceName), at: _now().toUtc());
+        await _terminals.setSecret(tx, kiosk, _hash(secret));
         await _audit.record(
           tx,
-          AuditEvent(
-            type: AuditEventType.terminalPaired,
-            actorUserId: null,
-            references: {EventLogReference.company: row.companyId, EventLogReference.terminal: terminalId},
-          ),
+          AuditEvent(type: AuditEventType.terminalPaired, actorUserId: null, references: {EventLogReference.device: terminalId}),
         );
         return row;
       });
+      _presence.seen(terminalId, _now());
       return TerminalPairResponse(token: '$terminalId.$secret', terminal: _info(row));
     },
   );
@@ -92,19 +97,16 @@ class TerminalDeviceService {
     if (row == null || stored == null || !_sameHash(stored, _hash(token!.substring(dot + 1)))) {
       throw const ApiException.unauthenticated('This tablet is not connected.');
     }
+    _presence.seen(row.id, _now());
     return row;
   }
 
-  /// The tablet's regular check-in.
-  Future<TerminalInfo> seen(TerminalRow terminal) async {
-    await _terminals.markSeen(_executor, terminal.id, _now().toUtc());
-    return _info(terminal);
-  }
+  /// The tablet's regular check-in; [authenticate] already noted the moment.
+  TerminalInfo seen(TerminalRow terminal) => _info(terminal);
 
   Future<TerminalScanResult> scan(TerminalRow terminal, TerminalScanRequest request) async {
     final at = _toSecond(request.at);
     final owner = await _ownerAt(terminal, request.qrCode, at);
-    await _terminals.markSeen(_executor, terminal.id, _now().toUtc());
 
     final day = (await _myDay.today(owner.id)).day;
     final start = day?.start?.actual, finish = day?.finish?.actual;
@@ -120,10 +122,9 @@ class TerminalDeviceService {
         method: TimeRegistrationMethod.qr,
         entry: RegistrationEntry.now,
         at: at,
-        addressId: terminal.addressId,
       ),
+      // Shared by every company: the day counts for the employee's default.
       terminalId: terminal.id,
-      companyId: terminal.companyId,
     );
     return _result(owner, running ? TerminalScanOutcome.checkedOut : TerminalScanOutcome.checkedIn, at);
   }
@@ -132,12 +133,13 @@ class TerminalDeviceService {
   Future<TerminalScanResult> switchTo(TerminalRow terminal, TerminalSwitchRequest request) async {
     final at = _toSecond(request.at);
     final owner = await _ownerAt(terminal, request.qrCode, at);
-    await _activities.switchTo(owner.id, SwitchActivityRequest(kind: request.kind, at: at, projectId: request.projectId));
+    final activities = _activities ?? (throw const ApiException.notFound('Switching is not available.'));
+    await activities.switchTo(owner.id, SwitchActivityRequest(kind: request.kind, at: at, projectId: request.projectId));
     return _result(owner, TerminalScanOutcome.checkedIn, at);
   }
 
   Future<TerminalScanResult> _result(QrOwner owner, TerminalScanOutcome outcome, DateTime at) async {
-    final mine = await _activities.mine(owner.id);
+    final mine = await _activities?.mine(owner.id) ?? MyActivity.disabled;
     final local = _clock.wallClockOf(at);
     return TerminalScanResult(
       outcome: outcome,
@@ -154,7 +156,7 @@ class TerminalDeviceService {
   /// The employee of [qrCode], allowed to scan here at [at]. The refusals are
   /// the tablet's screens.
   Future<QrOwner> _ownerAt(TerminalRow terminal, String qrCode, DateTime at) async {
-    if (!terminal.isActive || !terminal.scanningEnabled) {
+    if (!terminal.isActive) {
       throw const ApiException(409, ApiErrorCode.terminalOff, 'Nobody can scan here right now.');
     }
     if (at.isAfter(_now().toUtc().add(_allowedClockSkew))) {
@@ -163,27 +165,10 @@ class TerminalDeviceService {
     final owner = await _terminals.ownerOfQr(_executor, qrCode.trim());
     if (owner == null) throw const ApiException(400, ApiErrorCode.qrNotRecognised, 'This QR code isn’t recognised.');
     if (!owner.isActive) throw const ApiException(403, ApiErrorCode.employeeUnavailable, 'This account can’t register.');
-    if (!await _terminals.isMember(_executor, owner.id, terminal.companyId)) {
-      throw const ApiException(403, ApiErrorCode.scanNotAllowed, 'This employee can’t register at this terminal.');
-    }
     return owner;
   }
 
-  static TerminalInfo _info(TerminalRow row) => TerminalInfo(
-    id: row.id,
-    name: row.name,
-    companyName: row.companyName,
-    canScan: row.isActive && row.scanningEnabled,
-    placeName: row.addressName,
-  );
-
-  static String? _deviceName(String? name) {
-    final trimmed = name?.trim() ?? '';
-    if (trimmed.isEmpty) return null;
-    return trimmed.length > _maxDeviceName ? trimmed.substring(0, _maxDeviceName) : trimmed;
-  }
-
-  static const _maxDeviceName = 100;
+  static TerminalInfo _info(TerminalRow row) => TerminalInfo(id: row.id, name: row.name, canScan: row.isActive);
 
   static DateTime _toSecond(DateTime at) =>
       DateTime.fromMillisecondsSinceEpoch(at.millisecondsSinceEpoch ~/ 1000 * 1000, isUtc: true);

@@ -263,7 +263,7 @@ scanning off there. Nothing to ask IT.
 
 ## GAP-09: Terminals
 **Status:** `RESOLVED` by IT's ERD of 2026-11-09 (devices) and the product owner (2026-11-10).
-Applies once that ERD is in `jitandev`; until then the proposed `tblTerminal` stays local.
+Built on IT's tables on 2026-11-10 (that ERD is in `jitandev`); the proposed `tblTerminal` is gone.
 
 - **A terminal is a `tblDevice` with `deviceMultiUser = 1`**, used by employees of every
   company (no company on the terminal). Name in `deviceName` (place or plate go in the
