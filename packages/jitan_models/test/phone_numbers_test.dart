@@ -20,7 +20,7 @@ void main() {
       expect(PhoneNumbers.check('+').problem, PhoneNumberProblem.invalid);
     });
 
-    test('the stored form fits tblUser.cellphoneNumber', () {
+    test('the stored form fits tblUser.userCellphoneNumber', () {
       final longest = PhoneNumbers.check('+256772123456').formatted!;
       expect(longest.length, lessThanOrEqualTo(CreateEmployeeRequest.maxPhoneLength));
     });

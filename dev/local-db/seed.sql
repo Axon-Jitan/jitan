@@ -75,7 +75,7 @@ INSERT INTO tblEventType (eventTypeID, eventTypeName) VALUES
 --  5 Sara Maes        Almeco, MFD, activated          (local password Sara-Local-Dev-1)
 --  6 Thomas Vermeulen PCA only, active, NOT activated (company scoping)
 INSERT INTO tblUser
-  (userID, userName, userSurname, userEmail, cellphoneNumber, userCode, userQRcode, userPassword,
+  (userID, userName, userSurname, userEmail, userCellphoneNumber, userCode, userQRcode, userPassword,
    userKioskMode, userPINCode, userActive, userMFD)
 VALUES
   (1, 'Hanne', 'Claes', NULL, NULL, 'HCL', '9hCXVyef49_msLoccCm9Nh-aEvb2rXDs',

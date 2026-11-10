@@ -125,7 +125,7 @@ The central person/identity. Every employee, HR user and admin is a row here.
 | `userName` | String | | **First name**. Not a login username. At most 100 characters |
 | `userSurname` | String | | Last name. At most 100 characters |
 | `userEmail` | String | | Optional. Jitan does not require email anywhere. |
-| `cellphoneNumber` | String | | Optional phone. At most 30 characters |
+| `userCellphoneNumber` | String | | Optional phone. At most 30 characters |
 | `userCode` | String | UK | **Employee code**, the login identity (e.g. `SBW`). At most 50 characters |
 | `userQRcode` | String | UK | Value encoded in the employee's **personal QR**, used for Terminal registration only |
 | `userPassword` | String | | Password **hash**. Never plaintext, never returned by the API, never logged, never visible to HR/Admin. |

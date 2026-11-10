@@ -15,7 +15,7 @@ const _usedColumns = {
   'tblCompany': ['companyID', 'companyName', 'companyActive', 'companyMFD'],
   'tblUserCompany': ['userCompanyID', 'userID', 'companyID', 'userCompanyActive', 'userCompanyMFD'],
   'tblUser': [
-    'userID', 'userName', 'userSurname', 'userCode', 'userQRcode', 'cellphoneNumber',
+    'userID', 'userName', 'userSurname', 'userCode', 'userQRcode', 'userCellphoneNumber',
     'userKioskMode', 'userPassword', 'userActive', 'userMFD',
   ],
   'tblUserGroup': ['userGroupID', 'userID', 'groupID', 'userGroupActive', 'userGroupMFD'],

@@ -37,7 +37,7 @@ class CreateEmployeeRequest {
   /// `tblUser.userCode`, unique across all users.
   final String code;
 
-  /// `tblUser.cellphoneNumber`.
+  /// `tblUser.userCellphoneNumber`.
   final String? phone;
 
   /// `tblUser.userEmail` (optional; never used to sign in).
@@ -69,7 +69,7 @@ class CreateEmployeeRequest {
   /// Longest values the database stores, in characters (Unicode code points,
   /// as MySQL counts them: use `value.runes.length`). From IT's `tblUser`:
   /// `userName`/`userSurname` VARCHAR(100), `userCode` VARCHAR(50),
-  /// `cellphoneNumber` VARCHAR(30), `userEmail` VARCHAR(255).
+  /// `userCellphoneNumber` VARCHAR(30), `userEmail` VARCHAR(255).
   static const maxFirstNameLength = 100;
   static const maxLastNameLength = 100;
   static const maxCodeLength = 50;

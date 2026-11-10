@@ -15,7 +15,7 @@ enum PhoneNumberProblem {
 
 /// The phone number rule of Jitan, the same in every client and the server:
 /// an international number with `+` and its country code, stored in one
-/// readable form, e.g. `+32 470 12 34 56` (`tblUser.cellphoneNumber`).
+/// readable form, e.g. `+32 470 12 34 56` (`tblUser.userCellphoneNumber`).
 abstract final class PhoneNumbers {
   static final _allowedSigns = RegExp(r'^[0-9 +().\-]*$');
 

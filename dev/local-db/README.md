@@ -62,15 +62,14 @@ Argon2id hashes made with Jitan's own `PasswordHasher`; they exist only here.
 
 ## Differences from the IT development database
 
-`schema.sql` was generated from IT's `information_schema` export of 2026-10-09 (the
-exports themselves are never committed). The structure is the same: tables, columns,
-types and lengths, NOT NULL and defaults, primary/unique/foreign keys and constraint
-names, including Active/MFD on all 11 junction tables. What still differs:
+`schema.sql` is generated from `SHOW CREATE TABLE` of every table in IT's `jitandev`
+(read-only, 2026-11-10, after IT applied its ERD of 2026-11-09: 39 tables). Tables, columns,
+types and lengths, NOT NULL and defaults, collation (`utf8mb4_0900_as_cs`), primary/unique/
+foreign keys and constraint names are IT's exactly. What still differs:
 
-1. **Character set and collation.** Not in the export; `utf8mb4_0900_ai_ci` is assumed.
-2. **Data.** Here only the `[DEV]` seed below. IT's lookup rows (credential groups, event
-   types, languages) are not known yet (CLARIFY-11): if IT's event type names differ from
-   the code's (`AuditEventType`), either IT adds these rows or the code adopts IT's names.
+1. **Proposals.** `proposals/` adds local-only tables and columns IT doesn't have.
+2. **Data.** Here the `[DEV]` seed below. IT's `jitandev` is empty (every table, 2026-11-10):
+   HR adds companies, employees and everything else through Jitan.
 3. **TLS and accounts.** Here a local user with a self-signed certificate. IT's server has
    its own account, privileges and certificate; Jitan needs SELECT/INSERT/UPDATE (the
    integration tests also DELETE their `[DEV-TEST]` fixtures, so they never run there).

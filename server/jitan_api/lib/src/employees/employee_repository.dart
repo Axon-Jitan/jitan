@@ -44,7 +44,7 @@ class EmployeeRepository {
   /// Details of [userId] as a non-MFD member of [companyId], or `null`.
   Future<EmployeeDetails?> findDetails(int companyId, int userId) async {
     final rows = await _db.query(
-      'SELECT u.userID, u.userName, u.userSurname, u.userCode, u.cellphoneNumber, u.userActive, '
+      'SELECT u.userID, u.userName, u.userSurname, u.userCode, u.userCellphoneNumber, u.userActive, '
       '(u.userPassword IS NOT NULL) AS isActivated, c.companyID, c.companyName '
       'FROM tblUser u '
       'JOIN tblUserCompany uc ON uc.userID = u.userID AND ${MembershipFilters.activeCompany('uc')} '
@@ -68,7 +68,7 @@ class EmployeeRepository {
       lastName: row.readOptionalString('userSurname'),
       code: row.readString('userCode'),
       groups: [for (final g in groups) g.readString('groupName')],
-      phone: row.readOptionalString('cellphoneNumber'),
+      phone: row.readOptionalString('userCellphoneNumber'),
       isActive: row.readBool('userActive'),
       isActivated: row.readBool('isActivated'),
     );
@@ -102,7 +102,7 @@ class EmployeeRepository {
     String? email,
   }) async =>
       (await tx.execute(
-        'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, cellphoneNumber, userEmail, '
+        'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userCellphoneNumber, userEmail, '
         'userKioskMode, userActive, userMFD) '
         'VALUES (:firstName, :lastName, :code, :qr, :phone, :email, 0, 1, 0)',
         {'firstName': firstName, 'lastName': lastName, 'code': code, 'qr': personalQrCode, 'phone': phone, 'email': email},

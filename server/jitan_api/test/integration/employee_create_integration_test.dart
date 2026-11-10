@@ -165,11 +165,11 @@ void main() {
     );
 
     final row = (await db.query(
-      'SELECT userSurname, userCode, cellphoneNumber FROM tblUser WHERE userID = :id',
+      'SELECT userSurname, userCode, userCellphoneNumber FROM tblUser WHERE userID = :id',
       {'id': created.id},
     )).single;
     expect(
-      (row.readString('userSurname'), row.readString('userCode'), row.readString('cellphoneNumber')),
+      (row.readString('userSurname'), row.readString('userCode'), row.readString('userCellphoneNumber')),
       (lastName, code, '+256 772 123456'),
     );
   });
