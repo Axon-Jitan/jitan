@@ -9,18 +9,22 @@ Features using them are off on IT's database until IT has added them; registerin
 starts and finishes keeps working there, because the server checks at startup. If IT
 prefers another structure, Jitan changes to match.
 
-## Questions for IT
+## Questions for IT (parked)
 
-1. Can these be added as written, or do you prefer another structure? You said you would
-   update the ERD with projects and default companies (2026-10-13); this may overlap.
-2. Projects will come from SAP (D21, product owner, 2026-11-09). How will they reach
-   Jitan's database, and which fields does SAP give? Does SAP also hold the agreement
-   with the client about kilometres, i.e. whether the client is charged for the van's
-   trips (D26)? Blue collar kilometres are always paid to the employee, so that is the
-   only open part. Jitan will store it the way SAP gives it, once the project report
-   needs it.
-3. Is a terminal meant to be a `tblUser` with `userKioskMode = 1` (GAP-09)? We propose its
-   own table, because a user has no type, location, last-seen time or plate number.
+Product owner, 2026-11-10: Jitan builds on what IT's database allows today, and these
+questions wait. Nothing below blocks that work.
+
+1. **Collation.** `jitandev` is `utf8mb4_0900_as_cs`. Jitan handles it itself
+   (CLARIFY-16); ask only whether it was a deliberate choice.
+2. **Transport.** May a trip be stored as a `tblTimeReg` row of type "Activity – Transport"
+   (D22, D40)? HR adds the type in Jitan's Lists page; the question is only whether IT
+   agrees with the meaning.
+3. **Travel as work.** May a group's "travel counts as work" be a "Travel" row in its
+   schedule (D39)?
+4. **SAP.** How does Jitan's server reach SAP's API for projects, and which fields does it
+   return (D43)?
+5. **Database certificate.** IT's CA certificate or fingerprint, so the API can verify the
+   connection (SEC-01).
 
 ## New tables
 
