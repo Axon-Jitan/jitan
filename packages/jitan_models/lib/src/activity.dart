@@ -199,20 +199,6 @@ class ActivityEntry {
   };
 }
 
-/// `GET /groups/{id}/travel`. [available] is `false` on a database without
-/// the proposed tables: the group page then shows no switch.
-class GroupTravel {
-  const GroupTravel({required this.available, required this.travelIsWork});
-
-  factory GroupTravel.fromJson(Map<String, Object?> json) =>
-      GroupTravel(available: json.readBool('available'), travelIsWork: json.readBool('travelIsWork'));
-
-  final bool available;
-  final bool travelIsWork;
-
-  Map<String, Object?> toJson() => {'available': available, 'travelIsWork': travelIsWork};
-}
-
 /// `GET /me/activity`. [enabled] is `false` on a database without the proposed
 /// tables: the app then shows no project card.
 class MyActivity {

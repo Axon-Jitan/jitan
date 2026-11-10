@@ -57,6 +57,7 @@ class HoursReportEmployee {
     this.trips = 0,
     this.distanceMetres = 0,
     this.tripsWithoutDistance = 0,
+    this.travelMinutes = 0,
   });
 
   factory HoursReportEmployee.fromJson(Map<String, Object?> json) => HoursReportEmployee(
@@ -71,6 +72,7 @@ class HoursReportEmployee {
     trips: json.readOptionalInt('trips') ?? 0,
     distanceMetres: json.readOptionalInt('distanceMetres') ?? 0,
     tripsWithoutDistance: json.readOptionalInt('tripsWithoutDistance') ?? 0,
+    travelMinutes: json.readOptionalInt('travelMinutes') ?? 0,
   );
 
   final int employeeId;
@@ -81,7 +83,8 @@ class HoursReportEmployee {
   /// The schedule's work time up to today, without non-work days.
   final int plannedMinutes;
 
-  /// Only finished days with nothing waiting for HR.
+  /// Worked: only finished days with nothing waiting for HR, without travel
+  /// (D46).
   final int registeredMinutes;
   final int daysToReview;
 
@@ -94,6 +97,10 @@ class HoursReportEmployee {
 
   /// Trips whose place or route isn't known: [distanceMetres] leaves them out.
   final int tripsWithoutDistance;
+
+  /// Finished travel this month, shown next to [registeredMinutes] and never
+  /// part of it (D46).
+  final int travelMinutes;
 
   int get differenceMinutes => registeredMinutes - plannedMinutes;
 
@@ -109,6 +116,7 @@ class HoursReportEmployee {
     'trips': trips,
     'distanceMetres': distanceMetres,
     'tripsWithoutDistance': tripsWithoutDistance,
+    'travelMinutes': travelMinutes,
   };
 }
 

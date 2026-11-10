@@ -10,9 +10,6 @@ SET NAMES utf8mb4; -- the names below contain "–" (en dash)
 
 -- tblUserCompany.userCompanyDefault is in IT's ERD since 2026-11-09.
 
--- Whether an employee group's travel is working time (D39).
-ALTER TABLE tblGroup ADD COLUMN groupTravelIsWork TINYINT(1) NOT NULL DEFAULT 0;
-
 -- ── Projects (D16, D17, D21, D27) ─────────
 
 CREATE TABLE tblProjectType (

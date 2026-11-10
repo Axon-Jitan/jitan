@@ -9,18 +9,17 @@ import 'package:jitan_models/jitan_models.dart';
 /// instead (rounded finish − rounded start − break), which this total meets
 /// after the break has passed.
 abstract final class RunningTotal {
-  /// "Registered today" for [day] from [start] to [now]. Time away replaces
-  /// the break (D34). Travelling that isn't work waits until it ends, so the
-  /// total stands still during it (D39).
+  /// Worked today for [day], from [start] to [now]. Time away replaces the
+  /// break (D34). Travel is never part of it (D46): finished travel is taken
+  /// off, and while travelling the total stands still.
   static int ofToday(MyDay day, DateTime start, CurrentActivity? current, DateTime now) {
     final record = day.day;
     if (record == null) return 0;
-    final travelCounts = record.travelIsWork;
-    final end = !travelCounts && current?.kind == ActivityKind.transport ? current!.since : now;
+    final end = current?.kind == ActivityKind.transport ? current!.since : now;
     final elapsed = record.awayMinutes > 0
         ? end.difference(start).inMinutes - record.awayMinutes
         : minutes(start: start, now: end, breakStart: day.breakStart, breakFinish: day.breakFinish);
-    return elapsed - (travelCounts ? 0 : record.transportMinutes);
+    return elapsed - record.transportMinutes;
   }
 
   /// Whole minutes from [start] to [now], minus the overlap with the break

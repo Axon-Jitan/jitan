@@ -235,7 +235,7 @@ Future<void> main() async {
     clock: workplaceClock,
     schedules: ScheduleRepository(db),
     rounding: RegistrationRounding(ScheduleRepository(db)),
-    travelIsWork: hasActivities ? (ids) => const ActivityRepository().travelIsWork(db, ids) : null,
+    kilometres: tripKilometres,
   );
   final myDayService = MyDayService(
     days: timeRecordService,
@@ -371,7 +371,7 @@ Future<void> main() async {
         onDayStart: activityService?.dayStarted,
       ),
     ),
-    activities: ActivityRoutes(authorizer, activityService),
+    activities: ActivityRoutes(activityService),
     terminals: TerminalRoutes(
       authorizer,
       hasActivities

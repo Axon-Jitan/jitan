@@ -192,7 +192,7 @@ class TestApp {
         scheduleEditing,
       ),
       timeRecords: TimeRecordRoutes(Authorizer(permissions), timeRecordService, timeCorrections, myDays),
-      activities: ActivityRoutes(Authorizer(permissions), null),
+      activities: ActivityRoutes(null),
       terminals: TerminalRoutes(Authorizer(permissions), null),
       terminalDevices: const TerminalDeviceRoutes(null),
       projects: ProjectRoutes(

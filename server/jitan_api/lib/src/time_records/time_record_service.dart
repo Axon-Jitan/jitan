@@ -1,5 +1,6 @@
 import 'package:jitan_models/jitan_models.dart';
 
+import '../activities/trip_kilometres.dart';
 import '../companies/company_repository.dart';
 import '../employees/employee_repository.dart';
 import '../http/api_exception.dart';
@@ -23,7 +24,7 @@ class TimeRecordService {
     required this._clock,
     required this._schedules,
     required this._rounding,
-    this._travelIsWork,
+    this._kilometres,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -34,9 +35,9 @@ class TimeRecordService {
   final ScheduleRepository _schedules;
   final RegistrationRounding _rounding;
 
-  /// Those of the given employees whose travel counts as work (D39); `null`
-  /// on a database without the proposed tables.
-  final Future<Set<int>> Function(List<int> userIds)? _travelIsWork;
+  /// Trip distances (D23); `null` on a database without the proposed tables.
+  final TripKilometres? _kilometres;
+
   final DateTime Function() _now;
 
   static final _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
@@ -95,9 +96,8 @@ class TimeRecordService {
       firstRegistrations: await _records.firstRegistrations(ids),
       from: first,
       to: last,
-      travelIsWork: await _travelIsWork?.call(ids) ?? const {},
     );
-    return [for (final day in days) day.pending.isEmpty ? day : await _withPreview(day)];
+    return [for (final day in days) await _withTrips(day.pending.isEmpty ? day : await _withPreview(day))];
   }
 
   /// ISO weekdays on which each employee has a "Work – start" schedule.
@@ -126,15 +126,7 @@ class TimeRecordService {
       return '${rounded.hour.toString().padLeft(2, '0')}:${rounded.minute.toString().padLeft(2, '0')}';
     }
 
-    return TimeRecordDay(
-      employeeId: day.employeeId,
-      firstName: day.firstName,
-      lastName: day.lastName,
-      employeeCode: day.employeeCode,
-      date: day.date,
-      status: day.status,
-      start: day.start,
-      finish: day.finish,
+    return day.copyWith(
       pending: [
         for (final p in day.pending)
           TimeRecordPending(
@@ -146,10 +138,18 @@ class TimeRecordService {
             roundedLocal: preview(p),
           ),
       ],
-      events: day.events,
-      nonWorkReason: day.nonWorkReason,
-      companyIds: day.companyIds,
     );
+  }
+
+  /// [day] with its trips and their distance (D23, D46), when it had travel.
+  Future<TimeRecordDay> _withTrips(TimeRecordDay day) async {
+    final kilometres = _kilometres;
+    if (kilometres == null || day.transportMinutes == 0) return day;
+    final from = _clock.utcOf(DateTime(day.date.year, day.date.month, day.date.day));
+    final to = _clock.utcOf(DateTime(day.date.year, day.date.month, day.date.day + 1));
+    final totals = (await kilometres.ofUsers([day.employeeId], from, to))[day.employeeId];
+    if (totals == null) return day;
+    return day.copyWith(trips: totals.trips, distanceMetres: totals.metres, tripsWithoutDistance: totals.unknown);
   }
 
   static DateTime _parseDate(String? value, String field) {

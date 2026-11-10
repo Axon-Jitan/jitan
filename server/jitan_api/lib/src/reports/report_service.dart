@@ -85,7 +85,7 @@ class ReportService {
     for (final employee in employees) {
       final week = plans[employee.id] ?? const {};
       final byDate = {for (final d in days) if (d.employeeId == employee.id) d.date: d};
-      var planned = 0, registered = 0, toReview = 0;
+      var planned = 0, registered = 0, travel = 0, toReview = 0;
       final reportDays = <HoursReportDay>[];
       for (var date = first; !date.isAfter(end); date = DateTime.utc(date.year, date.month, date.day + 1)) {
         final plan = week[date.weekday];
@@ -94,6 +94,7 @@ class ReportService {
         if (day == null) continue;
         final minutes = MyDayService.registeredMinutes(day, plan?.breakMinutes ?? 0);
         registered += minutes ?? 0;
+        travel += day.transportMinutes;
         if (_toReview.contains(day.status)) toReview++;
         reportDays.add(
           HoursReportDay(
@@ -121,6 +122,7 @@ class ReportService {
           trips: travelled?.trips ?? 0,
           distanceMetres: travelled?.metres ?? 0,
           tripsWithoutDistance: travelled?.unknown ?? 0,
+          travelMinutes: travel,
         ),
       );
     }

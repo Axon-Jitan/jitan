@@ -202,32 +202,6 @@ class ActivityService {
     return mine(userId);
   }
 
-  /// Whether [groupId]'s travel counts as work (D39); 404 for no such group.
-  Future<GroupTravel> groupTravel(int groupId) async => GroupTravel(
-    available: true,
-    travelIsWork: await _activities.groupTravel(_executor, groupId) ?? (throw _noGroup()),
-  );
-
-  /// Changes it, audited; nothing happens when it is already so.
-  Future<GroupTravel> setGroupTravel(int actorUserId, int groupId, {required bool travelIsWork}) async {
-    await _transactions.transaction((tx) async {
-      final current = await _activities.groupTravel(tx, groupId) ?? (throw _noGroup());
-      if (current == travelIsWork) return;
-      await _activities.setGroupTravel(tx, groupId, travelIsWork: travelIsWork);
-      await _audit.record(
-        tx,
-        AuditEvent(
-          type: AuditEventType.groupTravelChanged,
-          actorUserId: actorUserId,
-          references: {EventLogReference.group: groupId},
-        ),
-      );
-    });
-    return GroupTravel(available: true, travelIsWork: travelIsWork);
-  }
-
-  static ApiException _noGroup() => const ApiException.notFound('No such group.');
-
   /// Today's list: transports in a row are one line.
   Future<List<ActivityEntry>> _entries(int userId, List<AssignedProject> projects) async {
     final (from, to) = _todayBounds();

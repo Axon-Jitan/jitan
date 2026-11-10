@@ -27,7 +27,7 @@ import 'time_record_repository.dart';
 ///
 /// Activity rows (D37) say what the time counted for and nothing about the
 /// day: they stay out of all of the above, and only give the transport
-/// minutes. Without "travel is work" for the employee, those aren't work (D39).
+/// minutes, which are never work time: they are shown next to it (D46).
 abstract final class TimeRecordDays {
   static List<TimeRecordDay> build({
     required List<RegistrationRow> rows,
@@ -38,7 +38,6 @@ abstract final class TimeRecordDays {
     Map<int, DateTime> firstRegistrations = const {},
     DateTime? from,
     DateTime? to,
-    Set<int> travelIsWork = const {},
   }) {
     final byUserDay = <int, Map<DateTime, List<RegistrationRow>>>{};
     final activities = <(int, DateTime), List<RegistrationRow>>{};
@@ -63,7 +62,6 @@ abstract final class TimeRecordDays {
           clock,
           today,
           activities[(employee.id, date)] ?? const [],
-          travelIsWork.contains(employee.id),
         );
         if (day != null) days.add(day);
       }
@@ -98,7 +96,6 @@ abstract final class TimeRecordDays {
     WorkplaceClock clock,
     DateTime today,
     List<RegistrationRow> activities,
-    bool travelIsWork,
   ) {
     final byId = [...rows]..sort((a, b) => a.id.compareTo(b.id));
     final kinds = {for (final r in byId) r.id: _kind(r)};
@@ -233,7 +230,6 @@ abstract final class TimeRecordDays {
       companyIds: employee.companyIds,
       awayMinutes: _awayMinutes(moments),
       transportMinutes: _transportMinutes(activities, moments),
-      travelIsWork: travelIsWork,
     );
   }
 

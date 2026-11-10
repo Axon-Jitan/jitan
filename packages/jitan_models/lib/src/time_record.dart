@@ -268,7 +268,9 @@ class TimeRecordDay {
     this.companyIds = const [],
     this.awayMinutes = 0,
     this.transportMinutes = 0,
-    this.travelIsWork = false,
+    this.trips = 0,
+    this.distanceMetres = 0,
+    this.tripsWithoutDistance = 0,
   });
 
   factory TimeRecordDay.fromJson(Map<String, Object?> json) => TimeRecordDay(
@@ -286,7 +288,9 @@ class TimeRecordDay {
         companyIds: json['companyIds'] == null ? const [] : json.readIntList('companyIds'),
         awayMinutes: json.readOptionalInt('awayMinutes') ?? 0,
         transportMinutes: json.readOptionalInt('transportMinutes') ?? 0,
-        travelIsWork: json['travelIsWork'] == true,
+        trips: json.readOptionalInt('trips') ?? 0,
+        distanceMetres: json.readOptionalInt('distanceMetres') ?? 0,
+        tripsWithoutDistance: json.readOptionalInt('tripsWithoutDistance') ?? 0,
       );
 
   final int employeeId;
@@ -314,11 +318,38 @@ class TimeRecordDay {
   /// is not work (D34). When there are any, they replace the automatic break.
   final int awayMinutes;
 
-  /// Minutes of finished transport this day (D22).
+  /// Minutes of finished travel this day (D22). Shown next to the worked
+  /// time and never part of it: payroll decides what travel is worth (D46).
   final int transportMinutes;
 
-  /// Transport counts as work for this employee (D39).
-  final bool travelIsWork;
+  /// The day's trips and their normal route (D23), calculated when asked.
+  /// [tripsWithoutDistance]: trips whose place or route isn't known, left out
+  /// of [distanceMetres].
+  final int trips;
+  final int distanceMetres;
+  final int tripsWithoutDistance;
+
+  /// This day with [pending] and the trips replaced; everything else kept.
+  TimeRecordDay copyWith({List<TimeRecordPending>? pending, int? trips, int? distanceMetres, int? tripsWithoutDistance}) =>
+      TimeRecordDay(
+        employeeId: employeeId,
+        employeeCode: employeeCode,
+        date: date,
+        status: status,
+        firstName: firstName,
+        lastName: lastName,
+        start: start,
+        finish: finish,
+        pending: pending ?? this.pending,
+        events: events,
+        nonWorkReason: nonWorkReason,
+        companyIds: companyIds,
+        awayMinutes: awayMinutes,
+        transportMinutes: transportMinutes,
+        trips: trips ?? this.trips,
+        distanceMetres: distanceMetres ?? this.distanceMetres,
+        tripsWithoutDistance: tripsWithoutDistance ?? this.tripsWithoutDistance,
+      );
 
   Map<String, Object?> toJson() => {
         'employeeId': employeeId,
@@ -335,7 +366,9 @@ class TimeRecordDay {
         if (companyIds.isNotEmpty) 'companyIds': companyIds,
         if (awayMinutes > 0) 'awayMinutes': awayMinutes,
         if (transportMinutes > 0) 'transportMinutes': transportMinutes,
-        if (travelIsWork) 'travelIsWork': true,
+        if (trips > 0) 'trips': trips,
+        if (distanceMetres > 0) 'distanceMetres': distanceMetres,
+        if (tripsWithoutDistance > 0) 'tripsWithoutDistance': tripsWithoutDistance,
       };
 
   /// A `yyyy-MM-dd` date as a UTC-flagged calendar day (no time zone meant).

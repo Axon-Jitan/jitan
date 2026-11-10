@@ -32,14 +32,13 @@ void main() {
 
   group('the total of today, the same on every screen', () {
     final start = DateTime(2026, 11, 1, 8);
-    TimeRecordDay record({int away = 0, int transport = 0, bool travelIsWork = false}) => TimeRecordDay(
+    TimeRecordDay record({int away = 0, int transport = 0}) => TimeRecordDay(
       employeeId: 1,
       employeeCode: 'SBW',
       date: DateTime.utc(2026, 11, 1),
       status: TimeRecordStatus.working,
       awayMinutes: away,
       transportMinutes: transport,
-      travelIsWork: travelIsWork,
     );
     MyDay day(TimeRecordDay record) => MyDay(date: DateTime.utc(2026, 11, 1), firstDay: false, day: record);
 
@@ -48,10 +47,9 @@ void main() {
       expect(total, 180);
     });
 
-    test('finished transport isn’t work, unless the group says it is', () {
+    test('finished travel is never part of the worked time (D46)', () {
       final now = DateTime(2026, 11, 1, 12);
       expect(RunningTotal.ofToday(day(record(transport: 30)), start, null, now), 210);
-      expect(RunningTotal.ofToday(day(record(transport: 30, travelIsWork: true)), start, null, now), 240);
     });
 
     test('a running transport holds the total still', () {

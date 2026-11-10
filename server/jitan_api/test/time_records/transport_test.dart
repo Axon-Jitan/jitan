@@ -22,14 +22,13 @@ List<RegistrationRow> _finish(int hour, [int minute = 0]) => [
   _row('Finish – rounded', _at(hour, minute)),
 ];
 
-TimeRecordDay _day(List<RegistrationRow> rows, {Set<int> travelIsWork = const {}}) => TimeRecordDays.build(
+TimeRecordDay _day(List<RegistrationRow> rows) => TimeRecordDays.build(
   rows: rows,
   employees: const {
     _user: EmployeeSummary(id: _user, code: 'SBW', firstName: 'A', lastName: 'B', groups: [], isActive: true, isActivated: true),
   },
   clock: _clock,
   today: DateTime.utc(2026, 10, 22),
-  travelIsWork: travelIsWork,
 ).single;
 
 void main() {
@@ -42,18 +41,11 @@ void main() {
     ..._finish(17, 15),
   ];
 
-  test('D25: the van journey has 1:30 of transport, not working time', () {
+  test('D25, D46: the van journey has 1:30 of travel, shown next to the worked time and never in it', () {
     final day = _day(van);
 
     expect(day.transportMinutes, 90);
     expect(MyDayService.registeredMinutes(day, 30), 555 - 30 - 90);
-  });
-
-  test('D39: where travel is work, it stays in the hours and is still recorded', () {
-    final day = _day(van, travelIsWork: {_user});
-
-    expect(day.transportMinutes, 90);
-    expect(MyDayService.registeredMinutes(day, 30), 555 - 30);
   });
 
   test('a transport still running is not subtracted until it ends', () {
