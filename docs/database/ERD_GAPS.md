@@ -579,3 +579,11 @@ is not company-scoped through these tables. If company-specific schedules are ne
 later, that is a schema change for IT to approve (see GAP-03 for registrations).
 `ERD.jpg` stays the logical reference; the physical schema (types, lengths, defaults,
 junction Active/MFD) is IT's database, mirrored in `dev/local-db/schema.sql`.
+
+## CLARIFY-15: Settings tables (`tblConfigType`, `tblConfiguration`, `tblUserConfiguration`) · `DECIDED` (product owner, 2026-11-10)
+New in IT's ERD of 2026-11-09. **Jitan uses them for user preferences only**: an HR or
+Admin user's saved screen choices (for example which columns a table shows and in what
+order), with the general value in `tblConfiguration` and the user's own value in
+`tblUserConfiguration`. Business rules never go there: schedules, rounding and group
+settings keep their own tables, and the 2-hour short-exit limit (GAP-06) stays in the
+server's configuration. Server addresses and secrets never go in the database.
