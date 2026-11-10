@@ -16,7 +16,7 @@ Future<void> showSwitchActivityDialog(
   builder: (_) => _SwitchActivityDialog(api: api, activity: activity, at: clock),
 );
 
-/// What are you working on? (Figma `1499:1171`): one list, and a tap saves
+/// What are you working on? (Figma `1513:176`): one list, and a tap saves
 /// it. Every active project can be chosen (D44), so a search narrows it; the
 /// recently used ones come first.
 class _SwitchActivityDialog extends StatefulWidget {

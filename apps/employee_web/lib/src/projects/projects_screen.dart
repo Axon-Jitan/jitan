@@ -7,7 +7,7 @@ import '../app/web_services.dart';
 import '../common/web_text.dart';
 import '../l10n/employee_web_text_keys.dart';
 
-/// Projects (Figma `1499:742`, as the phone's Choose a project `1512:502`):
+/// Projects (Figma `1513:79`, like the phone's Choose a project `1512:502`):
 /// every active project (D44), searched by SAP number or name, the recently
 /// used ones first.
 class ProjectsScreen extends StatefulWidget {
