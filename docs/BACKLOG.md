@@ -6,6 +6,21 @@ product questions in [PRODUCT_CLARIFICATIONS.md](PRODUCT_CLARIFICATIONS.md).
 
 Status values: `TODO` · `IN PROGRESS` · `DONE (commit)`
 
+## V2-ROWS-01: Lookup rows to ask IT for in version 2 · `TODO` (version 2)
+
+IT adds no new rows in version 1 (D45). For version 2, first get IT's current rows of these
+tables, then ask IT to add only what is missing (Jitan uses IT's names where a row exists):
+
+| Table | Rows | Switches on |
+|---|---|---|
+| `tblTimeRegType` | Activity – Work, Activity – Client on site, Activity – Client in-house, Activity – Internal, Activity – Transport | Switching project or activity, transport, kilometres (D37, D22, D40) |
+| `tblLocationType` | Project location | Projects as address rows (D44) |
+| `tblScheduleType` | Travel | Travel counting as work per group (D39) |
+| `tblEventType` | Every name in `AuditEventType` (`server/jitan_api/lib/src/audit/audit_event.dart`) that IT lacks | Event names on audit rows |
+
+Plus the SAP API connection for projects (D43). Then switch the version 2 features on and
+build projects on IT's tables (D44) in place of the local proposal.
+
 ## EMP-DETAILS-V2: Details from a table row (version 2) · `TODO`
 
 **Decided 2026-10-21 (product owner):** in V1 no HR/Admin table opens details when HR
