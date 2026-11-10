@@ -12,6 +12,7 @@ HoursReportEmployee reportEmployee(
   int trips = 0,
   int metres = 0,
   int unknownTrips = 0,
+  int travel = 0,
   List<HoursReportDay> days = const [],
 }) => HoursReportEmployee(
   employeeId: id,
@@ -24,6 +25,7 @@ HoursReportEmployee reportEmployee(
   trips: trips,
   distanceMetres: metres,
   tripsWithoutDistance: unknownTrips,
+  travelMinutes: travel,
   days: days,
 );
 

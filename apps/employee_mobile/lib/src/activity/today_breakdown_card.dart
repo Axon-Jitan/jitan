@@ -6,27 +6,30 @@ import '../l10n/employee_text_keys.dart';
 import '../today/today_text.dart';
 import '../today/today_widgets.dart';
 
-/// "Today's breakdown" (Figma `1092:30`): how the day has gone so far, shown
-/// once there is more than one kind of work, with only the parts that have
-/// time in them. Transport says its kilometres (D23); while a trip's distance
-/// isn't known they would be too low, so it says its time.
+/// "Today's breakdown" (Figma `1092:30`, D46 `1508:2`): how the worked time
+/// has gone so far, shown once there is more than one kind of work, with only
+/// the parts that have time in them. Travel is never part of the worked time,
+/// so it sits under a line: its time, with the trips and their kilometres
+/// (D23) once every trip's distance is known.
 class TodayBreakdownCard extends StatelessWidget {
   const TodayBreakdownCard({super.key, required this.breakdown});
 
   final ActivityBreakdown breakdown;
 
-  String _transport(BuildContext context, int minutes) => breakdown.tripsWithoutDistance == 0
-      ? context.t(EmployeeTextKeys.activityKilometres, args: {'km': (breakdown.distanceMetres / 1000).round()})
-      : TodayText.duration(context, minutes);
+  String _trips(BuildContext context) {
+    final trips = context.tPlural(EmployeeTextKeys.activityTrips, breakdown.trips);
+    if (breakdown.tripsWithoutDistance > 0 || breakdown.distanceMetres == 0) return trips;
+    return '$trips · ${context.t(EmployeeTextKeys.activityKilometres, args: {'km': (breakdown.distanceMetres / 1000).round()})}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final parts = [
       (EmployeeTextKeys.activityClientWork, breakdown.clientMinutes, JitanColors.ink),
       (EmployeeTextKeys.activityInternal, breakdown.internalMinutes, JitanColors.inkMuted),
-      (EmployeeTextKeys.activityOtherWork, breakdown.otherMinutes, JitanColors.inkMuted),
-      (EmployeeTextKeys.activityTransport, breakdown.transportMinutes, JitanColors.chartAmber),
+      (EmployeeTextKeys.activityOtherWork, breakdown.otherMinutes, JitanColors.chartAmber),
     ].where((part) => part.$2 > 0).toList();
+    final value = JitanMobileTextStyles.cardText.copyWith(color: JitanColors.ink, fontWeight: FontWeight.w600);
     return TodayCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -59,15 +62,32 @@ class TodayBreakdownCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Expanded(child: Text(context.t(key), style: JitanMobileTextStyles.cardText)),
-                  Text(
-                    key == EmployeeTextKeys.activityTransport
-                        ? '${context.tPlural(EmployeeTextKeys.activityTrips, breakdown.trips)} · ${_transport(context, minutes)}'
-                        : TodayText.duration(context, minutes),
-                    style: JitanMobileTextStyles.cardText.copyWith(color: JitanColors.ink),
-                  ),
+                  Text(TodayText.duration(context, minutes), style: value),
                 ],
               ),
             ),
+          if (breakdown.transportMinutes > 0) ...[
+            const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: JitanColors.inputBorder)),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(
+                children: [
+                  const Icon(Icons.north_east_rounded, size: 14, color: JitanColors.inkMuted),
+                  const SizedBox(width: 6),
+                  Text(context.t(EmployeeTextKeys.activityTravel), style: JitanMobileTextStyles.cardText),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _trips(context),
+                      overflow: TextOverflow.ellipsis,
+                      style: JitanMobileTextStyles.cardText.copyWith(color: JitanColors.inkMuted),
+                    ),
+                  ),
+                  Text(TodayText.duration(context, breakdown.transportMinutes), style: value),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

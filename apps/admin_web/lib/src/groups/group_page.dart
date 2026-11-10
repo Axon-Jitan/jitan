@@ -18,7 +18,6 @@ import 'group_member_hours.dart';
 import 'group_members_card.dart';
 import 'group_page_controller.dart';
 import 'group_summary_cards.dart';
-import 'group_travel_row.dart';
 import 'remove_member_dialog.dart';
 import 'rename_group_dialog.dart';
 
@@ -205,7 +204,6 @@ class _GroupPageState extends State<GroupPage> {
     final hoursPanel = GroupHoursPanel(
       schedule: loaded.schedule,
       hasMembers: members.isNotEmpty,
-      travel: GroupTravelRow(api: widget.groupsApi, groupId: group.id, enabled: group.isActive),
       onEdit: group.isActive ? () => _setHours(loaded) : null,
     );
     return Column(

@@ -21,6 +21,7 @@ abstract final class EmployeeWebTextKeys {
   static const failed = 'web.failed';
   static const hours = 'web.hours';
   static const hoursMinutes = 'web.hoursMinutes';
+  static const minutes = 'web.minutes';
   static const kilometres = 'web.kilometres';
 
   static const homeGreetingMorning = 'web.home.morning';
@@ -34,6 +35,7 @@ abstract final class EmployeeWebTextKeys {
   static const homePlannedRange = 'web.home.plannedRange';
   static const homeNoPlan = 'web.home.noPlan';
   static const homeRegistered = 'web.home.registered';
+  static const homeTravel = 'web.home.travel';
   static const homePlannedFinish = 'web.home.plannedFinish';
   static const homeStartsWhen = 'web.home.startsWhen';
   static const homePlanned = 'web.home.planned';

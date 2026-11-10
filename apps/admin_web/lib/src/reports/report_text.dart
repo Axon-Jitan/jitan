@@ -20,6 +20,10 @@ abstract final class ReportText {
   static String difference(BuildContext context, int minutes) =>
       '${minutes > 0 ? '+' : minutes < 0 ? '−' : ''}${hours(context, minutes)}';
 
+  /// "52h 15m" of travel; "—" without any (D46).
+  static String travel(BuildContext context, HoursReportEmployee e) =>
+      e.travelMinutes == 0 ? '—' : hours(context, e.travelMinutes);
+
   /// "1 268 km"; "—" without trips.
   static String kilometres(BuildContext context, HoursReportEmployee e) {
     if (e.trips == 0) return '—';

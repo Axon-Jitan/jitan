@@ -5,8 +5,8 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 import 'report_text.dart';
 
-/// One quiet card with the month's four numbers (Figma `1467:2`, phone
-/// `1482:2`).
+/// One quiet card with the month's numbers (Figma `1467:2`, D46 `1508:234`,
+/// phone `1482:2`). Travel sits next to Worked and is never part of it.
 class ReportTotalsCard extends StatelessWidget {
   const ReportTotalsCard({super.key, required this.employees});
 
@@ -17,11 +17,13 @@ class ReportTotalsCard extends StatelessWidget {
     int sum(int Function(HoursReportEmployee) of) => employees.fold(0, (total, e) => total + of(e));
     final planned = sum((e) => e.plannedMinutes);
     final registered = sum((e) => e.registeredMinutes);
+    final travel = sum((e) => e.travelMinutes);
     final toReview = sum((e) => e.daysToReview);
     final items = [
       (AdminTextKeys.reportPlanned, ReportText.hours(context, planned), JitanColors.ink),
       (AdminTextKeys.reportRegistered, ReportText.hours(context, registered), JitanColors.ink),
       (AdminTextKeys.reportDifference, ReportText.difference(context, registered - planned), JitanColors.ink),
+      (AdminTextKeys.reportTravel, ReportText.hours(context, travel), JitanColors.ink),
       (AdminTextKeys.reportToReview, '$toReview', toReview > 0 ? JitanColors.warning : JitanColors.ink),
     ];
     Widget item((String, String, Color) value) => Padding(
@@ -46,8 +48,14 @@ class ReportTotalsCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: 16,
                   children: [
-                    for (final pair in [items.sublist(0, 2), items.sublist(2)])
-                      Row(children: [for (final value in pair) Expanded(child: item(value))]),
+                    // Two per row; an odd last one keeps its column's width.
+                    for (var i = 0; i < items.length; i += 2)
+                      Row(
+                        children: [
+                          Expanded(child: item(items[i])),
+                          Expanded(child: i + 1 < items.length ? item(items[i + 1]) : const SizedBox.shrink()),
+                        ],
+                      ),
                   ],
                 )
               : IntrinsicHeight(

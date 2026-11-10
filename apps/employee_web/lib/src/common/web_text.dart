@@ -10,6 +10,7 @@ abstract final class WebText {
   /// "4h 18m", "8h".
   static String duration(BuildContext context, int minutes) {
     final m = minutes % 60;
+    if (minutes > 0 && minutes < 60) return context.t(EmployeeWebTextKeys.minutes, args: {'minutes': minutes});
     return context.t(
       m == 0 ? EmployeeWebTextKeys.hours : EmployeeWebTextKeys.hoursMinutes,
       args: {'hours': minutes ~/ 60, 'minutes': m.toString().padLeft(2, '0')},

@@ -167,6 +167,8 @@ abstract final class EmployeeTextKeys {
   static const todayWorkingTitle = 'today.working.title';
   static const todayWorkingChip = 'today.working.chip';
   static const todayWorkingRegistered = 'today.working.registered';
+  static const todayWorkingTravel = 'today.working.travel';
+  static const todayWorkingTravelKm = 'today.working.travelKm';
   static const todayWorkingStarted = 'today.working.started';
   static const todayMethodManual = 'today.method.manual';
   static const todayMethodQr = 'today.method.qr';
@@ -202,6 +204,7 @@ abstract final class EmployeeTextKeys {
   static const activityInHouse = 'activity.kind.inHouse';
   static const activityInternal = 'activity.kind.internal';
   static const activityTransport = 'activity.kind.transport';
+  static const activityTravel = 'activity.travel';
   static const activityClientProject = 'activity.clientProject';
   static const activityInternalProject = 'activity.internalProject';
   static const activityRegisterFor = 'activity.registerFor';

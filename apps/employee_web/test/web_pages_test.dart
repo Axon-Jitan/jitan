@@ -63,7 +63,7 @@ void main() {
       expect(find.text('4h 18m'), findsOneWidget);
       expect(find.text('Office refurbishment'), findsOneWidget);
       expect(find.text('Started'), findsOneWidget);
-      expect(find.text('To Cooling towers · 36 km'), findsOneWidget);
+      expect(find.text('To Cooling towers  ·  50m  ·  36 km'), findsOneWidget, reason: 'travel time to the next line (D46)');
     });
 
     testWidgets('no project: a place for My QR, not an empty card', (tester) async {

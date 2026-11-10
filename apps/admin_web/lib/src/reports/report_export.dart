@@ -18,6 +18,7 @@ abstract final class ReportExport {
     _hours(e.plannedMinutes),
     _hours(e.registeredMinutes),
     _hours(e.differenceMinutes),
+    _hours(e.travelMinutes),
     e.daysToReview,
     e.trips,
     double.parse((e.distanceMetres / 1000).toStringAsFixed(1)),

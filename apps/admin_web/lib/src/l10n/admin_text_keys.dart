@@ -776,8 +776,6 @@ abstract final class AdminTextKeys {
   static const groupDetailToleranceRow = 'group.detail.toleranceRow';
   static const groupDetailToleranceValue = 'group.detail.toleranceValue';
   static const groupDetailRoundingRow = 'group.detail.roundingRow';
-  static const groupTravelRow = 'group.detail.travelRow';
-  static const groupTravelFailed = 'group.detail.travelFailed';
   static const groupDetailHoursEmptyText = 'group.detail.hoursEmptyText';
   static const groupDetailHoursNoSingleText = 'group.detail.hoursNoSingleText';
   static const groupDetailHoursDifferText = 'group.detail.hoursDifferText';
@@ -794,8 +792,8 @@ abstract final class AdminTextKeys {
   static const groupRemoveConfirm = 'group.remove.confirm';
 
   static const timeRecordDayTransport = 'timeRecord.day.transport';
-  static const timeRecordDayTransportWork = 'timeRecord.day.transportWork';
-  static const timeRecordDayTransportNotWork = 'timeRecord.day.transportNotWork';
+  static const timeRecordDayTravelText = 'timeRecord.day.travelText';
+  static const timeRecordDayTrips = 'timeRecord.day.trips';
   static const timeRecordDayAway = 'timeRecord.day.away';
   static const timeRecordDayAwayText = 'timeRecord.day.away.text';
   static const timeRecordDayAwayValue = 'timeRecord.day.away.value';
@@ -1004,6 +1002,7 @@ abstract final class AdminTextKeys {
   static const reportSearch = 'report.search';
   static const reportPlanned = 'report.planned';
   static const reportRegistered = 'report.registered';
+  static const reportTravel = 'report.travel';
   static const reportDifference = 'report.difference';
   static const reportToReview = 'report.toReview';
   static const reportColumnEmployee = 'report.column.employee';
@@ -1035,6 +1034,7 @@ abstract final class AdminTextKeys {
   static const reportFileLastName = 'report.file.lastName';
   static const reportFilePlanned = 'report.file.planned';
   static const reportFileRegistered = 'report.file.registered';
+  static const reportFileTravel = 'report.file.travel';
   static const reportFileDifference = 'report.file.difference';
   static const reportFileToReview = 'report.file.toReview';
 

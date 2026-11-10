@@ -13,7 +13,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../support/fake_companies_api.dart';
 import '../support/fake_reports.dart';
 
-const _titles = ['Code', 'First name', 'Last name', 'Planned', 'Registered', 'Difference', 'Days to review'];
+const _titles = ['Code', 'First name', 'Last name', 'Planned', 'Worked', 'Difference', 'Travel', 'Days to review'];
 
 void main() {
   late FakeReportsApi api;
@@ -174,6 +174,7 @@ void main() {
       trips: 4,
       metres: 96450,
       unknownTrips: 1,
+      travel: 75,
     );
 
     test('Excel: titles, then hours as numbers', () {
@@ -181,14 +182,14 @@ void main() {
       final rows = book.tables[book.getDefaultSheet()!]!.rows;
 
       expect(rows[0].first?.value.toString(), 'Code');
-      expect(rows[1].map((c) => c?.value.toString()), ['EJA', 'Émma', 'Janssens', '160', '157.5', '-2.5', '1', '4', '96.5', '1']);
+      expect(rows[1].map((c) => c?.value.toString()), ['EJA', 'Émma', 'Janssens', '160', '157.5', '-2.5', '1.25', '1', '4', '96.5', '1']);
     });
 
     test('CSV: semicolons, and é survives', () {
       final bytes = ReportExport.csv(_titles, [emma]);
 
       expect(bytes.take(3), [0xEF, 0xBB, 0xBF]);
-      expect(utf8.decode(bytes.skip(3).toList()).split('\r\n')[1], 'EJA;Émma;Janssens;160.0;157.5;-2.5;1;4;96.5;1');
+      expect(utf8.decode(bytes.skip(3).toList()).split('\r\n')[1], 'EJA;Émma;Janssens;160.0;157.5;-2.5;1.25;1;4;96.5;1');
     });
 
     test('CSV: a name can not become a formula or a new column', () {

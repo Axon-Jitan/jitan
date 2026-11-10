@@ -453,6 +453,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Travel next to the worked time, never in it (D46, Figma `1508:2`);
+  /// without travel, how the day is registered.
+  String _heroNote(BuildContext context, TimeRecordMethod method) {
+    final travel = _activity.activity.breakdown;
+    if (travel.transportMinutes == 0) return TodayText.method(context, method);
+    final time = TodayText.duration(context, travel.transportMinutes);
+    return travel.distanceMetres > 0 && travel.tripsWithoutDistance == 0
+        ? context.t(EmployeeTextKeys.todayWorkingTravelKm, args: {'time': time, 'km': (travel.distanceMetres / 1000).round()})
+        : context.t(EmployeeTextKeys.todayWorkingTravel, args: {'time': time});
+  }
+
   Widget _working(BuildContext context, MyDay day) {
     final start = shownTime(day.day, RegistrationBoundary.start);
     final elapsed = start.at == null ? null : RunningTotal.ofToday(day, start.at!, _activity.activity.current, _today.now());
@@ -486,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: JitanMobileTextStyles.displayLarge.copyWith(fontSize: 40, color: JitanColors.warmWhite),
               ),
               const SizedBox(height: 14),
-              Text(TodayText.method(context, method), style: light),
+              Text(_heroNote(context, method), style: light),
             ],
           ),
         ),

@@ -87,16 +87,11 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
         ],
         if (day.awayMinutes > 0) ...[
           const SizedBox(height: 16),
-          _minutesNote(context, AdminTextKeys.timeRecordDayAway, AdminTextKeys.timeRecordDayAwayText, day.awayMinutes),
+          _minutesNote(context, AdminTextKeys.timeRecordDayAway, context.t(AdminTextKeys.timeRecordDayAwayText), day.awayMinutes),
         ],
         if (day.transportMinutes > 0) ...[
           const SizedBox(height: 16),
-          _minutesNote(
-            context,
-            AdminTextKeys.timeRecordDayTransport,
-            day.travelIsWork ? AdminTextKeys.timeRecordDayTransportWork : AdminTextKeys.timeRecordDayTransportNotWork,
-            day.transportMinutes,
-          ),
+          _minutesNote(context, AdminTextKeys.timeRecordDayTransport, _travelText(context, day), day.transportMinutes),
         ],
         if (day.events.isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -206,7 +201,15 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
     );
   }
 
-  /// Time away or transport: a title, what it means, and the time.
+  /// "2 trips · 36 km · Shown next to worked time, not part of it" (D46,
+  /// Figma `1508:586`); the distance leaves out trips without one.
+  static String _travelText(BuildContext context, TimeRecordDay day) => [
+    if (day.trips > 0) context.tPlural(AdminTextKeys.timeRecordDayTrips, day.trips),
+    if (day.distanceMetres > 0) context.t(AdminTextKeys.reportKilometres, args: {'km': (day.distanceMetres / 1000).round()}),
+    context.t(AdminTextKeys.timeRecordDayTravelText),
+  ].join(' · ');
+
+  /// Time away or travel: a title, what it means, and the time.
   Widget _minutesNote(BuildContext context, String title, String text, int minutes) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
     decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(12)),
@@ -218,7 +221,7 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
             children: [
               Text(context.t(title), style: JitanTextStyles.tableCellStrong),
               const SizedBox(height: 2),
-              Text(context.t(text), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
+              Text(text, style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
             ],
           ),
         ),

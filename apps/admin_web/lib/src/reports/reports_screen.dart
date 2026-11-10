@@ -73,6 +73,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       AdminTextKeys.reportFilePlanned,
       AdminTextKeys.reportFileRegistered,
       AdminTextKeys.reportFileDifference,
+      AdminTextKeys.reportFileTravel,
       AdminTextKeys.reportFileToReview,
       AdminTextKeys.reportFileTrips,
       AdminTextKeys.reportFileKilometres,

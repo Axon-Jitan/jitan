@@ -104,11 +104,17 @@ class _HomeBody extends StatelessWidget {
   }
 
   Widget _hero(BuildContext context) {
-    final note = _isWorking
+    final planned = _isWorking
         ? (day.scheduledFinish == null ? '' : context.t(EmployeeWebTextKeys.homePlannedFinish, args: {'time': day.scheduledFinish!}))
         : _isFinished
         ? (day.scheduledStart == null ? '' : context.t(EmployeeWebTextKeys.homePlanned, args: {'time': _plannedText(context)}))
         : context.t(EmployeeWebTextKeys.homeStartsWhen);
+    // Travel next to the worked time, never in it (D46, Figma `1508:171`).
+    final travel = controller.activity.breakdown.transportMinutes;
+    final note = [
+      if (planned.isNotEmpty) planned,
+      if (travel > 0) context.t(EmployeeWebTextKeys.homeTravel, args: {'time': WebText.duration(context, travel)}),
+    ].join('  ·  ');
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(color: JitanColors.ink, borderRadius: BorderRadius.circular(20)),
@@ -134,6 +140,11 @@ class _HomeBody extends StatelessWidget {
     final start = _parse(day.scheduledStart), finish = _parse(day.scheduledFinish);
     if (start == null || finish == null) return '';
     return WebText.duration(context, finish - start - (day.breakMinutes ?? 0));
+  }
+
+  static int? _minutesBetween(String from, String to) {
+    final a = _parse(from), b = _parse(to);
+    return a == null || b == null ? null : b - a;
   }
 
   static int? _parse(String? hhmm) {
@@ -201,21 +212,25 @@ class _HomeBody extends StatelessWidget {
       ),
     );
 
-    String detail(ActivityEntry entry) {
+    final entries = controller.activity.today;
+
+    /// "To Cooling towers · 50m · 36 km": a trip's time runs to the next line.
+    String detail(int i, ActivityEntry entry) {
       if (entry.kind != ActivityKind.transport) return entry.projectName ?? entry.placeName ?? '';
+      final minutes = i + 1 < entries.length ? _minutesBetween(entry.timeLocal, entries[i + 1].timeLocal) : null;
       final parts = [
         if (entry.placeName case final place?) context.t(EmployeeWebTextKeys.entryTo, args: {'place': place}),
+        if (minutes != null && minutes > 0) WebText.duration(context, minutes),
         if (entry.metres case final metres?) WebText.kilometres(context, metres),
       ];
-      return parts.join(' · ');
+      return parts.join('  ·  ');
     }
 
-    final entries = controller.activity.today;
     final rows = [
       for (final (i, entry) in entries.indexed)
         i == 0
             ? row(entry.timeLocal, context.t(EmployeeWebTextKeys.entryStarted), entry.placeName ?? entry.projectName ?? '')
-            : row(entry.timeLocal, WebText.kind(context, entry.kind), detail(entry)),
+            : row(entry.timeLocal, WebText.kind(context, entry.kind), detail(i, entry)),
       // Without activities (a database without the proposed tables), the day itself.
       if (entries.isEmpty && _record?.start?.actualLocal != null)
         row(_record!.start!.actualLocal, context.t(EmployeeWebTextKeys.entryStarted), ''),

@@ -7,7 +7,7 @@ import '../l10n/admin_text_keys.dart';
 import 'report_text.dart';
 
 /// One row per employee (Figma `1467:2`): a row opens their month. On a phone
-/// (`1482:2`) only the name, the registered hours and a dot for days to review.
+/// (`1482:2`) only the name, the worked hours and a dot for days to review.
 class ReportsTable extends StatelessWidget {
   const ReportsTable({super.key, required this.employees, required this.onOpen});
 
@@ -16,9 +16,10 @@ class ReportsTable extends StatelessWidget {
 
   /// Column widths proportional to Figma.
   static const _flexEmployee = 270;
-  static const _flexHours = 150;
+  static const _flexHours = 130;
+  static const _flexTravel = 110;
   static const _flexKilometres = 130;
-  static const _flexReview = 150;
+  static const _flexReview = 140;
   static const _flexOpen = 40;
   static const _flexPhoneEmployee = 200;
   static const _flexPhoneHours = 90;
@@ -35,6 +36,7 @@ class ReportsTable extends StatelessWidget {
         JitanTableColumn(label: t.t(AdminTextKeys.reportPlanned), flex: _flexHours),
         JitanTableColumn(label: t.t(AdminTextKeys.reportRegistered), flex: _flexHours),
         JitanTableColumn(label: t.t(AdminTextKeys.reportDifference), flex: _flexHours),
+        JitanTableColumn(label: t.t(AdminTextKeys.reportTravel), flex: _flexTravel),
         JitanTableColumn(label: t.t(AdminTextKeys.reportColumnKilometres), flex: _flexKilometres),
         JitanTableColumn(label: t.t(AdminTextKeys.reportColumnToReview), flex: _flexReview),
         const JitanTableColumn(label: '', flex: _flexOpen, align: JitanColumnAlign.end),
@@ -47,6 +49,10 @@ class ReportsTable extends StatelessWidget {
           Text(ReportText.hours(context, e.plannedMinutes), style: JitanTextStyles.tableCell),
           Text(ReportText.hours(context, e.registeredMinutes), style: JitanTextStyles.tableCellStrong),
           Text(ReportText.difference(context, e.differenceMinutes), style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted)),
+          Text(
+            ReportText.travel(context, e),
+            style: e.travelMinutes == 0 ? JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted) : JitanTextStyles.tableCell,
+          ),
           Text(
             ReportText.kilometres(context, e),
             style: JitanTextStyles.tableCell.copyWith(

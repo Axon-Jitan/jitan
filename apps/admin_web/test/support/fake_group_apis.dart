@@ -12,20 +12,6 @@ class FakeGroupManagementApi implements GroupManagementApi {
   final calls = <String>[];
   ApiClientException? failNext;
 
-  /// `null`: a database without the proposed tables.
-  bool? travelIsWork;
-
-  @override
-  Future<GroupTravel> travel(int groupId) async =>
-      GroupTravel(available: travelIsWork != null, travelIsWork: travelIsWork ?? false);
-
-  @override
-  Future<GroupTravel> setTravel(int groupId, {required bool travelIsWork}) async {
-    calls.add('travel $groupId $travelIsWork');
-    this.travelIsWork = travelIsWork;
-    return GroupTravel(available: true, travelIsWork: travelIsWork);
-  }
-
   /// Holds [overview] until the test completes it (loading state).
   Completer<void>? holdOverview;
 
