@@ -587,3 +587,15 @@ order), with the general value in `tblConfiguration` and the user's own value in
 `tblUserConfiguration`. Business rules never go there: schedules, rounding and group
 settings keep their own tables, and the 2-hour short-exit limit (GAP-06) stays in the
 server's configuration. Server addresses and secrets never go in the database.
+
+## CLARIFY-16: Case- and accent-sensitive collation (`utf8mb4_0900_as_cs`) · `DECIDED`, not built yet (product owner, 2026-11-10)
+IT's ERD of 2026-11-09 sets `utf8mb4_0900_as_cs`, so `SBW` ≠ `sbw` and `Rene` ≠ `René`.
+Jitan handles it itself, without asking IT, and works with either collation:
+1. Employee codes are stored and compared in capitals (create, import, sign-in, recovery,
+   terminal), so the unique key on `userCode` keeps blocking near-duplicates.
+2. Searches compare with `COLLATE utf8mb4_0900_ai_ci` in the query (fixed SQL text, values
+   still bound), so they ignore capitals and accents.
+3. Before adding or renaming a company, group, location or terminal, the service checks
+   existing names the same way and returns a clear "already exists" error.
+Before going live on IT's database: check for existing lower-case codes and ask IT to
+change them once.
