@@ -262,7 +262,23 @@ scanning off there. Nothing to ask IT.
    the stream clears the exception by itself; anything else needs this gap answered.
 
 ## GAP-09: Terminals
-**ERD GAP — requires clarification with IT.** · Status: `OPEN`
+**Status:** `RESOLVED` by IT's ERD of 2026-11-09 (devices) and the product owner (2026-11-10).
+Applies once that ERD is in `jitandev`; until then the proposed `tblTerminal` stays local.
+
+- **A terminal is a `tblDevice` with `deviceMultiUser = 1`**, used by employees of every
+  company (no company on the terminal). Name in `deviceName` (place or plate go in the
+  name), Office / Vehicle as `tblDeviceType` rows linked through `tblDeviceDeviceType`,
+  serial number typed by HR from the tablet's label (`deviceSN`; apps can't read it),
+  on/off in `deviceActive`, removal in `deviceMFD`.
+- **The tablet's secret:** each terminal has a kiosk account, a `tblUser` with
+  `userKioskMode = 1`, its secret hashed in `userPassword`, linked to the device through
+  `tblUserDevice`. Kiosk accounts are left out of employee lists, sign-in and reports.
+- **Which terminal took a scan:** the scan's audit row carries `tblEventLog.deviceID`; no
+  `tblTimeReg` column.
+- **Last seen:** kept in the server's memory from the tablet's check-ins (about every
+  minute), with the last scan from the audit log for a tablet that is off. Not stored.
+- **Dropped from the HR form:** company, address, plate number (part of the name), QR
+  on/off (Active covers it). The Add terminal screens change to match (Figma).
 
 1. **Requirement** (§28, §27): HR manages terminals with name, type (Office / Vehicle),
    company, location or vehicle, online status, last seen, QR enabled, pairing code.
