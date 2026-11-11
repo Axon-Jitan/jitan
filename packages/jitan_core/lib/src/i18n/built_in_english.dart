@@ -940,6 +940,7 @@ const builtInEnglish = <String, String>{
   'schedule.info.finishRounding': 'How the registered finish time is rounded; the actual time is always kept as well. Example: Down · 15 min: 16:38 becomes 16:30.',
   'nav.groups': 'Groups',
   'groups.title': 'Groups',
+  'groups.newGroup': 'New group',
   'schedule.step.group': 'Group',
   'groups.field.nameLabel': 'Name',
   'groups.employees.chosen.one': '{n} chosen',

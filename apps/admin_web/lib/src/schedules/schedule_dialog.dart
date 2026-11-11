@@ -126,11 +126,18 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
               labels: [for (final step in ScheduleStep.values) context.t(_stepNames[step]!)],
             ),
             const SizedBox(height: 22),
-            switch (c.options) {
-              ScheduleOptionsLoading() => JitanLoadingState(label: context.t(AdminTextKeys.scheduleFormOptionsLoading)),
-              ScheduleOptionsFailed(:final failure) => _optionsError(context, failure),
-              ScheduleOptionsLoaded(:final options) => _step(context, options),
-            },
+            // One height on every step, so the pop-up never jumps; a long
+            // step (hours per day) scrolls inside it.
+            SizedBox(
+              height: wizardStepHeight(MediaQuery.sizeOf(context)),
+              child: SingleChildScrollView(
+                child: switch (c.options) {
+                  ScheduleOptionsLoading() => JitanLoadingState(label: context.t(AdminTextKeys.scheduleFormOptionsLoading)),
+                  ScheduleOptionsFailed(:final failure) => _optionsError(context, failure),
+                  ScheduleOptionsLoaded(:final options) => _step(context, options),
+                },
+              ),
+            ),
           ],
         ),
         leadingActions: [

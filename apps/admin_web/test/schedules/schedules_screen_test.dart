@@ -260,6 +260,26 @@ void main() {
     expect(find.byType(ScheduleTimeField), findsNWidgets(2));
   });
 
+  testWidgets('the wizard keeps one size on every step, so it never jumps', (tester) async {
+    final api = await _pump(tester);
+    await _loaded(tester, api);
+    await _openAdd(tester, api);
+    // The white pop-up itself, not the screen-wide Dialog around it.
+    Size size() => tester.getSize(find.descendant(of: find.byType(Dialog), matching: find.byType(Material)).first);
+
+    final first = size();
+    await _fillHours(tester);
+    await tester.tap(find.text('Set hours per day'));
+    await tester.pumpAndSettle();
+    expect(size(), first, reason: 'hours per day');
+    await tester.tap(find.text('Use the same hours every day'));
+    await tester.pumpAndSettle();
+    await _continue(tester);
+    expect(size(), first, reason: 'Rules');
+    await _continue(tester);
+    expect(size(), first, reason: 'Review');
+  });
+
   testWidgets('a group that has a schedule: "Edit that schedule instead" fills it in', (tester) async {
     final api = await _pump(tester);
     await _loaded(tester, api);

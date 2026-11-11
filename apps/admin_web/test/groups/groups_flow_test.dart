@@ -405,6 +405,25 @@ void main() {
     expect(fakes.groupManagement.calls, contains('reactivate 4'));
   });
 
+  testWidgets('Create group keeps one size on every step, so it never jumps', (tester) async {
+    final fakes = _fakes();
+    await _pump(tester, fakes, '/groups');
+    await _tapPrimary(tester, 'Add group');
+    // The white pop-up itself, not the screen-wide Dialog around it.
+    Size size() => tester.getSize(find.descendant(of: find.byType(Dialog), matching: find.byType(Material)).first);
+    final first = size();
+    await tester.enterText(_dialogField(0), 'Drivers');
+    await tester.pump();
+    await _tapPrimary(tester, 'Continue');
+    fakes.schedules.succeedOptions();
+    await tester.pumpAndSettle();
+    // (Hours is checked in the browser: in the test font its three buttons
+    // need two lines.)
+    await tester.tap(find.text('Set hours later'));
+    await tester.pumpAndSettle();
+    expect(size(), first, reason: 'Review');
+  });
+
   testWidgets('Create group: a click outside the dialog changes nothing', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups');

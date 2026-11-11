@@ -90,28 +90,41 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
       return JitanModal(
         width: 520,
         title: context.t(AdminTextKeys.groupsCreateTitle),
-        subtitle: c.step == CreateGroupStep.group || name.isEmpty ? null : name,
+        // On every step, so the pop-up keeps one size: the name as typed.
+        subtitle: name.isEmpty ? context.t(AdminTextKeys.groupsNewGroup) : name,
         onClose: busy ? null : () => Navigator.of(context).pop(),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ScheduleStepper(current: c.step.index, labels: [for (final key in _stepNames) context.t(key)]),
             const SizedBox(height: 22),
-            ...switch (c.step) {
-              CreateGroupStep.group => _group(context),
-              CreateGroupStep.hours => _hours(context),
-              CreateGroupStep.attendance => _rules(context),
-              CreateGroupStep.review => _review(context),
-            },
-            if (failure != null) ...[
-              const SizedBox(height: 16),
-              Builder(
-                builder: (context) {
-                  final keys = failureTextKeysFor(failure);
-                  return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
-                },
+            // One height on every step, as in the schedule wizard, so the
+            // pop-up never jumps; a long step scrolls inside it.
+            SizedBox(
+              height: wizardStepHeight(MediaQuery.sizeOf(context)),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ...switch (c.step) {
+                      CreateGroupStep.group => _group(context),
+                      CreateGroupStep.hours => _hours(context),
+                      CreateGroupStep.attendance => _rules(context),
+                      CreateGroupStep.review => _review(context),
+                    },
+                    if (failure != null) ...[
+                      const SizedBox(height: 16),
+                      Builder(
+                        builder: (context) {
+                          final keys = failureTextKeysFor(failure);
+                          return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
+                        },
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
+            ),
           ],
         ),
         leadingActions: [

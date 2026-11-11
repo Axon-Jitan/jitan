@@ -577,6 +577,7 @@ abstract final class AdminTextKeys {
 
   // Employee groups (Figma HR / Employee groups 1340:2 to 1354:7)
   static const groupsTitle = 'groups.title';
+  static const groupsNewGroup = 'groups.newGroup';
   static const scheduleStepGroup = 'schedule.step.group';
   static const groupsFieldNameLabel = 'groups.field.nameLabel';
   static const groupsEmployeesChosen = 'groups.employees.chosen';

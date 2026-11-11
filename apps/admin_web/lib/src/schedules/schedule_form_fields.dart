@@ -5,6 +5,12 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import 'schedule_summary_text.dart';
 
+/// The height of every step of the schedule and Create group wizards
+/// (product owner, 2026-11-11: the pop-ups must not jump between steps):
+/// room for the employee list of Create group; less on a short window, so
+/// the pop-up still fits.
+double wizardStepHeight(Size screen) => (screen.height - 330).clamp(260.0, 470.0);
+
 /// The wizard's progress: one bar per step, filled up to the current one,
 /// with the step's name under it (the current one bold).
 class ScheduleStepper extends StatelessWidget {
