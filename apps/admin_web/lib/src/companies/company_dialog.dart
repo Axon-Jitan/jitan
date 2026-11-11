@@ -113,7 +113,6 @@ class _CompanyDialogState extends State<CompanyDialog> {
       width: 460,
       title: company.name,
       subtitle: context.t(company.isActive ? CommonTextKeys.statusActive : CommonTextKeys.statusInactive),
-      onClose: () => Navigator.of(context).pop(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
