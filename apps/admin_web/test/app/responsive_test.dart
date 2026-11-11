@@ -173,6 +173,29 @@ void main() {
       await tester.tap(find.text('Almeco Reception'));
       await _settle(tester);
       _fitsTheWindow(tester, width, 'Manage');
+      await tester.tap(find.text('Deactivate'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Deactivate terminal');
+    });
+
+    testWidgets('an inactive terminal, no matches and no terminals at $width px', (tester) async {
+      final api = FakeTerminalsApi()..terminals = [officeTerminal(status: TerminalStatus.inactive)];
+      await _pump(tester, width, TerminalsScreen(api: api, clock: () => DateTime(2026, 11, 1, 9)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Almeco Reception'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'inactive terminal');
+      await tester.tapAt(const Offset(4, 4));
+      await _settle(tester);
+
+      await tester.enterText(find.byType(TextField).first, 'nothing here');
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'no matching terminals');
+
+      api.terminals = [];
+      await _pump(tester, width, TerminalsScreen(key: const ValueKey('empty'), api: api, clock: () => DateTime(2026, 11, 1, 9)));
+      await tester.pumpAndSettle();
+      _fitsTheWindow(tester, width, 'no terminals');
     });
 
     testWidgets('Dashboard and its period picker at $width px', (tester) async {

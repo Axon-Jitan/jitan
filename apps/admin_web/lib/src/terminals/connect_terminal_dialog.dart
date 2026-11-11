@@ -130,7 +130,7 @@ class _ConnectTerminalDialogState extends State<ConnectTerminalDialog> {
                     ),
                     child: _expired
                         ? Icon(Icons.qr_code_2, size: _qrSize, color: JitanColors.ink.withValues(alpha: 0.12))
-                        : JitanQrCode(data: qr.qrCode, size: _qrSize, semanticLabel: context.t(AdminTextKeys.terminalConnectTitle)),
+                        : JitanQrCode(data: qr.qrCode, size: _qrSize, framed: false, semanticLabel: context.t(AdminTextKeys.terminalConnectTitle)),
                   ),
                   _note(context),
                 ],

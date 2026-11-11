@@ -17,7 +17,8 @@ import 'terminal_service.dart';
 /// - `GET /terminal-options`: the form's types.
 /// - `GET /terminals` and `POST /terminals` (`TerminalRequest`, 201).
 /// - `GET` and `PUT /terminals/{id}`.
-/// - `POST /terminals/{id}/deactivate`, `/reactivate` and `/remove`.
+/// - `POST /terminals/{id}/deactivate` and `/reactivate` (there is no
+///   remove: a tablet no longer used is deactivated, 2026-11-11).
 /// - `POST /terminals/{id}/pairing-qr`: `no-store`, it is a credential.
 class TerminalRoutes {
   const TerminalRoutes(this._authorizer, this._terminals);
@@ -35,7 +36,6 @@ class TerminalRoutes {
     ..put(_terminal, _update)
     ..post('$_terminal/deactivate', _deactivate)
     ..post('$_terminal/reactivate', _reactivate)
-    ..post('$_terminal/remove', _remove)
     ..post('$_terminal/pairing-qr', _pairingQr);
 
   Future<Response> _options(Request request) async {
@@ -70,12 +70,6 @@ class TerminalRoutes {
   Future<Response> _setActive(Request request, String terminalId, {required bool active}) async {
     final identity = await _authorizer.require(request, Permission.manageTerminals);
     return jsonResponse((await _terminals.setActive(identity.userId, _id(terminalId), active: active)).toJson());
-  }
-
-  Future<Response> _remove(Request request, String terminalId) async {
-    final identity = await _authorizer.require(request, Permission.manageTerminals);
-    await _terminals.remove(identity.userId, _id(terminalId));
-    return jsonResponse(const <String, Object?>{});
   }
 
   Future<Response> _pairingQr(Request request, String terminalId) async {

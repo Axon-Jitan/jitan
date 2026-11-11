@@ -14,7 +14,6 @@ import 'deactivate_location_dialog.dart';
 import 'location_dialog.dart';
 import 'location_map.dart';
 import 'locations_controller.dart';
-import 'locations_empty_card.dart';
 import 'locations_table.dart';
 
 /// HR/Admin "Locations" page (Figma `1542:2`; no results `1543:114`, none
@@ -145,7 +144,14 @@ class _LocationsScreenState extends State<LocationsScreen> {
   Widget _content(BuildContext context) => switch (_controller.state) {
     LocationsLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.locationsLoading))),
     LocationsFailed() => _state(GroupStateText(context.t(AdminTextKeys.locationsLoadFailed), onRetry: _controller.load)),
-    LocationsLoaded(locations: []) => SliverToBoxAdapter(child: LocationsEmptyCard(onAdd: _open)),
+    LocationsLoaded(locations: []) => SliverToBoxAdapter(
+      child: JitanEmptyPage(
+        title: context.t(AdminTextKeys.locationsEmptyTitle),
+        message: context.t(AdminTextKeys.locationsEmptyText),
+        actionLabel: context.t(AdminTextKeys.locationAdd),
+        onAction: _open,
+      ),
+    ),
     LocationsLoaded() => switch (_controller.visible) {
       [] => SliverToBoxAdapter(child: _nothingShown(context)),
       final locations => LocationsTable(locations: locations, onOpen: _open),
@@ -160,20 +166,7 @@ class _LocationsScreenState extends State<LocationsScreen> {
       ('', LocationStatusFilter.active) => (AdminTextKeys.locationsNoActiveTitle, AdminTextKeys.locationsNoActiveText),
       _ => (AdminTextKeys.locationsNoMatchTitle, AdminTextKeys.locationsNoMatchText),
     };
-    return Padding(
-      padding: const EdgeInsets.only(top: 96),
-      child: Column(
-        spacing: 6,
-        children: [
-          Text(context.t(title), textAlign: TextAlign.center, style: JitanTextStyles.stateTitle.copyWith(fontSize: 17)),
-          Text(
-            context.t(line),
-            textAlign: TextAlign.center,
-            style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
-          ),
-        ],
-      ),
-    );
+    return JitanNoResults(title: context.t(title), message: context.t(line));
   }
 
   static Widget _centered(Widget child) => JitanTableStateSliver(child: child);

@@ -49,11 +49,31 @@ void main() {
     expect(find.text('3 terminals'), findsOneWidget);
   });
 
-  testWidgets('no terminals yet says so, and a search can find nothing', (tester) async {
+  testWidgets('a search can find nothing, and says so calmly (Figma 1545:830)', (tester) async {
     await pump(tester);
     await tester.enterText(find.byType(TextField), 'nothing like this');
     await tester.pumpAndSettle();
-    expect(find.text('No terminals match your search.'), findsOneWidget);
+    expect(find.text('No matching terminals'), findsOneWidget);
+    expect(find.text('Try another name.'), findsOneWidget);
+  });
+
+  testWidgets('Inactive with none says every terminal is in use; All shows them again', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Inactive'));
+    await tester.pumpAndSettle();
+    expect(find.text('No inactive terminals'), findsOneWidget);
+
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+    expect(find.text('Front desk'), findsOneWidget);
+  });
+
+  testWidgets('nothing yet: one line and Add terminal, no search (Figma 1545:955)', (tester) async {
+    api.terminals = [];
+    await pump(tester);
+    expect(find.text('No terminals yet'), findsOneWidget);
+    expect(find.byType(JitanSearchField), findsNothing);
+    expect(find.widgetWithText(JitanPrimaryButton, 'Add terminal'), findsOneWidget);
   });
 
   testWidgets('Add terminal asks for what is missing and only then goes on to the QR', (tester) async {
@@ -125,17 +145,56 @@ void main() {
     expect(api.calls, isEmpty);
   });
 
-  testWidgets('Remove asks first, and then it is gone', (tester) async {
+  testWidgets('no Remove: Deactivate, said once it is done, and the terminal stays as Inactive', (tester) async {
     await pump(tester);
     await tester.tap(find.text('Van 1-DEF-456'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Remove'));
+    expect(find.text('Remove'), findsNothing);
+
+    await tester.tap(find.text('Deactivate'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Remove'));
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Deactivate'));
     await tester.pumpAndSettle();
 
-    expect(api.calls, ['remove 2']);
-    expect(find.text('Van 1-DEF-456'), findsNothing);
+    expect(api.calls, ['deactivate 2']);
+    expect(find.text('Van 1-DEF-456 deactivated.'), findsOneWidget);
+    expect(find.text('Van 1-DEF-456'), findsOneWidget);
+    expect(find.text('Inactive'), findsNWidgets(2), reason: 'the row and the pill');
+  });
+
+  testWidgets('an inactive terminal says what that means, and Reactivate needs no question (Figma 1545:408)', (tester) async {
+    api.terminals = [officeTerminal(id: 4, name: 'Old tablet', status: TerminalStatus.inactive)];
+    await pump(tester);
+    await tester.tap(find.text('Old tablet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Employees can’t scan on this tablet. Reactivate it to use it again.'), findsOneWidget);
+    expect(find.text('Reconnect'), findsNothing);
+    expect(find.text('Connect'), findsNothing);
+
+    await tester.tap(find.text('Reactivate'));
+    await tester.pumpAndSettle();
+    expect(api.calls, ['reactivate 4']);
+    expect(find.text('Old tablet reactivated.'), findsOneWidget);
+  });
+
+  testWidgets('Edit: Save waits for a change, and the save is said (Figma 1545:687)', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Almeco Reception'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    JitanPrimaryButton save() => tester.widget(find.widgetWithText(JitanPrimaryButton, 'Save'));
+    expect(save().onPressed, isNull);
+    await tester.enterText(find.widgetWithText(TextField, 'Almeco Reception'), 'Almeco front desk');
+    await tester.pump();
+    expect(save().onPressed, isNotNull);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(api.updated.single.$2.name, 'Almeco front desk');
+    expect(find.text('Almeco Reception saved.'), findsOneWidget, reason: 'the fake answers with the stored terminal');
   });
 
   testWidgets('a terminal never connected offers Connect, and waits for the tablet', (tester) async {

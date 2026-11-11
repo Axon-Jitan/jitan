@@ -113,7 +113,7 @@ void main() {
   testWidgets('empty: one sentence and one action, no filters', (tester) async {
     await _pump(tester, TestServices());
 
-    expect(find.text('Add your first location'), findsOneWidget);
+    expect(find.text('No locations yet'), findsOneWidget);
     expect(find.byType(JitanSearchField), findsNothing);
     expect(find.widgetWithText(JitanPrimaryButton, 'Add location'), findsOneWidget);
   });
@@ -127,7 +127,7 @@ void main() {
     fakes.locations.failList = null;
     await tester.tap(find.text('Unable to load locations. Try again →'));
     await tester.pumpAndSettle();
-    expect(find.text('Add your first location'), findsOneWidget);
+    expect(find.text('No locations yet'), findsOneWidget);
   });
 
   testWidgets('from a company just added: Add location is open at once', (tester) async {

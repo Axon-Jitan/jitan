@@ -1,69 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'terminal_text.dart';
 
-enum TerminalAction { edit, connect, deactivate, remove }
+/// What HR chose in a terminal's pop-up; the page does it and says so.
+enum TerminalAction { edit, connect, deactivate, reactivate }
 
-/// Opens Manage for [terminal]. Turning it back on is saved here; the rest
-/// comes back as a [TerminalAction].
+/// Opens [terminal]'s pop-up.
 Future<TerminalAction?> showManageTerminalDialog(
   BuildContext context, {
-  required TerminalsApi api,
   required Terminal terminal,
   required DateTime now,
 }) => showJitanModal<TerminalAction>(
   context,
-  builder: (_) => _ManageTerminalDialog(api: api, terminal: terminal, now: now),
+  builder: (_) => _ManageTerminalDialog(terminal: terminal, now: now),
 );
 
-/// Figma `HR / Terminals V3 — Manage` (`1507:434`): one calm window with the
-/// kind, the serial number and the last scan.
-class _ManageTerminalDialog extends StatefulWidget {
-  const _ManageTerminalDialog({required this.api, required this.terminal, required this.now});
+/// Figma a terminal (`1545:261`) and an inactive one (`1545:408`): the kind,
+/// the serial number and the last scan; one quiet action, Deactivate in red
+/// or Reactivate in ink.
+class _ManageTerminalDialog extends StatelessWidget {
+  const _ManageTerminalDialog({required this.terminal, required this.now});
 
-  final TerminalsApi api;
   final Terminal terminal;
   final DateTime now;
 
-  @override
-  State<_ManageTerminalDialog> createState() => _ManageTerminalDialogState();
-}
+  bool get _isInactive => terminal.status == TerminalStatus.inactive;
+  bool get _isConnected => terminal.status == TerminalStatus.online || terminal.status == TerminalStatus.offline;
 
-class _ManageTerminalDialogState extends State<_ManageTerminalDialog> {
-  late Terminal _terminal = widget.terminal;
-  ApiClientException? _failure;
-  bool _busy = false;
-
-  bool get _isInactive => _terminal.status == TerminalStatus.inactive;
-  bool get _isConnected => _terminal.status == TerminalStatus.online || _terminal.status == TerminalStatus.offline;
-
-  Future<void> _save(Future<Terminal> Function() change) async {
-    setState(() {
-      _busy = true;
-      _failure = null;
-    });
-    try {
-      final saved = await change();
-      if (mounted) setState(() => _terminal = saved);
-    } on ApiClientException catch (e) {
-      if (mounted) setState(() => _failure = e);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  String get _statusLine {
-    final status = TerminalText.status(context, _terminal.status);
+  String _statusLine(BuildContext context) {
+    final status = TerminalText.status(context, terminal.status);
     if (!_isConnected) return status;
     return context.t(
       AdminTextKeys.terminalStatusSeen,
-      args: {'status': status, 'seen': TerminalText.lastSeen(context, _terminal.lastSeen, widget.now)},
+      args: {'status': status, 'seen': TerminalText.lastSeen(context, terminal.lastSeen, now)},
     );
   }
 
@@ -86,11 +59,11 @@ class _ManageTerminalDialogState extends State<_ManageTerminalDialog> {
     style: JitanTextStyles.tableCell.copyWith(fontWeight: FontWeight.w500),
   );
 
-  Widget _details() {
+  Widget _details(BuildContext context) {
     final rows = [
-      _row(context.t(AdminTextKeys.terminalColumnType), _value(_terminal.type.name)),
-      _row(context.t(AdminTextKeys.terminalSerial), _value(_terminal.serialNumber)),
-      _row(context.t(AdminTextKeys.terminalLastScan), _value(TerminalText.lastSeen(context, _terminal.lastScan, widget.now))),
+      _row(context.t(AdminTextKeys.terminalColumnType), _value(terminal.type.name)),
+      _row(context.t(AdminTextKeys.terminalSerial), _value(terminal.serialNumber)),
+      _row(context.t(AdminTextKeys.terminalLastScan), _value(TerminalText.lastSeen(context, terminal.lastScan, now))),
     ];
     return Container(
       decoration: BoxDecoration(color: JitanColors.tableHeader, borderRadius: BorderRadius.circular(14)),
@@ -106,84 +79,90 @@ class _ManageTerminalDialogState extends State<_ManageTerminalDialog> {
     );
   }
 
-  Widget _quiet(String label, VoidCallback? onPressed) => TextButton(
-    onPressed: onPressed,
-    style: TextButton.styleFrom(
-      foregroundColor: JitanColors.inkMuted,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      minimumSize: Size.zero,
-      textStyle: JitanTextStyles.tableCell.copyWith(fontWeight: FontWeight.w500),
-    ),
-    child: Text(label),
-  );
-
-  void _done(TerminalAction action) => Navigator.of(context).pop(action);
+  /// Deactivate in red, Reactivate in ink (as on a location).
+  Widget _quiet(BuildContext context) {
+    final color = _isInactive ? JitanColors.ink : JitanColors.errorStrong;
+    return TextButton(
+      onPressed: () => Navigator.of(context).pop(_isInactive ? TerminalAction.reactivate : TerminalAction.deactivate),
+      style: TextButton.styleFrom(
+        foregroundColor: color,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        minimumSize: Size.zero,
+      ),
+      child: Text(
+        context.t(_isInactive ? AdminTextKeys.terminalReactivate : AdminTextKeys.terminalDeactivate),
+        style: JitanTextStyles.tableCellStrong.copyWith(color: color),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final failure = _failure;
-    final keys = failure == null ? null : failureTextKeysFor(failure);
     final narrow = MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint;
-    final quiet = [
-      if (_isInactive)
-        _quiet(context.t(AdminTextKeys.terminalReactivate), _busy ? null : () => _save(() => widget.api.reactivate(_terminal)))
-      else
-        _quiet(context.t(AdminTextKeys.terminalDeactivate), () => _done(TerminalAction.deactivate)),
-      _quiet(context.t(AdminTextKeys.terminalRemove), () => _done(TerminalAction.remove)),
-    ];
     return JitanModal(
       width: 480,
-      title: _terminal.name,
-      subtitle: _statusLine,
+      title: terminal.name,
+      subtitle: _statusLine(context),
       onClose: () => Navigator.of(context).pop(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 16,
         children: [
-          _details(),
-          if (keys != null) JitanInlineError(title: context.t(keys.title), message: context.t(keys.message)),
-          // On a phone they get a line of their own, under the details.
-          if (narrow) Row(spacing: 10, children: quiet),
+          _details(context),
+          if (_isInactive)
+            Text(
+              context.t(AdminTextKeys.terminalInactiveNote),
+              style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
+            ),
+          // On a phone it gets a line of its own, under the details.
+          if (narrow) Align(alignment: Alignment.centerLeft, child: _quiet(context)),
         ],
       ),
-      leadingActions: narrow ? const [] : quiet,
+      leadingActions: narrow ? const [] : [_quiet(context)],
       actions: [
-        if (!_isInactive)
-          JitanSecondaryButton(
-            label: context.t(_isConnected ? AdminTextKeys.terminalReconnect : AdminTextKeys.terminalConnect),
-            onPressed: () => _done(TerminalAction.connect),
-          ),
-        JitanPrimaryButton(
-          label: context.t(AdminTextKeys.terminalEdit),
-          color: JitanColors.ink,
-          onPressed: () => _done(TerminalAction.edit),
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            if (!_isInactive)
+              JitanSecondaryButton(
+                label: context.t(_isConnected ? AdminTextKeys.terminalReconnect : AdminTextKeys.terminalConnect),
+                onPressed: () => Navigator.of(context).pop(TerminalAction.connect),
+              ),
+            JitanPrimaryButton(
+              label: context.t(AdminTextKeys.terminalEdit),
+              color: JitanColors.ink,
+              onPressed: () => Navigator.of(context).pop(TerminalAction.edit),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-/// Figma `1494:1339` and `1494:1493`: asks once; returns `true` to go ahead.
-Future<bool> confirmTerminalAction(
-  BuildContext context, {
-  required String title,
-  required String text,
-  required String action,
-  bool destructive = false,
-}) async =>
+/// Figma "Deactivate?" (`1545:556`): one plain question; `true` to go ahead.
+Future<bool> confirmTerminalDeactivate(BuildContext context, Terminal terminal) async =>
     await showJitanModal<bool>(
       context,
       builder: (dialog) => JitanModal(
-        width: 480,
-        title: title,
-        subtitle: text,
-        body: const SizedBox.shrink(),
+        width: 440,
+        title: dialog.t(AdminTextKeys.terminalDeactivateTitle, args: {'terminal': terminal.name}),
+        subtitle: dialog.t(AdminTextKeys.terminalDeactivateText),
         actions: [
-          JitanSecondaryButton(label: dialog.t(CommonTextKeys.cancel), onPressed: () => Navigator.of(dialog).pop(false)),
-          JitanPrimaryButton(
-            label: action,
-            color: destructive ? JitanColors.vermilion : JitanColors.ink,
-            onPressed: () => Navigator.of(dialog).pop(true),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              JitanSecondaryButton(label: dialog.t(CommonTextKeys.cancel), onPressed: () => Navigator.of(dialog).pop(false)),
+              JitanPrimaryButton(
+                label: dialog.t(AdminTextKeys.terminalDeactivate),
+                color: JitanColors.errorStrong,
+                onPressed: () => Navigator.of(dialog).pop(true),
+              ),
+            ],
           ),
         ],
       ),

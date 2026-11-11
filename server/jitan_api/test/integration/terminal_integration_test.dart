@@ -251,7 +251,7 @@ void main() {
       expect((await terminals.list()).where((t) => t.id == created.id).single.type.id, vehicleType);
     });
 
-    test('deactivate, reactivate, remove: audited once each, and an action that changes nothing is not', () async {
+    test('deactivate and reactivate: audited once each, the tablet shut out meanwhile, and an action that changes nothing is not', () async {
       final (actor, _) = await newEmployee();
       final (terminal, _) = await connected();
       Future<int> audited() async => (await db.query(
@@ -262,17 +262,15 @@ void main() {
       expect((await terminals.setActive(actor, terminal.id, active: false)).status, TerminalStatus.inactive);
       await terminals.setActive(actor, terminal.id, active: false);
       expect(await audited(), 1);
-
-      await terminals.setActive(actor, terminal.id, active: true);
-      await terminals.remove(actor, terminal.id);
-      expect(await audited(), 3);
-      await expectLater(terminals.find(terminal.id), refusedWith(404, 'not_found'));
-      final kiosk = (await db.query(
-        'SELECT u.userActive, u.userMFD, u.userPassword FROM tblUserDevice ud JOIN tblUser u ON u.userID = ud.userID '
-        'WHERE ud.deviceID = :d',
+      Future<bool> kioskActive() async => (await db.query(
+        'SELECT u.userActive FROM tblUserDevice ud JOIN tblUser u ON u.userID = ud.userID WHERE ud.deviceID = :d',
         {'d': terminal.id},
-      )).single;
-      expect((kiosk.readBool('userActive'), kiosk.readBool('userMFD'), kiosk.readOptionalString('userPassword')), (false, true, null));
+      )).single.readBool('userActive');
+      expect(await kioskActive(), isFalse);
+
+      expect((await terminals.setActive(actor, terminal.id, active: true)).status, isNot(TerminalStatus.inactive));
+      expect(await audited(), 2);
+      expect(await kioskActive(), isTrue);
     });
   });
 

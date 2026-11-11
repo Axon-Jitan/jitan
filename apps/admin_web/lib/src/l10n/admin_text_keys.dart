@@ -799,8 +799,6 @@ abstract final class AdminTextKeys {
   static const terminalsSearch = 'terminals.search';
   static const terminalsLoading = 'terminals.loading';
   static const terminalsLoadFailed = 'terminals.loadFailed';
-  static const terminalsEmpty = 'terminals.empty';
-  static const terminalsNoMatch = 'terminals.noMatch';
   static const terminalCount = 'terminals.count';
   static const terminalColumnTerminal = 'terminal.column.terminal';
   static const terminalColumnType = 'terminal.column.type';
@@ -841,12 +839,23 @@ abstract final class AdminTextKeys {
   static const terminalConnect = 'terminal.connect';
   static const terminalDeactivate = 'terminal.deactivate';
   static const terminalReactivate = 'terminal.reactivate';
-  static const terminalRemove = 'terminal.remove';
   static const terminalDeactivateTitle = 'terminal.deactivate.title';
   static const terminalDeactivateText = 'terminal.deactivate.text';
-  static const terminalRemoveTitle = 'terminal.remove.title';
-  static const terminalRemoveText = 'terminal.remove.text';
   static const terminalChangeFailed = 'terminal.changeFailed';
+  // Terminals V4 (Figma 1545:111 … 1545:955).
+  static const terminalsFilterAll = 'terminals.filter.all';
+  static const terminalsEmptyTitle = 'terminals.empty.title';
+  static const terminalsEmptyText = 'terminals.empty.text';
+  static const terminalsNoMatchTitle = 'terminals.noMatch.title';
+  static const terminalsNoMatchText = 'terminals.noMatch.text';
+  static const terminalsNoInactiveTitle = 'terminals.noInactive.title';
+  static const terminalsNoInactiveText = 'terminals.noInactive.text';
+  static const terminalsNoActiveTitle = 'terminals.noActive.title';
+  static const terminalsNoActiveText = 'terminals.noActive.text';
+  static const terminalInactiveNote = 'terminal.inactive.note';
+  static const terminalSaved = 'terminal.saved';
+  static const terminalDeactivated = 'terminal.deactivated';
+  static const terminalReactivated = 'terminal.reactivated';
 
   // Projects (Figma 647:1192)
   static const projectsTitle = 'project.list.title';

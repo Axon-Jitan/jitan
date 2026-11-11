@@ -23,6 +23,9 @@ class TerminalsFailed extends TerminalsState {
   final ApiClientException failure;
 }
 
+/// The pills above the table; `null` is All.
+enum TerminalStatusFilter { active, inactive }
+
 /// Loads the terminals and filters them for display. Holds no terminal rules:
 /// the server validates every change and says each one's status.
 class TerminalsController extends ChangeNotifier {
@@ -34,7 +37,13 @@ class TerminalsController extends ChangeNotifier {
   TerminalsState get state => _state;
 
   String _search = '';
+  TerminalStatusFilter? _status;
   bool _disposed = false;
+
+  /// What HR searched for ('' = nothing).
+  String get search => _search;
+
+  TerminalStatusFilter? get status => _status;
 
   List<Terminal> get all => switch (_state) {
     TerminalsLoaded(:final terminals) => terminals,
@@ -47,6 +56,9 @@ class TerminalsController extends ChangeNotifier {
   ];
 
   bool _matches(Terminal terminal) {
+    final inactive = terminal.status == TerminalStatus.inactive;
+    if (_status == TerminalStatusFilter.active && inactive) return false;
+    if (_status == TerminalStatusFilter.inactive && !inactive) return false;
     if (_search.isEmpty) return true;
     final text = '${terminal.name} ${terminal.serialNumber}';
     return text.toLowerCase().contains(_search.toLowerCase());
@@ -63,6 +75,11 @@ class TerminalsController extends ChangeNotifier {
 
   void updateSearch(String text) {
     _search = text.trim();
+    _notify();
+  }
+
+  void updateStatus(TerminalStatusFilter? status) {
+    _status = status;
     _notify();
   }
 

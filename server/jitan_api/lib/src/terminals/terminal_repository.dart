@@ -170,25 +170,6 @@ class TerminalRepository {
     }
   }
 
-  /// It leaves the list, and its tablet's secret is forgotten.
-  Future<void> remove(SqlExecutor tx, TerminalRow terminal) async {
-    await tx.execute('UPDATE tblDevice SET deviceActive = 0, deviceMFD = 1 WHERE deviceID = :id', {'id': terminal.id});
-    await tx.execute(
-      'UPDATE tblDeviceDeviceType SET deviceDeviceTypeActive = 0, deviceDeviceTypeMFD = 1 WHERE deviceID = :id',
-      {'id': terminal.id},
-    );
-    await tx.execute(
-      'UPDATE tblUserDevice SET userDeviceActive = 0, userDeviceMFD = 1 WHERE deviceID = :id',
-      {'id': terminal.id},
-    );
-    if (terminal.kioskUserId case final kiosk?) {
-      await tx.execute(
-        'UPDATE tblUser SET userActive = 0, userMFD = 1, userPassword = NULL WHERE userID = :id AND userKioskMode = 1',
-        {'id': kiosk},
-      );
-    }
-  }
-
   /// Connects a tablet; any tablet connected before is cut off.
   Future<void> setSecret(SqlExecutor tx, int kioskUserId, String secretHash) async => tx.execute(
     'UPDATE tblUser SET userPassword = :hash WHERE userID = :id AND userKioskMode = 1',

@@ -155,26 +155,11 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
     CompaniesFailed(:final failure) => _centered(_error(context, failure)),
     // Nothing yet: calm, on the page itself, with the one thing to do.
     CompaniesLoaded(companies: [], search: '') => SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 160),
-        child: Column(
-          spacing: 10,
-          children: [
-            Text(context.t(AdminTextKeys.companyEmptyTitle), style: JitanTextStyles.modalTitle.copyWith(fontSize: 22)),
-            Text(
-              context.t(AdminTextKeys.companyEmptyMessage),
-              textAlign: TextAlign.center,
-              style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
-            ),
-            const SizedBox(height: 8),
-            JitanPrimaryButton(
-              label: context.t(AdminTextKeys.companyAdd),
-              icon: Icons.add,
-              height: JitanDimensions.controlHeight,
-              onPressed: _add,
-            ),
-          ],
-        ),
+      child: JitanEmptyPage(
+        title: context.t(AdminTextKeys.companyEmptyTitle),
+        message: context.t(AdminTextKeys.companyEmptyMessage),
+        actionLabel: context.t(AdminTextKeys.companyAdd),
+        onAction: _add,
       ),
     ),
     CompaniesLoaded(companies: [], :final search) => _centered(

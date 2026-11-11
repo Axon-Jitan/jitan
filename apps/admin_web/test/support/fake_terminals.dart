@@ -67,22 +67,18 @@ class FakeTerminalsApi implements TerminalsApi {
   @override
   Future<Terminal> deactivate(Terminal terminal) async {
     calls.add('deactivate ${terminal.id}');
-    return terminal;
+    return _replace(officeTerminal(id: terminal.id, name: terminal.name, status: TerminalStatus.inactive));
   }
 
   @override
   Future<Terminal> reactivate(Terminal terminal) async {
     calls.add('reactivate ${terminal.id}');
-    return officeTerminal(id: terminal.id, name: terminal.name);
+    return _replace(officeTerminal(id: terminal.id, name: terminal.name));
   }
 
-  @override
-  Future<void> remove(Terminal terminal) async {
-    calls.add('remove ${terminal.id}');
-    terminals = [
-      for (final t in terminals)
-        if (t.id != terminal.id) t,
-    ];
+  Terminal _replace(Terminal changed) {
+    terminals = [for (final t in terminals) t.id == changed.id ? changed : t];
+    return changed;
   }
 
   @override

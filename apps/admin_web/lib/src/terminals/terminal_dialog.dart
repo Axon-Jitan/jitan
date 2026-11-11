@@ -16,7 +16,8 @@ Future<Terminal?> showTerminalDialog(BuildContext context, {required TerminalsAp
     );
 
 /// Figma `HR / Terminals V3 — Add terminal` (`1507:126`), vehicle (`1507:280`)
-/// and Edit (`1507:595`): the kind, a name and the tablet's serial number. A
+/// and Edit (`1545:687`, Save waits for a change): the kind, a name and the
+/// tablet's serial number. A
 /// terminal is shared by every company, so it has no company; a van's number
 /// plate goes in its name.
 class _TerminalDialog extends StatefulWidget {
@@ -42,11 +43,22 @@ class _TerminalDialogState extends State<_TerminalDialog> {
   bool get _editing => widget.terminal != null;
   bool get _isVehicle => _options?.vehicleTypeIds.contains(_typeId) ?? false;
 
+  /// Something differs from the stored terminal (always true when adding).
+  bool get _changed {
+    final t = widget.terminal;
+    if (t == null) return true;
+    return _name.text.trim() != t.name.trim() || _serial.text.trim() != t.serialNumber.trim() || _typeId != t.type.id;
+  }
+
   @override
   void initState() {
     super.initState();
+    _name.addListener(_refresh);
+    _serial.addListener(_refresh);
     _load();
   }
+
+  void _refresh() => setState(() {});
 
   @override
   void dispose() {
@@ -170,7 +182,7 @@ class _TerminalDialogState extends State<_TerminalDialog> {
         JitanPrimaryButton(
           label: context.t(_editing ? AdminTextKeys.terminalSave : AdminTextKeys.terminalContinue),
           busy: _busy,
-          onPressed: options == null || _busy ? null : _save,
+          onPressed: options == null || _busy || !_changed ? null : _save,
         ),
       ],
     );

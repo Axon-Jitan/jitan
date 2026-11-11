@@ -39,10 +39,6 @@ class TerminalsApi {
 
   Future<Terminal> reactivate(Terminal terminal) async => _action(terminal, 'reactivate');
 
-  Future<void> remove(Terminal terminal) async {
-    await _transport.postJson('terminals/${terminal.id}/remove', const {});
-  }
-
   /// A new temporary QR to connect a tablet; the previous one stops working.
   Future<TemporaryQrResponse> pairingQr(Terminal terminal) async {
     final json = await _transport.postJson('terminals/${terminal.id}/pairing-qr', const {});

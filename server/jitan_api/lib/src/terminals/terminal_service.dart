@@ -108,16 +108,6 @@ class TerminalService {
     return find(terminalId);
   }
 
-  /// It leaves the list and its tablet is cut off; registrations stay.
-  Future<void> remove(int actorUserId, int terminalId) async {
-    await _transactions.transaction((tx) async {
-      if (!await _terminals.lock(tx, terminalId)) throw _notFound();
-      await _terminals.remove(tx, await _of(terminalId, tx));
-      await _record(tx, AuditEventType.terminalRemoved, actorUserId, terminalId);
-    });
-    _presence.forget(terminalId);
-  }
-
   /// A temporary QR that connects a tablet to this terminal (GAP-04's rules);
   /// a new one invalidates the previous one. Temporary QRs carry one id: for
   /// this purpose it is the terminal's (`deviceID`), not a user's.

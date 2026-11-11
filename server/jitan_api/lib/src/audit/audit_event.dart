@@ -147,6 +147,8 @@ enum AuditEventType {
 
   terminalDeactivated('terminal.deactivated'),
   terminalReactivated('terminal.reactivated'),
+  /// No longer written (Remove became Deactivate, 2026-11-11); kept for
+  /// the audit rows that have it.
   terminalRemoved('terminal.removed'),
 
   /// HR/Admin added an entry a fixed list was missing (the Lists page).
