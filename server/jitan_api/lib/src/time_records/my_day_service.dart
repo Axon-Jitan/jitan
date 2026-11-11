@@ -1,5 +1,6 @@
 import 'package:jitan_models/jitan_models.dart';
 
+import '../activities/activity_minutes.dart';
 import '../http/api_exception.dart';
 import '../time_registration/workplace_clock.dart';
 import 'time_record_repository.dart';
@@ -89,6 +90,23 @@ class MyDayService {
     final worked = finish.difference(start).inMinutes -
         (day.awayMinutes > 0 ? day.awayMinutes : breakMinutes) -
         day.transportMinutes;
+    return worked < 0 ? 0 : worked;
+  }
+
+  /// Worked so far on a day still running (status working), up to [now]:
+  /// from the rounded start, without the part of the break already passed
+  /// (or the time away), finished travel and a trip still under way (D13,
+  /// D34, D46): what the phone's Home shows. Calculated when asked, never
+  /// stored; once the day is finished [registeredMinutes] counts instead.
+  /// `null` for any other day.
+  static int? workedSoFar(TimeRecordDay day, DayPlan? plan, DateTime now, WorkplaceClock clock) {
+    if (day.status != TimeRecordStatus.working) return null;
+    final start = day.start?.rounded ?? day.start?.actual;
+    if (start == null) return null;
+    final end = day.travellingSince ?? now;
+    if (!end.isAfter(start)) return 0;
+    final left = day.awayMinutes > 0 ? ActivityMinutes.timeAway(day) : ActivityMinutes.breakOf(plan);
+    final worked = ActivityMinutes.between(clock, start, end, left) - day.transportMinutes;
     return worked < 0 ? 0 : worked;
   }
 

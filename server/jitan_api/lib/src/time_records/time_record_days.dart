@@ -230,6 +230,7 @@ abstract final class TimeRecordDays {
       companyIds: employee.companyIds,
       awayMinutes: _awayMinutes(moments),
       transportMinutes: _transportMinutes(activities, moments),
+      travellingSince: _travellingSince(activities, moments),
     );
   }
 
@@ -252,6 +253,23 @@ abstract final class TimeRecordDays {
       if (end != null) minutes += end.difference(row.at).inMinutes;
     }
     return minutes;
+  }
+
+  /// The start of the trip still under way: transports in a row at the end of
+  /// the day's activities, with no finish after them.
+  static DateTime? _travellingSince(List<RegistrationRow> activities, List<_Moment> moments) {
+    final rows = [
+      for (final row in activities)
+        if (row.active) row,
+    ]..sort((a, b) => a.at.compareTo(b.at));
+    if (rows.isEmpty || rows.last.typeName != _transportType) return null;
+    var first = rows.length - 1;
+    while (first > 0 && rows[first - 1].typeName == _transportType) {
+      first--;
+    }
+    final since = rows[first].at;
+    final finished = moments.any((m) => m.boundary == RegistrationBoundary.finish && m.at.isAfter(rows.last.at));
+    return finished ? null : since;
   }
 
   /// Every start and finish that counts, by time; a finish first at the same

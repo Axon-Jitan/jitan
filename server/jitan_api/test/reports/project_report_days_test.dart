@@ -78,6 +78,7 @@ List<ProjectReportProject> _build({
   required List<TimeRecordDay> days,
   required Map<int, List<ActivityRow>> activities,
   Map<Trip, int?> metres = const {},
+  DateTime? now,
 }) => ProjectReportDays.build(
   employees: employees,
   days: days,
@@ -86,6 +87,7 @@ List<ProjectReportProject> _build({
   projects: _projects,
   metres: metres,
   clock: _clock,
+  now: now ?? DateTime.utc(2026, 11, 30),
 );
 
 void main() {
@@ -159,6 +161,20 @@ void main() {
     );
 
     expect((report.single.trips, report.single.distanceMetres, report.single.tripsWithoutDistance), (1, 0, 1));
+  });
+
+  test('today, still working: counts up to now, without the part of the break passed', () {
+    final report = _build(
+      days: [
+        TimeRecordDay(employeeId: _hanne.id, employeeCode: _hanne.code, date: _monday, status: TimeRecordStatus.working, start: _time('08:00')),
+      ],
+      activities: {
+        _hanne.id: [_row('Client on site', '08:00', _towers)],
+      },
+      now: _at('13:00'),
+    );
+
+    expect(report.single.workedMinutes, 5 * 60 - 30);
   });
 
   test('a day still waiting (missing finish) is left out until it is fixed', () {

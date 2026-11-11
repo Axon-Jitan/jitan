@@ -90,7 +90,9 @@ class ReportService {
         final day = byDate[date];
         if (day?.status != TimeRecordStatus.nonWork) planned += WeekPlans.plannedMinutes(plan) ?? 0;
         if (day == null) continue;
-        final minutes = MyDayService.registeredMinutes(day, plan?.breakMinutes ?? 0);
+        // A day still running counts so far; planned counts the whole day.
+        final minutes = MyDayService.registeredMinutes(day, plan?.breakMinutes ?? 0) ??
+            MyDayService.workedSoFar(day, plan, _now().toUtc(), _clock);
         registered += minutes ?? 0;
         travel += day.transportMinutes;
         if (_toReview.contains(day.status)) toReview++;

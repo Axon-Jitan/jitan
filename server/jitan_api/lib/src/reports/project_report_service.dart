@@ -30,7 +30,8 @@ class ProjectReportService {
     required this._kilometres,
     required this._executor,
     required this._clock,
-  });
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
 
   final TimeRecordService _days;
   final WeekPlans _plans;
@@ -42,6 +43,7 @@ class ProjectReportService {
   final TripKilometres _kilometres;
   final SqlExecutor _executor;
   final WorkplaceClock _clock;
+  final DateTime Function() _now;
 
   /// The period [from]–[to] (`yyyy-MM-dd`, both included). 400 for a
   /// missing, malformed, reversed or too long period.
@@ -88,6 +90,7 @@ class ProjectReportService {
         projects: projects,
         metres: await _kilometres.metresOf(trips),
         clock: _clock,
+        now: _now().toUtc(),
       ),
     );
   }

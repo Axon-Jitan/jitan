@@ -1,5 +1,6 @@
 import 'package:jitan_models/jitan_models.dart';
 
+import '../time_records/week_plans.dart';
 import '../time_registration/workplace_clock.dart';
 
 /// A stretch of a day in workplace minutes since midnight: from, to.
@@ -39,6 +40,13 @@ abstract final class ActivityMinutes {
       if (overlapEnd > overlapStart) minutes -= overlapEnd - overlapStart;
     }
     return minutes < 0 ? 0 : minutes;
+  }
+
+  /// The schedule's break, as a stretch of the day; none without one.
+  static List<MinuteSpan> breakOf(DayPlan? plan) {
+    final from = plan?.breakStart, to = plan?.breakFinish;
+    if (from == null || to == null) return const [];
+    return [(minuteOf(from), minuteOf(to))];
   }
 
   /// `HH:mm` → minutes since midnight.

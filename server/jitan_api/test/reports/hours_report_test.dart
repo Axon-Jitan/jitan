@@ -71,6 +71,22 @@ void main() {
     expect(emma.differenceMinutes, -6 * 480);
   });
 
+  test('today, still working: worked so far counts; planned has the whole day', () async {
+    // Thursday 22 October, 13:00 in Brussels; Emma started at 08:00.
+    final app = _app()..now = DateTime.utc(2026, 10, 22, 11);
+    app.timeRecords.rows = [
+      _row('Start – actual – Manual', DateTime.utc(2026, 10, 22, 6)),
+      _row('Start – rounded', DateTime.utc(2026, 10, 22, 6)),
+    ];
+
+    final emma = await _emma(app);
+
+    expect(emma.registeredMinutes, 5 * 60 - 30, reason: '08:00–13:00 without the break');
+    expect(emma.plannedMinutes, 7 * 480, reason: 'Thursday counts whole');
+    expect(emma.days.single.registeredMinutes, 5 * 60 - 30);
+    expect(emma.days.single.status, TimeRecordStatus.working);
+  });
+
   test('the month of a past month counts every planned day', () async {
     final app = _app()..now = DateTime.utc(2026, 11, 20, 10);
 

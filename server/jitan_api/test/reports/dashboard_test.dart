@@ -107,13 +107,14 @@ void main() {
     expect((d.employees, d.notStarted), (1, 1));
   });
 
-  test('hours: only up to today, each day with its plan; a running day has no hours yet', () async {
+  test('hours: only up to today, each day with its plan; a running day counts so far', () async {
     final app = _app();
     app.timeRecords.rows = [..._start(11, 19, 8), ..._finish(11, 19, 16, 30), ..._start(11, 22, 8)];
 
     final d = await _dashboard(app, from: '2026-10-19', to: '2026-10-25');
 
-    expect(d.registeredMinutes, 480);
+    // Monday 8h; today (Thursday, now 13:00) 08:00–13:00 without the break.
+    expect(d.registeredMinutes, 480 + 5 * 60 - 30);
     expect(d.plannedMinutes, 6 * 480, reason: 'three employees, Monday and Thursday, none of the days to come');
     expect(d.buckets.first.registeredMinutes, 480);
     expect(d.buckets, hasLength(7));

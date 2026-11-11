@@ -268,6 +268,7 @@ class TimeRecordDay {
     this.companyIds = const [],
     this.awayMinutes = 0,
     this.transportMinutes = 0,
+    this.travellingSince,
     this.trips = 0,
     this.distanceMetres = 0,
     this.tripsWithoutDistance = 0,
@@ -288,6 +289,7 @@ class TimeRecordDay {
         companyIds: json['companyIds'] == null ? const [] : json.readIntList('companyIds'),
         awayMinutes: json.readOptionalInt('awayMinutes') ?? 0,
         transportMinutes: json.readOptionalInt('transportMinutes') ?? 0,
+        travellingSince: json.readOptionalDateTime('travellingSince')?.toUtc(),
         trips: json.readOptionalInt('trips') ?? 0,
         distanceMetres: json.readOptionalInt('distanceMetres') ?? 0,
         tripsWithoutDistance: json.readOptionalInt('tripsWithoutDistance') ?? 0,
@@ -322,6 +324,11 @@ class TimeRecordDay {
   /// time and never part of it: payroll decides what travel is worth (D46).
   final int transportMinutes;
 
+  /// When the trip still under way started (UTC); `null` when not
+  /// travelling. Its time is not worked either, so a running total stands
+  /// still meanwhile (D46).
+  final DateTime? travellingSince;
+
   /// The day's trips and their normal route (D23), calculated when asked.
   /// [tripsWithoutDistance]: trips whose place or route isn't known, left out
   /// of [distanceMetres].
@@ -346,6 +353,7 @@ class TimeRecordDay {
         companyIds: companyIds,
         awayMinutes: awayMinutes,
         transportMinutes: transportMinutes,
+        travellingSince: travellingSince,
         trips: trips ?? this.trips,
         distanceMetres: distanceMetres ?? this.distanceMetres,
         tripsWithoutDistance: tripsWithoutDistance ?? this.tripsWithoutDistance,
@@ -366,6 +374,7 @@ class TimeRecordDay {
         if (companyIds.isNotEmpty) 'companyIds': companyIds,
         if (awayMinutes > 0) 'awayMinutes': awayMinutes,
         if (transportMinutes > 0) 'transportMinutes': transportMinutes,
+        if (travellingSince case final at?) 'travellingSince': at.toUtc().toIso8601String(),
         if (trips > 0) 'trips': trips,
         if (distanceMetres > 0) 'distanceMetres': distanceMetres,
         if (tripsWithoutDistance > 0) 'tripsWithoutDistance': tripsWithoutDistance,

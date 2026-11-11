@@ -19,7 +19,8 @@ import '../time_registration/workplace_clock.dart';
 ///   next activity or the finish, as in the hours report, and is never part
 ///   of Worked. Its distance is the normal route (D23).
 /// - Only days the hours report counts: finished, with nothing waiting for
-///   HR. Days to review stay out until they are fixed.
+///   HR, and today while it runs (up to now). Days to review stay out until
+///   they are fixed.
 abstract final class ProjectReportDays {
   static List<ProjectReportProject> build({
     required List<EmployeeSummary> employees,
@@ -29,6 +30,7 @@ abstract final class ProjectReportDays {
     required Map<int, ProjectSummary> projects,
     required Map<Trip, int?> metres,
     required WorkplaceClock clock,
+    required DateTime now,
   }) {
     final totals = <int, Map<int, _Totals>>{};
     _Totals of(int projectId, int employeeId) =>
@@ -44,9 +46,14 @@ abstract final class ProjectReportDays {
       for (final MapEntry(key: date, value: rows) in byDate.entries) {
         final day = dayOf[(employee.id, date)];
         final plan = plans[employee.id]?[date.weekday];
-        if (day == null || MyDayService.registeredMinutes(day, plan?.breakMinutes ?? 0) == null) continue;
-        final start = day.start!.rounded!, finish = day.finish!.rounded!;
-        final left = day.awayMinutes > 0 ? ActivityMinutes.timeAway(day) : _breakOf(plan);
+        if (day == null) continue;
+        // A day still running counts up to now, as the hours report does.
+        final running = MyDayService.workedSoFar(day, plan, now, clock) != null;
+        if (!running && MyDayService.registeredMinutes(day, plan?.breakMinutes ?? 0) == null) continue;
+        final start = day.start!.rounded ?? day.start!.actual;
+        final finish = running ? now : day.finish!.rounded!;
+        final finishedAt = running ? now : day.finish!.actual;
+        final left = day.awayMinutes > 0 ? ActivityMinutes.timeAway(day) : ActivityMinutes.breakOf(plan);
         rows.sort((a, b) => a.at.compareTo(b.at));
         bool isTransport(int i) => rows[i].typeName == ActivityRepository.transportType;
 
@@ -70,7 +77,7 @@ abstract final class ProjectReportDays {
           if (!isTransport(i) || (i > 0 && isTransport(i - 1))) continue;
           var minutes = 0;
           for (var k = i; k < rows.length && isTransport(k); k++) {
-            final end = k + 1 < rows.length ? rows[k + 1].at : day.finish!.actual;
+            final end = k + 1 < rows.length ? rows[k + 1].at : finishedAt;
             if (end.isAfter(rows[k].at)) minutes += end.difference(rows[k].at).inMinutes;
           }
           final route = trips[trip++];
@@ -118,13 +125,6 @@ abstract final class ProjectReportDays {
           : a.project.fullName.compareTo(b.project.fullName),
     );
     return report;
-  }
-
-  /// The schedule's break, as a stretch of the day; none without one.
-  static List<MinuteSpan> _breakOf(DayPlan? plan) {
-    final from = plan?.breakStart, to = plan?.breakFinish;
-    if (from == null || to == null) return const [];
-    return [(ActivityMinutes.minuteOf(from), ActivityMinutes.minuteOf(to))];
   }
 
   static DateTime _later(DateTime a, DateTime b) => a.isAfter(b) ? a : b;

@@ -122,7 +122,10 @@ class DashboardService {
         final day = byEmployeeDate[(employee.id, date)];
         if (day?.status != TimeRecordStatus.nonWork) plannedIn[bucket] += WeekPlans.plannedMinutes(plan) ?? 0;
         if (day == null) continue;
-        registeredIn[bucket] += MyDayService.registeredMinutes(day, plan?.breakMinutes ?? 0) ?? 0;
+        // A day still running counts so far; planned counts the whole day.
+        registeredIn[bucket] += MyDayService.registeredMinutes(day, plan?.breakMinutes ?? 0) ??
+            MyDayService.workedSoFar(day, plan, _now().toUtc(), _clock) ??
+            0;
         travel += day.transportMinutes;
         if (_toReview.contains(day.status)) {
           toReview++;
