@@ -246,7 +246,9 @@ to, so an employee always keeps at least one company. Removing someone from Jita
 altogether is not part of assignment management (that would be disabling the employee).
 
 ## PRODUCT-CLARIFY-VAN-TRIP: A van trip with several people counted once
-Status: `OPEN` (2026-11-11)
+Status: `PARKED` (product owner, 2026-11-11): not in this version. IT: "we only need distance
+and time between locations" (D46), so every person's trip counts. Revisit only if the
+kilometres are later used per van (invoicing or vehicle costs).
 
 D24 says the project report counts "each van trip once", and the approved Figma footer
 (`1515:2`) says "A van trip with several people on board counts once." Jitan can't tell

@@ -374,8 +374,8 @@ of every company the viewer may see (each checked, §28a.5); a project has no co
 - **Travel and trips**: a trip belongs to the project it arrives at, else to the one it leaves
   from; time as in the hours report, distance the normal route (D23), never part of Worked.
 - Export: one row per project (Excel or CSV).
-- Open: a van trip with several people counts once (PRODUCT-CLARIFY-VAN-TRIP). Until then every
-  person's trip counts.
+- Every person's trip counts. Counting a shared van trip once is parked (PRODUCT-CLARIFY-VAN-TRIP,
+  product owner 2026-11-11, following IT).
 
 ## PROJ-01: Projects as address rows (D44) · `DONE` 2026-11-10
 
