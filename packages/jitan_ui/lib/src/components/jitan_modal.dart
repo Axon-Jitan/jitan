@@ -143,20 +143,7 @@ class JitanModal extends StatelessWidget {
         overflowDirection: VerticalDirection.up,
         spacing: 12,
         overflowSpacing: 10,
-        // The actions on the right stay together, away from those on the left.
-        children: leadingActions.isEmpty || actions.length < 2
-            ? [...leadingActions, ...actions]
-            : [
-                ...leadingActions,
-                OverflowBar(
-                  alignment: MainAxisAlignment.end,
-                  overflowAlignment: OverflowBarAlignment.end,
-                  overflowDirection: VerticalDirection.up,
-                  spacing: 12,
-                  overflowSpacing: 10,
-                  children: actions,
-                ),
-              ],
+        children: [...leadingActions, ...actions],
       );
     }
     return _footerRowWithNote();

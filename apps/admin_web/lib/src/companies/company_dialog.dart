@@ -186,9 +186,16 @@ class _CompanyDialogState extends State<CompanyDialog> {
           ),
         ),
       ],
+      // Close and Save together on the right, Deactivate alone on the left.
       actions: [
-        JitanSecondaryButton(label: context.t(AdminTextKeys.companyClose), onPressed: () => Navigator.of(context).pop()),
-        JitanPrimaryButton(label: context.t(AdminTextKeys.companySave), busy: _busy, onPressed: _ready ? _save : null),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 12,
+          children: [
+            JitanSecondaryButton(label: context.t(AdminTextKeys.companyClose), onPressed: () => Navigator.of(context).pop()),
+            JitanPrimaryButton(label: context.t(AdminTextKeys.companySave), busy: _busy, onPressed: _ready ? _save : null),
+          ],
+        ),
       ],
     );
   }
