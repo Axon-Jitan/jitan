@@ -14,18 +14,22 @@ class JitanPillSwitch<T> extends StatelessWidget {
   final T value;
   final ValueChanged<T> onChanged;
 
+  /// Narrower than its choices (a phone), the track scrolls sideways.
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(11)),
-    child: Padding(
-      padding: const EdgeInsets.all(3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 2,
-        children: [
-          for (final (option, label) in options)
-            _Pill(label: label, selected: option == value, onTap: () => onChanged(option)),
-        ],
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: DecoratedBox(
+      decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(11)),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 2,
+          children: [
+            for (final (option, label) in options)
+              _Pill(label: label, selected: option == value, onTap: () => onChanged(option)),
+          ],
+        ),
       ),
     ),
   );

@@ -20,6 +20,7 @@ class JitanSliverTable extends StatelessWidget {
     this.minWidth = 760,
     this.rowColor,
     this.onRowTap,
+    this.hoverChevron = false,
   });
 
   final List<JitanTableColumn> columns;
@@ -36,6 +37,9 @@ class JitanSliverTable extends StatelessWidget {
   /// As [JitanDataTable.onRowTap]: rows open something (e.g. a group's
   /// page), with a hover highlight.
   final ValueChanged<int>? onRowTap;
+
+  /// With [onRowTap]: a "›" at the end of the hovered row.
+  final bool hoverChevron;
 
   static const _radius = Radius.circular(JitanDimensions.tableCardRadius);
 
@@ -73,7 +77,7 @@ class JitanSliverTable extends StatelessWidget {
                 color: rowColor?.call(i) ?? (i.isOdd ? JitanColors.tableStripe : JitanColors.surface),
                 child: onRowTap == null
                     ? JitanTableRow(columns: columns, cells: cells(i))
-                    : JitanTappableRow(onTap: () => onRowTap!(i), child: JitanTableRow(columns: columns, cells: cells(i))),
+                    : JitanTappableRow(onTap: () => onRowTap!(i), hoverChevron: hoverChevron, child: JitanTableRow(columns: columns, cells: cells(i))),
               );
               // Without a footer the last row closes the card.
               return footer == null && i == rowCount - 1

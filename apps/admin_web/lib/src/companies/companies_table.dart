@@ -40,6 +40,7 @@ class CompaniesTable extends StatelessWidget {
     final t = TranslationScope.of(context);
     return JitanSliverTable(
       onRowTap: (i) => onOpen(companies[i]),
+      hoverChevron: true,
       rowColor: (i) => companies[i].id == fresh ? JitanColors.successSurface : null,
       columns: [
         JitanTableColumn(label: t.t(AdminTextKeys.companyColumnName), flex: _flexCompany),

@@ -106,19 +106,52 @@ class JitanDataTable extends StatelessWidget {
   }
 }
 
-/// A table row that opens something: hover highlight, keyboard focusable.
-class JitanTappableRow extends StatelessWidget {
-  const JitanTappableRow({super.key, required this.onTap, required this.child});
+/// A table row that opens something: hover highlight, keyboard focusable,
+/// and with [hoverChevron] a "›" at the end while hovered (Figma `1524:2`,
+/// `1531:2`) for tables with no chevron of their own.
+class JitanTappableRow extends StatefulWidget {
+  const JitanTappableRow({super.key, required this.onTap, required this.child, this.hoverChevron = false});
 
   final VoidCallback onTap;
   final Widget child;
+  final bool hoverChevron;
+
+  @override
+  State<JitanTappableRow> createState() => _JitanTappableRowState();
+}
+
+class _JitanTappableRowState extends State<JitanTappableRow> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
         child: Material(
           type: MaterialType.transparency,
-          child: InkWell(onTap: onTap, hoverColor: JitanColors.tableHover, child: child),
+          child: InkWell(
+            onTap: widget.onTap,
+            onHover: widget.hoverChevron ? (hovered) => setState(() => _hovered = hovered) : null,
+            hoverColor: JitanColors.tableHover,
+            child: !widget.hoverChevron
+                ? widget.child
+                : Stack(
+                    children: [
+                      widget.child,
+                      Positioned(
+                        right: 14,
+                        top: 0,
+                        bottom: 0,
+                        child: IgnorePointer(
+                          child: AnimatedOpacity(
+                            opacity: _hovered ? 1 : 0,
+                            duration: const Duration(milliseconds: 120),
+                            child: const Icon(Icons.chevron_right, size: 18, color: JitanColors.inkMuted),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
         ),
       );
 }
