@@ -480,6 +480,26 @@ void main() {
       _fitsTheWindow(tester, width, 'Reset account access?');
     });
 
+    testWidgets('Companies, groups and access, every tab, at $width px', (tester) async {
+      final employees = FakeEmployeesApi();
+      await _pump(tester, width, _detailsOpener(employees));
+      await _openEmployee(tester, employees);
+      await _settle(tester);
+      employees.detailsSucceed(_activated);
+      await _settle(tester);
+      await tester.ensureVisible(find.text('Companies, groups and access'));
+      await tester.tap(find.text('Companies, groups and access'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Companies, groups and access');
+      for (final tab in ['Groups', 'Language', 'Access']) {
+        await tester.ensureVisible(find.text(tab));
+        await tester.pump();
+        await tester.tap(find.text(tab));
+        await _settle(tester);
+        _fitsTheWindow(tester, width, 'Companies, groups and access · $tab');
+      }
+    });
+
     testWidgets('Deactivate an employee at $width px', (tester) async {
       final employees = FakeEmployeesApi();
       await _pump(tester, width, _detailsOpener(employees));

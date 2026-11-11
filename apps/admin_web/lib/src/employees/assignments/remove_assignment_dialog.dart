@@ -15,22 +15,26 @@ Future<bool> showRemoveAssignmentDialog(
   required ManageAssignmentsController controller,
   required AssignmentTab tab,
   required AssignmentOption option,
+  required String name,
 }) async =>
     await showJitanModal<bool>(
       context,
-      builder: (_) => RemoveAssignmentDialog(controller: controller, tab: tab, option: option),
+      builder: (_) => RemoveAssignmentDialog(controller: controller, tab: tab, option: option, name: name),
     ) ??
     false;
 
-/// Figma "Remove Company confirmation" (`207:329`) and "Remove Group
-/// confirmation" (`207:441`): removal is a soft delete (Active = false,
-/// MFD = true), recorded in `tblEventLog`.
+/// Taking an employee out of a company or group, asked first in one plain
+/// sentence, like Deactivate (Figma `1534:366`). On the server it is a soft
+/// delete (Active = 0, MFD = 1), audited; adding it again brings it back.
 class RemoveAssignmentDialog extends StatefulWidget {
-  const RemoveAssignmentDialog({super.key, required this.controller, required this.tab, required this.option});
+  const RemoveAssignmentDialog({super.key, required this.controller, required this.tab, required this.option, required this.name});
 
   final ManageAssignmentsController controller;
   final AssignmentTab tab;
   final AssignmentOption option;
+
+  /// The employee's first name, for the question.
+  final String name;
 
   @override
   State<RemoveAssignmentDialog> createState() => _RemoveAssignmentDialogState();
@@ -62,47 +66,35 @@ class _RemoveAssignmentDialogState extends State<RemoveAssignmentDialog> {
   @override
   Widget build(BuildContext context) {
     final failure = _failure;
+    final args = {'name': widget.name, 'what': widget.option.name};
     return JitanModal(
-      width: 620,
-      title: context.t(_company ? AdminTextKeys.removeCompanyTitle : AdminTextKeys.removeGroupTitle),
-      subtitle: context.t(AdminTextKeys.removeAssignmentSubtitle),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-            decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(14)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(context.t(AdminTextKeys.removeAssignmentWhatHappens), style: JitanTextStyles.stateTitle.copyWith(fontSize: 16)),
-                const SizedBox(height: 14),
-                Text(
-                  context.t(_company ? AdminTextKeys.removeCompanySoftDelete : AdminTextKeys.removeGroupSoftDelete),
-                  style: JitanTextStyles.stateMessage.copyWith(fontSize: 15),
-                ),
-                const SizedBox(height: 10),
-                Text(context.t(AdminTextKeys.removeAssignmentAudit), style: JitanTextStyles.stateMessage.copyWith(fontSize: 15)),
-              ],
+      width: 440,
+      title: context.t(AdminTextKeys.removeAssignmentTitle, args: args),
+      subtitle: context.t(_company ? AdminTextKeys.removeCompanyText : AdminTextKeys.removeGroupText, args: args),
+      body: failure == null
+          ? const SizedBox.shrink()
+          : JitanInlineError(
+              title: context.t(failureTextKeysFor(failure).title),
+              message: context.t(failureTextKeysFor(failure).message),
             ),
-          ),
-          if (failure != null) ...[
-            const SizedBox(height: 16),
-            Builder(
-              builder: (context) {
-                final keys = failureTextKeysFor(failure);
-                return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
-              },
+      actions: [
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            JitanSecondaryButton(
+              label: context.t(CommonTextKeys.cancel),
+              onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+            ),
+            JitanPrimaryButton(
+              label: context.t(AdminTextKeys.removeAssignmentConfirm),
+              color: JitanColors.errorStrong,
+              busy: _busy,
+              onPressed: _busy ? null : _remove,
             ),
           ],
-        ],
-      ),
-      actions: [
-        JitanSecondaryButton(
-          label: context.t(CommonTextKeys.cancel),
-          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
         ),
-        JitanPrimaryButton(label: context.t(AdminTextKeys.removeAssignmentConfirm), busy: _busy, onPressed: _busy ? null : _remove),
       ],
     );
   }

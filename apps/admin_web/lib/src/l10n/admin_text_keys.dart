@@ -442,48 +442,27 @@ abstract final class AdminTextKeys {
   static const employeeResetAccessNotActivated = 'employee.resetAccess.notActivated';
 
   // Manage employee assignments (Figma Employees 04–07)
-  static const assignmentsAction = 'employee.assignments.action';
+  /// One line above each tab's list (Figma 1537:*). Argument: `{name}`.
+  static const assignmentsCompaniesNote = 'employee.assignments.companies.note';
+  static const assignmentsGroupsNote = 'employee.assignments.groups.note';
+  static const assignmentsLanguageNote = 'employee.assignments.language.note';
+  static const assignmentsAccessNote = 'employee.assignments.access.note';
   static const assignmentsTitle = 'employee.assignments.title';
 
-  /// Arguments: `{name}`, `{company}`, `{code}`.
-  static const assignmentsSubtitle = 'employee.assignments.subtitle';
   static const assignmentsLoading = 'employee.assignments.loading';
-  static const assignmentsFooter = 'employee.assignments.footer';
   static const assignmentsSave = 'employee.assignments.save';
   static const assignmentsSaved = 'employee.assignments.saved';
   static const assignmentsTabCompanies = 'employee.assignments.tab.companies';
-  static const assignmentsCompaniesTitle = 'employee.assignments.companies.title';
-  static const assignmentsCompaniesText = 'employee.assignments.companies.text';
-  static const assignmentsCompaniesCurrent = 'employee.assignments.companies.current';
-  static const assignmentsCompaniesAdditional = 'employee.assignments.companies.additional';
-  static const assignmentsCompaniesNoteTitle = 'employee.assignments.companies.note.title';
-  static const assignmentsCompaniesNoteText = 'employee.assignments.companies.note.text';
   static const assignmentsTabGroups = 'employee.assignments.tab.groups';
-  static const assignmentsGroupsTitle = 'employee.assignments.groups.title';
-  static const assignmentsGroupsText = 'employee.assignments.groups.text';
-  static const assignmentsGroupsAvailable = 'employee.assignments.groups.available';
-  static const assignmentsGroupsHint = 'employee.assignments.groups.hint';
-  static const assignmentsRemovable = 'employee.assignments.removable';
 
   // Remove Company / Group confirmation (Figma 207:329, 207:441)
-  static const removeCompanyTitle = 'employee.assignments.remove.company.title';
-  static const removeGroupTitle = 'employee.assignments.remove.group.title';
-  static const removeAssignmentSubtitle = 'employee.assignments.remove.subtitle';
-  static const removeAssignmentWhatHappens = 'employee.assignments.remove.whatHappens';
-  static const removeCompanySoftDelete = 'employee.assignments.remove.company.softDelete';
-  static const removeGroupSoftDelete = 'employee.assignments.remove.group.softDelete';
-  static const removeAssignmentAudit = 'employee.assignments.remove.audit';
+  /// Arguments: `{name}` (first name), `{what}` (the company or group).
+  static const removeAssignmentTitle = 'employee.assignments.remove.title';
+  static const removeCompanyText = 'employee.assignments.remove.company.text';
+  static const removeGroupText = 'employee.assignments.remove.group.text';
   static const removeAssignmentConfirm = 'employee.assignments.remove.confirm';
   static const assignmentsTabLanguage = 'employee.assignments.tab.language';
-  static const assignmentsLanguageTitle = 'employee.assignments.language.title';
-  static const assignmentsLanguageText = 'employee.assignments.language.text';
   static const assignmentsTabAccess = 'employee.assignments.tab.access';
-  static const assignmentsAccessTitle = 'employee.assignments.access.title';
-  static const assignmentsAccessText = 'employee.assignments.access.text';
-  static const assignmentsAccessPicker = 'employee.assignments.access.picker';
-  static const assignmentsAccessCurrent = 'employee.assignments.access.current';
-  static const assignmentsAccessNone = 'employee.assignments.access.none';
-  static const assignmentsAccessHint = 'employee.assignments.access.hint';
 
   // Schedules (Figma HR / Schedules 1317:2 to 1333:196)
   static const scheduleTitle = 'schedule.title';

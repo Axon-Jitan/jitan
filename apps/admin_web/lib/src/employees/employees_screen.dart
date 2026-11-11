@@ -137,7 +137,14 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     switch (choice) {
       case EmployeeChoice.assignments:
         final saved = context.t(AdminTextKeys.assignmentsSaved);
-        if (!await showManageAssignmentsDialog(context, api: widget.assignmentsApi, employee: details)) return;
+        if (!await showManageAssignmentsDialog(
+          context,
+          api: widget.assignmentsApi,
+          employee: details,
+          schedulesApi: widget.schedulesApi,
+        )) {
+          return;
+        }
         _say(saved);
       case EmployeeChoice.setUpQr:
         // After Reset account access the recovery QR applies; onboarding is

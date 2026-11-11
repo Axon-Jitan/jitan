@@ -94,192 +94,6 @@ void main() {
     });
   });
 
-  group('Manage employee assignments modal (Companies tab)', () {
-    Future<FakeEmployeeAssignmentsApi> open(WidgetTester tester, {FakeEmployeeAssignmentsApi? api}) async {
-      tester.view.physicalSize = const Size(1440, 1024);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final fake = api ?? _api();
-      await tester.pumpWidget(
-        TranslationScope(
-          translations: Translations.english(),
-          child: MaterialApp(
-            theme: JitanTheme.light(),
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => TextButton(
-                  onPressed: () => showManageAssignmentsDialog(context, api: fake, employee: _disan),
-                  child: const Text('open'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.tap(find.text('open'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      return fake;
-    }
-
-    testWidgets('matches the Figma content: title, employee line, tabs, options and note', (tester) async {
-      await open(tester);
-
-      expect(find.text('Manage employee assignments'), findsOneWidget);
-      expect(find.text('Disan Ssebowa  ·  Almeco  ·  Employee code SBW'), findsOneWidget);
-      expect(find.text('Company membership'), findsOneWidget);
-      expect(find.text('Choose the companies this employee belongs to. Multiple selections are allowed.'), findsOneWidget);
-      expect(find.text('Current company'), findsOneWidget);
-      expect(find.text('Additional company'), findsOneWidget);
-      expect(find.text('Inactive'), findsOneWidget, reason: 'an existing membership stays listed');
-      expect(find.text('Company-scoped access'), findsOneWidget);
-      expect(find.text('Changes take effect after saving.'), findsOneWidget);
-    });
-
-    testWidgets('Save is disabled until something is ticked; ticking PCA and saving adds a second company', (tester) async {
-      final api = await open(tester);
-      FilledButton save() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save changes'));
-      expect(save().onPressed, isNull);
-
-      await tester.tap(find.text('Almeco'));
-      await tester.pump();
-      expect(save().onPressed, isNull, reason: 'the current company is locked');
-
-      await tester.tap(find.text('PCA'));
-      await tester.pump();
-      await tester.tap(find.text('Save changes'));
-      await tester.pump();
-
-      final (companyId, userId, kind, ids) = api.adds.single;
-      expect((companyId, userId, kind), (1, 2, AssignmentKind.companies));
-      expect(ids, [2]);
-    });
-
-    testWidgets('a load failure shows a retryable error', (tester) async {
-      final api = _api()..loadFailure = const ApiClientException.network('offline');
-      await open(tester, api: api);
-
-      expect(find.text('Try again'), findsOneWidget);
-      api.loadFailure = null;
-      await tester.tap(find.text('Try again'));
-      await tester.pump();
-      expect(find.text('Almeco'), findsOneWidget);
-    });
-
-    testWidgets('a failed save shows an inline error and keeps the modal open', (tester) async {
-      final api = await open(tester, api: _api()..addFailure = const ApiClientException.network('offline'));
-
-      await tester.tap(find.text('Groups'));
-      await tester.pump();
-      await tester.tap(find.text('Blue collar'));
-      await tester.pump();
-      await tester.tap(find.text('Save changes'));
-      await tester.pump();
-
-      expect(api.adds, hasLength(1));
-      expect(find.text('Manage employee assignments'), findsOneWidget);
-      expect(find.byType(JitanInlineError), findsOneWidget);
-    });
-  });
-  group('Groups tab (universal groups)', () {
-    Future<FakeEmployeeAssignmentsApi> openGroups(WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1440, 1024);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final fake = _api();
-      await tester.pumpWidget(
-        TranslationScope(
-          translations: Translations.english(),
-          child: MaterialApp(
-            theme: JitanTheme.light(),
-            home: Scaffold(body: ManageAssignmentsDialog(api: fake, employee: _disan)),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.tap(find.text('Groups'));
-      await tester.pump();
-      return fake;
-    }
-
-    testWidgets('matches Figma: no company selector, available groups to add', (tester) async {
-      await openGroups(tester);
-
-      expect(find.text('Employee groups / type'), findsOneWidget);
-      expect(find.text('Groups are universal. Assigned groups apply across every company the employee belongs to.'), findsOneWidget);
-      expect(find.text('Not assigned · available to add'), findsOneWidget);
-      expect(find.text('Removing groups is temporarily unavailable'), findsNothing);
-      expect(find.byType(DropdownButton<int>), findsNothing);
-      expect(find.text('Almeco'), findsNothing, reason: 'no company list on the Groups tab');
-    });
-
-    testWidgets('ticking Blue collar and saving adds that group only', (tester) async {
-      final api = await openGroups(tester);
-
-      await tester.tap(find.text('White collar'));
-      await tester.tap(find.text('Blue collar'));
-      await tester.pump();
-      await tester.tap(find.text('Save changes'));
-      await tester.pump();
-
-      final (companyId, userId, kind, ids) = api.adds.single;
-      expect((companyId, userId, kind), (1, 2, AssignmentKind.groups));
-      expect(ids, [2]);
-    });
-  });
-  group('Access tab (credential groups)', () {
-    Future<FakeEmployeeAssignmentsApi> openAccess(WidgetTester tester, {FakeEmployeeAssignmentsApi? api}) async {
-      tester.view.physicalSize = const Size(1440, 1024);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final fake = api ?? _api();
-      await tester.pumpWidget(
-        TranslationScope(
-          translations: Translations.english(),
-          child: MaterialApp(
-            theme: JitanTheme.light(),
-            home: Scaffold(body: ManageAssignmentsDialog(api: fake, employee: _disan)),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.tap(find.text('Access'));
-      await tester.pump();
-      return fake;
-    }
-
-    testWidgets('matches Figma: picker, current assignments from the database, hint', (tester) async {
-      await openAccess(tester);
-
-      expect(find.text('Access and credential groups'), findsOneWidget);
-      expect(find.text('Select credential group'), findsOneWidget);
-      expect(find.text('Current assignments'), findsOneWidget);
-      expect(find.text('Employee'), findsOneWidget, reason: 'the current assignment, listed');
-      expect(find.text('Only authorized HR/Admin users can change access. The server enforces permissions.'), findsOneWidget);
-    });
-
-    testWidgets('no assignments shows the empty text', (tester) async {
-      final api = _api()..byKind[AssignmentKind.credentialGroups] = [_hrRole];
-      await openAccess(tester, api: api);
-
-      expect(find.text('Assigned credential groups will appear here.'), findsOneWidget);
-    });
-
-    testWidgets('picking HR and saving adds that credential group', (tester) async {
-      final api = await openAccess(tester);
-
-      await tester.tap(find.text('Select credential group'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('HR').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Save changes'));
-      await tester.pump();
-
-      final (companyId, userId, kind, ids) = api.adds.single;
-      expect((companyId, userId, kind), (1, 2, AssignmentKind.credentialGroups));
-      expect(ids, [2]);
-    });
-  });
 
   test('choose keeps one pending option and ignores assigned ones', () async {
     final c = ManageAssignmentsController(api: _api(), companyId: 1, userId: 2);
@@ -292,57 +106,6 @@ void main() {
     expect(access.pending, {2});
     c.choose(access, null);
     expect(c.hasChanges, isFalse);
-  });
-  group('Language tab (one preferred language)', () {
-    Future<FakeEmployeeAssignmentsApi> openLanguage(WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1440, 1024);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final fake = _api();
-      await tester.pumpWidget(
-        TranslationScope(
-          translations: Translations.english(),
-          child: MaterialApp(
-            theme: JitanTheme.light(),
-            home: Scaffold(body: ManageAssignmentsDialog(api: fake, employee: _disan)),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.tap(find.text('Language'));
-      await tester.pump();
-      return fake;
-    }
-
-    testWidgets('matches Figma: title, native names with the English name below, radio', (tester) async {
-      await openLanguage(tester);
-
-      expect(find.text('Preferred app language'), findsOneWidget);
-      expect(find.text('Choose the language used in the employee app and Employee Web.'), findsOneWidget);
-      expect(find.text('Nederlands'), findsOneWidget);
-      expect(find.text('Dutch'), findsOneWidget);
-      expect(
-        tester.widgetList<JitanOptionCard>(find.byType(JitanOptionCard)).map((c) => (c.title, c.selected, c.indicator)),
-        [('English', true, JitanOptionIndicator.radio), ('Nederlands', false, JitanOptionIndicator.radio)],
-      );
-    });
-
-    testWidgets('choosing Nederlands moves the selection and saving replaces the language', (tester) async {
-      final api = await openLanguage(tester);
-
-      await tester.tap(find.text('Nederlands'));
-      await tester.pump();
-      expect(
-        tester.widgetList<JitanOptionCard>(find.byType(JitanOptionCard)).map((c) => c.selected),
-        [false, true],
-        reason: 'one choice: English is no longer shown selected',
-      );
-      await tester.tap(find.text('Save changes'));
-      await tester.pump();
-
-      expect(api.languageChanges.single, (1, 2, 2));
-      expect(api.adds, isEmpty);
-    });
   });
 
   test('language: picking the current one again undoes the change', () async {
@@ -369,57 +132,213 @@ void main() {
     expect(c.hasChanges, isFalse);
   });
 
-  group('removing a company or group (soft delete, Figma 207:329 / 207:441)', () {
-    const removableWhite = AssignmentOption(id: 1, name: 'White collar', isActive: true, isAssigned: true, isRemovable: true);
-    const removablePca = AssignmentOption(id: 2, name: 'PCA', isActive: true, isAssigned: true, isRemovable: true);
-
-    Future<FakeEmployeeAssignmentsApi> openTab(WidgetTester tester, String tab) async {
-      tester.view.physicalSize = const Size(1440, 1200);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final fake = _api()
-        ..byKind[AssignmentKind.groups] = [_blue, removableWhite]
-        ..byKind[AssignmentKind.companies] = [_almeco, removablePca];
-      await tester.pumpWidget(
-        TranslationScope(
-          translations: Translations.english(),
-          child: MaterialApp(
-            theme: JitanTheme.light(),
-            home: Scaffold(body: ManageAssignmentsDialog(api: fake, employee: _disan)),
+  /// The pop-up, opened on [tab] (Figma 1537:*).
+  Future<FakeEmployeeAssignmentsApi> open(WidgetTester tester, {String tab = 'Companies', FakeEmployeeAssignmentsApi? api}) async {
+    tester.view.physicalSize = const Size(1440, 1024);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final fake = api ?? _api();
+    await tester.pumpWidget(
+      TranslationScope(
+        translations: Translations.english(),
+        child: MaterialApp(
+          theme: JitanTheme.light(),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showManageAssignmentsDialog(context, api: fake, employee: _disan),
+                child: const Text('open'),
+              ),
+            ),
           ),
         ),
-      );
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    if (tab != 'Companies') {
+      // The test font is wide: the tabs may scroll.
+      await tester.ensureVisible(find.text(tab));
       await tester.pump();
       await tester.tap(find.text(tab));
       await tester.pump();
-      return fake;
     }
+    return fake;
+  }
 
-    testWidgets('an assigned group says "Assigned · select to remove"; tapping asks to confirm', (tester) async {
-      final api = await openTab(tester, 'Groups');
+  bool ticked(WidgetTester tester, String name) => find
+      .descendant(of: find.ancestor(of: find.text(name), matching: find.byType(Row)).first, matching: find.byIcon(Icons.check))
+      .evaluate()
+      .isNotEmpty;
 
-      expect(find.text('Assigned · select to remove'), findsOneWidget);
-      expect(tester.widget<JitanOptionCard>(find.widgetWithText(JitanOptionCard, 'White collar')).removable, isTrue);
+  group('Companies, groups and access (Figma 1537:2)', () {
+    testWidgets('the name, tabs like the rest of the app, one line and a plain list with a check', (tester) async {
+      await open(tester);
+
+      expect(find.text('Disan Ssebowa'), findsOneWidget);
+      expect(find.text('Companies, groups and access'), findsOneWidget);
+      expect(find.byType(JitanPillSwitch<int>), findsOneWidget);
+      expect(find.text('Disan can work for several companies.'), findsOneWidget);
+      expect(ticked(tester, 'Almeco'), isTrue);
+      expect(ticked(tester, 'PCA'), isFalse);
+      expect(find.text('Inactive'), findsOneWidget, reason: 'an existing membership stays listed, marked');
+      for (final gone in ['Manage employee assignments', 'Current company', 'Additional company', 'Changes take effect after saving.']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+    });
+
+    testWidgets('Save waits for a change; ticking PCA and saving adds a second company', (tester) async {
+      final api = await open(tester);
+      FilledButton save() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save'));
+      expect(save().onPressed, isNull);
+
+      await tester.tap(find.text('Almeco'));
+      await tester.pump();
+      expect(save().onPressed, isNull, reason: 'the current company is locked');
+
+      await tester.tap(find.text('PCA'));
+      await tester.pump();
+      expect(ticked(tester, 'PCA'), isTrue);
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+
+      final (companyId, userId, kind, ids) = api.adds.single;
+      expect((companyId, userId, kind), (1, 2, AssignmentKind.companies));
+      expect(ids, [2]);
+    });
+
+    testWidgets('every tab keeps the same height', (tester) async {
+      await open(tester);
+      final companies = tester.getSize(find.byType(ListView)).height;
+      for (final tab in ['Groups', 'Language', 'Access']) {
+        await tester.ensureVisible(find.text(tab));
+        await tester.pump();
+        await tester.tap(find.text(tab));
+        await tester.pump();
+        expect(tester.getSize(find.byType(ListView)).height, companies, reason: tab);
+      }
+    });
+
+    testWidgets('a load failure shows a retryable error', (tester) async {
+      final api = _api()..loadFailure = const ApiClientException.network('offline');
+      await open(tester, api: api);
+
+      expect(find.text('Try again'), findsOneWidget);
+      api.loadFailure = null;
+      await tester.tap(find.text('Try again'));
+      await tester.pump();
+      expect(find.text('Almeco'), findsOneWidget);
+    });
+
+    testWidgets('a failed save shows an inline error and keeps the pop-up open', (tester) async {
+      final api = await open(tester, tab: 'Groups', api: _api()..addFailure = const ApiClientException.network('offline'));
+
+      await tester.tap(find.text('Blue collar'));
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+
+      expect(api.adds, hasLength(1));
+      expect(find.text('Companies, groups and access'), findsOneWidget);
+      expect(find.byType(JitanInlineError), findsOneWidget);
+    });
+  });
+
+  group('Groups (1537:194)', () {
+    testWidgets('the hours come from the group: one line, and no company list', (tester) async {
+      await open(tester, tab: 'Groups');
+
+      expect(find.text('Disan’s hours come from the group.'), findsOneWidget);
+      expect(ticked(tester, 'White collar'), isTrue);
+      expect(find.text('Almeco'), findsNothing, reason: 'no company list on the Groups tab');
+    });
+
+    testWidgets('ticking Blue collar and saving adds that group only', (tester) async {
+      final api = await open(tester, tab: 'Groups');
+
+      await tester.tap(find.text('White collar'));
+      await tester.tap(find.text('Blue collar'));
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+
+      final (companyId, userId, kind, ids) = api.adds.single;
+      expect((companyId, userId, kind), (1, 2, AssignmentKind.groups));
+      expect(ids, [2]);
+    });
+  });
+
+  group('Language (1537:372)', () {
+    testWidgets('native names only, one checked; choosing Nederlands and saving replaces it', (tester) async {
+      final api = await open(tester, tab: 'Language');
+
+      expect(find.text('The language of Disan’s Jitan app.'), findsOneWidget);
+      expect(find.text('Dutch'), findsNothing, reason: 'no repeated English name');
+      expect(ticked(tester, 'English'), isTrue);
+
+      await tester.tap(find.text('Nederlands'));
+      await tester.pump();
+      expect(ticked(tester, 'Nederlands'), isTrue);
+      expect(ticked(tester, 'English'), isFalse, reason: 'one choice');
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+
+      expect(api.languageChanges.single, (1, 2, 2));
+      expect(api.adds, isEmpty);
+    });
+  });
+
+  group('Access (1537:556)', () {
+    testWidgets('the role names from the database, in plain words; picking HR and saving adds it', (tester) async {
+      final api = await open(tester, tab: 'Access');
+
+      expect(find.text('What Disan can open in Jitan.'), findsOneWidget);
+      expect(ticked(tester, 'Employee'), isTrue);
+      for (final gone in ['Access and credential groups', 'Select credential group', 'Current assignments']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+      expect(find.textContaining('server enforces'), findsNothing);
+
+      await tester.tap(find.text('HR'));
+      await tester.pump();
+      expect(ticked(tester, 'HR'), isTrue);
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+
+      final (companyId, userId, kind, ids) = api.adds.single;
+      expect((companyId, userId, kind), (1, 2, AssignmentKind.credentialGroups));
+      expect(ids, [2]);
+    });
+  });
+
+  group('taking out of a company or group, asked first', () {
+    const removableWhite = AssignmentOption(id: 1, name: 'White collar', isActive: true, isAssigned: true, isRemovable: true);
+    const removablePca = AssignmentOption(id: 2, name: 'PCA', isActive: true, isAssigned: true, isRemovable: true);
+
+    FakeEmployeeAssignmentsApi removable() => _api()
+      ..byKind[AssignmentKind.groups] = [_blue, removableWhite]
+      ..byKind[AssignmentKind.companies] = [_almeco, removablePca];
+
+    testWidgets('a group: one plain question, then taken out', (tester) async {
+      final api = await open(tester, tab: 'Groups', api: removable());
 
       await tester.tap(find.text('White collar'));
       await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('Remove employee from group?'), findsOneWidget);
-      expect(find.text('The assignment will disappear from Jitan but remain in the database.'), findsOneWidget);
-      expect(find.text('Set Active = false and MFD = true in tblUserGroup.'), findsOneWidget);
-      expect(find.text('Record the change, actor and time in tblEventLog.'), findsOneWidget);
+      expect(find.text('Take Disan out of White collar?'), findsOneWidget);
+      expect(find.text('You can add White collar again any time.'), findsOneWidget);
+      expect(find.textContaining('tblUserGroup'), findsNothing);
       expect(api.removes, isEmpty, reason: 'nothing happens before the confirmation');
 
-      await tester.tap(find.text('Remove assignment'));
+      await tester.tap(find.text('Take out'));
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(api.removes.single, (1, 2, AssignmentKind.groups, 1));
-      expect(find.text('Remove employee from group?'), findsNothing);
-      expect(find.text('Assigned · select to remove'), findsNothing, reason: 'the list comes from the server');
+      expect(find.text('Take Disan out of White collar?'), findsNothing);
     });
 
-    testWidgets('Cancel removes nothing', (tester) async {
-      final api = await openTab(tester, 'Groups');
+    testWidgets('Cancel takes nothing out', (tester) async {
+      final api = await open(tester, tab: 'Groups', api: removable());
 
       await tester.tap(find.text('White collar'));
       await tester.pump(const Duration(milliseconds: 300));
@@ -427,37 +346,34 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(api.removes, isEmpty);
-      expect(find.text('Assigned · select to remove'), findsOneWidget);
     });
 
-    testWidgets('an additional company is removed after confirmation; the current one is not offered', (tester) async {
-      final api = await openTab(tester, 'Companies');
+    testWidgets('a second company is taken out after the question; the current one is locked', (tester) async {
+      final api = await open(tester, api: removable());
 
-      expect(find.text('Current company'), findsOneWidget);
       await tester.tap(find.text('Almeco'));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Remove employee from company?'), findsNothing, reason: 'the current company is locked');
+      expect(find.text('Take Disan out of Almeco?'), findsNothing, reason: 'the current company is locked');
 
       await tester.tap(find.text('PCA'));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Remove employee from company?'), findsOneWidget);
-      expect(find.text('Set Active = false and MFD = true in tblUserCompany.'), findsOneWidget);
-      await tester.tap(find.text('Remove assignment'));
+      expect(find.text('Disan no longer works for PCA in Jitan. Time records stay, and you can add PCA again any time.'), findsOneWidget);
+      await tester.tap(find.text('Take out'));
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(api.removes.single, (1, 2, AssignmentKind.companies, 2));
     });
 
-    testWidgets('a refused removal is explained and the dialog stays open', (tester) async {
-      final api = await openTab(tester, 'Groups');
+    testWidgets('a refusal is explained and the question stays open', (tester) async {
+      final api = await open(tester, tab: 'Groups', api: removable());
       api.removeFailure = const ApiClientException.network('offline');
 
       await tester.tap(find.text('White collar'));
       await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Remove assignment'));
+      await tester.tap(find.text('Take out'));
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Remove employee from group?'), findsOneWidget);
+      expect(find.text('Take Disan out of White collar?'), findsOneWidget);
       expect(find.byType(JitanInlineError), findsOneWidget);
     });
   });
