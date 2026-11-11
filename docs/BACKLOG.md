@@ -357,6 +357,19 @@ older Reports frames were demos with dummy data.
 
 Transports and kilometres (D23) are in since D46; the project report is REP-02.
 
+## COMP-01: Companies managed in Jitan · `DONE` 2026-11-11
+
+IT's database starts empty, so HR adds the companies (Figma `1524:2`, a company `1524:105`, Add
+company `1524:233`, just added `1524:350`, nothing yet `1524:453`). A company holds only its name.
+- `POST /companies`, `PUT /companies/{id}`, `POST /companies/{id}/deactivate|reactivate`
+  (permission `manageCompanies`), each audited (`company.created|renamed|deactivated|reactivated`).
+  A name in use is refused ignoring capitals and accents (CLARIFY-16); the pop-up says so while typing.
+- The page: a count, search and All · Active · Inactive pills, the whole row opens the company in a
+  pop-up (rename, Deactivate/Reactivate, View employees), the employee count opens Employees,
+  inactive companies grey, the exact time on hover. Right after adding: the row lights up and a
+  message offers "Add employees". The first time: one calm line and the button, no card.
+- The Locations and Terminals columns are gone: a company has no places or terminals of its own.
+
 ## REP-02: Project report (D24) · `DONE` 2026-11-11
 
 **Period, not month** (product owner, 2026-11-11): both reports take any period with the

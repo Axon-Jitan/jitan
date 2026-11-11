@@ -49,6 +49,13 @@ class FakeCompanyRepository implements CompanyRepository {
 
   @override
   Future<bool> exists(int companyId) async => existingIds.contains(companyId);
+
+  @override
+  Future<CompanySummary?> find(int companyId) async => companies.where((c) => c.id == companyId).firstOrNull;
+
+  // Writes are tested against MySQL (company_integration_test.dart).
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError('${invocation.memberName}');
 }
 
 class FakeEmployeeRepository implements EmployeeRepository {

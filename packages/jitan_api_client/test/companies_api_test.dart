@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
+import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
 CompaniesApi _api(MockClientHandler handler) => CompaniesApi(
@@ -85,6 +86,37 @@ void main() {
     expect(
       api.listCompanies(),
       throwsA(isA<ApiClientException>().having((e) => e.kind, 'kind', ApiFailureKind.network)),
+    );
+  });
+
+  test('add, rename, deactivate and reactivate send the right requests', () async {
+    final sent = <String>[];
+    final api = _api((request) async {
+      sent.add('${request.method} ${request.url.path} ${request.body}');
+      return _json({'id': 9, 'name': 'Proceq', 'isActive': true, 'employeeCount': 0, 'lastUpdatedAt': null}, 200);
+    });
+
+    await api.create(const CompanyRequest(name: 'Proceq'));
+    await api.rename(9, const CompanyRequest(name: 'Proceq NV'));
+    await api.deactivate(9);
+    await api.reactivate(9);
+
+    expect(sent, [
+      'POST /companies {"name":"Proceq"}',
+      'PUT /companies/9 {"name":"Proceq NV"}',
+      'POST /companies/9/deactivate {}',
+      'POST /companies/9/reactivate {}',
+    ]);
+  });
+
+  test('a name in use comes back as the server said it, on the name', () async {
+    final api = _api((request) async => _json({
+      'error': {'code': 'duplicate_company_name', 'message': 'x', 'field': 'name'},
+    }, 409));
+
+    await expectLater(
+      api.create(const CompanyRequest(name: 'Almeco')),
+      throwsA(isA<ApiClientException>().having((e) => e.error?.code, 'code', 'duplicate_company_name')),
     );
   });
 }

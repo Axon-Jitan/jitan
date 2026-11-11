@@ -99,6 +99,18 @@ enum AuditEventType {
   /// delete), after a save or a removal by HR/Admin.
   scheduleDeactivated('schedule.deactivated'),
 
+  /// HR/Admin added a company.
+  companyCreated('company.created'),
+
+  /// HR/Admin renamed a company.
+  companyRenamed('company.renamed'),
+
+  /// HR/Admin deactivated a company.
+  companyDeactivated('company.deactivated'),
+
+  /// HR/Admin reactivated a company.
+  companyReactivated('company.reactivated'),
+
   /// HR/Admin added a location: its address, geofence and their link.
   locationCreated('location.created'),
 

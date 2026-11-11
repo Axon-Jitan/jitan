@@ -28,10 +28,11 @@ class CompaniesFailed extends CompaniesState {
   final ApiClientException failure;
 }
 
-/// Loads the company list from the API and applies search.
-///
-/// Holds no business rules: filtering happens on the server; this only
-/// sequences requests and exposes their outcome.
+/// Which companies the pills let through (Figma `1524:2`).
+enum CompanyStatusFilter { all, active, inactive }
+
+/// Loads the company list from the API, applies search (on the server) and
+/// the status pills (here), and keeps the list current after a change.
 class CompaniesController extends ChangeNotifier {
   CompaniesController(this._api, {this.searchDelay = defaultSearchDelay});
 
@@ -46,6 +47,51 @@ class CompaniesController extends ChangeNotifier {
 
   String _search = '';
   Timer? _searchTimer;
+
+  CompanyStatusFilter _status = CompanyStatusFilter.all;
+  CompanyStatusFilter get status => _status;
+
+  /// The company just added, lit up for a moment (Figma `1524:350`).
+  int? _fresh;
+  int? get fresh => _fresh;
+
+  /// What the list shows: the loaded companies the status pills let through.
+  List<CompanySummary> get visible => switch (_state) {
+    CompaniesLoaded(:final companies) => [
+      for (final c in companies)
+        if (_status == CompanyStatusFilter.all || c.isActive == (_status == CompanyStatusFilter.active)) c,
+    ],
+    _ => const [],
+  };
+
+  /// Every loaded company, for the name check while typing.
+  List<CompanySummary> get loaded => switch (_state) {
+    CompaniesLoaded(:final companies) => companies,
+    _ => const [],
+  };
+
+  void updateStatus(CompanyStatusFilter status) {
+    _status = status;
+    if (!_disposed) notifyListeners();
+  }
+
+  /// [company] as the server answered after a change: added (and lit up),
+  /// or replaced where it was. Names stay in order.
+  void put(CompanySummary company, {bool added = false}) {
+    if (_state case CompaniesLoaded(:final companies, :final search)) {
+      final rest = [for (final c in companies) if (c.id != company.id) c];
+      final next = [...rest, company]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      if (added) _fresh = company.id;
+      _emit(CompaniesLoaded(companies: next, search: search));
+    }
+  }
+
+  /// The lit-up row fades back.
+  void settle() {
+    if (_fresh == null) return;
+    _fresh = null;
+    if (!_disposed) notifyListeners();
+  }
 
   /// Increments per request so a slow, outdated response never overwrites a
   /// newer one.

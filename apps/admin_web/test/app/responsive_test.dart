@@ -297,6 +297,24 @@ void main() {
       await tester.pump();
 
       _fitsTheWindow(tester, width, 'Companies');
+
+      await tester.tap(find.text('Almeco'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'A company');
+      await tester.tap(find.text('Close'));
+      await _settle(tester);
+
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add company'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Add company');
+    });
+
+    testWidgets('Companies the very first time at $width px', (tester) async {
+      final api = FakeCompaniesApi();
+      await _pump(tester, width, CompaniesScreen(api: api));
+      api.succeed(const []);
+      await tester.pump();
+      _fitsTheWindow(tester, width, 'No companies yet');
     });
 
     testWidgets('the schedule wizard, every step, at $width px', (tester) async {

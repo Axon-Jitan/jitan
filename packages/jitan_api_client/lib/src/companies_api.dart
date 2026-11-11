@@ -22,4 +22,26 @@ class CompaniesApi {
       throw ApiClientException.invalidResponse(200, 'Company list: ${e.message}');
     }
   }
+
+  /// `POST /companies`: a new, active company.
+  Future<CompanySummary> create(CompanyRequest request) async =>
+      _company(await _transport.postJson('companies', request.toJson()));
+
+  /// `PUT /companies/{id}`: a new name.
+  Future<CompanySummary> rename(int companyId, CompanyRequest request) async =>
+      _company(await _transport.putJson('companies/$companyId', request.toJson()));
+
+  Future<CompanySummary> deactivate(int companyId) async =>
+      _company(await _transport.postJson('companies/$companyId/deactivate', const {}));
+
+  Future<CompanySummary> reactivate(int companyId) async =>
+      _company(await _transport.postJson('companies/$companyId/reactivate', const {}));
+
+  static CompanySummary _company(Map<String, Object?> json) {
+    try {
+      return CompanySummary.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Company: ${e.message}');
+    }
+  }
 }

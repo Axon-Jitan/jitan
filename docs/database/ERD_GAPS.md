@@ -54,7 +54,7 @@ answered, and they block only the production cut-over of authentication and auth
 | Authentication (production cut-over only) | CLARIFY-01 |
 | Authorization (production cut-over only) | CLARIFY-10, CLARIFY-11 |
 | Companies: list | **not blocked**, built. "Locations" column shows "—" (GAP-03) |
-| Companies: Add company (Figma `153:87`) | GAP-02 (country, timezone), GAP-03 (primary workplace), GAP-07 (company registration methods), CLARIFY-11 (audit event type). Only the name is storable, so the slice is held back rather than shipped partially |
+| Companies: Add company | **built** (2026-11-11, Figma `1524:*`): only the name, which is all `tblCompany` holds; country, timezone and a primary workplace stay out (GAP-02, GAP-03), each company's workplace is added on Locations |
 | Employees: list (Figma `153:137`) | **not blocked**. Location (GAP-11) shows "—"; Onboarding shows Activated / Not activated (`userPassword IS NOT NULL`); Policy omitted (PRODUCT-CLARIFY-EMPLOYEE-POLICY) |
 | Employee onboarding (**Milestone 1**) | **not blocked**, built: temporary onboarding QR (GAP-04 resolved), activated = `userPassword IS NOT NULL` |
 | Schedules, schedule types, rounding rules: read-only views | **not blocked**: schedules are global and user-wide (CLARIFY-14 resolved) |

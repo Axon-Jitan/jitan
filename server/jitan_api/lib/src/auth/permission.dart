@@ -66,6 +66,10 @@ enum Permission {
   /// company in the ERD yet (GAP-03), so not company-scoped.
   viewLocations,
 
+  /// Add, rename, deactivate and reactivate companies. Not company-scoped:
+  /// a new company has none yet.
+  manageCompanies,
+
   /// Add, change, deactivate and reactivate locations. Not company-scoped,
   /// like [viewLocations].
   manageLocations,

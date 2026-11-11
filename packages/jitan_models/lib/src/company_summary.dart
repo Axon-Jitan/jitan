@@ -57,3 +57,23 @@ class CompanyListResponse {
         'companies': [for (final company in companies) company.toJson()],
       };
 }
+
+/// Body of `POST /companies` (Add company) and `PUT /companies/{id}`
+/// (rename): only the name, all `tblCompany` holds that HR enters.
+class CompanyRequest {
+  const CompanyRequest({required this.name});
+
+  factory CompanyRequest.fromJson(Map<String, Object?> json) => CompanyRequest(name: json.readString(fieldName));
+
+  static const fieldName = 'name';
+
+  /// `tblCompany.companyName` is varchar(150).
+  static const maxNameLength = 150;
+
+  final String name;
+
+  /// [name] without the spaces around it.
+  CompanyRequest trimmed() => CompanyRequest(name: name.trim());
+
+  Map<String, Object?> toJson() => {fieldName: name};
+}

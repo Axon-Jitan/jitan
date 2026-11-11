@@ -273,7 +273,7 @@ Future<void> main() async {
   final handler = buildApp(
     corsOrigins: config.corsOrigins,
     health: HealthRoutes(DatabaseHealthRepository(db)),
-    companies: CompanyRoutes(authorizer, CompanyService(companyRepository)),
+    companies: CompanyRoutes(authorizer, CompanyService(companyRepository, transactions: db)),
     employees: EmployeeRoutes(
       authorizer,
       employeeService,

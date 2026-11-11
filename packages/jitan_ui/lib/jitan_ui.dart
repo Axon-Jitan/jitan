@@ -18,6 +18,7 @@ export 'src/components/jitan_month_grid.dart';
 export 'src/components/jitan_multi_select_field.dart';
 export 'src/components/show_jitan_modal.dart';
 export 'src/components/jitan_page_header.dart';
+export 'src/components/jitan_pill_switch.dart';
 export 'src/components/jitan_primary_button.dart';
 export 'src/components/jitan_qr_code.dart';
 export 'src/components/jitan_row_actions_button.dart';

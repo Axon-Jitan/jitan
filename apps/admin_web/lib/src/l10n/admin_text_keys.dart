@@ -16,15 +16,36 @@ abstract final class AdminTextKeys {
 
 
   static const companyTitle = 'company.title';
+  static const companyFilterAll = 'company.filter.all';
+  static const companyNoneWithStatus = 'company.noneWithStatus';
+  static const companyAdd = 'company.add';
+  static const companyAddText = 'company.add.text';
+  static const companyName = 'company.name';
+  static const companyNameRequired = 'company.name.required';
+  static const companyNameTaken = 'company.name.taken';
+  static const companyAdded = 'company.added';
+  static const companyAddEmployees = 'company.addEmployees';
+  static const companyEmployees = 'company.employees';
+  static const companyViewEmployees = 'company.viewEmployees';
+  static const companyLastUpdated = 'company.lastUpdated';
+  static const companySave = 'company.save';
+  static const companyClose = 'company.close';
+  static const companyDeactivate = 'company.deactivate';
+  static const companyReactivate = 'company.reactivate';
+  static const companySaveFailed = 'company.saveFailed';
+  static const companySaved = 'company.saved';
+  static const companyDeactivated = 'company.deactivated';
+  static const companyReactivated = 'company.reactivated';
+
+  /// Plural; `{n}`.
+  static const companyCount = 'company.count';
   static const companyListSubtitle = 'company.list.subtitle';
   static const companySearch = 'company.search';
   static const companyListLoading = 'company.list.loading';
   static const companyColumnName = 'company.column.name';
   static const companyColumnEmployees = 'company.column.employees';
-  static const companyColumnLocations = 'company.column.locations';
   static const companyColumnStatus = 'company.column.status';
   static const companyColumnLastUpdated = 'company.column.lastUpdated';
-  static const companyLocationsUnavailable = 'company.locations.unavailable';
   static const companyEmptyTitle = 'company.empty.title';
   static const companyEmptyMessage = 'company.empty.message';
   static const companyNoMatchTitle = 'company.noMatch.title';

@@ -119,4 +119,20 @@ void main() {
     expect(response.statusCode, 404);
     expect((await jsonBody(response))['error'], containsPair('code', 'not_found'));
   });
+
+  group('adding and changing a company', () {
+    test('needs the right to manage companies', () async {
+      final app = TestApp(allowPermissions: false);
+      expect((await app.post('/companies', '{"name":"Proceq"}')).statusCode, 403);
+      expect((await app.post('/companies/7/deactivate', '{}')).statusCode, 403);
+    });
+
+    test('a session is required', () async {
+      expect((await TestApp(devUserId: null).post('/companies', '{"name":"Proceq"}')).statusCode, 401);
+    });
+
+    test('a body without a name is a bad request', () async {
+      expect((await TestApp().post('/companies', '{}')).statusCode, 400);
+    });
+  });
 }

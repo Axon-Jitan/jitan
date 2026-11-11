@@ -49,20 +49,20 @@ void main() {
     ]);
     await tester.pump();
 
-    for (final header in ['Company', 'Employees', 'Locations', 'Status', 'Last updated']) {
+    for (final header in ['Company', 'Employees', 'Status', 'Last updated']) {
       expect(find.text(header), findsOneWidget, reason: header);
     }
+    expect(find.text('Locations'), findsNothing, reason: 'a company has no places of its own');
+    expect(find.text('4 companies'), findsOneWidget);
     expect(find.text('Almeco'), findsOneWidget);
     expect(find.text('48'), findsOneWidget);
     expect(find.text('Today'), findsOneWidget);
     expect(find.text('Yesterday'), findsOneWidget);
     expect(find.text('3 days ago'), findsOneWidget);
-    expect(find.text('Active'), findsNWidgets(3));
-    expect(find.text('Inactive'), findsOneWidget);
-    // Locations has no data source yet (ERD GAP-03): a placeholder for every
-    // row, never a number. Proceq has no event-log history, so its
-    // "Last updated" is the same placeholder.
-    expect(find.text('—'), findsNWidgets(5));
+    expect(find.text('Active'), findsNWidgets(4), reason: 'three rows and the pill');
+    expect(find.text('Inactive'), findsNWidgets(2), reason: 'one row and the pill');
+    // Proceq has no event-log history: its "Last updated" is a placeholder.
+    expect(find.text('—'), findsOneWidget);
   });
 
   testWidgets('shows the empty state when there are no companies', (tester) async {
@@ -124,5 +124,110 @@ void main() {
       expect(find.text(title), findsOneWidget, reason: '$failure');
       await tester.pumpWidget(const SizedBox());
     }
+  });
+
+  group('Figma 1524', () {
+    final almeco = company(1, 'Almeco', employees: 15, lastUpdatedAt: DateTime(2026, 10, 7, 9, 42));
+    final pca = company(2, 'PCA', employees: 8);
+    final proceq = company(3, 'Proceq', active: false);
+
+    testWidgets('the pills narrow the list to active or inactive companies', (tester) async {
+      final api = await _pumpScreen(tester);
+      api.succeed([almeco, pca, proceq]);
+      await tester.pump();
+
+      await tester.tap(find.text('Inactive').first);
+      await tester.pump();
+      expect(find.text('Proceq'), findsOneWidget);
+      expect(find.text('Almeco'), findsNothing);
+    });
+
+    testWidgets('Add company: ready to type; a name already in Jitan is said at once; the new one lights up', (tester) async {
+      final api = await _pumpScreen(tester);
+      api.succeed([almeco, pca]);
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add company'));
+      await tester.pumpAndSettle();
+      expect(find.text('As people know it, e.g. Almeco.'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).last, 'almecó');
+      await tester.pump();
+      expect(find.text('Almeco is already in Jitan.'), findsOneWidget);
+      expect(tester.widget<JitanPrimaryButton>(find.widgetWithText(JitanPrimaryButton, 'Add company').last).onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField).last, 'Proceq');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add company').last);
+      await tester.pumpAndSettle();
+
+      expect(api.writes, ['create Proceq']);
+      expect(find.text('Proceq'), findsOneWidget);
+      expect(find.text('Proceq added'), findsOneWidget);
+      expect(find.text('Add employees'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+    });
+
+    testWidgets('a name the server finds taken is said under the field', (tester) async {
+      final api = await _pumpScreen(tester);
+      api.succeed([almeco]);
+      await tester.pump();
+      api.writeFailure = serverError(409, 'duplicate_company_name');
+
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add company'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Societe');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add company').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Societe is already in Jitan.'), findsOneWidget);
+    });
+
+    testWidgets('a row opens the company: Save waits for a change; rename is saved', (tester) async {
+      final api = await _pumpScreen(tester);
+      api.succeed([almeco, pca]);
+      await tester.pump();
+      api.answer = (_) => company(1, 'Almeco Group', employees: 15);
+
+      await tester.tap(find.text('Almeco'));
+      await tester.pumpAndSettle();
+      expect(find.text('View employees'), findsOneWidget);
+      expect(tester.widget<JitanPrimaryButton>(find.widgetWithText(JitanPrimaryButton, 'Save')).onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField).last, 'Almeco Group');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(api.writes, ['rename 1 Almeco Group']);
+      expect(find.text('Almeco Group'), findsOneWidget);
+    });
+
+    testWidgets('Deactivate is saved at once, and the company greys', (tester) async {
+      final api = await _pumpScreen(tester);
+      api.succeed([almeco, pca]);
+      await tester.pump();
+      api.answer = (_) => company(2, 'PCA', active: false, employees: 8);
+
+      await tester.tap(find.text('PCA'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Deactivate'));
+      await tester.pumpAndSettle();
+
+      expect(api.writes, ['deactivate 2']);
+      expect(find.text('PCA deactivated'), findsOneWidget);
+    });
+
+    testWidgets('the very first time: no card, one line and the button', (tester) async {
+      final api = await _pumpScreen(tester);
+      api.succeed(<CompanySummary>[]);
+      await tester.pump();
+
+      expect(find.text('No companies yet'), findsOneWidget);
+      expect(find.text('Add the first one to start. Its employees, workplace and schedules follow.'), findsOneWidget);
+      expect(find.widgetWithText(JitanPrimaryButton, 'Add company'), findsOneWidget, reason: 'only the one with the text');
+      expect(find.text('Search companies'), findsNothing);
+    });
   });
 }

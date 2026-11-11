@@ -146,6 +146,10 @@ SELECT e.name FROM (
   UNION ALL SELECT 'terminal.reactivated'
   UNION ALL SELECT 'terminal.removed'
   UNION ALL SELECT 'list.entry.added'
+  UNION ALL SELECT 'company.created'
+  UNION ALL SELECT 'company.renamed'
+  UNION ALL SELECT 'company.deactivated'
+  UNION ALL SELECT 'company.reactivated'
 ) e WHERE NOT EXISTS (SELECT 1 FROM tblEventType x WHERE x.eventTypeName = e.name);
 
 -- ---------- Kinds of place (tblLocationType) ------------------------

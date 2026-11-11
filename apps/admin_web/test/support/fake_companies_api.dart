@@ -25,6 +25,36 @@ class FakeCompaniesApi implements CompaniesApi {
       _pending[index ?? _pending.length - 1].complete(companies);
 
   void fail(ApiClientException failure, {int? index}) => _pending[index ?? _pending.length - 1].completeError(failure);
+
+  /// Every write, e.g. `create Proceq`, `rename 2 Almeco Group`, `deactivate 2`.
+  final writes = <String>[];
+
+  /// Thrown by the next write when set.
+  ApiClientException? writeFailure;
+
+  /// What the writes answer with: the company after the change.
+  CompanySummary Function(String write) answer = (_) => company(9, 'Proceq');
+
+  Future<CompanySummary> _write(String write) async {
+    writes.add(write);
+    if (writeFailure case final failure?) {
+      writeFailure = null;
+      throw failure;
+    }
+    return answer(write);
+  }
+
+  @override
+  Future<CompanySummary> create(CompanyRequest request) => _write('create ${request.name}');
+
+  @override
+  Future<CompanySummary> rename(int companyId, CompanyRequest request) => _write('rename $companyId ${request.name}');
+
+  @override
+  Future<CompanySummary> deactivate(int companyId) => _write('deactivate $companyId');
+
+  @override
+  Future<CompanySummary> reactivate(int companyId) => _write('reactivate $companyId');
 }
 
 CompanySummary company(int id, String name, {bool active = true, int employees = 0, DateTime? lastUpdatedAt}) =>

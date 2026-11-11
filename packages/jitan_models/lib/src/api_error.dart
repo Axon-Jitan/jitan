@@ -66,6 +66,9 @@ abstract final class ApiErrorCode {
   /// A terminal: the QR's owner doesn't belong to its company.
   static const scanNotAllowed = 'scan_not_allowed';
 
+  /// Another company (active or inactive) already has this name.
+  static const duplicateCompanyName = 'duplicate_company_name';
+
   /// Another location (active or inactive) already has this name.
   static const duplicateLocationName = 'duplicate_location_name';
 
