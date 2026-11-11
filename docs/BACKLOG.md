@@ -344,7 +344,7 @@ Status: `DONE` (2026-10-31)
 HR sees one month per employee and exports it (Figma `1467:2` month, `1467:230` export,
 `1467:391` an employee's month, `1467:631` empty), designed by us and approved on 2026-10-31; the
 older Reports frames were demos with dummy data.
-- `GET /reports/hours?month=yyyy-MM&company=`: calculated when opened, never stored (D24), from the
+- `GET /reports/hours?from=yyyy-MM-dd&to=yyyy-MM-dd&company=`: calculated when opened, never stored (D24), from the
   same days as Time records. Permission `viewReports`, checked per company.
 - **Only what Jitan can calculate** (product owner, 2026-10-31): planned, registered, difference,
   days to review. No overtime, absence, attendance percentages or company totals.
@@ -359,8 +359,14 @@ Transports and kilometres (D23) are in since D46; the project report is REP-02.
 
 ## REP-02: Project report (D24) · `DONE` 2026-11-11
 
+**Period, not month** (product owner, 2026-11-11): both reports take any period with the
+Dashboard's picker (shortcuts, two calendars, Apply; Figma `1475:16`), "This month" at first,
+remembered in the browser, one period for both views. The picker now lives in
+`apps/admin_web/lib/src/period/` and is shared by the Dashboard and Reports. Exports are named
+by period (`jitan-hours-2026-10-01_2026-10-31.xlsx`).
+
 Reports has "Employees | Projects" (Figma `1515:2`, a project `1515:190`).
-`GET /reports/projects?month=yyyy-MM`, calculated when opened, never stored, for the employees
+`GET /reports/projects?from=yyyy-MM-dd&to=yyyy-MM-dd`, calculated when opened, never stored, for the employees
 of every company the viewer may see (each checked, §28a.5); a project has no company (D44).
 - **Worked**: each activity row on the project until the next one or the finish, inside the
   day's rounded start and finish, without time away or else the break, so a day on one project
