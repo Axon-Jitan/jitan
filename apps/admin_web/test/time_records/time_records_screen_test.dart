@@ -100,7 +100,7 @@ void main() {
     expect(find.text('08:00–16:30'), findsOneWidget);
     expect(find.text('07:58–16:31'), findsOneWidget);
     expect(find.text('08:15–—'), findsNWidgets(2), reason: 'no finish yet');
-    expect(find.text('Complete'), findsOneWidget);
+    expect(find.text('Registered'), findsOneWidget);
     expect(find.text('Missing finish'), findsOneWidget);
     expect(find.text('Working'), findsOneWidget);
     expect(find.text('Automatic'), findsOneWidget);

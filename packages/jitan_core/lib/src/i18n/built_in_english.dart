@@ -254,7 +254,7 @@ const builtInEnglish = <String, String>{
   'employee.filter.status.notSetUp': 'Not set up',
   'timeRecords.period.lastMonth': 'Last month',
   'timeRecords.status.all': 'All records',
-  'timeRecords.status.complete': 'Complete',
+  'timeRecords.status.complete': 'Registered',
   'timeRecords.status.working': 'Working',
   'timeRecords.status.missingFinish': 'Missing finish',
   'timeRecords.status.missingStart': 'Missing start',
