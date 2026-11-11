@@ -14,9 +14,10 @@ void main() {
 
   test('the project report asks for the month and reads the projects', () async {
     late Uri asked;
-    const report = ProjectReport(
-      month: '2026-10',
-      projects: [
+    final report = ProjectReport(
+      from: DateTime.utc(2026, 10, 1),
+      to: DateTime.utc(2026, 10, 31),
+      projects: const [
         ProjectReportProject(
           project: ProjectSummary(id: 3, sapNumber: 'P-1042', name: 'Office refurbishment', isClientSite: true, isActive: true),
           workedMinutes: 480,
@@ -31,16 +32,16 @@ void main() {
     final answer = await api((r) async {
       asked = r.url;
       return ok(report.toJson());
-    }).projects('2026-10');
+    }).projects(DateTime(2026, 10), DateTime(2026, 10, 31));
 
     expect(asked.path, '/reports/projects');
-    expect(asked.queryParameters, {'month': '2026-10'});
+    expect(asked.queryParameters, {'from': '2026-10-01', 'to': '2026-10-31'});
     expect(answer.projects.single.project.fullName, 'P-1042 Office refurbishment');
   });
 
   test('a broken project report is an invalid response', () async {
     expect(
-      api((r) async => ok({'month': '2026-10'})).projects('2026-10'),
+      api((r) async => ok({'from': '2026-10-01'})).projects(DateTime(2026, 10), DateTime(2026, 10, 31)),
       throwsA(isA<ApiClientException>()),
     );
   });

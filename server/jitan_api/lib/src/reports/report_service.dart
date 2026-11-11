@@ -4,12 +4,13 @@ import '../activities/trip_kilometres.dart';
 import '../companies/company_repository.dart';
 import '../employees/employee_repository.dart';
 import '../http/api_exception.dart';
+import 'report_period.dart';
 import '../time_records/my_day_service.dart';
 import '../time_records/time_record_service.dart';
 import '../time_records/week_plans.dart';
 import '../time_registration/workplace_clock.dart';
 
-/// The monthly hours report (Figma `1467:2`, D24): calculated when opened,
+/// The hours report (Figma `1467:2`, D24), for any period: calculated when opened,
 /// never stored, from the same days as Time records. It holds only what
 /// Jitan can calculate; overtime and absence have no rule or data yet.
 class ReportService {
@@ -33,17 +34,6 @@ class ReportService {
   final TripKilometres? _kilometres;
   final DateTime Function() _now;
 
-  static final _month = RegExp(r'^(\d{4})-(0[1-9]|1[0-2])$');
-
-  /// [month] as `yyyy-MM`: the text, and its first and last day. 400 for a
-  /// missing or malformed month.
-  static ({String text, DateTime first, DateTime last}) monthOf(String? month) {
-    final match = _month.firstMatch(month ?? '');
-    if (match == null) throw const ApiException.validation('month', 'Give the month as yyyy-MM, e.g. 2026-10.');
-    final year = int.parse(match.group(1)!), number = int.parse(match.group(2)!);
-    return (text: '${match.group(1)}-${match.group(2)}', first: DateTime.utc(year, number), last: DateTime.utc(year, number + 1, 0));
-  }
-
   static const _toReview = {
     TimeRecordStatus.missingStart,
     TimeRecordStatus.missingFinish,
@@ -51,21 +41,20 @@ class ReportService {
     TimeRecordStatus.noRegistration,
   };
 
-  /// [month] (`yyyy-MM`) for the employees of [companyId], or of every
-  /// company for which [mayView] is true. An employee in several companies
-  /// shows with all their hours: registrations have no company yet (GAP-03).
+  /// The period [from]–[to] (`yyyy-MM-dd`, both included) for the employees
+  /// of [companyId], or of every company for which [mayView] is true. An
+  /// employee in several companies shows with all their hours: registrations
+  /// have no company yet (GAP-03).
   ///
-  /// 400 for a missing or malformed month; 404 for an unknown company.
+  /// 400 for a missing, malformed, reversed or too long period; 404 for an
+  /// unknown company.
   Future<HoursReport> hours({
-    required String? month,
+    required String? from,
+    required String? to,
     required Future<bool> Function(int companyId) mayView,
     int? companyId,
   }) async {
-    final match = _month.firstMatch(month ?? '');
-    if (match == null) throw const ApiException.validation('month', 'Give the month as yyyy-MM, e.g. 2026-10.');
-    final year = int.parse(match.group(1)!), number = int.parse(match.group(2)!);
-    final first = DateTime.utc(year, number);
-    final last = DateTime.utc(year, number + 1, 0);
+    final (:first, :last) = ReportPeriod.parse(from, to);
 
     final List<int> companyIds;
     if (companyId != null) {
@@ -83,8 +72,8 @@ class ReportService {
     final plans = await _plans.of([for (final e in employees) e.id]);
     final trips = await _kilometres?.ofUsers(
       [for (final e in employees) e.id],
-      _clock.utcOf(DateTime(year, number)),
-      _clock.utcOf(DateTime(year, number + 1)),
+      _clock.utcOf(DateTime(first.year, first.month, first.day)),
+      _clock.utcOf(DateTime(last.year, last.month, last.day + 1)),
     );
     final local = _clock.wallClockOf(_now().toUtc());
     final today = DateTime.utc(local.year, local.month, local.day);
@@ -135,6 +124,6 @@ class ReportService {
         ),
       );
     }
-    return HoursReport(month: '${match.group(1)}-${match.group(2)}', employees: rows);
+    return HoursReport(from: first, to: last, employees: rows);
   }
 }

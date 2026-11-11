@@ -3,9 +3,10 @@ import 'package:test/test.dart';
 
 void main() {
   test('a project report goes to JSON and back unchanged', () {
-    const report = ProjectReport(
-      month: '2026-10',
-      projects: [
+    final report = ProjectReport(
+      from: DateTime.utc(2026, 10, 1),
+      to: DateTime.utc(2026, 10, 31),
+      projects: const [
         ProjectReportProject(
           project: ProjectSummary(
             id: 3,
@@ -38,7 +39,7 @@ void main() {
 
     final back = ProjectReport.fromJson(report.toJson());
 
-    expect(back.month, '2026-10');
+    expect((back.from, back.to), (DateTime.utc(2026, 10, 1), DateTime.utc(2026, 10, 31)));
     final project = back.projects.single;
     expect((project.project.fullName, project.project.placeName), ('P-1042 Office refurbishment', 'Mouscron'));
     expect((project.workedMinutes, project.travelMinutes, project.trips), (600, 50, 2));
@@ -48,6 +49,6 @@ void main() {
   });
 
   test('a missing field is refused', () {
-    expect(() => ProjectReport.fromJson({'month': '2026-10'}), throwsFormatException);
+    expect(() => ProjectReport.fromJson({'from': '2026-10-01', 'to': '2026-10-31'}), throwsFormatException);
   });
 }

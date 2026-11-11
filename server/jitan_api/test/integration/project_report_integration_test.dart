@@ -51,9 +51,9 @@ void main() {
   var counter = 0;
 
   DateTime moment(int minutesAgo) => DateTime.now().toUtc().subtract(Duration(minutes: minutesAgo));
-  String thisMonth() {
+  String today() {
     final local = clock.wallClockOf(moment(0));
-    return '${local.year}-${local.month.toString().padLeft(2, '0')}';
+    return TimeRecordDay.dateText(DateTime.utc(local.year, local.month, local.day));
   }
 
   Future<int> newCompany(String name) async => (await db.execute(
@@ -189,7 +189,7 @@ void main() {
     await workedOn(mine, project);
     await workedOn(theirs, project);
 
-    final report = await reports.projects(month: thisMonth(), mayView: (id) async => id == company);
+    final report = await reports.projects(from: today(), to: today(), mayView: (id) async => id == company);
 
     final row = report.projects.singleWhere((p) => p.project.id == project);
     expect((row.project.isClientSite, row.project.placeName), (true, 'Engis'));
@@ -197,13 +197,13 @@ void main() {
     expect(row.workedMinutes, inInclusiveRange(19, 20));
     expect(row.employees.single.days, 1);
 
-    final both = await reports.projects(month: thisMonth(), mayView: (_) async => true);
+    final both = await reports.projects(from: today(), to: today(), mayView: (_) async => true);
     expect(both.projects.singleWhere((p) => p.project.id == project).employees, hasLength(2));
   });
 
-  test('a malformed month is refused', () async {
+  test('a malformed period is refused', () async {
     await expectLater(
-      reports.projects(month: '2026-13', mayView: (_) async => true),
+      reports.projects(from: '2026-13-01', to: '2026-13-02', mayView: (_) async => true),
       throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)),
     );
   });

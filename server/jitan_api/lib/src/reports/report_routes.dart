@@ -12,11 +12,13 @@ import 'report_service.dart';
 
 /// HR/Admin reports. Consumer: the Reports page (`apps/admin_web`).
 ///
-/// - `GET /reports/hours?month=yyyy-MM&company=`: each employee's month. With
+/// - `GET /reports/hours?from=yyyy-MM-dd&to=yyyy-MM-dd&company=`: each
+///   employee's period. With
 ///   `company`, that company only (the right is checked there); without,
 ///   every company where the viewer may see reports, each checked on its own
 ///   (ENGINEERING_RULES §28a.5).
-/// - `GET /reports/projects?month=yyyy-MM`: each project's month. A project
+/// - `GET /reports/projects?from=yyyy-MM-dd&to=yyyy-MM-dd`: each project's
+///   period. A project
 ///   has no company (D44): it holds the employees of every company where the
 ///   viewer may see reports, each checked on its own.
 /// - `GET /dashboard?from=yyyy-MM-dd&to=yyyy-MM-dd`: today, the totals and the
@@ -51,7 +53,8 @@ class ReportRoutes {
     // 401 without an identity, even when there is no company to check.
     request.identity;
     final report = await _projects.projects(
-      month: request.url.queryParameters['month'],
+      from: request.url.queryParameters['from'],
+      to: request.url.queryParameters['to'],
       mayView: (id) => _authorizer.may(request, Permission.viewReports, companyId: id),
     );
     return jsonResponse(report.toJson());
@@ -65,7 +68,8 @@ class ReportRoutes {
     final companyId = rawCompany == null || rawCompany.isEmpty ? null : pathId(rawCompany, 'No such company.');
     if (companyId != null) await _authorizer.require(request, Permission.viewReports, companyId: companyId);
     final report = await _reports.hours(
-      month: query['month'],
+      from: query['from'],
+      to: query['to'],
       companyId: companyId,
       mayView: (id) => _authorizer.may(request, Permission.viewReports, companyId: id),
     );

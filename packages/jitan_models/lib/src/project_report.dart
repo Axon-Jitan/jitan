@@ -1,5 +1,6 @@
 import 'json_reading.dart';
 import 'project.dart';
+import 'time_record.dart';
 
 /// One employee's month on one project.
 class ProjectReportEmployee {
@@ -98,21 +99,24 @@ class ProjectReportProject {
 }
 
 /// Response body of `GET /reports/projects`: the projects worked on or
-/// travelled to in a month, the most worked first.
+/// travelled to in a period, the most worked first.
 class ProjectReport {
-  const ProjectReport({required this.month, required this.projects});
+  const ProjectReport({required this.from, required this.to, required this.projects});
 
   factory ProjectReport.fromJson(Map<String, Object?> json) => ProjectReport(
-    month: json.readString('month'),
+    from: TimeRecordDay.parseDate(json.readString('from')),
+    to: TimeRecordDay.parseDate(json.readString('to')),
     projects: json.readObjectList('projects').map(ProjectReportProject.fromJson).toList(),
   );
 
-  /// `yyyy-MM`.
-  final String month;
+  /// The period's first and last day, both included.
+  final DateTime from;
+  final DateTime to;
   final List<ProjectReportProject> projects;
 
   Map<String, Object?> toJson() => {
-    'month': month,
+    'from': TimeRecordDay.dateText(from),
+    'to': TimeRecordDay.dateText(to),
     'projects': [for (final p in projects) p.toJson()],
   };
 }

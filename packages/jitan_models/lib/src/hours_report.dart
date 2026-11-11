@@ -122,19 +122,22 @@ class HoursReportEmployee {
 
 /// Response body of `GET /reports/hours`.
 class HoursReport {
-  const HoursReport({required this.month, required this.employees});
+  const HoursReport({required this.from, required this.to, required this.employees});
 
   factory HoursReport.fromJson(Map<String, Object?> json) => HoursReport(
-    month: json.readString('month'),
+    from: TimeRecordDay.parseDate(json.readString('from')),
+    to: TimeRecordDay.parseDate(json.readString('to')),
     employees: json.readObjectList('employees').map(HoursReportEmployee.fromJson).toList(),
   );
 
-  /// `yyyy-MM`.
-  final String month;
+  /// The period's first and last day, both included.
+  final DateTime from;
+  final DateTime to;
   final List<HoursReportEmployee> employees;
 
   Map<String, Object?> toJson() => {
-    'month': month,
+    'from': TimeRecordDay.dateText(from),
+    'to': TimeRecordDay.dateText(to),
     'employees': [for (final employee in employees) employee.toJson()],
   };
 }

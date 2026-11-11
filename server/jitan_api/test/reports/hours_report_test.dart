@@ -50,8 +50,10 @@ TestApp _app() {
   return app;
 }
 
-Future<HoursReportEmployee> _emma(TestApp app, {String month = '2026-10'}) async {
-  final response = await app.get('/reports/hours?month=$month');
+const _october = 'from=2026-10-01&to=2026-10-31';
+
+Future<HoursReportEmployee> _emma(TestApp app) async {
+  final response = await app.get('/reports/hours?$_october');
   expect(response.statusCode, 200);
   return HoursReport.fromJson(await jsonBody(response)).employees.single;
 }
@@ -146,29 +148,45 @@ void main() {
       7: [_employee(11, 'Emma', 'Janssens', 'EJA'), _employee(12, 'Noor', 'Peeters', 'NPE')],
     };
 
-    final report = HoursReport.fromJson(await jsonBody(await app.get('/reports/hours?month=2026-10')));
+    final report = HoursReport.fromJson(await jsonBody(await app.get('/reports/hours?$_october')));
 
     expect(report.employees.map((e) => e.code), ['EJA']);
   });
 
   group('checks', () {
-    for (final month in ['', '2026', '2026-13', '2026-00', '26-10', "2026-10' OR '1'='1"]) {
-      test('month "$month" → 400 on month', () async {
-        final response = await _app().get('/reports/hours?month=${Uri.encodeComponent(month)}');
+    for (final (from, to) in [
+      ('', '2026-10-31'),
+      ('2026-10', '2026-10-31'),
+      ('2026-02-31', '2026-03-01'),
+      ('2026-10-31', '2026-10-01'),
+      ('2025-01-01', '2026-10-31'),
+      ("2026-10-01' OR '1'='1", '2026-10-31'),
+    ]) {
+      test('period "$from" to "$to" → 400', () async {
+        final response = await _app().get(
+          '/reports/hours?from=${Uri.encodeComponent(from)}&to=${Uri.encodeComponent(to)}',
+        );
 
         expect(response.statusCode, 400);
       });
     }
 
+    test('any period, not only a month: a week counts its own planned days', () async {
+      final response = await _app().get('/reports/hours?from=2026-10-05&to=2026-10-11');
+      final report = HoursReport.fromJson(await jsonBody(response));
+      expect((report.from, report.to), (DateTime.utc(2026, 10, 5), DateTime.utc(2026, 10, 11)));
+      expect(report.employees.single.plannedMinutes, 2 * 480, reason: 'one Monday and one Thursday');
+    });
+
     test('an unknown company is 404', () async {
-      expect((await _app().get('/reports/hours?month=2026-10&company=99')).statusCode, 404);
+      expect((await _app().get('/reports/hours?$_october&company=99')).statusCode, 404);
     });
 
     test('needs viewReports in the company asked for', () async {
       final app = TestApp(allowPermissions: false);
       app.companies.existingIds = {7};
 
-      final response = await app.get('/reports/hours?month=2026-10&company=7');
+      final response = await app.get('/reports/hours?$_october&company=7');
 
       expect(response.statusCode, 403);
       expect(app.permissions.checked.map((c) => (c.$2, c.$3)), contains((Permission.viewReports, 7)));
@@ -187,17 +205,17 @@ void main() {
       ];
       app.permissions.deniedCompanies = {7};
 
-      final report = HoursReport.fromJson(await jsonBody(await app.get('/reports/hours?month=2026-10')));
+      final report = HoursReport.fromJson(await jsonBody(await app.get('/reports/hours?$_october')));
 
       expect(report.employees.map((e) => e.code), ['OCO'], reason: 'nothing from company 7');
     });
 
     test('a session is required', () async {
-      expect((await TestApp(devUserId: null).get('/reports/hours?month=2026-10')).statusCode, 401);
+      expect((await TestApp(devUserId: null).get('/reports/hours?$_october')).statusCode, 401);
     });
 
     test('the project report needs a session too', () async {
-      expect((await TestApp(devUserId: null).get('/reports/projects?month=2026-10')).statusCode, 401);
+      expect((await TestApp(devUserId: null).get('/reports/projects?$_october')).statusCode, 401);
     });
   });
 }

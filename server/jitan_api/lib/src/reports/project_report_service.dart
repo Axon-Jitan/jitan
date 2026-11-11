@@ -12,7 +12,7 @@ import '../time_records/time_record_service.dart';
 import '../time_records/week_plans.dart';
 import '../time_registration/workplace_clock.dart';
 import 'project_report_days.dart';
-import 'report_service.dart';
+import 'report_period.dart';
 
 /// The project report (Figma `1515:2`, a project `1515:190`, D24):
 /// calculated when opened, never stored. A project has no company (D44), so
@@ -43,25 +43,27 @@ class ProjectReportService {
   final SqlExecutor _executor;
   final WorkplaceClock _clock;
 
-  /// 400 for a missing or malformed month.
+  /// The period [from]–[to] (`yyyy-MM-dd`, both included). 400 for a
+  /// missing, malformed, reversed or too long period.
   Future<ProjectReport> projects({
-    required String? month,
+    required String? from,
+    required String? to,
     required Future<bool> Function(int companyId) mayView,
   }) async {
-    final (:text, :first, :last) = ReportService.monthOf(month);
+    final (:first, :last) = ReportPeriod.parse(from, to);
     final companyIds = [
       for (final company in await _companies.listCompanies())
         if (await mayView(company.id)) company.id,
     ];
     final employees = await _employees.listForCompanies(companyIds);
-    if (employees.isEmpty) return ProjectReport(month: text, projects: const []);
+    if (employees.isEmpty) return ProjectReport(from: first, to: last, projects: const []);
     final ids = [for (final e in employees) e.id];
 
     final activities = await _activities.ofUsers(
       _executor,
       ids,
-      _clock.utcOf(DateTime(first.year, first.month)),
-      _clock.utcOf(DateTime(first.year, first.month + 1)),
+      _clock.utcOf(DateTime(first.year, first.month, first.day)),
+      _clock.utcOf(DateTime(last.year, last.month, last.day + 1)),
     );
     final days = await _days.daysOf(employees, first, last);
     final plans = await _plans.of(ids);
@@ -76,7 +78,8 @@ class ProjectReportService {
     ];
 
     return ProjectReport(
-      month: text,
+      from: first,
+      to: last,
       projects: ProjectReportDays.build(
         employees: employees,
         days: days,
