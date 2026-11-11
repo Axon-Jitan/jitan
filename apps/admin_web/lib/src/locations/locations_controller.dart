@@ -39,6 +39,9 @@ class LocationsController extends ChangeNotifier {
 
   String _search = '';
 
+  /// What HR searched for ('' = nothing).
+  String get search => _search;
+
   LocationStatusFilter? _status;
   LocationStatusFilter? get status => _status;
 

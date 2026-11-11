@@ -24,6 +24,7 @@ class LocationFormController extends ChangeNotifier {
       field.addListener(_addressChanged);
     }
     name.addListener(notifyListeners);
+    box.addListener(notifyListeners);
   }
 
   /// A new location's area: the low end of the recommended 50–100 m.
@@ -65,6 +66,21 @@ class LocationFormController extends ChangeNotifier {
 
   bool get canSave =>
       !_busy && name.text.trim().isNotEmpty && street.text.trim().isNotEmpty && _point != null;
+
+  /// Something differs from the stored location (always true when adding).
+  bool get changed {
+    final l = location;
+    if (l == null) return true;
+    String norm(String? v) => (v ?? '').trim();
+    return norm(name.text) != norm(l.name) ||
+        norm(street.text) != norm(l.street) ||
+        norm(number.text) != norm(l.number) ||
+        norm(box.text) != norm(l.box) ||
+        norm(zipcode.text) != norm(l.zipcode) ||
+        norm(city.text) != norm(l.city) ||
+        _point != l.point ||
+        _radius != l.radiusMeters;
+  }
 
   /// A street and a pin: enough for a place another form names (a project's
   /// client site, D44).

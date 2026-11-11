@@ -1022,15 +1022,21 @@ abstract final class AdminTextKeys {
   static const locationsCount = 'locations.count';
   static const locationsLoading = 'locations.loading';
   static const locationsLoadFailed = 'locations.loadFailed';
-  static const locationsNoMatch = 'locations.noMatch';
   static const locationsEmptyTitle = 'locations.empty.title';
   static const locationsEmptyText = 'locations.empty.text';
   static const locationAdd = 'location.add';
   static const locationSave = 'location.save';
+  // Locations V2 (Figma 1542:153, 1542:322, 1543:114, 1543:216).
+  static const locationActiveSubtitle = 'location.active.subtitle';
+  static const locationInactiveNote = 'location.inactive.note';
+  static const locationsNoMatchTitle = 'locations.noMatch.title';
+  static const locationsNoMatchText = 'locations.noMatch.text';
+  static const locationsNoInactiveTitle = 'locations.noInactive.title';
+  static const locationsNoInactiveText = 'locations.noInactive.text';
+  static const locationsNoActiveTitle = 'locations.noActive.title';
+  static const locationsNoActiveText = 'locations.noActive.text';
   static const locationAddTitle = 'location.add.title';
   static const locationAddSubtitle = 'location.add.subtitle';
-  static const locationEditTitle = 'location.edit.title';
-  static const locationEditSubtitle = 'location.edit.subtitle';
   static const locationFieldName = 'location.field.name';
   static const locationFieldNameHint = 'location.field.name.hint';
   static const locationFieldStreet = 'location.field.street';

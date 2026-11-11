@@ -273,6 +273,24 @@ void main() {
       _fitsTheWindow(tester, width, 'Deactivate location');
     });
 
+    testWidgets('an inactive location and no inactive ones at $width px', (tester) async {
+      final api = FakeLocationsApi()..locations.addAll([location(1, 'Almeco office'), location(2, 'Old depot', active: false)]);
+      await _pump(tester, width, LocationsScreen(api: api, maps: fakeLocationMaps()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Old depot'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'inactive location');
+      await tester.ensureVisible(find.text('Cancel'));
+      await _settle(tester);
+      await tester.tap(find.text('Cancel'));
+      await _settle(tester);
+
+      await tester.enterText(find.byType(TextField).first, 'nothing here');
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'no matching locations');
+    });
+
     testWidgets('empty Locations page at $width px', (tester) async {
       await _pump(tester, width, LocationsScreen(api: FakeLocationsApi(), maps: fakeLocationMaps()));
       await tester.pumpAndSettle();

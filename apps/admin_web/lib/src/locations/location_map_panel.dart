@@ -9,11 +9,14 @@ import 'location_map.dart';
 /// The map side of Add location (Figma `1465:301`) and of Add project for a
 /// client site (`1512:114`): the pin, its area, a hint and the close button.
 class LocationMapPanel extends StatelessWidget {
-  const LocationMapPanel({super.key, required this.form, required this.maps, required this.busy});
+  const LocationMapPanel({super.key, required this.form, required this.maps, required this.busy, this.showClose = true});
 
   final LocationFormController form;
   final LocationMaps? maps;
   final bool busy;
+
+  /// The ✕ in the corner; off where the form has Cancel (Figma `1542:153`).
+  final bool showClose;
 
   /// Required by Mapbox, in every language.
   static const _attribution = '© Mapbox © OpenStreetMap';
@@ -38,22 +41,23 @@ class LocationMapPanel extends StatelessWidget {
           left: 20,
           child: _Hint(context.t(form.point == null ? AdminTextKeys.locationMapPlace : AdminTextKeys.locationMapDrag)),
         ),
-        Positioned(
-          top: 20,
-          right: 20,
-          child: Material(
-            color: JitanColors.surface,
-            shape: const CircleBorder(),
-            child: IconButton(
-              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-              iconSize: 16,
-              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
-              padding: EdgeInsets.zero,
-              onPressed: busy ? null : () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close, color: JitanColors.ink),
+        if (showClose)
+          Positioned(
+            top: 20,
+            right: 20,
+            child: Material(
+              color: JitanColors.surface,
+              shape: const CircleBorder(),
+              child: IconButton(
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                iconSize: 16,
+                constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+                padding: EdgeInsets.zero,
+                onPressed: busy ? null : () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, color: JitanColors.ink),
+              ),
             ),
           ),
-        ),
         Positioned(
           left: 20,
           right: 20,

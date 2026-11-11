@@ -17,8 +17,9 @@ import 'locations_controller.dart';
 import 'locations_empty_card.dart';
 import 'locations_table.dart';
 
-/// HR/Admin "Locations" page (Figma `1465:2`, empty `1465:177`). The ERD has
-/// no company on an address yet (GAP-03), so this page is not company-scoped.
+/// HR/Admin "Locations" page (Figma `1542:2`; no results `1543:114`, none
+/// inactive `1543:216`, nothing yet `1543:318`). The ERD has no company on an
+/// address (GAP-03), so this page is not company-scoped.
 class LocationsScreen extends StatefulWidget {
   const LocationsScreen({super.key, required this.api, required this.maps, this.startAdding = false});
 
@@ -88,11 +89,16 @@ class _LocationsScreenState extends State<LocationsScreen> {
         children: [
           JitanPageHeader(
             title: context.t(AdminTextKeys.locationsTitle),
-            subtitle: context.t(AdminTextKeys.locationsSubtitle),
+            subtitle: switch (_controller.state) {
+              LocationsLoaded(:final locations) when locations.isNotEmpty =>
+                context.tPlural(AdminTextKeys.locationsCount, locations.length),
+              _ => context.t(AdminTextKeys.locationsSubtitle),
+            },
             action: _isEmpty
                 ? null
                 : JitanPrimaryButton(
                     label: context.t(AdminTextKeys.locationAdd),
+                    icon: Icons.add,
                     height: JitanDimensions.controlHeight,
                     onPressed: _open,
                   ),
@@ -105,52 +111,72 @@ class _LocationsScreenState extends State<LocationsScreen> {
     list: [ListenableBuilder(listenable: _controller, builder: (context, _) => _content(context))],
   );
 
+  /// A search box and All · Active · Inactive, as on Companies.
   Widget _toolbar(BuildContext context) {
-    final search = JitanFieldLabel(
-      label: context.t(CommonTextKeys.searchLabel),
-      child: JitanSearchField(
-        clearTooltip: context.t(CommonTextKeys.searchClear),
-        outlined: true,
-        hintText: context.t(AdminTextKeys.locationsSearch),
-        onChanged: _controller.updateSearch,
-      ),
+    final search = JitanSearchField(
+      clearTooltip: context.t(CommonTextKeys.searchClear),
+      outlined: true,
+      hintText: context.t(AdminTextKeys.locationsSearch),
+      onChanged: _controller.updateSearch,
     );
-    final status = JitanSelectField<LocationStatusFilter?>(
-      label: context.t(AdminTextKeys.scheduleFilterStatus),
-      value: _controller.status,
+    final status = JitanPillSwitch<LocationStatusFilter?>(
       options: [
-        JitanSelectOption(value: null, label: context.t(AdminTextKeys.locationsFilterAll)),
-        JitanSelectOption(value: LocationStatusFilter.active, label: context.t(CommonTextKeys.statusActive)),
-        JitanSelectOption(value: LocationStatusFilter.inactive, label: context.t(CommonTextKeys.statusInactive)),
+        (null, context.t(AdminTextKeys.locationsFilterAll)),
+        (LocationStatusFilter.active, context.t(CommonTextKeys.statusActive)),
+        (LocationStatusFilter.inactive, context.t(CommonTextKeys.statusInactive)),
       ],
+      value: _controller.status,
       onChanged: _controller.updateStatus,
     );
     return LayoutBuilder(
       builder: (context, constraints) => constraints.maxWidth < JitanDimensions.phoneBreakpoint
           ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [search, const SizedBox(height: 14), status],
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 12,
+              children: [search, status],
             )
           : Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                SizedBox(width: JitanDimensions.filterSearchWidth, child: search),
-                const SizedBox(width: 16),
-                SizedBox(width: 220, child: status),
-              ],
+              spacing: 12,
+              children: [SizedBox(width: 320, child: search), status],
             ),
     );
   }
 
   Widget _content(BuildContext context) => switch (_controller.state) {
-    LocationsLoading() => _state(GroupStateText(context.t(AdminTextKeys.locationsLoading))),
+    LocationsLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.locationsLoading))),
     LocationsFailed() => _state(GroupStateText(context.t(AdminTextKeys.locationsLoadFailed), onRetry: _controller.load)),
     LocationsLoaded(locations: []) => SliverToBoxAdapter(child: LocationsEmptyCard(onAdd: _open)),
     LocationsLoaded() => switch (_controller.visible) {
-      [] => _state(GroupStateText(context.t(AdminTextKeys.locationsNoMatch))),
+      [] => SliverToBoxAdapter(child: _nothingShown(context)),
       final locations => LocationsTable(locations: locations, onOpen: _open),
     },
   };
+
+  /// Nothing to show: said for what HR did, a search or a status
+  /// (Figma `1543:114`, `1543:216`), calmly on the page itself.
+  Widget _nothingShown(BuildContext context) {
+    final (title, line) = switch ((_controller.search, _controller.status)) {
+      ('', LocationStatusFilter.inactive) => (AdminTextKeys.locationsNoInactiveTitle, AdminTextKeys.locationsNoInactiveText),
+      ('', LocationStatusFilter.active) => (AdminTextKeys.locationsNoActiveTitle, AdminTextKeys.locationsNoActiveText),
+      _ => (AdminTextKeys.locationsNoMatchTitle, AdminTextKeys.locationsNoMatchText),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 96),
+      child: Column(
+        spacing: 6,
+        children: [
+          Text(context.t(title), textAlign: TextAlign.center, style: JitanTextStyles.stateTitle.copyWith(fontSize: 17)),
+          Text(
+            context.t(line),
+            textAlign: TextAlign.center,
+            style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _centered(Widget child) => JitanTableStateSliver(child: child);
 
   static Widget _state(Widget child) => SliverToBoxAdapter(
     child: Padding(padding: const EdgeInsets.only(top: 20), child: child),

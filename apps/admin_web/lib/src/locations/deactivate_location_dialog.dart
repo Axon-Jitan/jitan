@@ -14,8 +14,9 @@ Future<Location?> showDeactivateLocationDialog(
   required Location location,
 }) => showJitanModal<Location>(context, builder: (_) => DeactivateLocationDialog(api: api, location: location));
 
-/// Figma `HR / Locations — Deactivate confirmation` (1465:846). Nothing is
-/// deleted: Jitan stops recognising the place, and its time stays.
+/// Figma "Deactivate?" (`1543:3`): one plain question. Nothing is deleted:
+/// Jitan stops recognising the place, its time stays, and it can be
+/// reactivated.
 class DeactivateLocationDialog extends StatefulWidget {
   const DeactivateLocationDialog({super.key, required this.api, required this.location});
 
@@ -51,7 +52,7 @@ class _DeactivateLocationDialogState extends State<DeactivateLocationDialog> {
     title: context.t(AdminTextKeys.locationDeactivateTitle, args: {'location': widget.location.name}),
     subtitle: context.t(AdminTextKeys.locationDeactivateText),
     body: switch (_failure) {
-      null => const SizedBox.shrink(),
+      null => null,
       final failure => Builder(
         builder: (context) {
           final keys = failureTextKeysFor(failure);
@@ -60,11 +61,23 @@ class _DeactivateLocationDialogState extends State<DeactivateLocationDialog> {
       ),
     },
     actions: [
-      JitanSecondaryButton(
-        label: context.t(CommonTextKeys.cancel),
-        onPressed: _busy ? null : () => Navigator.of(context).pop(),
+      Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 12,
+        runSpacing: 10,
+        children: [
+          JitanSecondaryButton(
+            label: context.t(CommonTextKeys.cancel),
+            onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          ),
+          JitanPrimaryButton(
+            label: context.t(AdminTextKeys.locationDeactivate),
+            color: JitanColors.errorStrong,
+            busy: _busy,
+            onPressed: _deactivate,
+          ),
+        ],
       ),
-      JitanPrimaryButton(label: context.t(AdminTextKeys.locationDeactivate), busy: _busy, onPressed: _deactivate),
     ],
   );
 }

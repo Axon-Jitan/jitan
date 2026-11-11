@@ -43,8 +43,10 @@ Future<LocationDialogResult?> showLocationDialog(
   builder: (_) => LocationDialog(api: api, maps: maps, location: location),
 );
 
-/// Figma `HR / Locations — Add location` (1465:301), `name in use` (1465:482)
-/// and `Edit location` (1465:664): the form beside the map; stacked on a phone.
+/// Figma Add location (`1465:301`, name in use `1465:482`), a location
+/// (`1542:153`) and an inactive one (`1542:322`): the form beside the map,
+/// stacked on a phone. A location shows its name and whether it is active;
+/// Save waits for a change; Cancel closes (no ✕).
 class LocationDialog extends StatefulWidget {
   const LocationDialog({super.key, required this.api, required this.maps, this.location});
 
@@ -153,13 +155,17 @@ class _LocationDialogState extends State<LocationDialog> {
             Semantics(
               header: true,
               child: Text(
-                context.t(editing ? AdminTextKeys.locationEditTitle : AdminTextKeys.locationAddTitle),
+                editing ? widget.location!.name : context.t(AdminTextKeys.locationAddTitle),
                 style: JitanTextStyles.modalTitle,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              context.t(editing ? AdminTextKeys.locationEditSubtitle : AdminTextKeys.locationAddSubtitle),
+              context.t(switch (widget.location) {
+                null => AdminTextKeys.locationAddSubtitle,
+                Location(isActive: true) => AdminTextKeys.locationActiveSubtitle,
+                _ => CommonTextKeys.statusInactive,
+              }),
               style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
             ),
             const SizedBox(height: 24),
@@ -234,6 +240,13 @@ class _LocationDialogState extends State<LocationDialog> {
                 ),
               ],
             ),
+            if (widget.location case Location(isActive: false)) ...[
+              const SizedBox(height: 14),
+              Text(
+                context.t(AdminTextKeys.locationInactiveNote),
+                style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
+              ),
+            ],
             if (_form.failure case final failure?) ...[
               const SizedBox(height: 16),
               Builder(
@@ -255,13 +268,19 @@ class _LocationDialogState extends State<LocationDialog> {
     final quiet = location == null
         ? null
         : TextButton(
-            style: TextButton.styleFrom(foregroundColor: JitanColors.inkMuted, padding: EdgeInsets.zero),
+            style: TextButton.styleFrom(
+              foregroundColor: location.isActive ? JitanColors.errorStrong : JitanColors.ink,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
             onPressed: !idle
                 ? null
                 : location.isActive
                 ? () => Navigator.of(context).pop(const LocationDeactivateChosen())
                 : _reactivate,
-            child: Text(context.t(location.isActive ? AdminTextKeys.locationDeactivate : AdminTextKeys.locationReactivate)),
+            child: Text(
+              context.t(location.isActive ? AdminTextKeys.locationDeactivate : AdminTextKeys.locationReactivate),
+              style: JitanTextStyles.tableCellStrong.copyWith(color: location.isActive ? JitanColors.errorStrong : JitanColors.ink),
+            ),
           );
     // Wraps instead of overflowing: on a phone Deactivate takes its own line.
     final buttons = Wrap(
@@ -276,7 +295,7 @@ class _LocationDialogState extends State<LocationDialog> {
         JitanPrimaryButton(
           label: context.t(location == null ? AdminTextKeys.locationAdd : AdminTextKeys.locationSave),
           busy: _form.busy,
-          onPressed: _form.canSave && idle ? _save : null,
+          onPressed: _form.canSave && _form.changed && idle ? _save : null,
         ),
       ],
     );
@@ -288,5 +307,5 @@ class _LocationDialogState extends State<LocationDialog> {
     );
   }
 
-  Widget _map(BuildContext context) => LocationMapPanel(form: _form, maps: widget.maps, busy: _form.busy);
+  Widget _map(BuildContext context) => LocationMapPanel(form: _form, maps: widget.maps, busy: _form.busy, showClose: false);
 }

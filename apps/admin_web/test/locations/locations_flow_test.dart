@@ -45,8 +45,8 @@ void main() {
     expect(find.text('Locations'), findsWidgets);
     expect(find.text('Rue du Progrès 12, 7700 Mouscron'), findsNWidgets(2));
     expect(find.text('75 m'), findsOneWidget);
-    expect(find.text('Inactive'), findsOneWidget);
-    expect(find.text('2 locations'), findsOneWidget);
+    expect(find.text('Inactive'), findsNWidgets(2), reason: 'the row and the pill');
+    expect(find.text('2 locations'), findsOneWidget, reason: 'the count is in the header');
   });
 
   testWidgets('search and status filter the list', (tester) async {
@@ -61,7 +61,53 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, 'nothing here');
     await tester.pumpAndSettle();
-    expect(find.text('No locations match your search.'), findsOneWidget);
+    expect(find.text('No matching locations'), findsOneWidget);
+    expect(find.text('Try another name, street or city.'), findsOneWidget);
+  });
+
+  testWidgets('Inactive with none says so calmly', (tester) async {
+    final fakes = TestServices();
+    fakes.locations.locations.add(location(1, 'Almeco office'));
+    await _pump(tester, fakes);
+
+    await tester.tap(find.text('Inactive'));
+    await tester.pumpAndSettle();
+    expect(find.text('No inactive locations'), findsOneWidget);
+    expect(find.text('Every location is in use.'), findsOneWidget);
+
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+    expect(find.text('Almeco office'), findsOneWidget);
+  });
+
+  testWidgets('a location: its name as the title, Save only after a change', (tester) async {
+    final fakes = TestServices();
+    fakes.locations.locations.add(location(1, 'Almeco office'));
+    await _pump(tester, fakes);
+    await tester.tap(find.text('Almeco office'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Almeco office'), findsNWidgets(3), reason: 'the row, the title and the field');
+    expect(find.text('Active · Changes apply to employees right away.'), findsOneWidget);
+    expect(_primary(tester, 'Save').onPressed, isNull, reason: 'nothing changed');
+
+    await tester.enterText(_field('Name'), 'Almeco office 2');
+    await tester.pump();
+    expect(_primary(tester, 'Save').onPressed, isNotNull);
+    await tester.enterText(_field('Name'), 'Almeco office');
+    await tester.pump();
+    expect(_primary(tester, 'Save').onPressed, isNull, reason: 'back as it was');
+  });
+
+  testWidgets('an inactive location says what that means', (tester) async {
+    final fakes = TestServices();
+    fakes.locations.locations.add(location(1, 'Old depot', active: false));
+    await _pump(tester, fakes);
+    await tester.tap(find.text('Old depot'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jitan doesn’t recognise employees here. Reactivate it to use it again.'), findsOneWidget);
+    expect(find.text('Reactivate'), findsOneWidget);
   });
 
   testWidgets('empty: one sentence and one action, no filters', (tester) async {
@@ -170,12 +216,14 @@ void main() {
     await tester.tap(find.text('Almeco office'));
     await tester.pumpAndSettle();
 
+    await tester.enterText(_field('Name'), 'PCA workshop');
+    await tester.pump();
     fakes.locations.failNext = _apiError(409, ApiErrorCode.duplicateLocationName, field: 'name');
-    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Save changes'));
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Save'));
     await tester.pumpAndSettle();
 
     expect(find.text('This name is already in use.'), findsOneWidget);
-    expect(find.text('Edit location'), findsOneWidget);
+    expect(find.text('Active · Changes apply to employees right away.'), findsOneWidget, reason: 'the pop-up stays');
   });
 
   testWidgets('edit: a row opens it, and saving reloads the list', (tester) async {
@@ -187,7 +235,7 @@ void main() {
 
     await tester.enterText(_field('Name'), 'Almeco head office');
     await tester.pump();
-    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Save changes'));
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Save'));
     await tester.pumpAndSettle();
 
     expect(fakes.locations.calls, contains('update 1'));
@@ -210,14 +258,15 @@ void main() {
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Deactivate'));
     await tester.pumpAndSettle();
     expect(fakes.locations.calls, contains('deactivate 1'));
-    expect(find.text('Inactive'), findsOneWidget);
+    expect(find.text('Inactive'), findsNWidgets(2), reason: 'the row and the pill');
 
     await tester.tap(find.text('Almeco office'));
     await tester.pumpAndSettle();
+    expect(find.text('Inactive'), findsNWidgets(3), reason: 'the row, the pill and the pop-up');
     await tester.tap(find.text('Reactivate'));
     await tester.pumpAndSettle();
     expect(fakes.locations.calls, contains('reactivate 1'));
-    expect(find.text('Active'), findsOneWidget);
+    expect(find.text('Active'), findsNWidgets(2), reason: 'the row and the pill');
   });
 
   testWidgets('with no map token a new location cannot be placed, and the page says why', (tester) async {
