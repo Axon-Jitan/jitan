@@ -4,7 +4,6 @@ import 'dart:convert';
 
 import 'package:admin_web/src/companies/companies_screen.dart';
 import 'package:admin_web/src/company_context/current_company.dart';
-import 'package:admin_web/src/employees/employee_details_dialog.dart';
 import 'package:admin_web/src/employees/employees_screen.dart';
 import 'package:admin_web/src/employees/import/employee_import_screen.dart';
 import 'package:admin_web/src/employees/import/platform/import_file_picker.dart';
@@ -79,22 +78,22 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 400));
 }
 
-/// Employee details has no way in from a row in V1 (EMP-DETAILS-V2), so the
-/// tests open it from a button.
-Widget _detailsOpener(FakeEmployeesApi employees) => Builder(
-  builder: (context) => Center(
-    child: TextButton(
-      onPressed: () => showEmployeeDetailsDialog(
-        context,
-        employeesApi: employees,
-        assignmentsApi: FakeEmployeeAssignmentsApi(),
-        companyId: 7,
-        userId: 1,
-      ),
-      child: const Text('open details'),
-    ),
-  ),
+/// Employees with one employee, whose row opens their pop-up (Figma
+/// `1531:259`).
+Widget _detailsOpener(FakeEmployeesApi employees) => EmployeesScreen(
+  api: employees,
+  groupsApi: FakeGroupsApi(),
+  companiesApi: FakeCompaniesApi(),
+  schedulesApi: FakeSchedulesApi(),
+  assignmentsApi: FakeEmployeeAssignmentsApi(),
 );
+
+/// Lists Disan and opens the row.
+Future<void> _openEmployee(WidgetTester tester, FakeEmployeesApi employees) async {
+  employees.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW', companyIds: [7])]);
+  await _settle(tester);
+  await tester.tap(find.text('Disan Ssebowa'));
+}
 
 const _activated = EmployeeDetails(
   id: 1,
@@ -427,7 +426,7 @@ void main() {
       final groupsApi = FakeGroupsApi();
       final companiesApi = FakeCompaniesApi();
       final schedulesApi = FakeSchedulesApi();
-      await _pump(tester, width, EmployeesScreen(api: employees, groupsApi: groupsApi, companiesApi: companiesApi, schedulesApi: schedulesApi));
+      await _pump(tester, width, EmployeesScreen(api: employees, groupsApi: groupsApi, companiesApi: companiesApi, schedulesApi: schedulesApi, assignmentsApi: FakeEmployeeAssignmentsApi()));
       employees.succeed([
         employee(1, 'Disan', 'Ssebowa', 'SBW', groups: ['White collar', 'Blue collar']),
         employee(2, 'Thomas', 'Vermeulen', 'TVM', active: false),
@@ -465,14 +464,14 @@ void main() {
       _fitsTheWindow(tester, width, 'Add employee, step 3 (onboarding QR)');
     });
 
-    testWidgets('Employee details and Reset access (staged for V2) at $width px', (tester) async {
+    testWidgets('an employee and Reset access at $width px', (tester) async {
       final employees = FakeEmployeesApi();
       await _pump(tester, width, _detailsOpener(employees));
-      await tester.tap(find.text('open details'));
+      await _openEmployee(tester, employees);
       await _settle(tester);
       employees.detailsSucceed(_activated);
       await _settle(tester);
-      _fitsTheWindow(tester, width, 'Employee details');
+      _fitsTheWindow(tester, width, 'an employee');
 
       await tester.ensureVisible(find.text('Reset account access'));
       await tester.tap(find.text('Reset account access'));
@@ -483,7 +482,7 @@ void main() {
     testWidgets('the temporary QR at $width px', (tester) async {
       final employees = FakeEmployeesApi();
       await _pump(tester, width, _detailsOpener(employees));
-      await tester.tap(find.text('open details'));
+      await _openEmployee(tester, employees);
       await _settle(tester);
       employees.detailsSucceed(
         const EmployeeDetails(
@@ -500,8 +499,8 @@ void main() {
         ),
       );
       await _settle(tester);
-      await tester.ensureVisible(find.text('Generate temporary QR'));
-      await tester.tap(find.text('Generate temporary QR'));
+      await tester.ensureVisible(find.text('Show onboarding QR'));
+      await tester.tap(find.text('Show onboarding QR'));
       await _settle(tester);
       employees.qrSucceeds('header.payload.signature', expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)));
       await _settle(tester);

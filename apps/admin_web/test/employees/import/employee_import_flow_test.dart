@@ -168,7 +168,7 @@ void main() {
 
     expect(find.text('1 employee added to Almeco'), findsOneWidget);
     expect(
-      find.text('2 rows with problems were skipped. Each new employee activates the app with an onboarding QR from Employees.'),
+      find.text('2 rows with problems were skipped. Each new employee sets up the app with an onboarding QR from Employees.'),
       findsOneWidget,
     );
 

@@ -8,6 +8,7 @@ import '../auth/no_access_screen.dart';
 import '../auth/sign_in_screen.dart';
 import '../companies/companies_screen.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../employees/employee_standing.dart';
 import '../employees/employees_screen.dart';
 import '../employees/import/employee_import_screen.dart';
 import '../groups/group_page.dart';
@@ -90,6 +91,7 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
                 groupsApi: services.groupsApi,
                 companiesApi: services.companiesApi,
                 schedulesApi: services.schedulesApi,
+                assignmentsApi: services.assignmentsApi,
                 status: state.uri.queryParameters['status'] == 'not_set_up' ? EmployeeStatusFilter.notSetUp : null,
               ),
             ),

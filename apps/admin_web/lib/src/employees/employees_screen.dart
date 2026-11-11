@@ -11,33 +11,19 @@ import '../company_context/company_switcher.dart';
 import '../company_context/current_company.dart';
 import '../l10n/admin_text_keys.dart';
 import 'add_employee_dialog.dart';
+import 'assignments/manage_assignments_dialog.dart';
+import 'employee_dialog.dart';
+import 'employee_standing.dart';
 import 'employees_controller.dart';
 import 'employees_table.dart';
-import 'manage_employee_dialog.dart';
 import 'remove_employee_dialog.dart';
 import 'reset_access_dialog.dart';
 import 'temporary_qr/temporary_qr_dialog.dart';
 
-/// Which employees the Status filter shows.
-enum EmployeeStatusFilter {
-  active,
-  inactive,
-
-  /// Active, but onboarding isn't done (`userPassword IS NULL`).
-  notSetUp;
-
-  bool lets(EmployeeSummary e) => switch (this) {
-    active => e.isActive,
-    inactive => !e.isActive,
-    notSetUp => e.isActive && !e.isActivated,
-  };
-}
-
-/// HR/Admin "Employees" page (Figma `HR / Employees — Company switcher open`
-/// 1401:2, `No company selected` 1401:121): the employees of the company
-/// chosen in "Current company", with search, status filter, and each row's
-/// "⋯" (Manage employee, 1399:10).
-/// "Import CSV / Excel" opens Import employees for the same company.
+/// HR/Admin "Employees" page (Figma `1531:2`): the employees of the company
+/// chosen on the right ("All companies" or one), with search and the status
+/// buttons. A row opens the employee (`1531:259`, not set up `1531:459`).
+/// "Import CSV / Excel" opens Import employees.
 class EmployeesScreen extends StatefulWidget {
   const EmployeesScreen({
     super.key,
@@ -45,6 +31,7 @@ class EmployeesScreen extends StatefulWidget {
     required this.groupsApi,
     required this.companiesApi,
     required this.schedulesApi,
+    required this.assignmentsApi,
     this.status,
   });
 
@@ -52,6 +39,7 @@ class EmployeesScreen extends StatefulWidget {
   final GroupsApi groupsApi;
   final CompaniesApi companiesApi;
   final SchedulesApi schedulesApi;
+  final EmployeeAssignmentsApi assignmentsApi;
 
   /// Opened from the Dashboard: the status filter at first.
   final EmployeeStatusFilter? status;
@@ -69,7 +57,25 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   final _searchText = TextEditingController();
 
   String _search = '';
-  late EmployeeStatusFilter? _status = widget.status;
+  late EmployeeStatusFilter _status = widget.status ?? EmployeeStatusFilter.all;
+
+  /// Every company, to name an employee's in their pop-up.
+  List<CompanySummary> _companies = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompanies();
+  }
+
+  Future<void> _loadCompanies() async {
+    try {
+      final companies = await widget.companiesApi.listCompanies();
+      if (mounted) _companies = companies;
+    } on ApiClientException {
+      // Only the names in a pop-up depend on it; they show "—" without.
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -91,7 +97,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     super.dispose();
   }
 
-  void _say(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
+  void _say(String text) => showJitanToast(context, text);
 
   Future<void> _addEmployee() async {
     final created = await showAddEmployeeDialog(
@@ -108,44 +114,31 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     _say(context.t(AdminTextKeys.employeeAddSuccess, args: {'name': name}));
   }
 
-  /// "⋯" → Manage employee → the onboarding QR, or Reset account access and
-  /// then the recovery QR (as in Employee details).
+  /// A row: the employee's pop-up, then what HR chose there.
   ///
   /// The actions are company-scoped endpoints: the filter company, or with
   /// every company listed, one the employee belongs to (the same person and
   /// the same result in each).
-  Future<void> _manage(CompanySummary? company, EmployeeSummary employee) async {
+  Future<void> _open(CompanySummary? company, EmployeeSummary employee) async {
     final companyId = company?.id ?? employee.companyIds.firstOrNull;
     if (companyId == null) return;
-    final action = await showManageEmployeeDialog(context, employee: employee);
-    if (action == null || !mounted) return;
-    if (action == EmployeeAction.remove) {
-      final name = [employee.firstName, employee.lastName].whereType<String>().join(' ');
-      final success = context.t(
-        AdminTextKeys.employeeRemoveSuccess,
-        args: {'name': name.isEmpty ? employee.code : name},
-      );
-      final removed = await showRemoveEmployeeDialog(
-        context,
-        employeesApi: widget.api,
-        employee: employee,
-        companyId: companyId,
-      );
-      if (!removed) return;
-      _say(success);
-      await _controller?.load();
-      return;
-    }
-    final EmployeeDetails details;
-    try {
-      details = await widget.api.details(companyId, employee.id);
-    } on ApiClientException catch (failure) {
-      if (mounted) _say(context.t(failureTextKeysFor(failure).message));
-      return;
-    }
-    if (!mounted) return;
-    switch (action) {
-      case EmployeeAction.onboardingQr:
+    final result = await showEmployeeDialog(
+      context,
+      api: widget.api,
+      employee: employee,
+      companyId: companyId,
+      companies: _companies,
+    );
+    if (result == null || !mounted) return;
+    final (choice, details) = result;
+    final name = [details.firstName, details.lastName].whereType<String>().join(' ');
+    final who = name.isEmpty ? details.code : name;
+    switch (choice) {
+      case EmployeeChoice.assignments:
+        final saved = context.t(AdminTextKeys.assignmentsSaved);
+        if (!await showManageAssignmentsDialog(context, api: widget.assignmentsApi, employee: details)) return;
+        _say(saved);
+      case EmployeeChoice.setUpQr:
         // After Reset account access the recovery QR applies; onboarding is
         // only for an employee who never had a password (server rule).
         await showTemporaryQrDialog(
@@ -154,24 +147,24 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           employee: details,
           purpose: details.accessResetPending ? TemporaryQrPurpose.recovery : TemporaryQrPurpose.onboarding,
         );
-      case EmployeeAction.resetAccess:
-        final name = [details.firstName, details.lastName].whereType<String>().join(' ');
-        final success = context.t(
-          AdminTextKeys.employeeResetAccessSuccess,
-          args: {'name': name.isEmpty ? details.code : name},
-        );
+      case EmployeeChoice.resetAccess:
+        final success = context.t(AdminTextKeys.employeeResetAccessSuccess, args: {'name': who});
         if (!await showResetAccessDialog(context, employeesApi: widget.api, employee: details)) return;
         _say(success);
         if (!mounted) return;
+        // Figma 207:6: after the reset, HR/Admin shows the recovery QR.
         await showTemporaryQrDialog(
           context,
           employeesApi: widget.api,
           employee: details,
           purpose: TemporaryQrPurpose.recovery,
         );
-      case EmployeeAction.remove:
-        // Handled above: it needs no details.
-        return;
+      case EmployeeChoice.remove:
+        final success = context.t(AdminTextKeys.employeeRemoveSuccess, args: {'name': who});
+        if (!await showRemoveEmployeeDialog(context, employeesApi: widget.api, employee: employee, companyId: companyId)) {
+          return;
+        }
+        _say(success);
     }
     await _controller?.load();
   }
@@ -180,14 +173,19 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   Widget build(BuildContext context) {
     final company = _company;
     final controller = _controller;
-    final top = Column(
+    // Rebuilt with the list, so the count under the title follows it.
+    Widget top() => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         JitanPageHeader(
           title: context.t(AdminTextKeys.employeeTitle),
-          subtitle: context.t(AdminTextKeys.employeeListSubtitle),
+          subtitle: switch (controller?.state) {
+            EmployeesLoaded(:final employees, search: '') when employees.isNotEmpty =>
+              context.tPlural(AdminTextKeys.employeeCount, employees.length),
+            _ => context.t(AdminTextKeys.employeeListSubtitle),
+          },
           action: Wrap(
-            spacing: 22,
+            spacing: 12,
             runSpacing: 10,
             children: [
               JitanOutlineButton(
@@ -208,13 +206,11 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         ),
         const SizedBox(height: JitanDimensions.headerToToolbar),
         _toolbar(context),
-        const SizedBox(height: 28),
-        Text(context.t(AdminTextKeys.employeeSection), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
-        const SizedBox(height: 16),
+        const SizedBox(height: JitanDimensions.toolbarToTable),
       ],
     );
     return JitanListPage(
-      top: top,
+      top: controller == null ? top() : ListenableBuilder(listenable: controller, builder: (context, _) => top()),
       list: [
         if (controller != null)
           ListenableBuilder(listenable: controller, builder: (context, _) => _content(context, company, controller)),
@@ -222,47 +218,47 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     );
   }
 
+  /// The narrowest width that holds the toolbar on one row.
+  static const _toolbarRowWidth = 760.0;
+
   Widget _toolbar(BuildContext context) {
-    final search = JitanFieldLabel(
-      label: context.t(CommonTextKeys.searchLabel),
-      child: JitanSearchField(
-        controller: _searchText,
-        clearTooltip: context.t(CommonTextKeys.searchClear),
-        outlined: true,
-        hintText: context.t(AdminTextKeys.employeeSearch),
-        onChanged: (text) {
-          _search = text;
-          _controller?.updateSearch(text);
-        },
-      ),
+    final search = JitanSearchField(
+      controller: _searchText,
+      clearTooltip: context.t(CommonTextKeys.searchClear),
+      outlined: true,
+      hintText: context.t(AdminTextKeys.employeeSearch),
+      onChanged: (text) {
+        _search = text;
+        _controller?.updateSearch(text);
+      },
     );
-    final status = JitanSelectField<EmployeeStatusFilter?>(
-      label: context.t(AdminTextKeys.employeeFilterStatus),
-      value: _status,
+    final status = JitanPillSwitch<EmployeeStatusFilter>(
       options: [
-        JitanSelectOption(value: null, label: context.t(AdminTextKeys.employeeFilterStatusAll)),
-        JitanSelectOption(value: EmployeeStatusFilter.active, label: context.t(CommonTextKeys.statusActive)),
-        JitanSelectOption(value: EmployeeStatusFilter.inactive, label: context.t(CommonTextKeys.statusInactive)),
-        JitanSelectOption(value: EmployeeStatusFilter.notSetUp, label: context.t(AdminTextKeys.employeeFilterStatusNotSetUp)),
+        (EmployeeStatusFilter.all, context.t(AdminTextKeys.employeeFilterAll)),
+        (EmployeeStatusFilter.active, context.t(CommonTextKeys.statusActive)),
+        (EmployeeStatusFilter.notSetUp, context.t(AdminTextKeys.employeeNotSetUp)),
+        (EmployeeStatusFilter.inactive, context.t(CommonTextKeys.statusInactive)),
       ],
+      value: _status,
       onChanged: (value) => setState(() => _status = value),
     );
     final switcher = CompanySwitcher(companiesApi: widget.companiesApi);
     return LayoutBuilder(
-      builder: (context, constraints) => constraints.maxWidth < JitanDimensions.phoneBreakpoint
+      // One row needs the search, the four buttons and the company side by
+      // side; narrower, they stack.
+      builder: (context, constraints) => constraints.maxWidth < _toolbarRowWidth
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [search, const SizedBox(height: 14), status, const SizedBox(height: 14), switcher],
+              spacing: 12,
+              children: [search, Align(alignment: Alignment.centerLeft, child: status), switcher],
             )
           : Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              spacing: 12,
               children: [
-                Flexible(flex: 330, child: search),
-                const SizedBox(width: 20),
-                Flexible(flex: 220, child: status),
-                const SizedBox(width: 64),
-                Flexible(flex: 255, child: switcher),
-                const Spacer(flex: 215),
+                Flexible(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 320), child: search)),
+                status,
+                const Spacer(),
+                SizedBox(width: 220, child: switcher),
               ],
             ),
     );
@@ -282,7 +278,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         ),
         EmployeesLoaded(:final employees) => switch ([
           for (final e in employees)
-            if (_status?.lets(e) ?? true) e,
+            if (_status.lets(e)) e,
         ]) {
           [] => _centered(
             JitanEmptyState(
@@ -290,11 +286,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
               message: context.t(AdminTextKeys.employeeNoMatch),
             ),
           ),
-          final visible => EmployeesTable(
-            employees: visible,
-            total: employees.length,
-            onManage: (employee) => _manage(company, employee),
-          ),
+          final visible => EmployeesTable(employees: visible, onOpen: (employee) => _open(company, employee)),
         },
       };
 

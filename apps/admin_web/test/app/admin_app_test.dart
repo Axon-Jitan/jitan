@@ -76,7 +76,6 @@ void main() {
     await tester.pumpWidget(app(services, initialLocation: '/employees'));
     await tester.pump();
 
-    expect(find.text('Current company'), findsOneWidget);
     expect(find.text('All companies'), findsOneWidget, reason: 'the filter shows every company');
     expect(services.employees.calls, [(-1, '')]);
   });

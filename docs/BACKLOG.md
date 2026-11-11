@@ -24,9 +24,12 @@ Plus the SAP API connection for projects (D43).
 **Decided 2026-10-21 (product owner):** in V1 no HR/Admin table opens details when HR
 clicks a row; that comes in V2, with its Figma frames.
 
-- **Employees:** the Employee details dialog (`employee_details_dialog.dart`) is built and
-  tested but has no way in until V2. The onboarding/recovery QR and Reset account access
-  are reachable from each row's "⋯" (Manage employee, Figma `1399:10`, 2026-10-21).
+- **Employees: done 2026-11-11** (product owner: "Row clicks should work"). A row opens
+  the employee (Figma `1531:259`, not set up yet `1531:459`): companies, type, schedule,
+  phone and account, then Companies and groups, Reset account access (set up) or the
+  onboarding/recovery QR (not set up), and Remove employee. The "⋯" column and Manage
+  employee are gone. Name, code and phone are shown, not edited: no endpoint changes
+  them yet.
 - **Employee groups:** the group page is reached only right after Create group (and from
   "Manage employees →" in Cannot deactivate group). Adding employees or changing hours
   later needs a way in.

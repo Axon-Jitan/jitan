@@ -7,6 +7,7 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../support/fake_assignments_api.dart';
 import '../support/fake_companies_api.dart';
 import '../support/fake_employees_api.dart';
 import '../support/fake_schedules_api.dart';
@@ -42,7 +43,13 @@ void main() {
           child: MaterialApp(
             theme: JitanTheme.web(),
             home: Scaffold(
-              body: EmployeesScreen(api: employees, groupsApi: groups, companiesApi: companies, schedulesApi: schedules),
+              body: EmployeesScreen(
+                api: employees,
+                groupsApi: groups,
+                companiesApi: companies,
+                schedulesApi: schedules,
+                assignmentsApi: FakeEmployeeAssignmentsApi(),
+              ),
             ),
           ),
         ),
@@ -91,7 +98,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    for (final text in ['Employee information', 'Work & assignments', 'Account activation', 'Personal information',
+    for (final text in ['Employee information', 'Work & assignments', 'Account set-up', 'Personal information',
         'Contact details', 'First name', 'Last name', 'Employee code', 'Phone number', 'Email', 'Step 1 of 3']) {
       expect(find.text(text), findsWidgets, reason: text);
     }
@@ -100,7 +107,7 @@ void main() {
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
     await tester.pump();
     expect(find.text('Required.'), findsNWidgets(3));
-    expect(companies.calls, [null], reason: 'only the Current company switcher; step 2 loads nothing yet');
+    expect(companies.calls, [null, null], reason: 'the page (names in a pop-up) and the company filter; step 2 loads nothing yet');
   });
 
   testWidgets('the whole flow: details, assignments with work schedule, onboarding QR, Finish setup', (tester) async {
@@ -134,8 +141,8 @@ void main() {
     employees.createSucceeds(employee(2, 'Kevin', 'De Vos', 'KDV', groups: ['White collar', 'Drivers']));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Activate employee account'), findsOneWidget);
-    expect(find.descendant(of: find.byType(JitanModal), matching: find.text('Not activated')), findsOneWidget);
+    expect(find.text('Set up the employee’s account'), findsOneWidget);
+    expect(find.descendant(of: find.byType(JitanModal), matching: find.text('Not set up')), findsOneWidget);
     expect(find.text('Almeco · PCA · White collar · Drivers'), findsOneWidget, reason: 'every chosen company');
     expect(find.widgetWithText(JitanSecondaryButton, 'Back'), findsNothing, reason: 'the employee exists now');
     expect(employees.qrRequests.single, (7, 2, TemporaryQrPurpose.onboarding));

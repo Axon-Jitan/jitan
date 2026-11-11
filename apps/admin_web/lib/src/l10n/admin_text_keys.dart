@@ -59,22 +59,14 @@ abstract final class AdminTextKeys {
   static const employeeColumnName = 'employee.column.name';
   static const employeeColumnCode = 'employee.column.code';
   static const employeeColumnType = 'employee.column.type';
-  static const employeeColumnOnboarding = 'employee.column.onboarding';
   static const employeeColumnStatus = 'employee.column.status';
-  static const employeeLocationUnavailable = 'employee.location.unavailable';
-  static const employeeOnboardingActivated = 'employee.onboarding.activated';
-  static const employeeOnboardingNotActivated = 'employee.onboarding.notActivated';
   static const employeeEmptyTitle = 'employee.empty.title';
 
   /// Argument: `{company}`.
   static const employeeEmptyMessage = 'employee.empty.message';
   static const employeeEmptyMessageAll = 'employee.empty.messageAll';
 
-  /// Plural (`.one`/`.other`), Figma 1399:10 results footer.
-  static const employeeResultsDisplayed = 'employee.results.displayed';
 
-  /// Arguments: `{shown}`, `{total}`.
-  static const employeeResultsShowing = 'employee.results.showing';
   static const employeeNoMatchTitle = 'employee.noMatch.title';
 
   /// Argument: `{search}`.
@@ -166,8 +158,6 @@ abstract final class AdminTextKeys {
   static const employeeImportDoneAgain = 'employee.import.done.again';
 
   // Remove employee (Figma 238:3689, 238:3853)
-  static const employeeManageRemove = 'employee.manage.remove';
-  static const employeeManageRemoveText = 'employee.manage.remove.text';
   static const employeeRemoveTitle = 'employee.remove.title';
 
   /// Argument: `{name}`.
@@ -356,23 +346,11 @@ abstract final class AdminTextKeys {
   static const employeeAddTitle = 'employee.add.title';
   static const employeeAddSubtitle = 'employee.add.subtitle';
   static const employeeColumnSchedule = 'employee.column.schedule';
-  static const employeeColumnActions = 'employee.column.actions';
-  static const employeeActionsMenu = 'employee.actions.menu';
-  static const employeeFilterStatus = 'employee.filter.status';
-  static const employeeFilterStatusNotSetUp = 'employee.filter.status.notSetUp';
-  static const employeeFilterStatusAll = 'employee.filter.status.all';
-  static const employeeFilterCompany = 'employee.filter.company';
   static const employeeFilterCompanyHint = 'employee.filter.company.hint';
   static const employeeFilterCompanyAll = 'employee.filter.company.all';
   static const employeeFilterCompanyFailed = 'employee.filter.company.failed';
-  static const employeeSection = 'employee.section';
   static const employeeNoCompany = 'employee.noCompany';
   static const employeeNoMatch = 'employee.noMatch';
-  static const employeeManageTitle = 'employee.manage.title';
-  static const employeeManageQr = 'employee.manage.qr';
-  static const employeeManageQrText = 'employee.manage.qr.text';
-  static const employeeManageReset = 'employee.manage.reset';
-  static const employeeManageResetText = 'employee.manage.reset.text';
   static const employeeAddSubtitleAssignments = 'employee.add.subtitle.assignments';
   static const employeeAddStepInformation = 'employee.add.step.information';
   static const employeeAddStepAssignments = 'employee.add.step.assignments';
@@ -416,7 +394,6 @@ abstract final class AdminTextKeys {
   static const employeeFieldFirstName = 'employee.field.firstName';
   static const employeeFieldLastName = 'employee.field.lastName';
   static const employeeFieldCode = 'employee.field.code';
-  static const employeeFieldType = 'employee.field.type';
   static const employeeFieldPhone = 'employee.field.phone';
   static const employeeFieldPhoneHint = 'employee.field.phone.hint';
   static const employeeFieldErrorRequired = 'employee.field.error.required';
@@ -428,19 +405,10 @@ abstract final class AdminTextKeys {
   static const employeeImportProblemPhoneCountryCode = 'employee.import.problem.phoneCountryCode';
   static const employeeImportProblemPhoneInvalid = 'employee.import.problem.phoneInvalid';
 
-  static const employeeDetailsTitle = 'employee.details.title';
 
   /// Arguments: `{company}`, `{code}`.
   static const employeeDetailsSubtitle = 'employee.details.subtitle';
-  static const employeeDetailsLoading = 'employee.details.loading';
-  static const employeeFieldLocation = 'employee.field.location';
-  static const employeeFieldAccount = 'employee.field.account';
-  static const employeeFieldStatus = 'employee.field.status';
 
-  static const employeeOnboardingTitle = 'employee.onboarding.title';
-  static const employeeOnboardingText = 'employee.onboarding.text';
-  static const employeeOnboardingAction = 'employee.onboarding.action';
-  static const employeeOnboardingCompletedText = 'employee.onboarding.completedText';
 
   /// Arguments: `{name}`, `{company}`.
   static const employeeQrSubtitle = 'employee.qr.subtitle';
@@ -475,7 +443,6 @@ abstract final class AdminTextKeys {
   /// Argument: `{name}`.
   static const temporaryQrSemantics = 'employee.temporaryQr.semantics';
 
-  static const employeeResetAccessAction = 'employee.resetAccess.action';
   static const employeeResetAccessTitle = 'employee.resetAccess.title';
 
   static const employeeResetAccessSubtitle = 'employee.resetAccess.subtitle';
@@ -534,7 +501,6 @@ abstract final class AdminTextKeys {
   static const assignmentsAccessCurrent = 'employee.assignments.access.current';
   static const assignmentsAccessNone = 'employee.assignments.access.none';
   static const assignmentsAccessHint = 'employee.assignments.access.hint';
-  static const employeeResetAccessAfterActivation = 'employee.resetAccess.afterActivation';
 
   // Schedules (Figma HR / Schedules 1317:2 to 1333:196)
   static const scheduleTitle = 'schedule.title';
@@ -1127,4 +1093,22 @@ abstract final class AdminTextKeys {
   static const locationUpdated = 'location.updated';
   static const locationDeactivated = 'location.deactivated';
   static const locationReactivated = 'location.reactivated';
+
+  // Employees V2 (Figma 1531:2, an employee 1531:259 / 1531:459).
+  static const employeeCount = 'employee.count';
+  static const employeeFilterAll = 'employee.filter.all';
+  static const employeeNotSetUp = 'employee.status.notSetUp';
+  static const employeeSetUp = 'employee.status.setUp';
+  static const employeeLoading = 'employee.loading';
+  static const employeeFactCompanies = 'employee.fact.companies';
+  static const employeeFactType = 'employee.fact.type';
+  static const employeeFactSchedule = 'employee.fact.schedule';
+  static const employeeFactPhone = 'employee.fact.phone';
+  static const employeeFactAccount = 'employee.fact.account';
+  static const employeeAssignments = 'employee.assignments';
+  static const employeeResetAccess = 'employee.resetAccess';
+  static const employeeShowSetUpQr = 'employee.showSetUpQr';
+  static const employeeShowRecoveryQr = 'employee.showRecoveryQr';
+  static const employeeRemove = 'employee.remove';
+  static const employeeClose = 'employee.close';
 }

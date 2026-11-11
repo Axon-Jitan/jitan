@@ -6,9 +6,9 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 import 'current_company.dart';
 
-/// "Current company" (Figma `HR / Employees — Company switcher open`
-/// 1401:2, `No company selected` 1401:121): a filter of the Employees list
-/// (product owner, 2026-10-21), one non-deleted company or "All companies".
+/// The company HR works in, on the right of the Employees filters (Figma
+/// `1531:2`, without a label): a filter of the Employees list (product
+/// owner, 2026-10-21), one non-deleted company or "All companies".
 /// Nothing is chosen for HR (§20: never silently pick the first company).
 class CompanySwitcher extends StatefulWidget {
   const CompanySwitcher({super.key, required this.companiesApi});
@@ -44,7 +44,6 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
     final current = CurrentCompanyScope.of(context);
     final companies = _companies ?? const <CompanySummary>[];
     return JitanSelectField<int?>(
-      label: context.t(AdminTextKeys.employeeFilterCompany),
       hintText: context.t(_failed ? AdminTextKeys.employeeFilterCompanyFailed : AdminTextKeys.employeeFilterCompanyAll),
       value: current.company?.id,
       options: [

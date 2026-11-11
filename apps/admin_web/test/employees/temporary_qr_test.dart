@@ -1,5 +1,5 @@
 import 'package:admin_web/src/company_context/current_company.dart';
-import 'package:admin_web/src/employees/employee_details_dialog.dart';
+import 'package:admin_web/src/employees/employees_screen.dart';
 import 'package:admin_web/src/employees/temporary_qr/temporary_qr_controller.dart';
 import 'package:admin_web/src/employees/temporary_qr/temporary_qr_dialog.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +12,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../support/fake_assignments_api.dart';
 import '../support/fake_companies_api.dart';
 import '../support/fake_employees_api.dart';
+import '../support/fake_schedules_api.dart';
 
 const _disan = EmployeeDetails(
   id: 1,
@@ -28,7 +29,7 @@ const _disan = EmployeeDetails(
 
 final _now = DateTime.utc(2026, 10, 8, 12);
 
-/// Employees → row → details → "Generate temporary QR" → temporary QR modal.
+/// Employees → row → the employee → "Show onboarding QR" → temporary QR modal.
 void main() {
   late FakeEmployeesApi employees;
 
@@ -47,30 +48,25 @@ void main() {
           child: MaterialApp(
             theme: JitanTheme.light(),
             home: Scaffold(
-              // Employee details has no way in from a row in V1 (EMP-DETAILS-V2):
-              // the test opens it directly.
-              body: Builder(
-                builder: (context) => TextButton(
-                  onPressed: () => showEmployeeDetailsDialog(
-                    context,
-                    employeesApi: employees,
-                    assignmentsApi: FakeEmployeeAssignmentsApi(),
-                    companyId: 7,
-                    userId: 1,
-                  ),
-                  child: const Text('open details'),
-                ),
+              body: EmployeesScreen(
+                api: employees,
+                groupsApi: FakeGroupsApi(),
+                companiesApi: FakeCompaniesApi(),
+                schedulesApi: FakeSchedulesApi(),
+                assignmentsApi: FakeEmployeeAssignmentsApi(),
               ),
             ),
           ),
         ),
       ),
     );
-    await tester.tap(find.text('open details'));
+    employees.succeed([employee(1, 'Disan', 'Ssebowa', 'SBW', companyIds: [7])]);
+    await tester.pump();
+    await tester.tap(find.text('Disan Ssebowa'));
     await tester.pump(const Duration(milliseconds: 300));
     employees.detailsSucceed(_disan);
     await tester.pump();
-    await tester.tap(find.text('Generate temporary QR'));
+    await tester.tap(find.text('Show onboarding QR'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
   }
