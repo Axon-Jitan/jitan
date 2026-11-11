@@ -32,6 +32,7 @@ export 'src/components/jitan_success_modal.dart';
 export 'src/components/jitan_surface_card.dart';
 export 'src/components/jitan_tab_bar.dart';
 export 'src/components/jitan_text_field.dart';
+export 'src/components/jitan_toast.dart';
 export 'src/components/jitan_sign_in_card.dart';
 export 'src/components/jitan_sign_in_form.dart';
 export 'src/components/jitan_wordmark.dart';

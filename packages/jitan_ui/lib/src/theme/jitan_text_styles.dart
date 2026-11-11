@@ -44,6 +44,10 @@ abstract final class JitanTextStyles {
 
   // Modals and forms
   static final modalTitle = _display.copyWith(fontSize: 26, fontWeight: _semiBold, letterSpacing: -0.4);
+
+  // Toast (Figma `1524:350`): white on ink.
+  static final toastText = _base.copyWith(fontSize: 14, fontWeight: _medium, letterSpacing: 0, color: JitanColors.surface);
+  static final toastAction = _base.copyWith(fontSize: 14, fontWeight: _semiBold, letterSpacing: 0, color: JitanColors.surface);
   static final modalSubtitle =
       _base.copyWith(fontSize: 15, fontWeight: _regular, color: JitanColors.inkMuted);
   static final fieldLabel =

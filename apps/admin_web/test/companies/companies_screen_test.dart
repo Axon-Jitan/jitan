@@ -164,7 +164,7 @@ void main() {
       expect(api.writes, ['create Proceq']);
       expect(find.text('Proceq'), findsOneWidget);
       expect(find.text('Proceq added'), findsOneWidget);
-      expect(find.text('Add employees'), findsOneWidget);
+      expect(find.text('Add location'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
     });
 
@@ -219,7 +219,7 @@ void main() {
       expect(find.text('PCA deactivated'), findsOneWidget);
     });
 
-    testWidgets('a later message replaces "added", whose Add employees does not keep it on screen', (tester) async {
+    testWidgets('a later message replaces "added", whose Add location does not keep it on screen', (tester) async {
       final api = await _pumpScreen(tester);
       api.succeed([almeco, pca]);
       await tester.pump();

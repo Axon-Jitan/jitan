@@ -25,6 +25,9 @@ abstract final class AdminRoutes {
   /// Employees whose onboarding isn't done (from the Dashboard).
   static const employeesNotSetUp = '$employees?status=not_set_up';
 
+  /// Locations with Add location open (after adding a company).
+  static const addLocation = '$locations?add=new';
+
   /// Time records of exact days, with a status filter or none (from the
   /// Dashboard).
   static String timeRecordsOf({String? status, required DateTime from, required DateTime to}) =>

@@ -66,7 +66,6 @@ const builtInEnglish = <String, String>{
   'company.name.required': 'Give the company a name.',
   'company.name.taken': '{name} is already in Jitan.',
   'company.added': '{name} added',
-  'company.addEmployees': 'Add employees',
   'company.employees': 'Employees',
   'company.viewEmployees': 'View employees',
   'company.lastUpdated': 'Last updated',

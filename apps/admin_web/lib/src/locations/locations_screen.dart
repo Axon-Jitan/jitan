@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../app/admin_routes.dart';
 import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'deactivate_location_dialog.dart';
@@ -16,9 +20,12 @@ import 'locations_table.dart';
 /// HR/Admin "Locations" page (Figma `1465:2`, empty `1465:177`). The ERD has
 /// no company on an address yet (GAP-03), so this page is not company-scoped.
 class LocationsScreen extends StatefulWidget {
-  const LocationsScreen({super.key, required this.api, required this.maps});
+  const LocationsScreen({super.key, required this.api, required this.maps, this.startAdding = false});
 
   final LocationsApi api;
+
+  /// Opens Add location at once (Add location after adding a company).
+  final bool startAdding;
 
   /// `null` when the build has no Mapbox token.
   final LocationMaps? maps;
@@ -31,12 +38,25 @@ class _LocationsScreenState extends State<LocationsScreen> {
   late final _controller = LocationsController(widget.api)..load();
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.startAdding) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await _open();
+        // Then drop "?add=new", so a reload doesn't open it again.
+        if (mounted) unawaited(GoRouter.maybeOf(context)?.replace<void>(AdminRoutes.locations));
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  void _say(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
+  void _say(String text) => showJitanToast(context, text);
 
   Future<void> _open([Location? location]) async {
     final result = await showLocationDialog(context, api: widget.api, maps: widget.maps, location: location);

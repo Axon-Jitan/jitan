@@ -144,7 +144,11 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
           GoRoute(
             path: AdminRoutes.locations,
             pageBuilder: (context, state) => NoTransitionPage(
-              child: LocationsScreen(api: services.locationsApi, maps: services.locationMaps),
+              child: LocationsScreen(
+                api: services.locationsApi,
+                maps: services.locationMaps,
+                startAdding: state.uri.queryParameters['add'] == 'new',
+              ),
             ),
           ),
           GoRoute(

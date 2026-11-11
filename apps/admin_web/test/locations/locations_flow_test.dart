@@ -84,6 +84,23 @@ void main() {
     expect(find.text('Add your first location'), findsOneWidget);
   });
 
+  testWidgets('from a company just added: Add location is open at once', (tester) async {
+    final fakes = TestServices();
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(TranslationScope(
+      translations: Translations.english(),
+      child: MaterialApp(
+        theme: JitanTheme.web(),
+        home: Scaffold(body: LocationsScreen(api: fakes.locations, maps: fakeLocationMaps(), startAdding: true)),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Click the map to place the pin'), findsOneWidget);
+  });
+
   testWidgets('add: the address finds the map, the pin can move, the server confirms', (tester) async {
     final fakes = TestServices();
     final geocoder = FakeGeocoder();

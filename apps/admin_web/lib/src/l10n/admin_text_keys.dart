@@ -24,7 +24,6 @@ abstract final class AdminTextKeys {
   static const companyNameRequired = 'company.name.required';
   static const companyNameTaken = 'company.name.taken';
   static const companyAdded = 'company.added';
-  static const companyAddEmployees = 'company.addEmployees';
   static const companyEmployees = 'company.employees';
   static const companyViewEmployees = 'company.viewEmployees';
   static const companyLastUpdated = 'company.lastUpdated';

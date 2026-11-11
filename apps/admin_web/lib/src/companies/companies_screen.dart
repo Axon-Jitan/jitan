@@ -44,13 +44,7 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
     super.dispose();
   }
 
-  /// The newest message replaces the one showing; one with an action
-  /// (Add employees) still fades like the rest instead of staying.
-  void _say(String text, {SnackBarAction? action}) {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    messenger?.hideCurrentSnackBar();
-    messenger?.showSnackBar(SnackBar(content: Text(text), action: action, persist: false));
-  }
+  void _say(String text) => showJitanToast(context, text);
 
   /// Employees shows the company HR works in: this one, from now on.
   void _openEmployees(CompanySummary company) {
@@ -64,9 +58,12 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
     _controller.put(company, added: true);
     _settle?.cancel();
     _settle = Timer(_litFor, _controller.settle);
-    _say(
+    // A company's workplace is a location, added next (Figma `1524:350`).
+    showJitanToast(
+      context,
       context.t(AdminTextKeys.companyAdded, args: {'name': company.name}),
-      action: SnackBarAction(label: context.t(AdminTextKeys.companyAddEmployees), onPressed: () => _openEmployees(company)),
+      actionLabel: context.t(AdminTextKeys.locationAdd),
+      onAction: () => context.go(AdminRoutes.addLocation),
     );
   }
 
