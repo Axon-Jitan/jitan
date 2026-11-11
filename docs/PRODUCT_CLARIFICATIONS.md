@@ -244,3 +244,18 @@ The company HR/Admin is working in ("Current company" in Figma `207:292`) cannot
 removed in its own context, and an employee is managed only through a company they belong
 to, so an employee always keeps at least one company. Removing someone from Jitan
 altogether is not part of assignment management (that would be disabling the employee).
+
+## PRODUCT-CLARIFY-VAN-TRIP: A van trip with several people counted once
+Status: `OPEN` (2026-11-11)
+
+D24 says the project report counts "each van trip once", and the approved Figma footer
+(`1515:2`) says "A van trip with several people on board counts once." Jitan can't tell
+yet that several people travelled in the same van: each employee's trip is their own
+"Activity – Transport" row, and a switch at a vehicle terminal stores the same row for each
+person, with nothing linking them to the van (`tblEventLog.deviceID` is set only on scans).
+Guessing it from "same route, same time" would invent a rule (§35).
+
+Until this is decided, the project report counts every person's trip and its kilometres,
+and its footer leaves the van sentence out. Question for the product owner: should a van
+trip count once, and how does Jitan know who was in the van (for example: only trips
+switched at the same vehicle terminal within a few minutes)?

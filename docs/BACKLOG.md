@@ -355,7 +355,21 @@ older Reports frames were demos with dummy data.
 - Export in the browser: Excel, or CSV with semicolons for Excel in Belgium. A text that a
   spreadsheet would run as a formula is neutralised.
 
-Later, with IT's update: transports and kilometres (D23), the project report (D24).
+Transports and kilometres (D23) are in since D46; the project report is REP-02.
+
+## REP-02: Project report (D24) · `DONE` 2026-11-11
+
+Reports has "Employees | Projects" (Figma `1515:2`, a project `1515:190`).
+`GET /reports/projects?month=yyyy-MM`, calculated when opened, never stored, for the employees
+of every company the viewer may see (each checked, §28a.5); a project has no company (D44).
+- **Worked**: each activity row on the project until the next one or the finish, inside the
+  day's rounded start and finish, without time away or else the break, so a day on one project
+  adds up to the hours report. Days to review stay out until fixed.
+- **Travel and trips**: a trip belongs to the project it arrives at, else to the one it leaves
+  from; time as in the hours report, distance the normal route (D23), never part of Worked.
+- Export: one row per project (Excel or CSV).
+- Open: a van trip with several people counts once (PRODUCT-CLARIFY-VAN-TRIP). Until then every
+  person's trip counts.
 
 ## PROJ-01: Projects as address rows (D44) · `DONE` 2026-11-10
 
