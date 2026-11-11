@@ -237,9 +237,8 @@ void main() {
       expect(employees.qrRequests, [(7, 1, TemporaryQrPurpose.recovery)]);
       employees.qrSucceeds('recovery-token', expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)));
       await tester.pump();
-      expect(find.text('Temporary password recovery QR'), findsOneWidget);
-      expect(find.text('This QR is not the employee’s permanent Terminal QR.'), findsOneWidget);
-      await tester.tap(find.text('Close'));
+      expect(find.text('Recovery QR'), findsOneWidget);
+      await tester.tap(find.text('Done'));
       await settle(tester);
       expect(employees.calls, hasLength(2), reason: 'the list reloads: now not set up');
       await tester.pump(const Duration(seconds: 5));

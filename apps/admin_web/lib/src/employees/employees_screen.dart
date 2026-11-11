@@ -141,24 +141,29 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       case EmployeeChoice.setUpQr:
         // After Reset account access the recovery QR applies; onboarding is
         // only for an employee who never had a password (server rule).
-        await showTemporaryQrDialog(
+        final recovery = details.accessResetPending;
+        final done = context.t(recovery ? AdminTextKeys.employeeNewPasswordDone : AdminTextKeys.employeeSetUpDone, args: {'name': who});
+        final used = await showTemporaryQrDialog(
           context,
           employeesApi: widget.api,
           employee: details,
-          purpose: details.accessResetPending ? TemporaryQrPurpose.recovery : TemporaryQrPurpose.onboarding,
+          purpose: recovery ? TemporaryQrPurpose.recovery : TemporaryQrPurpose.onboarding,
         );
+        if (used) _say(done);
       case EmployeeChoice.resetAccess:
         final success = context.t(AdminTextKeys.employeeResetAccessSuccess, args: {'name': who});
         if (!await showResetAccessDialog(context, employeesApi: widget.api, employee: details)) return;
         _say(success);
         if (!mounted) return;
         // Figma 207:6: after the reset, HR/Admin shows the recovery QR.
-        await showTemporaryQrDialog(
+        final done = context.t(AdminTextKeys.employeeNewPasswordDone, args: {'name': who});
+        final used = await showTemporaryQrDialog(
           context,
           employeesApi: widget.api,
           employee: details,
           purpose: TemporaryQrPurpose.recovery,
         );
+        if (used) _say(done);
       case EmployeeChoice.remove:
         final success = context.t(AdminTextKeys.employeeRemoveSuccess, args: {'name': who});
         if (!await showRemoveEmployeeDialog(context, employeesApi: widget.api, employee: employee, companyId: companyId)) {

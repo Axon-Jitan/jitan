@@ -413,35 +413,31 @@ abstract final class AdminTextKeys {
   /// Arguments: `{name}`, `{company}`.
   static const employeeQrSubtitle = 'employee.qr.subtitle';
 
-  // Temporary QRs (Figma 153:1214, 207:111, 207:123)
+  // The QR pop-up (Figma 1532:181 onboarding, 1532:772 recovery, 1532:1363 expired).
   static const temporaryQrOnboardingTitle = 'employee.temporaryQr.onboarding.title';
   static const temporaryQrRecoveryTitle = 'employee.temporaryQr.recovery.title';
-  static const temporaryQrRecoverySubtitle = 'employee.temporaryQr.recovery.subtitle';
   static const temporaryQrLoading = 'employee.temporaryQr.loading';
 
-  /// Argument: `{minutes}`.
-  static const temporaryQrValidStatus = 'employee.temporaryQr.status.valid';
+  /// Argument: `{name}`, the employee's first name.
   static const temporaryQrOnboardingInstruction = 'employee.temporaryQr.onboarding.instruction';
 
-  /// Argument: `{time}` (mm:ss).
-  static const temporaryQrExpiresIn = 'employee.temporaryQr.expiresIn';
+  /// Argument: `{name}`, the employee's first name.
+  static const temporaryQrRecoveryInstruction = 'employee.temporaryQr.recovery.instruction';
 
-  /// Argument: `{expiry}` ([temporaryQrExpiresIn]).
-  static const temporaryQrOnboardingFacts = 'employee.temporaryQr.onboarding.facts';
-
-  /// Argument: `{expiry}`.
-  static const temporaryQrRecoveryFacts = 'employee.temporaryQr.recovery.facts';
-  static const temporaryQrRecoveryNotTerminal = 'employee.temporaryQr.recovery.notTerminal';
-  static const temporaryQrGenerateNew = 'employee.temporaryQr.generateNew';
-  static const temporaryQrReplacementNote = 'employee.temporaryQr.replacementNote';
+  /// Argument: `{time}`, the time left ("09:57").
+  static const temporaryQrFacts = 'employee.temporaryQr.facts';
+  static const temporaryQrMakeNew = 'employee.temporaryQr.makeNew';
+  static const temporaryQrDone = 'employee.temporaryQr.done';
   static const temporaryQrClose = 'employee.temporaryQr.close';
-  static const temporaryQrExpiredTitle = 'employee.temporaryQr.expired.title';
+  static const temporaryQrExpired = 'employee.temporaryQr.expired';
   static const temporaryQrExpiredText = 'employee.temporaryQr.expired.text';
-  static const temporaryQrExpiredStatusTitle = 'employee.temporaryQr.expired.status.title';
-  static const temporaryQrExpiredStatusText = 'employee.temporaryQr.expired.status.text';
 
   /// Argument: `{name}`.
   static const temporaryQrSemantics = 'employee.temporaryQr.semantics';
+
+  /// Argument: `{name}`. Said once the employee finished with the QR.
+  static const employeeSetUpDone = 'employee.setUp.done';
+  static const employeeNewPasswordDone = 'employee.newPassword.done';
 
   static const employeeResetAccessTitle = 'employee.resetAccess.title';
 
