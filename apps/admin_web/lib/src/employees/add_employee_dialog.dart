@@ -7,7 +7,6 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../common/api_failure_text.dart';
 import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
-import '../schedules/schedule_form_fields.dart';
 import '../schedules/schedule_summary_text.dart';
 import 'add_employee_controller.dart';
 import 'add_employee_progress.dart';
@@ -232,50 +231,68 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
   /// Step 1 (`1536:2`): names and code, then phone and email (optional).
   List<Widget> _details(BuildContext context) {
     final optional = context.t(AdminTextKeys.employeeFieldOptional);
+    final firstName = JitanTextField(
+      label: context.t(AdminTextKeys.employeeFieldFirstName),
+      controller: _firstName,
+      autofocus: true,
+      errorText: _error(CreateEmployeeRequest.fieldFirstName),
+    );
+    final lastName = JitanTextField(
+      label: context.t(AdminTextKeys.employeeFieldLastName),
+      controller: _lastName,
+      errorText: _error(CreateEmployeeRequest.fieldLastName),
+    );
+    final code = JitanTextField(
+      label: context.t(AdminTextKeys.employeeFieldCode),
+      hintText: context.t(AdminTextKeys.employeeFieldCodeHint),
+      controller: _code,
+      errorText: _error(CreateEmployeeRequest.fieldCode),
+    );
+    final phone = JitanTextField(
+      label: context.t(AdminTextKeys.employeeFieldPhone),
+      note: optional,
+      hintText: context.t(AdminTextKeys.employeeFieldPhoneHint),
+      controller: _phone,
+      keyboardType: TextInputType.phone,
+      inputFormatters: const [PhoneNumberInputFormatter()],
+      errorText: _error(CreateEmployeeRequest.fieldPhone),
+    );
+    final email = JitanTextField(
+      label: context.t(AdminTextKeys.employeeFieldEmail),
+      note: optional,
+      hintText: context.t(AdminTextKeys.employeeFieldEmailHint),
+      controller: _email,
+      keyboardType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) => _continue(),
+      errorText: _error(CreateEmployeeRequest.fieldEmail),
+    );
     return [
-      ScheduleFieldColumns(
-        children: [
-          JitanTextField(
-            label: context.t(AdminTextKeys.employeeFieldFirstName),
-            controller: _firstName,
-            autofocus: true,
-            errorText: _error(CreateEmployeeRequest.fieldFirstName),
-          ),
-          JitanTextField(
-            label: context.t(AdminTextKeys.employeeFieldLastName),
-            controller: _lastName,
-            errorText: _error(CreateEmployeeRequest.fieldLastName),
-          ),
-          JitanTextField(
-            label: context.t(AdminTextKeys.employeeFieldCode),
-            hintText: context.t(AdminTextKeys.employeeFieldCodeHint),
-            controller: _code,
-            errorText: _error(CreateEmployeeRequest.fieldCode),
-          ),
-          const SizedBox.shrink(),
-          JitanTextField(
-            label: context.t(AdminTextKeys.employeeFieldPhone),
-            note: optional,
-            hintText: context.t(AdminTextKeys.employeeFieldPhoneHint),
-            controller: _phone,
-            keyboardType: TextInputType.phone,
-            inputFormatters: const [PhoneNumberInputFormatter()],
-            errorText: _error(CreateEmployeeRequest.fieldPhone),
-          ),
-          JitanTextField(
-            label: context.t(AdminTextKeys.employeeFieldEmail),
-            note: optional,
-            hintText: context.t(AdminTextKeys.employeeFieldEmailHint),
-            controller: _email,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _continue(),
-            errorText: _error(CreateEmployeeRequest.fieldEmail),
-          ),
-        ],
-      ),
+      _pair(firstName, lastName),
+      const SizedBox(height: 16),
+      _pair(code, null),
+      const SizedBox(height: 16),
+      _pair(phone, email),
     ];
   }
+
+  /// Two fields side by side (Figma `1536:2`); stacked on a phone. [b]
+  /// `null` keeps [a] at half width.
+  static Widget _pair(Widget a, Widget? b) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (constraints.maxWidth < _pairMinWidth) {
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 16, children: [a, ?b]);
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 16,
+        children: [Expanded(child: a), Expanded(child: b ?? const SizedBox.shrink())],
+      );
+    },
+  );
+
+  /// Below this, the pairs stack (a phone).
+  static const _pairMinWidth = 420.0;
 
   /// Step 2 (`1536:389`): companies and groups; the hours follow the groups.
   List<Widget> _work(BuildContext context) {

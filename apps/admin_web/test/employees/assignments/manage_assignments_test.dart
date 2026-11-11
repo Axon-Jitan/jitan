@@ -168,7 +168,7 @@ void main() {
   }
 
   bool ticked(WidgetTester tester, String name) => find
-      .descendant(of: find.ancestor(of: find.text(name), matching: find.byType(Row)).first, matching: find.byIcon(Icons.check))
+      .descendant(of: find.ancestor(of: find.text(name), matching: find.byType(InkWell)).first, matching: find.byIcon(Icons.check))
       .evaluate()
       .isNotEmpty;
 

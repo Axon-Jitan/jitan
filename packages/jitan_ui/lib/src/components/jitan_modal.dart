@@ -13,7 +13,7 @@ class JitanModal extends StatelessWidget {
   const JitanModal({
     super.key,
     required this.title,
-    required this.body,
+    this.body,
     this.subtitle,
     this.actions = const [],
     this.width,
@@ -25,7 +25,9 @@ class JitanModal extends StatelessWidget {
 
   final String title;
   final String? subtitle;
-  final Widget body;
+  /// `null` for a question that is all title and subtitle (Figma
+  /// `1534:366`): no empty space before the buttons.
+  final Widget? body;
   final List<Widget> actions;
 
   /// Fixed width (still narrower on small screens); otherwise sized to the
@@ -75,8 +77,10 @@ class JitanModal extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _header(context),
-                      const SizedBox(height: 32),
-                      Flexible(child: SingleChildScrollView(child: body)),
+                      if (body case final body?) ...[
+                        const SizedBox(height: 32),
+                        Flexible(child: SingleChildScrollView(child: body)),
+                      ],
                       if (!bandFooter && _hasFooter) ...[
                         SizedBox(height: footerNote == null ? 32 : 24),
                         if (footerNote != null) ...[

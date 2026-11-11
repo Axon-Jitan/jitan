@@ -68,7 +68,7 @@ class _DeactivateEmployeeDialogState extends State<DeactivateEmployeeDialog> {
       title: context.t(AdminTextKeys.employeeDeactivateTitle, args: {'name': fullName.isEmpty ? employee.code : fullName}),
       subtitle: context.t(AdminTextKeys.employeeDeactivateText, args: {'name': name}),
       body: failure == null
-          ? const SizedBox.shrink()
+          ? null
           : JitanInlineError(
               title: context.t(failureTextKeysFor(failure).title),
               message: context.t(failureTextKeysFor(failure).message),

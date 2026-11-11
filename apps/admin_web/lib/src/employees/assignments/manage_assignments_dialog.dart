@@ -239,19 +239,27 @@ class _ManageAssignmentsDialogState extends State<ManageAssignmentsDialog> {
           child: Row(
             spacing: 10,
             children: [
-              Flexible(
-                child: Text(
-                  option.name,
-                  overflow: TextOverflow.ellipsis,
-                  style: JitanTextStyles.tableCell.copyWith(
-                    fontSize: 15,
-                    fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
-                    color: locked ? JitanColors.disabledText : JitanColors.ink,
-                  ),
+              // The name and its note on the left; the check at the far right.
+              Expanded(
+                child: Row(
+                  spacing: 10,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        option.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: JitanTextStyles.tableCell.copyWith(
+                          fontSize: 15,
+                          fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+                          color: locked ? JitanColors.disabledText : JitanColors.ink,
+                        ),
+                      ),
+                    ),
+                    if (note != null)
+                      Text(note, style: JitanTextStyles.tableCell.copyWith(fontSize: 13, color: JitanColors.disabledText)),
+                  ],
                 ),
               ),
-              if (note != null) Text(note, style: JitanTextStyles.tableCell.copyWith(fontSize: 13, color: JitanColors.disabledText)),
-              const Spacer(),
               if (selected) const Icon(Icons.check, size: 18, color: JitanColors.ink),
             ],
           ),

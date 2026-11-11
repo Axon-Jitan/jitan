@@ -425,7 +425,7 @@ const builtInEnglish = <String, String>{
   'employee.field.error.phoneLetters': 'A phone number has only digits.',
   'employee.field.error.phoneCountryCode': 'Start with + and the country code, like +32 470 12 34 56.',
   'employee.field.error.phoneInvalid': 'This is not a valid phone number. Check the digits.',
-  'employee.import.problem.phoneCountryCode': 'Phone number needs + and the country code',
+  'employee.import.problem.phoneCountryCode': 'Phone needs the country code',
   'employee.import.problem.phoneInvalid': 'Phone number is not valid',
 
   // Employee details (EMP-03)

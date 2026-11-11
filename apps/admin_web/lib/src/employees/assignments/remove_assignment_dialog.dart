@@ -72,7 +72,7 @@ class _RemoveAssignmentDialogState extends State<RemoveAssignmentDialog> {
       title: context.t(AdminTextKeys.removeAssignmentTitle, args: args),
       subtitle: context.t(_company ? AdminTextKeys.removeCompanyText : AdminTextKeys.removeGroupText, args: args),
       body: failure == null
-          ? const SizedBox.shrink()
+          ? null
           : JitanInlineError(
               title: context.t(failureTextKeysFor(failure).title),
               message: context.t(failureTextKeysFor(failure).message),
