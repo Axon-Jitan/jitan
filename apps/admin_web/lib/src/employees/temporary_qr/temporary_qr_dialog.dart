@@ -168,9 +168,10 @@ class _TemporaryQrDialogState extends State<TemporaryQrDialog> {
           ],
           actions: [
             if (expired)
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                alignment: WrapAlignment.end,
                 spacing: 12,
+                runSpacing: 10,
                 children: [
                   JitanSecondaryButton(label: context.t(AdminTextKeys.temporaryQrClose), onPressed: () => Navigator.of(context).pop()),
                   JitanPrimaryButton(label: newQr, busy: _controller.generating, onPressed: onNewQr),

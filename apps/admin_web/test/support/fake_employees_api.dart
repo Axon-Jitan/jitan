@@ -18,21 +18,32 @@ class FakeEmployeesApi implements EmployeesApi {
     return completer.future;
   }
 
-  /// (companyId, userId) of every remove.
-  final removes = <(int, int)>[];
-  final _pendingRemoves = <Completer<void>>[];
+  /// (companyId, userId) of every deactivate.
+  final deactivations = <(int, int)>[];
+  final _pendingDeactivations = <Completer<void>>[];
 
   @override
-  Future<void> remove(int companyId, int userId) {
-    removes.add((companyId, userId));
+  Future<void> deactivate(int companyId, int userId) {
+    deactivations.add((companyId, userId));
     final completer = Completer<void>();
-    _pendingRemoves.add(completer);
+    _pendingDeactivations.add(completer);
     return completer.future;
   }
 
-  void removeSucceeds() => _pendingRemoves.last.complete();
+  void deactivateSucceeds() => _pendingDeactivations.last.complete();
 
-  void removeFails(ApiClientException failure) => _pendingRemoves.last.completeError(failure);
+  void deactivateFails(ApiClientException failure) => _pendingDeactivations.last.completeError(failure);
+
+  /// (companyId, userId) of every reactivate; answered at once, or with
+  /// [reactivateFailure].
+  final reactivations = <(int, int)>[];
+  ApiClientException? reactivateFailure;
+
+  @override
+  Future<void> reactivate(int companyId, int userId) async {
+    reactivations.add((companyId, userId));
+    if (reactivateFailure case final failure?) throw failure;
+  }
 
   /// Every company (no "Current company"): recorded in [calls] as company -1.
   @override

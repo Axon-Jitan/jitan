@@ -7,9 +7,9 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 
-/// Asks HR/Admin to confirm "Remove employee" for [employee] (in
-/// [companyId]) and runs it. Returns `true` once the server confirmed.
-Future<bool> showRemoveEmployeeDialog(
+/// Asks HR/Admin to confirm Deactivate for [employee] (through [companyId])
+/// and runs it. Returns `true` once the server confirmed.
+Future<bool> showDeactivateEmployeeDialog(
   BuildContext context, {
   required EmployeesApi employeesApi,
   required EmployeeSummary employee,
@@ -17,35 +17,35 @@ Future<bool> showRemoveEmployeeDialog(
 }) async =>
     await showJitanModal<bool>(
       context,
-      builder: (_) => RemoveEmployeeDialog(employeesApi: employeesApi, employee: employee, companyId: companyId),
+      builder: (_) => DeactivateEmployeeDialog(employeesApi: employeesApi, employee: employee, companyId: companyId),
     ) ??
     false;
 
-/// Figma `HR / Employees — Remove employee` (238:3853): the employee is
-/// hidden from the interface and kept in the database (`userMFD = 1`).
-/// Nothing is shown as removed before the server confirms.
-class RemoveEmployeeDialog extends StatefulWidget {
-  const RemoveEmployeeDialog({super.key, required this.employeesApi, required this.employee, required this.companyId});
+/// Figma "Deactivate?" (`1534:366`): the employee can no longer sign in or
+/// register time, in any company; time records stay and Reactivate undoes
+/// it. Nothing shows as deactivated before the server confirms.
+class DeactivateEmployeeDialog extends StatefulWidget {
+  const DeactivateEmployeeDialog({super.key, required this.employeesApi, required this.employee, required this.companyId});
 
   final EmployeesApi employeesApi;
   final EmployeeSummary employee;
   final int companyId;
 
   @override
-  State<RemoveEmployeeDialog> createState() => _RemoveEmployeeDialogState();
+  State<DeactivateEmployeeDialog> createState() => _DeactivateEmployeeDialogState();
 }
 
-class _RemoveEmployeeDialogState extends State<RemoveEmployeeDialog> {
+class _DeactivateEmployeeDialogState extends State<DeactivateEmployeeDialog> {
   bool _busy = false;
   ApiClientException? _failure;
 
-  Future<void> _remove() async {
+  Future<void> _deactivate() async {
     setState(() {
       _busy = true;
       _failure = null;
     });
     try {
-      await widget.employeesApi.remove(widget.companyId, widget.employee.id);
+      await widget.employeesApi.deactivate(widget.companyId, widget.employee.id);
       if (mounted) Navigator.of(context).pop(true);
     } on ApiClientException catch (failure) {
       if (mounted) {
@@ -60,39 +60,39 @@ class _RemoveEmployeeDialogState extends State<RemoveEmployeeDialog> {
   @override
   Widget build(BuildContext context) {
     final employee = widget.employee;
-    final name = [employee.firstName, employee.lastName].whereType<String>().join(' ');
+    final fullName = [employee.firstName, employee.lastName].whereType<String>().join(' ');
+    final name = employee.firstName ?? (fullName.isEmpty ? employee.code : fullName);
     final failure = _failure;
     return JitanModal(
-      width: 460,
-      title: context.t(AdminTextKeys.employeeRemoveTitle),
-      onClose: _busy ? null : () => Navigator.of(context).pop(false),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            context.t(AdminTextKeys.employeeRemoveQuestion, args: {'name': name.isEmpty ? employee.code : name}),
-            style: JitanTextStyles.stateMessage.copyWith(fontSize: 14, color: JitanColors.ink),
-          ),
-          const SizedBox(height: 14),
-          Text(context.t(AdminTextKeys.employeeRemoveEffect), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
-          if (failure != null) ...[
-            const SizedBox(height: 16),
-            _failureMessage(context, failure),
-          ],
-        ],
-      ),
+      width: 440,
+      title: context.t(AdminTextKeys.employeeDeactivateTitle, args: {'name': fullName.isEmpty ? employee.code : fullName}),
+      subtitle: context.t(AdminTextKeys.employeeDeactivateText, args: {'name': name}),
+      body: failure == null
+          ? const SizedBox.shrink()
+          : JitanInlineError(
+              title: context.t(failureTextKeysFor(failure).title),
+              message: context.t(failureTextKeysFor(failure).message),
+            ),
       actions: [
-        JitanSecondaryButton(
-          label: context.t(CommonTextKeys.cancel),
-          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+        // Side by side; stacked when a phone has no room.
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            JitanSecondaryButton(
+              label: context.t(CommonTextKeys.cancel),
+              onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+            ),
+            JitanPrimaryButton(
+              label: context.t(AdminTextKeys.employeeDeactivate),
+              color: JitanColors.errorStrong,
+              busy: _busy,
+              onPressed: _deactivate,
+            ),
+          ],
         ),
-        JitanPrimaryButton(label: context.t(AdminTextKeys.employeeRemoveConfirm), busy: _busy, onPressed: _remove),
       ],
     );
-  }
-
-  Widget _failureMessage(BuildContext context, ApiClientException failure) {
-    final keys = failureTextKeysFor(failure);
-    return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
   }
 }

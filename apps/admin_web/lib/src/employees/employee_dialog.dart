@@ -10,9 +10,10 @@ import '../schedules/schedule_summary_text.dart';
 import 'employee_standing.dart';
 
 /// What HR chose in an employee's pop-up; the Employees page carries it out.
-enum EmployeeChoice { assignments, resetAccess, setUpQr, remove }
+enum EmployeeChoice { assignments, resetAccess, setUpQr, deactivate, reactivate }
 
-/// Opens an employee (Figma `1531:259`, not set up yet `1531:459`): what HR
+/// Opens an employee (Figma `1534:2`, not set up yet `1531:459`, inactive
+/// `1534:188`): what HR
 /// chose, with the employee's details, or `null` when closed.
 Future<(EmployeeChoice, EmployeeDetails)?> showEmployeeDialog(
   BuildContext context, {
@@ -26,9 +27,10 @@ Future<(EmployeeChoice, EmployeeDetails)?> showEmployeeDialog(
 );
 
 /// An employee in a pop-up: who they are and how they stand, then the
-/// actions that apply to them, and a quiet Remove employee on the left.
-/// Only the action that fits the account shows: Reset account access once
-/// it is set up, the onboarding QR before (the recovery QR after a reset).
+/// actions that apply to them, and a quiet Deactivate (or Reactivate) on the
+/// left. Only the action that fits the account shows: Reset account access
+/// once it is set up, the onboarding QR before (the recovery QR after a
+/// reset). An inactive employee shows no actions, only what that means.
 class EmployeeDialog extends StatefulWidget {
   const EmployeeDialog({
     super.key,
@@ -92,14 +94,18 @@ class _EmployeeDialogState extends State<EmployeeDialog> {
       },
       leadingActions: [
         TextButton(
-          onPressed: details == null ? null : () => _choose(EmployeeChoice.remove),
+          onPressed: details == null
+              ? null
+              : () => _choose(employee.isActive ? EmployeeChoice.deactivate : EmployeeChoice.reactivate),
           style: TextButton.styleFrom(
-            foregroundColor: JitanColors.errorStrong,
+            foregroundColor: employee.isActive ? JitanColors.errorStrong : JitanColors.ink,
             padding: const EdgeInsets.symmetric(horizontal: 4),
           ),
           child: Text(
-            context.t(AdminTextKeys.employeeRemove),
-            style: JitanTextStyles.tableCellStrong.copyWith(color: JitanColors.errorStrong),
+            context.t(employee.isActive ? AdminTextKeys.employeeDeactivate : AdminTextKeys.employeeReactivate),
+            style: JitanTextStyles.tableCellStrong.copyWith(
+              color: employee.isActive ? JitanColors.errorStrong : JitanColors.ink,
+            ),
           ),
         ),
       ],
@@ -143,6 +149,13 @@ class _EmployeeDialogState extends State<EmployeeDialog> {
             ],
           ),
         ),
+        if (!employee.isActive) ...[
+          const SizedBox(height: 14),
+          Text(
+            context.t(AdminTextKeys.employeeInactiveNote, args: {'name': employee.firstName ?? employee.code}),
+            style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
+          ),
+        ] else ...[
         const SizedBox(height: 12),
         DecoratedBox(
           decoration: BoxDecoration(
@@ -170,6 +183,7 @@ class _EmployeeDialogState extends State<EmployeeDialog> {
             ),
           ),
         ),
+        ],
       ],
     );
   }

@@ -9,7 +9,8 @@ import '../theme/jitan_text_styles.dart';
 /// pill at the bottom with a check, the message and at most one next step.
 /// The newest replaces the one showing, and every one fades, the one with
 /// a next step too.
-void showJitanToast(BuildContext context, String message, {String? actionLabel, VoidCallback? onAction}) {
+/// With [failed], an alert sign instead of the check.
+void showJitanToast(BuildContext context, String message, {String? actionLabel, VoidCallback? onAction, bool failed = false}) {
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
   final hasAction = actionLabel != null && onAction != null;
@@ -45,6 +46,7 @@ void showJitanToast(BuildContext context, String message, {String? actionLabel, 
       SnackBar(
         content: JitanToast(
           message: message,
+          failed: failed,
           actionLabel: hasAction ? actionLabel : null,
           onAction: hasAction
               ? () {
@@ -67,11 +69,12 @@ void showJitanToast(BuildContext context, String message, {String? actionLabel, 
 
 /// What a Jitan toast shows; [showJitanToast] puts it on screen.
 class JitanToast extends StatelessWidget {
-  const JitanToast({super.key, required this.message, this.actionLabel, this.onAction});
+  const JitanToast({super.key, required this.message, this.actionLabel, this.onAction, this.failed = false});
 
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final bool failed;
 
   static const _bottom = 32.0;
   static const _checkSize = 16.0;
@@ -84,7 +87,7 @@ class JitanToast extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      const Icon(Icons.check, size: _checkSize, color: JitanColors.surface),
+      Icon(failed ? Icons.error_outline : Icons.check, size: _checkSize, color: JitanColors.surface),
       const SizedBox(width: _checkGap),
       Expanded(child: Text(message, style: JitanTextStyles.toastText)),
       if (actionLabel case final label?) ...[

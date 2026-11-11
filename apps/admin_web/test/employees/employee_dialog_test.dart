@@ -12,7 +12,7 @@ import '../support/fake_companies_api.dart';
 import '../support/fake_employees_api.dart';
 import '../support/fake_schedules_api.dart';
 
-EmployeeDetails _details({bool activated = false, bool resetPending = false, String? phone}) => EmployeeDetails(
+EmployeeDetails _details({bool activated = false, bool resetPending = false, String? phone, bool active = true}) => EmployeeDetails(
   id: 1,
   companyId: 7,
   companyName: 'Almeco',
@@ -21,7 +21,7 @@ EmployeeDetails _details({bool activated = false, bool resetPending = false, Str
   code: 'SBW',
   groups: const ['White collar'],
   phone: phone,
-  isActive: true,
+  isActive: active,
   isActivated: activated,
   accessResetPending: resetPending,
 );
@@ -37,7 +37,7 @@ void main() {
   }
 
   /// The page with one employee (in Almeco and PCA), opened from its row.
-  Future<void> open(WidgetTester tester, {bool activated = false, CompanySummary? selected}) async {
+  Future<void> open(WidgetTester tester, {bool activated = false, bool active = true, CompanySummary? selected}) async {
     tester.view.physicalSize = const Size(1440, 1024);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -69,7 +69,7 @@ void main() {
       companies.succeed([company(7, 'Almeco'), company(8, 'PCA'), company(9, 'Proceq')], index: i);
     }
     employees.succeed([
-      employee(1, 'Disan', 'Ssebowa', 'SBW', groups: ['White collar'], activated: activated, companyIds: [7, 8]),
+      employee(1, 'Disan', 'Ssebowa', 'SBW', groups: ['White collar'], activated: activated, active: active, companyIds: [7, 8]),
     ]);
     await settle(tester);
     await tester.tap(find.text('Disan Ssebowa'));
@@ -138,38 +138,41 @@ void main() {
     expect(employees.detailRequests, hasLength(2));
   });
 
-  testWidgets('Companies and groups opens the assignments', (tester) async {
+  testWidgets('Companies, groups and access opens the assignments', (tester) async {
     await open(tester);
     employees.detailsSucceed(_details(activated: true));
     await settle(tester);
 
-    await tester.tap(inModal('Companies and groups'));
+    await tester.tap(inModal('Companies, groups and access'));
     await tester.pumpAndSettle();
     expect(find.text('Disan Ssebowa'), findsWidgets);
     expect(inModal('Account'), findsNothing, reason: 'the employee pop-up gave way to the assignments');
   });
 
-  group('Remove employee', () {
-    testWidgets('asks first, then the list reloads once the server confirms', (tester) async {
+  group('Deactivate and Reactivate (Figma 1534:366, 1534:188)', () {
+    testWidgets('Deactivate asks first, then the list reloads once the server confirms', (tester) async {
       await open(tester);
       employees.detailsSucceed(_details());
       await settle(tester);
 
-      await tester.tap(inModal('Remove employee'));
+      await tester.tap(inModal('Deactivate'));
       await settle(tester);
-      expect(find.text('Remove employee?'), findsOneWidget, reason: '238:3853');
-      expect(find.text('Are you sure you want to remove Disan Ssebowa?'), findsOneWidget);
-      expect(employees.removes, isEmpty, reason: 'nothing before the confirmation');
+      expect(find.text('Deactivate Disan Ssebowa?'), findsOneWidget);
+      expect(
+        find.text('Disan can no longer sign in or register time, in any company. Time records stay, and you can reactivate Disan any time.'),
+        findsOneWidget,
+      );
+      expect(employees.deactivations, isEmpty, reason: 'nothing before the confirmation');
 
-      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Remove'));
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Deactivate'));
       await tester.pump();
-      expect(employees.removes, [(7, 1)], reason: 'no company filter: one of the companies of the employee');
-      expect(find.text('Disan Ssebowa was removed.'), findsNothing, reason: 'no success before the server confirms');
+      expect(employees.deactivations, [(7, 1)], reason: 'no company filter: one of the companies of the employee');
+      expect(find.text('Disan Ssebowa deactivated.'), findsNothing, reason: 'no success before the server confirms');
 
-      employees.removeSucceeds();
+      employees.deactivateSucceeds();
       await settle(tester);
-      expect(find.text('Remove employee?'), findsNothing);
-      expect(find.text('Disan Ssebowa was removed.'), findsOneWidget);
+      expect(find.text('Deactivate Disan Ssebowa?'), findsNothing);
+      expect(find.text('Disan Ssebowa deactivated.'), findsOneWidget);
       expect(employees.calls, hasLength(2), reason: 'the list reloads');
       await tester.pump(const Duration(seconds: 5));
     });
@@ -178,16 +181,48 @@ void main() {
       await open(tester);
       employees.detailsSucceed(_details());
       await settle(tester);
-      await tester.tap(inModal('Remove employee'));
+      await tester.tap(inModal('Deactivate'));
       await settle(tester);
 
-      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Remove'));
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Deactivate'));
       await tester.pump();
-      employees.removeFails(const ApiClientException.network('offline'));
+      employees.deactivateFails(const ApiClientException.network('offline'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Remove employee?'), findsOneWidget);
+      expect(find.text('Deactivate Disan Ssebowa?'), findsOneWidget);
       expect(employees.calls, hasLength(1), reason: 'nothing changed: no reload');
+    });
+
+    testWidgets('an inactive employee: what it means, no actions, and Reactivate at once', (tester) async {
+      await open(tester, active: false);
+      employees.detailsSucceed(_details(active: false));
+      await settle(tester);
+
+      expect(inModal('Disan can’t sign in or register time. Time records stay.'), findsOneWidget);
+      for (final gone in ['Companies, groups and access', 'Show onboarding QR', 'Reset account access', 'Deactivate']) {
+        expect(inModal(gone), findsNothing, reason: gone);
+      }
+
+      await tester.tap(inModal('Reactivate'));
+      await settle(tester);
+      expect(employees.reactivations, [(7, 1)], reason: 'undoing needs no question');
+      expect(find.text('Disan Ssebowa reactivated.'), findsOneWidget);
+      expect(employees.calls, hasLength(2));
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('a refused Reactivate says so, with no check', (tester) async {
+      await open(tester, active: false);
+      employees
+        ..detailsSucceed(_details(active: false))
+        ..reactivateFailure = const ApiClientException.network('offline');
+      await settle(tester);
+
+      await tester.tap(inModal('Reactivate'));
+      await settle(tester);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Disan Ssebowa reactivated.'), findsNothing);
+      await tester.pump(const Duration(seconds: 5));
     });
   });
 
@@ -201,22 +236,21 @@ void main() {
       await tester.tap(inModal('Reset account access'));
       await settle(tester);
 
-      expect(find.text('Reset account access?'), findsOneWidget);
-      expect(find.textContaining('Use this only after verifying the employee.'), findsOneWidget);
+      expect(find.text('Reset Disan’s access?'), findsOneWidget, reason: 'Figma 1534:520');
+      expect(find.text('Do this only after you’ve checked it’s really Disan asking.'), findsOneWidget);
       for (final effect in [
-        '• sign out active sessions',
-        '• clear the current password hash',
-        '• allow recovery with a temporary recovery QR',
-        '• keep the employee’s Terminal QR unchanged',
-        'After reset: generate a temporary recovery QR for the employee. Do not use the Terminal QR.',
+        '•  Disan is signed out on every device.',
+        '•  Disan sets a new password with a recovery QR, shown next.',
+        '•  The Terminal QR stays the same.',
       ]) {
         expect(find.text(effect), findsOneWidget);
       }
+      expect(find.textContaining('hash'), findsNothing);
 
       await tester.tap(find.text('Cancel'));
       await settle(tester);
       expect(employees.resetRequests, isEmpty);
-      expect(find.text('Reset account access?'), findsNothing);
+      expect(find.text('Reset Disan’s access?'), findsNothing);
     });
 
     testWidgets('confirmed: resets, shows the temporary recovery QR, then the list reloads', (tester) async {
@@ -232,8 +266,8 @@ void main() {
       employees.resetSucceeds();
       await settle(tester);
 
-      expect(find.text('Reset account access?'), findsNothing);
-      expect(find.text('Access reset for Disan Ssebowa. Show them the temporary recovery QR.'), findsOneWidget);
+      expect(find.text('Reset Disan’s access?'), findsNothing);
+      expect(find.text('Access reset for Disan Ssebowa.'), findsOneWidget);
       expect(employees.qrRequests, [(7, 1, TemporaryQrPurpose.recovery)]);
       employees.qrSucceeds('recovery-token', expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)));
       await tester.pump();
@@ -259,7 +293,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('This employee hasn’t set up Jitan yet, so there is no access to reset.'), findsOneWidget);
-      expect(find.text('Reset account access?'), findsWidgets);
+      expect(find.text('Reset Disan’s access?'), findsOneWidget);
     });
   });
 }

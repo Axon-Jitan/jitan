@@ -16,7 +16,7 @@ import 'employee_dialog.dart';
 import 'employee_standing.dart';
 import 'employees_controller.dart';
 import 'employees_table.dart';
-import 'remove_employee_dialog.dart';
+import 'deactivate_employee_dialog.dart';
 import 'reset_access_dialog.dart';
 import 'temporary_qr/temporary_qr_dialog.dart';
 
@@ -97,7 +97,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     super.dispose();
   }
 
-  void _say(String text) => showJitanToast(context, text);
+  void _say(String text, {bool failed = false}) => showJitanToast(context, text, failed: failed);
 
   Future<void> _addEmployee() async {
     final created = await showAddEmployeeDialog(
@@ -164,9 +164,19 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           purpose: TemporaryQrPurpose.recovery,
         );
         if (used) _say(done);
-      case EmployeeChoice.remove:
-        final success = context.t(AdminTextKeys.employeeRemoveSuccess, args: {'name': who});
-        if (!await showRemoveEmployeeDialog(context, employeesApi: widget.api, employee: employee, companyId: companyId)) {
+      case EmployeeChoice.deactivate:
+        final success = context.t(AdminTextKeys.employeeDeactivated, args: {'name': who});
+        if (!await showDeactivateEmployeeDialog(context, employeesApi: widget.api, employee: employee, companyId: companyId)) {
+          return;
+        }
+        _say(success);
+      case EmployeeChoice.reactivate:
+        // Undoing needs no question (like a company, Figma 1534:188).
+        final success = context.t(AdminTextKeys.employeeReactivated, args: {'name': who});
+        try {
+          await widget.api.reactivate(companyId, employee.id);
+        } on ApiClientException catch (failure) {
+          if (mounted) _say(context.t(failureTextKeysFor(failure).message), failed: true);
           return;
         }
         _say(success);

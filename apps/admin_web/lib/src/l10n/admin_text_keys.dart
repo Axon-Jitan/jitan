@@ -158,15 +158,8 @@ abstract final class AdminTextKeys {
   static const employeeImportDoneAgain = 'employee.import.done.again';
 
   // Remove employee (Figma 238:3689, 238:3853)
-  static const employeeRemoveTitle = 'employee.remove.title';
 
-  /// Argument: `{name}`.
-  static const employeeRemoveQuestion = 'employee.remove.question';
-  static const employeeRemoveEffect = 'employee.remove.effect';
-  static const employeeRemoveConfirm = 'employee.remove.confirm';
 
-  /// Argument: `{name}`.
-  static const employeeRemoveSuccess = 'employee.remove.success';
 
   // Dates (Time records)
   static const dateMonthShort1 = 'date.month.short.1';
@@ -442,12 +435,9 @@ abstract final class AdminTextKeys {
   static const employeeResetAccessTitle = 'employee.resetAccess.title';
 
   static const employeeResetAccessSubtitle = 'employee.resetAccess.subtitle';
-  static const employeeResetAccessEffectsTitle = 'employee.resetAccess.effects.title';
   static const employeeResetAccessEffectSessions = 'employee.resetAccess.effects.sessions';
-  static const employeeResetAccessEffectPassword = 'employee.resetAccess.effects.password';
   static const employeeResetAccessEffectRecovery = 'employee.resetAccess.effects.recovery';
   static const employeeResetAccessEffectQr = 'employee.resetAccess.effects.qr';
-  static const employeeResetAccessNextStep = 'employee.resetAccess.nextStep';
   static const employeeResetAccessConfirm = 'employee.resetAccess.confirm';
 
   /// Argument: `{name}`.
@@ -1105,6 +1095,15 @@ abstract final class AdminTextKeys {
   static const employeeResetAccess = 'employee.resetAccess';
   static const employeeShowSetUpQr = 'employee.showSetUpQr';
   static const employeeShowRecoveryQr = 'employee.showRecoveryQr';
-  static const employeeRemove = 'employee.remove';
   static const employeeClose = 'employee.close';
+
+  // Deactivate / Reactivate (Figma 1534:366, 1534:188). Argument: `{name}`.
+  static const employeeDeactivate = 'employee.deactivate';
+  static const employeeReactivate = 'employee.reactivate';
+  static const employeeDeactivateTitle = 'employee.deactivate.title';
+  static const employeeDeactivateText = 'employee.deactivate.text';
+  static const employeeDeactivated = 'employee.deactivated';
+  static const employeeReactivated = 'employee.reactivated';
+  static const employeeInactiveNote = 'employee.inactive.note';
+  static const employeeResetAccessRefused = 'employee.resetAccess.refused';
 }

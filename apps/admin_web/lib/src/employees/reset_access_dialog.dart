@@ -20,11 +20,9 @@ Future<bool> showResetAccessDialog(
     ) ??
     false;
 
-/// Figma "Admin / Employees — Reset account access modal" (`196:242`, `207:97`).
-///
-/// The reset signs the employee out everywhere, clears the password hash,
-/// lets them recover with a temporary recovery QR, and keeps their
-/// Terminal QR unchanged.
+/// Figma "Reset access?" (`1534:520`): asked first, in plain words. The
+/// reset signs the employee out everywhere and clears the password, so they
+/// set a new one with the recovery QR shown next; the Terminal QR stays.
 class ResetAccessDialog extends StatefulWidget {
   const ResetAccessDialog({super.key, required this.employeesApi, required this.employee});
 
@@ -60,65 +58,32 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
   @override
   Widget build(BuildContext context) {
     final employee = widget.employee;
-    final name = [employee.firstName, employee.lastName].whereType<String>().join(' ');
+    final fullName = [employee.firstName, employee.lastName].whereType<String>().join(' ');
+    final name = employee.firstName ?? (fullName.isEmpty ? employee.code : fullName);
     final failure = _failure;
-    final effectStyle = JitanTextStyles.stateMessage.copyWith(fontSize: 14, color: JitanColors.errorStrong);
     return JitanModal(
-      title: context.t(AdminTextKeys.employeeResetAccessTitle),
-      subtitle: context.t(AdminTextKeys.employeeResetAccessSubtitle),
-      width: 640,
+      width: 440,
+      title: context.t(AdminTextKeys.employeeResetAccessTitle, args: {'name': name}),
+      subtitle: context.t(AdminTextKeys.employeeResetAccessSubtitle, args: {'name': name}),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 28),
-          // Employee summary
-          Container(
-            constraints: const BoxConstraints(minHeight: 84),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(14)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name.isEmpty ? employee.code : name, style: JitanTextStyles.stateTitle),
-                const SizedBox(height: 8),
-                Text(
-                  context.t(
-                    AdminTextKeys.employeeDetailsSubtitle,
-                    args: {'company': employee.companyName, 'code': employee.code},
-                  ),
-                  style: JitanTextStyles.stateMessage.copyWith(fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          // Reset effects
-          Container(
-            constraints: const BoxConstraints(minHeight: 150),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: JitanColors.errorSurface, borderRadius: BorderRadius.circular(14)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.t(AdminTextKeys.employeeResetAccessEffectsTitle),
-                  style: JitanTextStyles.stateTitle.copyWith(fontSize: 15, color: JitanColors.errorStrong),
-                ),
-                const SizedBox(height: 10),
-                for (final key in const [
-                  AdminTextKeys.employeeResetAccessEffectSessions,
-                  AdminTextKeys.employeeResetAccessEffectPassword,
-                  AdminTextKeys.employeeResetAccessEffectRecovery,
-                  AdminTextKeys.employeeResetAccessEffectQr,
-                ])
-                  Text(context.t(key), style: effectStyle),
-                const SizedBox(height: 14),
-                // Figma 207:225: the next step after the reset.
-                Text(
-                  context.t(AdminTextKeys.employeeResetAccessNextStep),
-                  style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 14, color: JitanColors.errorStrong),
-                ),
-              ],
+          DecoratedBox(
+            decoration: BoxDecoration(color: JitanColors.tableHeader, borderRadius: BorderRadius.circular(14)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 10,
+                children: [
+                  for (final key in const [
+                    AdminTextKeys.employeeResetAccessEffectSessions,
+                    AdminTextKeys.employeeResetAccessEffectRecovery,
+                    AdminTextKeys.employeeResetAccessEffectQr,
+                  ])
+                    Text('•  ${context.t(key, args: {'name': name})}', style: JitanTextStyles.tableCell),
+                ],
+              ),
             ),
           ),
           if (failure != null) ...[
@@ -128,15 +93,23 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
         ],
       ),
       actions: [
-        JitanSecondaryButton(
-          label: context.t(CommonTextKeys.cancel),
-          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
-        ),
-        JitanPrimaryButton(
-          label: context.t(AdminTextKeys.employeeResetAccessConfirm),
-          color: JitanColors.errorStrong,
-          busy: _busy,
-          onPressed: _reset,
+        // Side by side; stacked when a phone has no room.
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            JitanSecondaryButton(
+              label: context.t(CommonTextKeys.cancel),
+              onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+            ),
+            JitanPrimaryButton(
+              label: context.t(AdminTextKeys.employeeResetAccessConfirm),
+              color: JitanColors.errorStrong,
+              busy: _busy,
+              onPressed: _reset,
+            ),
+          ],
         ),
       ],
     );
@@ -145,7 +118,7 @@ class _ResetAccessDialogState extends State<ResetAccessDialog> {
   Widget _failureMessage(BuildContext context, ApiClientException failure) {
     if (failure.error?.code == ApiErrorCode.accountNotActivated) {
       return JitanInlineError(
-        title: context.t(AdminTextKeys.employeeResetAccessTitle),
+        title: context.t(AdminTextKeys.employeeResetAccessRefused),
         message: context.t(AdminTextKeys.employeeResetAccessNotActivated),
       );
     }

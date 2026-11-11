@@ -479,6 +479,19 @@ void main() {
       _fitsTheWindow(tester, width, 'Reset account access?');
     });
 
+    testWidgets('Deactivate an employee at $width px', (tester) async {
+      final employees = FakeEmployeesApi();
+      await _pump(tester, width, _detailsOpener(employees));
+      await _openEmployee(tester, employees);
+      await _settle(tester);
+      employees.detailsSucceed(_activated);
+      await _settle(tester);
+      await tester.ensureVisible(find.text('Deactivate'));
+      await tester.tap(find.text('Deactivate'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Deactivate?');
+    });
+
     testWidgets('the temporary QR at $width px', (tester) async {
       final employees = FakeEmployeesApi();
       await _pump(tester, width, _detailsOpener(employees));
