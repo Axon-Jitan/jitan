@@ -64,11 +64,10 @@ class CompaniesController extends ChangeNotifier {
     _ => const [],
   };
 
-  /// Every loaded company, for the name check while typing.
-  List<CompanySummary> get loaded => switch (_state) {
-    CompaniesLoaded(:final companies) => companies,
-    _ => const [],
-  };
+  /// Every company, whatever the search, for the name check while typing:
+  /// the last list loaded without a search, kept current after each change.
+  List<CompanySummary> _all = const [];
+  List<CompanySummary> get loaded => _all;
 
   void updateStatus(CompanyStatusFilter status) {
     _status = status;
@@ -78,6 +77,7 @@ class CompaniesController extends ChangeNotifier {
   /// [company] as the server answered after a change: added (and lit up),
   /// or replaced where it was. Names stay in order.
   void put(CompanySummary company, {bool added = false}) {
+    _all = [for (final c in _all) if (c.id != company.id) c, company];
     if (_state case CompaniesLoaded(:final companies, :final search)) {
       final rest = [for (final c in companies) if (c.id != company.id) c];
       final next = [...rest, company]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -104,6 +104,7 @@ class CompaniesController extends ChangeNotifier {
     _emit(const CompaniesLoading());
     try {
       final companies = await _api.listCompanies(search: search);
+      if (search.isEmpty) _all = companies;
       if (request == _latestRequest) _emit(CompaniesLoaded(companies: companies, search: search));
     } on ApiClientException catch (failure) {
       if (request == _latestRequest) _emit(CompaniesFailed(failure));

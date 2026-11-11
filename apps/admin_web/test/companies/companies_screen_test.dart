@@ -219,6 +219,51 @@ void main() {
       expect(find.text('PCA deactivated'), findsOneWidget);
     });
 
+    testWidgets('a later message replaces "added", whose Add employees does not keep it on screen', (tester) async {
+      final api = await _pumpScreen(tester);
+      api.succeed([almeco, pca]);
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add company'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Proceq');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add company').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Proceq added'), findsOneWidget);
+
+      api.answer = (_) => company(2, 'PCA', active: false, employees: 8);
+      await tester.tap(find.text('PCA'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Deactivate'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PCA deactivated'), findsOneWidget);
+      expect(find.text('Proceq added'), findsNothing);
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pumpAndSettle();
+      expect(find.text('PCA deactivated'), findsNothing, reason: 'messages fade');
+    });
+
+    testWidgets('while searching, a name outside the search is still said to be taken', (tester) async {
+      final api = await _pumpScreen(tester);
+      api.succeed([almeco, pca]);
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField).first, 'PC');
+      await tester.pump(const Duration(milliseconds: 400));
+      api.succeed([pca]);
+      await tester.pump();
+
+      await tester.tap(find.text('PCA'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Almeco');
+      await tester.pump();
+
+      expect(find.text('Almeco is already in Jitan.'), findsOneWidget);
+      expect(tester.widget<JitanPrimaryButton>(find.widgetWithText(JitanPrimaryButton, 'Save')).onPressed, isNull);
+    });
+
     testWidgets('the very first time: no card, one line and the button', (tester) async {
       final api = await _pumpScreen(tester);
       api.succeed(<CompanySummary>[]);

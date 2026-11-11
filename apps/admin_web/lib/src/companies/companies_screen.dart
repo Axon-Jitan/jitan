@@ -44,8 +44,13 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
     super.dispose();
   }
 
-  void _say(String text, {SnackBarAction? action}) =>
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text), action: action));
+  /// The newest message replaces the one showing; one with an action
+  /// (Add employees) still fades like the rest instead of staying.
+  void _say(String text, {SnackBarAction? action}) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(SnackBar(content: Text(text), action: action, persist: false));
+  }
 
   /// Employees shows the company HR works in: this one, from now on.
   void _openEmployees(CompanySummary company) {
