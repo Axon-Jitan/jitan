@@ -14,3 +14,8 @@ String groupScheduleText(Translations t, GroupSchedule? schedule) => switch (sch
   GroupSchedule(:final variants) when variants.single.workDays.isEmpty => t.t(AdminTextKeys.groupsScheduleNone),
   GroupSchedule(:final variants) => workHoursDaysSummary(t, variants.single),
 };
+
+/// Whether [schedule] is the group's own work hours (not "No schedule yet",
+/// "No schedule of its own" or "Different hours"), shown in ink, not muted.
+bool groupHasOwnHours(GroupSchedule schedule) =>
+    schedule.status == GroupScheduleStatus.configured && schedule.variants.single.workDays.isNotEmpty;

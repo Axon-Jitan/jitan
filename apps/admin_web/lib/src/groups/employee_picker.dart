@@ -9,14 +9,12 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 import 'group_state_text.dart';
 
-/// Search and tick employees to add to a group (Figma `HR / Employee groups
-/// — Employee picker` 1349:356 and its loading, no-results and error
-/// states). Each row shows the groups the employee is already in ("Also in:
-/// White collar"), so HR sees who will have this as their only group.
-///
-/// With [dropdown] (Create group step 2, 1352:2 and 1354:7) the list opens
-/// under the "Select employees" field when HR clicks or types in it, and
-/// stays open, so the dialog does not jump while HR picks.
+/// Search and tick employees to add to a group (Figma `HR / Groups V2`:
+/// Create group `1555:2`, Add employees `1555:162`): one calm card, a line
+/// per employee with a check, their name and code, and the groups they are
+/// already in ("Also in White collar"), so HR sees who will have this as
+/// their only group. A ticked employee can carry a small choice on the
+/// right ([trailing], e.g. whose hours they work).
 class EmployeePicker extends StatefulWidget {
   const EmployeePicker({
     super.key,
@@ -24,10 +22,7 @@ class EmployeePicker extends StatefulWidget {
     required this.selected,
     required this.onChanged,
     this.enabled = true,
-    this.dropdown = false,
-    this.hintKey = AdminTextKeys.groupsPickerSearch,
-    this.noOtherGroupsKey = AdminTextKeys.groupsPickerAlsoInNone,
-    this.below,
+    this.trailing,
   });
 
   /// The employees matching a search (`null`: no search).
@@ -37,18 +32,9 @@ class EmployeePicker extends StatefulWidget {
   final Map<int, GroupMember> selected;
   final ValueChanged<Map<int, GroupMember>> onChanged;
   final bool enabled;
-  final bool dropdown;
 
-  /// The search field's placeholder.
-  final String hintKey;
-
-  /// Extra content under an employee's row (e.g. whose hours they will
-  /// work, `1390:1106`); `null` adds nothing.
-  final Widget? Function(GroupMember employee)? below;
-
-  /// The text for an employee in no other group: "Also in: None" in Add
-  /// employees (1349:356), "No other groups" in Create group (1354:7).
-  final String noOtherGroupsKey;
+  /// Shown on the right of a ticked employee's line; `null` adds nothing.
+  final Widget? Function(GroupMember employee)? trailing;
 
   @override
   State<EmployeePicker> createState() => _EmployeePickerState();
@@ -57,12 +43,14 @@ class EmployeePicker extends StatefulWidget {
 class _EmployeePickerState extends State<EmployeePicker> {
   static const _searchDelay = Duration(milliseconds: 300);
 
+  /// The list scrolls inside the card past this height.
+  static const _maxListHeight = 280.0;
+
   List<GroupMember>? _employees;
   ApiClientException? _failure;
   String? _search;
   Timer? _timer;
   int _latest = 0;
-  bool _open = false;
 
   @override
   void initState() {
@@ -104,111 +92,105 @@ class _EmployeePickerState extends State<EmployeePicker> {
     widget.onChanged(next);
   }
 
-  void _openList() {
-    if (widget.dropdown && !_open) setState(() => _open = true);
-  }
-
   @override
-  Widget build(BuildContext context) {
-    // On every press, not on focus: a field that kept focus still opens it.
-    final field = Listener(
-      onPointerDown: (_) => _openList(),
-      child: JitanSearchField(
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: 12,
+    children: [
+      JitanSearchField(
         clearTooltip: context.t(CommonTextKeys.searchClear),
         outlined: true,
-        hintText: context.t(widget.hintKey),
-        onChanged: (text) {
-          _openList();
-          _onSearch(text);
-        },
+        hintText: context.t(AdminTextKeys.groupsPickerSearch),
+        onChanged: _onSearch,
       ),
-    );
-    if (!widget.dropdown) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          field,
-          const SizedBox(height: 12),
-          SizedBox(height: 280, child: _list(context)),
-        ],
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        field,
-        if (_open) ...[
-          const SizedBox(height: 6),
-          Container(
-            height: 214,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: JitanColors.surface,
-              borderRadius: BorderRadius.circular(JitanDimensions.inputRadius),
-              border: Border.all(color: JitanColors.inputBorder),
-            ),
-            child: _list(context),
-          ),
-        ],
-      ],
+      _list(context),
+    ],
+  );
+
+  Widget _list(BuildContext context) {
+    final employees = _employees;
+    final Widget? state = _failure != null
+        ? GroupStateText(context.t(AdminTextKeys.groupsPickerLoadFailed), onRetry: _load)
+        : employees == null
+        ? GroupStateText(context.t(AdminTextKeys.groupsPickerLoading))
+        : employees.isEmpty
+        ? GroupStateText(context.t(AdminTextKeys.groupsPickerEmptyMessage))
+        : null;
+    if (state != null) return Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: state);
+    return Container(
+      constraints: const BoxConstraints(maxHeight: _maxListHeight),
+      decoration: BoxDecoration(
+        color: JitanColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: JitanColors.cardBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ListView.separated(
+        shrinkWrap: true,
+        itemCount: employees!.length,
+        separatorBuilder: (_, _) => const Divider(height: 1, thickness: 1, color: JitanColors.cardBorder),
+        itemBuilder: (context, index) => _row(context, employees[index]),
+      ),
     );
   }
 
-  Widget _list(BuildContext context) {
-    if (_failure != null) return GroupStateText(context.t(AdminTextKeys.groupsPickerLoadFailed), onRetry: _load);
-    final employees = _employees;
-    if (employees == null) return GroupStateText(context.t(AdminTextKeys.groupsPickerLoading));
-    if (employees.isEmpty) return GroupStateText(context.t(AdminTextKeys.groupsPickerEmptyMessage));
-    return ListView.builder(
-      itemCount: employees.length,
-      itemBuilder: (context, index) {
-        final employee = employees[index];
-        final selected = widget.selected.containsKey(employee.id);
-        final alsoIn = employee.groups.isEmpty
-            ? context.t(widget.noOtherGroupsKey)
-            : context.t(AdminTextKeys.groupsPickerAlsoIn, args: {'groups': employee.groups.join(', ')});
-        return Material(
-          color: index.isOdd ? JitanColors.tableStripe : JitanColors.surface,
-          borderRadius: BorderRadius.circular(10),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: widget.enabled ? () => _toggle(employee) : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-              child: Row(
+  Widget _row(BuildContext context, GroupMember employee) {
+    final selected = widget.selected.containsKey(employee.id);
+    final trailing = selected ? widget.trailing?.call(employee) : null;
+    return InkWell(
+      onTap: widget.enabled ? () => _toggle(employee) : null,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+        child: Row(
+          spacing: 12,
+          children: [
+            _Check(selected: selected, label: employee.displayName),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Checkbox(
-                    value: selected,
-                    onChanged: widget.enabled ? (_) => _toggle(employee) : null,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
+                  Text(
+                    context.t(AdminTextKeys.groupsPickerName, args: {'name': employee.displayName, 'code': employee.code}),
+                    style: JitanTextStyles.tableCell.copyWith(color: JitanColors.ink, fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${employee.displayName} · ${employee.code}',
-                          style: JitanTextStyles.tableCellStrong,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          alsoIn,
-                          style: JitanTextStyles.stateMessage.copyWith(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (widget.below?.call(employee) case final extra?) ...[const SizedBox(height: 4), extra],
-                      ],
+                  if (employee.groups.isNotEmpty)
+                    Text(
+                      context.t(AdminTextKeys.groupsPickerAlsoIn, args: {'groups': employee.groups.join(', ')}),
+                      style: JitanTextStyles.stateMessage.copyWith(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
                 ],
               ),
             ),
-          ),
-        );
-      },
+            ?trailing,
+          ],
+        ),
+      ),
     );
   }
+}
+
+/// A small square check: ink with a white tick when chosen.
+class _Check extends StatelessWidget {
+  const _Check({required this.selected, required this.label});
+
+  final bool selected;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    checked: selected,
+    label: label,
+    child: Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        color: selected ? JitanColors.ink : JitanColors.surface,
+        borderRadius: BorderRadius.circular(5),
+        border: selected ? null : Border.all(color: JitanColors.inputBorder, width: 1.5),
+      ),
+      child: selected ? const Icon(Icons.check_rounded, size: 13, color: JitanColors.surface) : null,
+    ),
+  );
 }

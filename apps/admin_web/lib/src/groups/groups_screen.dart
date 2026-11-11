@@ -6,19 +6,16 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../app/admin_routes.dart';
-import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'create_group_dialog.dart';
-import 'deactivate_group_dialog.dart';
 import 'group_state_text.dart';
 import 'groups_controller.dart';
 import 'groups_table.dart';
-import 'manage_group_dialog.dart';
-import 'rename_group_dialog.dart';
 
-/// HR/Admin "Employee groups" page (Figma `HR / Employee groups — Overview`
-/// 1340:2, `Empty` 1342:2, `Loading` 1342:162, `Error` 1342:322). Groups are
-/// shared by all companies, so this page is not company-scoped.
+/// HR/Admin "Groups" (Figma `HR / Groups V2`: page `1554:2`, no match
+/// `1558:2`, nothing yet `1558:104`, loading `1558:209`, error `1558:309`).
+/// A row opens the group's page, where it is renamed and deactivated.
+/// Groups are shared by all companies, so this page is not company-scoped.
 class GroupsScreen extends StatefulWidget {
   const GroupsScreen({super.key, required this.groupsApi, required this.membersApi, required this.schedulesApi});
 
@@ -42,8 +39,6 @@ class _GroupsScreenState extends State<GroupsScreen> {
     super.dispose();
   }
 
-  void _say(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
-
   void _open(GroupOverview group) => context.go(AdminRoutes.group(group.id));
 
   Future<void> _create() async {
@@ -56,40 +51,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
     if (created == null || !mounted) return;
     // Back on the list with the new group in it (product owner, 2026-10-22);
     // its row opens the group's page.
-    _say(context.t(AdminTextKeys.groupsCreated, args: {'group': created.name}));
+    showJitanToast(context, context.t(AdminTextKeys.groupsCreated, args: {'group': created.name}));
     await _controller.load();
   }
 
-  Future<void> _manage(GroupOverview group) async {
-    final action = await showManageGroupDialog(context, group: group);
-    if (action == null || !mounted) return;
-    switch (action) {
-      case GroupAction.rename:
-        final renamed = await showRenameGroupDialog(context, groupsApi: widget.groupsApi, group: group);
-        if (renamed == null || !mounted) return;
-        _say(context.t(AdminTextKeys.groupsRenamed, args: {'group': renamed.name}));
-        await _controller.load();
-      case GroupAction.deactivate:
-        final done = await showDeactivateGroupDialog(
-          context,
-          groupsApi: widget.groupsApi,
-          group: group,
-          onManageEmployees: () => _open(group),
-        );
-        if (done == null || !mounted) return;
-        _say(context.t(AdminTextKeys.groupsDeactivated, args: {'group': done.name}));
-        await _controller.load();
-      case GroupAction.reactivate:
-        try {
-          final done = await widget.groupsApi.reactivate(group.id);
-          if (!mounted) return;
-          _say(context.t(AdminTextKeys.groupsReactivated, args: {'group': done.name}));
-          await _controller.load();
-        } on ApiClientException catch (failure) {
-          if (mounted) _say(context.t(failureTextKeysFor(failure).message));
-        }
-    }
-  }
+  bool get _isEmpty => switch (_controller.state) {
+    GroupsLoaded(groups: []) => true,
+    _ => false,
+  };
 
   @override
   Widget build(BuildContext context) => JitanListPage(
@@ -100,74 +69,77 @@ class _GroupsScreenState extends State<GroupsScreen> {
         children: [
           JitanPageHeader(
             title: context.t(AdminTextKeys.groupsTitle),
-            subtitle: context.t(AdminTextKeys.groupsSubtitle),
-            action: JitanPrimaryButton(
-              label: context.t(AdminTextKeys.groupsAdd),
-              icon: Icons.add,
-              height: JitanDimensions.controlHeight,
-              onPressed: _create,
-            ),
+            subtitle: switch (_controller.state) {
+              GroupsLoaded(:final groups) when groups.isNotEmpty => context.tPlural(AdminTextKeys.groupsCount, groups.length),
+              _ => context.t(AdminTextKeys.groupsSubtitle),
+            },
+            action: _isEmpty
+                ? null
+                : JitanPrimaryButton(
+                    label: context.t(AdminTextKeys.groupsAdd),
+                    icon: Icons.add,
+                    height: JitanDimensions.controlHeight,
+                    onPressed: _create,
+                  ),
           ),
           const SizedBox(height: JitanDimensions.headerToToolbar),
-          _toolbar(context),
-          const SizedBox(height: JitanDimensions.toolbarToTable),
+          if (!_isEmpty) ...[_toolbar(context), const SizedBox(height: JitanDimensions.toolbarToTable)],
         ],
       ),
     ),
     list: [ListenableBuilder(listenable: _controller, builder: (context, _) => _content(context))],
   );
 
+  /// A search box and All · Active · Inactive, as on Terminals.
   Widget _toolbar(BuildContext context) {
-    // Labelled like the other list pages (Employees, Schedules, Time records).
-    final search = JitanFieldLabel(
-      label: context.t(CommonTextKeys.searchLabel),
-      child: JitanSearchField(
-        clearTooltip: context.t(CommonTextKeys.searchClear),
-        outlined: true,
-        hintText: context.t(AdminTextKeys.groupsSearch),
-        onChanged: _controller.updateSearch,
-      ),
+    final search = JitanSearchField(
+      clearTooltip: context.t(CommonTextKeys.searchClear),
+      outlined: true,
+      hintText: context.t(AdminTextKeys.groupsSearch),
+      onChanged: _controller.updateSearch,
     );
-    final status = JitanSelectField<GroupStatusFilter?>(
-      label: context.t(AdminTextKeys.scheduleFilterStatus),
-      value: _controller.status,
+    final status = JitanPillSwitch<GroupStatusFilter?>(
       options: [
-        JitanSelectOption(value: null, label: context.t(AdminTextKeys.groupsFilterAll)),
-        JitanSelectOption(value: GroupStatusFilter.active, label: context.t(CommonTextKeys.statusActive)),
-        JitanSelectOption(value: GroupStatusFilter.inactive, label: context.t(CommonTextKeys.statusInactive)),
+        (null, context.t(AdminTextKeys.groupsFilterAll)),
+        (GroupStatusFilter.active, context.t(CommonTextKeys.statusActive)),
+        (GroupStatusFilter.inactive, context.t(CommonTextKeys.statusInactive)),
       ],
+      value: _controller.status,
       onChanged: _controller.updateStatus,
     );
     return LayoutBuilder(
       builder: (context, constraints) => constraints.maxWidth < JitanDimensions.phoneBreakpoint
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [search, const SizedBox(height: 14), status],
-            )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                SizedBox(width: JitanDimensions.filterSearchWidth, child: search),
-                const SizedBox(width: 16),
-                SizedBox(width: 220, child: status),
-              ],
-            ),
+          ? Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: [search, status])
+          : Row(spacing: 12, children: [SizedBox(width: 320, child: search), status]),
     );
   }
 
-  /// The table, or the state line Figma draws in its place (1342:2 empty,
-  /// 1342:162 loading, 1342:322 error).
   Widget _content(BuildContext context) => switch (_controller.state) {
-    GroupsLoading() => _state(GroupStateText(context.t(AdminTextKeys.groupsLoading))),
-    GroupsFailed() => _state(GroupStateText(context.t(AdminTextKeys.groupsLoadFailed), onRetry: _controller.load)),
-    GroupsLoaded(groups: []) => _state(GroupStateText(context.t(AdminTextKeys.groupsEmptyMessage))),
+    GroupsLoading() => _line(GroupStateText(context.t(AdminTextKeys.groupsLoading))),
+    GroupsFailed() => _line(GroupStateText(context.t(AdminTextKeys.groupsLoadFailed), onRetry: _controller.load)),
+    GroupsLoaded(groups: []) => SliverToBoxAdapter(
+      child: JitanEmptyPage(
+        title: context.t(AdminTextKeys.groupsEmptyTitle),
+        message: context.t(AdminTextKeys.groupsEmptyMessage),
+        actionLabel: context.t(AdminTextKeys.groupsAdd),
+        onAction: _create,
+      ),
+    ),
     GroupsLoaded(:final schedules) => switch (_controller.visibleGroups) {
-      [] => _state(GroupStateText(context.t(AdminTextKeys.groupsNoMatchMessage))),
-      final groups => GroupsTable(groups: groups, schedules: schedules, onManage: _manage, onOpen: _open),
+      [] => SliverToBoxAdapter(child: _nothingShown(context)),
+      final groups => GroupsTable(groups: groups, schedules: schedules, onOpen: _open),
     },
   };
 
-  static Widget _state(Widget child) => SliverToBoxAdapter(
-    child: Padding(padding: const EdgeInsets.only(top: 20), child: child),
-  );
+  /// Nothing to show, said for what HR did: a search or a status (`1558:2`).
+  Widget _nothingShown(BuildContext context) {
+    final (title, message) = switch ((_controller.search, _controller.status)) {
+      ('', GroupStatusFilter.inactive) => (AdminTextKeys.groupsNoInactiveTitle, AdminTextKeys.groupsNoInactiveText),
+      ('', GroupStatusFilter.active) => (AdminTextKeys.groupsNoActiveTitle, AdminTextKeys.groupsNoActiveText),
+      _ => (AdminTextKeys.groupsNoMatchTitle, AdminTextKeys.groupsNoMatchMessage),
+    };
+    return JitanNoResults(title: context.t(title), message: context.t(message));
+  }
+
+  static Widget _line(Widget child) => SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 4), child: child));
 }

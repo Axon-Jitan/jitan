@@ -6,9 +6,9 @@ import '../l10n/admin_text_keys.dart';
 import '../schedules/schedule_form_controller.dart';
 import 'group_name_error.dart';
 
-/// The steps of Create group, in order (Figma 1461:5, 1461:74, 1461:130 for
-/// steps 3–5).
-enum CreateGroupStep { details, employees, hours, attendance, review }
+/// The steps of Create group, in order (Figma `HR / Groups V2`: Group
+/// `1555:2`, Hours `1556:556`, then the Rules and Review of Schedules).
+enum CreateGroupStep { group, hours, attendance, review }
 
 /// State of Create group (Figma `HR / Employee groups — Create group`): the
 /// name, the employees from every company, the work hours and break, the
@@ -30,7 +30,7 @@ class CreateGroupController extends ChangeNotifier {
 
   static final _time = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$');
 
-  CreateGroupStep _step = CreateGroupStep.details;
+  CreateGroupStep _step = CreateGroupStep.group;
   CreateGroupStep get step => _step;
 
   String _name = '';
@@ -62,8 +62,8 @@ class CreateGroupController extends ChangeNotifier {
   String? get finish => _finish;
   final Map<int, ({String? start, String? finish})> _dayHours = {};
 
-  String _breakText = '';
-  String get breakText => _breakText;
+  int? _breakLength;
+  int? get breakLength => _breakLength;
 
   /// Step 4: minutes as typed, and the rounding of start and finish.
   String arrivalTolerance = '0';
@@ -102,13 +102,12 @@ class CreateGroupController extends ChangeNotifier {
 
   /// Every chosen employee keeps their own hours (product owner,
   /// 2026-10-22): nobody would work this group's hours, so step 3 is not
-  /// asked and step 2 creates the group. HR can set hours later on the
+  /// asked and the first step creates the group. HR can set hours later on the
   /// group page.
   bool get skipsHours => _selected.isNotEmpty && willWorkCount == 0;
 
   bool get canContinue => switch (_step) {
-    CreateGroupStep.details => _name.trim().isNotEmpty,
-    CreateGroupStep.employees => true,
+    CreateGroupStep.group => _name.trim().isNotEmpty,
     CreateGroupStep.hours => _options is ScheduleOptionsLoaded && _hoursComplete && hoursErrorKey == null && breakErrorKey == null,
     CreateGroupStep.attendance => true,
     CreateGroupStep.review => false,
@@ -117,7 +116,7 @@ class CreateGroupController extends ChangeNotifier {
   bool get canSubmit =>
       !_submitting &&
       switch (_step) {
-        CreateGroupStep.employees => skipsHours,
+        CreateGroupStep.group => skipsHours && _name.trim().isNotEmpty,
         CreateGroupStep.review => true,
         _ => false,
       };
@@ -141,7 +140,7 @@ class CreateGroupController extends ChangeNotifier {
       _dayIds.isEmpty &&
       (_start ?? '').isEmpty &&
       (_finish ?? '').isEmpty &&
-      _breakText.trim().isEmpty &&
+      _breakLength == null &&
       _dayHours.values.every((h) => (h.start ?? '').isEmpty && (h.finish ?? '').isEmpty);
 
   ({String? start, String? finish}) hoursOf(int dayId) =>
@@ -157,15 +156,10 @@ class CreateGroupController extends ChangeNotifier {
     return null;
   }
 
-  /// The break must be one of the allowed lengths and shorter than every
-  /// working day.
+  /// The break must be shorter than every working day.
   String? get breakErrorKey {
-    if (_breakText.trim().isEmpty) return null;
-    final minutes = int.tryParse(_breakText.trim());
-    final loaded = _options;
-    if (minutes == null || (loaded is ScheduleOptionsLoaded && !loaded.options.breakLengthMinutes.contains(minutes))) {
-      return AdminTextKeys.groupsErrorBreakLength;
-    }
+    final minutes = _breakLength;
+    if (minutes == null) return null;
     for (final dayId in _dayIds) {
       final (:start, :finish) = hoursOf(dayId);
       final from = _minutes(start), to = _minutes(finish);
@@ -174,16 +168,10 @@ class CreateGroupController extends ChangeNotifier {
     return null;
   }
 
-  /// The allowed break lengths, for the error text.
-  List<int> get breakLengths => switch (_options) {
-    ScheduleOptionsLoaded(:final options) => options.breakLengthMinutes,
-    _ => const [],
-  };
-
   bool get _hoursComplete =>
       _dayIds.isNotEmpty &&
       _dayIds.every((id) => _minutes(hoursOf(id).start) != null && _minutes(hoursOf(id).finish) != null) &&
-      int.tryParse(_breakText.trim()) != null;
+      _breakLength != null;
 
   void setName(String name) => _change(() {
     _name = name;
@@ -227,7 +215,7 @@ class CreateGroupController extends ChangeNotifier {
   void setDayFinish(int dayId, String? time) =>
       _change(() => _dayHours[dayId] = (start: _dayHours[dayId]?.start, finish: time));
 
-  void setBreak(String text) => _change(() => _breakText = text);
+  void setBreakLength(int? minutes) => _change(() => _breakLength = minutes);
 
   void setArrivalTolerance(String text) => _change(() {
     arrivalTolerance = text;
@@ -256,20 +244,19 @@ class CreateGroupController extends ChangeNotifier {
     _notify();
   }
 
-  /// Step 1 → 2 → 3; the name is checked before leaving step 1.
+  /// Group → Hours → Rules → Review; the name is checked before leaving
+  /// the first step.
   void next() {
     switch (_step) {
-      case CreateGroupStep.details:
+      case CreateGroupStep.group:
         final problem = groupNameProblem(_name);
         if (problem != null) {
           _nameError = problem;
         } else {
-          _step = CreateGroupStep.employees;
+          _step = CreateGroupStep.hours;
+          _hoursLater = false;
+          if (!_optionsRequested) loadOptions();
         }
-      case CreateGroupStep.employees:
-        _step = CreateGroupStep.hours;
-        _hoursLater = false;
-        if (!_optionsRequested) loadOptions();
       case CreateGroupStep.hours:
         if (!canContinue) return;
         _step = CreateGroupStep.attendance;
@@ -287,7 +274,7 @@ class CreateGroupController extends ChangeNotifier {
   }
 
   void back() {
-    if (_submitting || _step == CreateGroupStep.details) return;
+    if (_submitting || _step == CreateGroupStep.group) return;
     // From the review without hours: back to the hours step.
     _step = _step == CreateGroupStep.review && !withHours ? CreateGroupStep.hours : CreateGroupStep.values[_step.index - 1];
     if (_step == CreateGroupStep.hours) _hoursLater = false;
@@ -332,7 +319,7 @@ class CreateGroupController extends ChangeNotifier {
   /// the step concerned).
   Future<GroupOverview?> submit() async {
     final loaded = _options;
-    final withoutHours = _step == CreateGroupStep.employees || !withHours;
+    final withoutHours = _step == CreateGroupStep.group || !withHours;
     if (!canSubmit || (!withoutHours && loaded is! ScheduleOptionsLoaded)) return null;
     _submitting = true;
     _failure = null;
@@ -359,7 +346,7 @@ class CreateGroupController extends ChangeNotifier {
               startRounding: _startRounding,
               finishRounding: _finishRounding,
             ),
-            breakMinutes: int.parse(_breakText.trim()),
+            breakMinutes: _breakLength!,
           ),
         ),
       );
@@ -376,7 +363,7 @@ class CreateGroupController extends ChangeNotifier {
   void _refused(ApiClientException failure) {
     final error = failure.error;
     if (groupNameErrorKey(failure) case final key?) {
-      _step = CreateGroupStep.details;
+      _step = CreateGroupStep.group;
       _nameError = key;
     } else if (withHours &&
         (error?.code == ApiErrorCode.groupWithoutEmployees || error?.field == CreateGroupRequest.fieldEmployeeIds)) {

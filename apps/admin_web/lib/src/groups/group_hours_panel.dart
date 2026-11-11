@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
@@ -9,9 +10,9 @@ import '../schedules/schedule_summary_text.dart';
 ScheduleVariant? configuredVariant(GroupSchedule? schedule) =>
     schedule?.status == GroupScheduleStatus.configured && schedule!.variants.length == 1 ? schedule.variants.single : null;
 
-/// "Work hours & break" on the group page (Figma `1455:2`): every weekday
-/// with its hours or "Day off", then break, tolerance and rounding, and the
-/// button that opens the schedule wizard on this group.
+/// "Work hours & break" on the group page (Figma `HR / Groups V2 — a group`
+/// `1554:101`, no hours yet `1556:937`): the grouped card of Schedules with
+/// a small Edit, or one sentence and Set work hours while it has none.
 class GroupHoursPanel extends StatelessWidget {
   const GroupHoursPanel({super.key, required this.schedule, required this.hasMembers, required this.onEdit});
 
@@ -25,111 +26,84 @@ class GroupHoursPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = TranslationScope.of(context);
     final variant = configuredVariant(schedule);
-    final muted = JitanTextStyles.stateMessage.copyWith(fontSize: 13);
-    final strong = JitanTextStyles.tableCellStrong.copyWith(fontSize: 13);
-
-    Widget line(String label, String value, {bool dim = false}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: Text(label, style: dim ? JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted) : JitanTextStyles.tableCell)),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                value,
-                textAlign: TextAlign.end,
-                style: dim ? JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted) : JitanTextStyles.tableCellStrong,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    final List<Widget> content;
-    if (variant == null) {
-      content = [
-        Text(
-          context.t(switch (schedule?.status) {
-            GroupScheduleStatus.employeesDiffer => AdminTextKeys.groupDetailHoursDifferText,
-            GroupScheduleStatus.noSingleGroupEmployees when hasMembers => AdminTextKeys.groupDetailHoursNoSingleText,
-            _ => AdminTextKeys.groupDetailHoursEmptyText,
-          }),
-          style: JitanTextStyles.stateMessage,
-        ),
-      ];
-    } else {
-      final days = {for (final d in variant.workDays) if (d.start != null && d.finish != null) d.day.weekday: d};
-      final first = days.values.firstOrNull;
-      final breakMinutes = variant.breaks.firstOrNull?.lengthMinutes;
-      content = [
-        for (var weekday = 1; weekday <= 7; weekday++)
-          switch (days[weekday]) {
-            final day? => line(context.t(AdminTextKeys.weekdayLong[weekday - 1]), '${day.start!.time}–${day.finish!.time}'),
-            null => line(context.t(AdminTextKeys.weekdayLong[weekday - 1]), context.t(AdminTextKeys.groupDetailDayOff), dim: true),
-          },
-        const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1, color: JitanColors.inputBorder)),
-        _detail(
-          context.t(AdminTextKeys.groupDetailBreakRow),
-          breakMinutes == null
-              ? context.t(AdminTextKeys.groupDetailNoBreak)
-              : context.t(AdminTextKeys.groupDetailBreakValue, args: {'minutes': breakMinutes}),
-          muted,
-          strong,
-        ),
-        if (first != null) ...[
-          _detail(
-            context.t(AdminTextKeys.groupDetailToleranceRow),
-            context.t(
-              AdminTextKeys.groupDetailToleranceValue,
-              args: {'arrival': first.start!.toleranceMinutes, 'leaving': first.finish!.toleranceMinutes},
-            ),
-            muted,
-            strong,
-          ),
-          _detail(
-            context.t(AdminTextKeys.groupDetailRoundingRow),
-            roundingPairText(t, first.start!.rounding, first.finish!.rounding),
-            muted,
-            strong,
-          ),
-        ],
-      ];
-    }
-
+    final differ = schedule?.status == GroupScheduleStatus.employeesDiffer;
+    final title = Text(context.t(AdminTextKeys.groupDetailHoursPanel), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18));
+    final edit = onEdit;
     return JitanSurfaceCard(
       radius: JitanDimensions.tableCardRadius,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 16,
         children: [
-          Text(context.t(AdminTextKeys.groupDetailHoursPanel), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
-          const SizedBox(height: 14),
-          ...content,
-          const SizedBox(height: 18),
-          JitanPrimaryButton(
-            label: context.t(variant != null || schedule?.status == GroupScheduleStatus.employeesDiffer
-                ? AdminTextKeys.groupPageEditHours
-                : AdminTextKeys.groupPageSetHours),
-            onPressed: onEdit,
+          Row(
+            children: [
+              Expanded(child: title),
+              if (variant != null && edit != null)
+                TextButton(
+                  onPressed: edit,
+                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 30)),
+                  child: Text(context.t(AdminTextKeys.groupDetailEdit), style: JitanTextStyles.tableCellStrong.copyWith(color: JitanColors.vermilion)),
+                ),
+            ],
           ),
+          if (variant != null) ...[
+            _card(context, t, variant),
+            Text(context.t(AdminTextKeys.groupDetailHoursAll), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
+          ] else ...[
+            Text(
+              context.t(switch (schedule?.status) {
+                GroupScheduleStatus.employeesDiffer => AdminTextKeys.groupDetailHoursDifferText,
+                GroupScheduleStatus.noSingleGroupEmployees when hasMembers => AdminTextKeys.groupDetailHoursNoSingleText,
+                _ => AdminTextKeys.groupDetailHoursEmptyText,
+              }),
+              style: JitanTextStyles.stateMessage.copyWith(fontSize: 14),
+            ),
+            if (edit != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: JitanPrimaryButton(
+                  label: context.t(differ ? AdminTextKeys.groupPageEditHours : AdminTextKeys.groupPageSetHours),
+                  onPressed: edit,
+                ),
+              ),
+          ],
         ],
       ),
     );
   }
 
-  static Widget _detail(String label, String value, TextStyle muted, TextStyle strong) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 5),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: Text(label, style: muted)),
-        const SizedBox(width: 12),
-        Flexible(child: Align(alignment: Alignment.centerRight, child: Text(value, textAlign: TextAlign.end, style: strong))),
+  Widget _card(BuildContext context, Translations t, ScheduleVariant variant) {
+    final first = variant.workDays.where((d) => d.start != null && d.finish != null).firstOrNull;
+    final lengths = {for (final b in variant.breaks) b.lengthMinutes};
+    return JitanSettingsCard(
+      rows: [
+        JitanSettingsRow(label: context.t(AdminTextKeys.scheduleRowWorkDays), value: JitanSettingsRow.text(workDaysText(t, variant))),
+        JitanSettingsRow(label: context.t(AdminTextKeys.scheduleRowHours), value: JitanSettingsRow.text(workHoursText(t, variant))),
+        JitanSettingsRow(
+          label: context.t(AdminTextKeys.scheduleRowBreak),
+          value: JitanSettingsRow.text(switch (lengths.length) {
+            0 => context.t(AdminTextKeys.groupDetailNoBreak),
+            1 => context.t(AdminTextKeys.scheduleBreakMinutes, args: {'minutes': lengths.single}),
+            _ => breaksSummary(t, variant),
+          }),
+        ),
+        if (first != null) ...[
+          JitanSettingsRow(
+            label: context.t(AdminTextKeys.scheduleRowTolerance),
+            value: JitanSettingsRow.text(
+              context.t(
+                AdminTextKeys.groupDetailToleranceValue,
+                args: {'arrival': first.start!.toleranceMinutes, 'leaving': first.finish!.toleranceMinutes},
+              ),
+            ),
+          ),
+          JitanSettingsRow(
+            label: context.t(AdminTextKeys.scheduleRowRounding),
+            value: JitanSettingsRow.text(roundingCompactText(t, first.start!.rounding, first.finish!.rounding)),
+          ),
+        ],
       ],
-    ),
-  );
+    );
+  }
 }

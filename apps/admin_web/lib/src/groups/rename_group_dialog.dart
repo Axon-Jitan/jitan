@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
+import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
@@ -14,8 +15,8 @@ Future<GroupOverview?> showRenameGroupDialog(
   required GroupOverview group,
 }) => showJitanModal<GroupOverview>(context, builder: (_) => RenameGroupDialog(groupsApi: groupsApi, group: group));
 
-/// Figma `HR / Employee groups — Rename group` (1340:329) and `Group name
-/// error` (1340:836).
+/// Figma `HR / Groups V2 — rename` (`1555:308`): the name, Cancel and Save,
+/// which waits for a change.
 class RenameGroupDialog extends StatefulWidget {
   const RenameGroupDialog({super.key, required this.groupsApi, required this.group});
 
@@ -27,10 +28,14 @@ class RenameGroupDialog extends StatefulWidget {
 }
 
 class _RenameGroupDialogState extends State<RenameGroupDialog> {
-  late final _name = TextEditingController(text: widget.group.name);
+  late final _name = TextEditingController(text: widget.group.name)..addListener(_refresh);
   bool _busy = false;
   String? _nameError;
   ApiClientException? _failure;
+
+  void _refresh() => setState(() {});
+
+  bool get _changed => _name.text.trim() != widget.group.name.trim();
 
   @override
   void dispose() {
@@ -39,6 +44,7 @@ class _RenameGroupDialogState extends State<RenameGroupDialog> {
   }
 
   Future<void> _save() async {
+    if (!_changed || _busy) return;
     final problem = groupNameProblem(_name.text);
     if (problem != null) return setState(() => _nameError = problem);
     setState(() {
@@ -66,25 +72,23 @@ class _RenameGroupDialogState extends State<RenameGroupDialog> {
 
   @override
   Widget build(BuildContext context) => JitanModal(
-    width: 560,
+    width: 440,
     title: context.t(AdminTextKeys.groupsRenameTitle),
-    subtitle: context.t(AdminTextKeys.groupsRenameSubtitle),
     onClose: _busy ? null : () => Navigator.of(context).pop(),
     body: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        JitanFieldLabel(
-          label: context.t(AdminTextKeys.groupsFieldName),
-          child: TextField(
-            controller: _name,
-            autofocus: true,
-            enabled: !_busy,
-            maxLength: GroupNameRequest.maxNameLength,
-            style: JitanTextStyles.inputText,
-            onSubmitted: (_) => _save(),
-            decoration: jitanFieldDecoration(errorText: _nameError == null ? null : context.t(_nameError!))
-                .copyWith(counterText: ''),
-          ),
+        TextField(
+          controller: _name,
+          autofocus: true,
+          enabled: !_busy,
+          maxLength: GroupNameRequest.maxNameLength,
+          style: JitanTextStyles.inputText,
+          onSubmitted: (_) => _save(),
+          decoration: jitanFieldDecoration(
+            hintText: context.t(AdminTextKeys.groupsFieldNameHint),
+            errorText: _nameError == null ? null : context.t(_nameError!),
+          ).copyWith(counterText: ''),
         ),
         if (_failure case final failure?) ...[
           const SizedBox(height: 16),
@@ -98,7 +102,19 @@ class _RenameGroupDialogState extends State<RenameGroupDialog> {
       ],
     ),
     actions: [
-      JitanPrimaryButton(label: context.t(AdminTextKeys.groupsRenameSave), busy: _busy, onPressed: _save),
+      Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: _busy ? null : () => Navigator.of(context).pop()),
+          JitanPrimaryButton(
+            label: context.t(AdminTextKeys.groupsRenameSave),
+            busy: _busy,
+            onPressed: _changed && !_busy ? _save : null,
+          ),
+        ],
+      ),
     ],
   );
 }

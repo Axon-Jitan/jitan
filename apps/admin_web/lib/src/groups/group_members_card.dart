@@ -6,10 +6,11 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 import 'group_member_hours.dart';
 
-/// "Employees" on the group page (Figma `1455:2`): a count, a search, Add
-/// employees, and one row per member with their companies, other groups,
-/// where their work hours come from, and Remove. On a narrow window each
-/// member becomes a small block instead of a table row.
+/// "Employees" on the group page (Figma `HR / Groups V2 — a group`
+/// `1554:101`): a count, a search, Add employees, and one calm row per
+/// member with their companies, other groups and where their work hours
+/// come from; Remove shows while a row is hovered. On a narrow window each
+/// member becomes a small block, with Remove always there.
 class GroupMembersCard extends StatefulWidget {
   const GroupMembersCard({
     super.key,
@@ -27,7 +28,7 @@ class GroupMembersCard extends StatefulWidget {
   final List<GroupMember> members;
   final bool groupHasHours;
 
-  /// `null` while the group is inactive.
+  /// `null` while the group is inactive: no Add employees and no Remove.
   final VoidCallback? onAdd;
   final ValueChanged<GroupMember> onRemove;
 
@@ -42,8 +43,10 @@ class _GroupMembersCardState extends State<GroupMembersCard> {
   final _search = TextEditingController();
   String _term = '';
 
-  /// Proportional to Figma (230 / 150 / 130 / 170 / 80).
-  static const _flex = [230, 150, 130, 170, 80];
+  /// Proportional to Figma (230 / 120 / 120 / 150 / 70).
+  static const _flex = [230, 120, 120, 150, 70];
+
+  bool get _active => widget.onAdd != null;
 
   @override
   void dispose() {
@@ -70,25 +73,24 @@ class _GroupMembersCardState extends State<GroupMembersCard> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(padding: const EdgeInsets.fromLTRB(24, 20, 24, 16), child: _header(context, wide)),
+            Padding(padding: const EdgeInsets.fromLTRB(20, 18, 20, 16), child: _header(context, wide)),
             if (widget.members.isEmpty)
               _empty(context)
             else ...[
               if (wide) _headingRow(context),
               if (visible.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                   child: Text(context.t(AdminTextKeys.groupDetailNoMatch), style: JitanTextStyles.stateMessage),
                 ),
-              for (final (i, member) in visible.indexed)
-                ColoredBox(
-                  color: i.isOdd ? JitanColors.tableStripe : JitanColors.surface,
-                  child: wide ? _row(context, member) : _block(context, member),
+              for (final member in visible)
+                _MemberRow(
+                  wide: wide,
+                  onRemove: _active ? () => widget.onRemove(member) : null,
+                  removeLabel: context.t(AdminTextKeys.groupDetailRemove),
+                  cells: _cells(context, member, wide),
                 ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 14, 24, 16),
-                child: Text(context.tPlural(AdminTextKeys.groupDetailCount, widget.members.length), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
-              ),
+              const SizedBox(height: 6),
             ],
           ],
         );
@@ -99,10 +101,12 @@ class _GroupMembersCardState extends State<GroupMembersCard> {
   Widget _header(BuildContext context, bool wide) {
     final title = Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: [
         Text(context.t(AdminTextKeys.groupDetailEmployees), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
         const SizedBox(width: 10),
-        JitanBadge.neutral(label: '${widget.members.length}'),
+        Text('${widget.members.length}', style: JitanTextStyles.stateMessage),
       ],
     );
     final search = SizedBox(
@@ -115,30 +119,34 @@ class _GroupMembersCardState extends State<GroupMembersCard> {
         onChanged: (text) => setState(() => _term = text),
       ),
     );
-    final add = JitanOutlineButton(label: context.t(AdminTextKeys.groupDetailAddEmployees), onPressed: widget.onAdd);
+    final add = _active
+        ? JitanSecondaryButton(label: context.t(AdminTextKeys.groupDetailAddEmployees), onPressed: widget.onAdd)
+        : null;
+    final searchable = widget.members.length > 1;
     if (wide) {
       return Row(
         children: [
           Expanded(child: Align(alignment: Alignment.centerLeft, child: title)),
-          if (widget.members.length > 1) ...[search, const SizedBox(width: 12)],
-          add,
+          if (searchable) search,
+          if (searchable && add != null) const SizedBox(width: 10),
+          ?add,
         ],
       );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 12,
       children: [
         Align(alignment: Alignment.centerLeft, child: title),
-        const SizedBox(height: 14),
-        Align(alignment: Alignment.centerLeft, child: add),
-        if (widget.members.length > 1) ...[const SizedBox(height: 12), search],
+        if (add != null) Align(alignment: Alignment.centerLeft, child: add),
+        if (searchable) search,
       ],
     );
   }
 
   Widget _headingRow(BuildContext context) => Container(
     color: JitanColors.tableHeader,
-    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
     child: Row(
       children: [
         for (final (i, key) in [
@@ -147,7 +155,7 @@ class _GroupMembersCardState extends State<GroupMembersCard> {
           AdminTextKeys.groupDetailColumnOtherGroups,
           AdminTextKeys.groupDetailColumnHours,
         ].indexed)
-          Expanded(flex: _flex[i], child: Text(context.t(key).toUpperCase(), style: JitanTextStyles.tableHeader.copyWith(fontSize: 11, letterSpacing: 0.4))),
+          Expanded(flex: _flex[i], child: Text(context.t(key), style: JitanTextStyles.tableHeader)),
         Expanded(flex: _flex[4], child: const SizedBox()),
       ],
     ),
@@ -155,16 +163,13 @@ class _GroupMembersCardState extends State<GroupMembersCard> {
 
   List<String> _otherGroups(GroupMember member) => [for (final g in member.groups) if (g != widget.groupName) g];
 
-  GroupMemberHours _hours(GroupMember member) =>
-      GroupMemberHours.of(member, widget.groupId, groupHasHours: widget.groupHasHours);
-
-  Widget _hoursBadge(GroupMember member) {
-    final hours = _hours(member);
-    final badge = GroupMemberHoursBadge(member: member, hours: hours);
-    if (hours != GroupMemberHours.needsChoice) return badge;
+  Widget _hours(GroupMember member) {
+    final hours = GroupMemberHours.of(member, widget.groupId, groupHasHours: widget.groupHasHours);
+    final text = GroupMemberHoursText(member: member, hours: hours);
+    if (hours != GroupMemberHours.needsChoice || !_active) return text;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(onTap: () => widget.onChoose(member), child: badge),
+      child: GestureDetector(onTap: () => widget.onChoose(member), child: text),
     );
   }
 
@@ -177,82 +182,96 @@ class _GroupMembersCardState extends State<GroupMembersCard> {
     ],
   );
 
-  Widget _remove(BuildContext context, GroupMember member) => TextButton(
-    onPressed: () => widget.onRemove(member),
-    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 32)),
-    child: Text(context.t(AdminTextKeys.groupDetailRemove), style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 13, color: JitanColors.inkMuted)),
-  );
-
-  Widget _row(BuildContext context, GroupMember member) {
+  /// The row's cells (wide), or its block (narrow), without Remove.
+  List<Widget> _cells(BuildContext context, GroupMember member, bool wide) {
     final others = _otherGroups(member);
-    return Container(
-      constraints: const BoxConstraints(minHeight: 64),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-      child: Row(
-        children: [
-          Expanded(flex: _flex[0], child: _name(member)),
-          Expanded(
-            flex: _flex[1],
-            child: Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Text(member.companies.join(', '), maxLines: 1, style: JitanTextStyles.tableCell, overflow: TextOverflow.ellipsis),
-            ),
-          ),
-          Expanded(
-            flex: _flex[2],
-            child: Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Text(
-                others.isEmpty ? '—' : others.join(', '),
-                maxLines: 1,
-                style: JitanTextStyles.tableCell.copyWith(color: others.isEmpty ? JitanColors.inkMuted : null),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          Expanded(flex: _flex[3], child: Align(alignment: Alignment.centerLeft, child: _hoursBadge(member))),
-          Expanded(flex: _flex[4], child: Align(alignment: Alignment.centerRight, child: _remove(context, member))),
-        ],
+    if (!wide) {
+      final detail = [member.companies.join(', '), if (others.isNotEmpty) others.join(', ')].where((s) => s.isNotEmpty).join(' · ');
+      return [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _name(member),
+            if (detail.isNotEmpty) ...[const SizedBox(height: 4), Text(detail, style: JitanTextStyles.stateMessage.copyWith(fontSize: 12))],
+            const SizedBox(height: 6),
+            _hours(member),
+          ],
+        ),
+      ];
+    }
+    Widget text(String value, {bool muted = false}) => Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: JitanTextStyles.tableCell.copyWith(color: muted ? JitanColors.inkMuted : null),
       ),
     );
-  }
-
-  Widget _block(BuildContext context, GroupMember member) {
-    final others = _otherGroups(member);
-    final detail = [member.companies.join(', '), if (others.isNotEmpty) others.join(', ')].where((s) => s.isNotEmpty).join(' · ');
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _name(member),
-                if (detail.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(detail, style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
-                ],
-                const SizedBox(height: 8),
-                _hoursBadge(member),
-              ],
-            ),
-          ),
-          _remove(context, member),
-        ],
-      ),
-    );
+    return [
+      Expanded(flex: _flex[0], child: _name(member)),
+      Expanded(flex: _flex[1], child: text(member.companies.join(', '))),
+      Expanded(flex: _flex[2], child: text(others.isEmpty ? '—' : others.join(', '), muted: others.isEmpty)),
+      Expanded(flex: _flex[3], child: Align(alignment: Alignment.centerLeft, child: _hours(member))),
+    ];
   }
 
   Widget _empty(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(context.t(AdminTextKeys.groupDetailEmployeesNone), style: JitanTextStyles.stateTitle),
-        const SizedBox(height: 6),
-        Text(context.t(AdminTextKeys.groupDetailEmployeesNoneText), style: JitanTextStyles.stateMessage),
-      ],
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+    child: Text(
+      context.t(_active ? AdminTextKeys.groupDetailEmployeesNoneText : AdminTextKeys.groupDetailEmployeesNone),
+      style: JitanTextStyles.stateMessage.copyWith(fontSize: 14),
     ),
   );
+}
+
+/// One member: a soft shade and Remove while hovered (wide), or a block
+/// with Remove always there (narrow, where there is no hover).
+class _MemberRow extends StatefulWidget {
+  const _MemberRow({required this.wide, required this.onRemove, required this.removeLabel, required this.cells});
+
+  final bool wide;
+  final VoidCallback? onRemove;
+  final String removeLabel;
+  final List<Widget> cells;
+
+  @override
+  State<_MemberRow> createState() => _MemberRowState();
+}
+
+class _MemberRowState extends State<_MemberRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final remove = widget.onRemove;
+    final showRemove = remove != null && (!widget.wide || _hovered);
+    final link = TextButton(
+      onPressed: remove,
+      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 32)),
+      child: Text(widget.removeLabel, style: JitanTextStyles.tableCellStrong.copyWith(fontSize: 13, color: JitanColors.errorStrong)),
+    );
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Container(
+        color: _hovered && widget.wide ? JitanColors.warmWhite : null,
+        constraints: const BoxConstraints(minHeight: 58),
+        padding: EdgeInsets.fromLTRB(20, 8, widget.wide ? 20 : 12, 8),
+        child: Row(
+          children: [
+            if (widget.wide) ...widget.cells else Expanded(child: widget.cells.single),
+            if (widget.wide)
+              Expanded(
+                flex: _GroupMembersCardState._flex[4],
+                // Kept in place while hidden, so rows don't shift on hover.
+                child: Align(alignment: Alignment.centerRight, child: Visibility.maintain(visible: showRemove, child: link)),
+              )
+            else if (showRemove)
+              link,
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -23,17 +23,17 @@ Future<List<GroupMember>?> showAddEmployeesDialog(
   builder: (_) => AddEmployeesDialog(membersApi: membersApi, group: group, groupHasHours: groupHasHours),
 );
 
-/// Figma `HR / Employee groups — Employee picker` (1349:356) and `Add
-/// employees — Schedule source choices` (1390:1106): employees from every
-/// company, added in one save. When the group has work hours, an employee
-/// already in other groups chooses "Keep … hours" or "Use {group} hours".
+/// Figma `HR / Groups V2 — add employees` (`1555:162`): employees from every
+/// company, added in one save. When the group has work hours, a ticked
+/// employee already in other groups chooses on their line whose hours they
+/// work ("Hours: White collar ⌄").
 class AddEmployeesDialog extends StatefulWidget {
   const AddEmployeesDialog({super.key, required this.membersApi, required this.group, this.groupHasHours = false});
 
   final GroupMembersApi membersApi;
   final GroupOverview group;
 
-  /// Whether "Use {group} hours" can be offered.
+  /// Whether "Hours: {group}" can be offered.
   final bool groupHasHours;
 
   @override
@@ -43,7 +43,7 @@ class AddEmployeesDialog extends StatefulWidget {
 class _AddEmployeesDialogState extends State<AddEmployeesDialog> {
   Map<int, GroupMember> _selected = const {};
 
-  /// Employees in other groups who "Use {group} hours"; the others keep theirs.
+  /// Employees in other groups who work this group's hours; the others keep theirs.
   Set<int> _follow = const {};
   bool _busy = false;
   ApiClientException? _failure;
@@ -71,7 +71,7 @@ class _AddEmployeesDialogState extends State<AddEmployeesDialog> {
   Widget build(BuildContext context) {
     final failure = _failure;
     return JitanModal(
-      width: 640,
+      width: 520,
       title: context.t(AdminTextKeys.groupsPickerTitle),
       subtitle: context.t(AdminTextKeys.groupsPickerSubtitle, args: {'group': widget.group.name}),
       onClose: _busy ? null : () => Navigator.of(context).pop(),
@@ -83,7 +83,7 @@ class _AddEmployeesDialogState extends State<AddEmployeesDialog> {
             load: (search) => widget.membersApi.candidates(widget.group.id, search: search),
             selected: _selected,
             onChanged: (ids) => setState(() => _selected = ids),
-            below: !widget.groupHasHours
+            trailing: !widget.groupHasHours
                 ? null
                 : (employee) => employee.groups.isEmpty
                       ? null
@@ -110,11 +110,20 @@ class _AddEmployeesDialogState extends State<AddEmployeesDialog> {
         ],
       ),
       actions: [
-        JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: _busy ? null : () => Navigator.of(context).pop()),
-        JitanPrimaryButton(
-          label: context.t(AdminTextKeys.groupsPickerAdd, args: {'count': _selected.length}),
-          busy: _busy,
-          onPressed: _selected.isEmpty ? null : _add,
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: _busy ? null : () => Navigator.of(context).pop()),
+            JitanPrimaryButton(
+              label: _selected.isEmpty
+                  ? context.t(AdminTextKeys.groupsPickerAddNone)
+                  : context.tPlural(AdminTextKeys.groupsPickerAdd, _selected.length),
+              busy: _busy,
+              onPressed: _selected.isEmpty || _busy ? null : _add,
+            ),
+          ],
         ),
       ],
     );

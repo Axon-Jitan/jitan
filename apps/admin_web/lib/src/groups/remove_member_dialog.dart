@@ -22,6 +22,8 @@ Future<bool> showRemoveMemberDialog(
     ) ??
     false;
 
+/// Figma `HR / Groups V2 — remove employee?` (`1555:419`): one plain
+/// question and a red Remove.
 class RemoveMemberDialog extends StatefulWidget {
   const RemoveMemberDialog({super.key, required this.controller, required this.group, required this.member});
 
@@ -58,30 +60,32 @@ class _RemoveMemberDialogState extends State<RemoveMemberDialog> {
   Widget build(BuildContext context) {
     final failure = _failure;
     return JitanModal(
-      width: 560,
-      title: context.t(AdminTextKeys.groupRemoveTitle),
-      onClose: _busy ? null : () => Navigator.of(context).pop(false),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            context.t(AdminTextKeys.groupRemoveText, args: {'name': widget.member.displayName, 'group': widget.group.name}),
-            style: JitanTextStyles.stateMessage,
-          ),
-          if (failure != null) ...[
-            const SizedBox(height: 16),
-            Builder(
+      width: 440,
+      title: context.t(AdminTextKeys.groupRemoveTitle, args: {'name': widget.member.displayName, 'group': widget.group.name}),
+      subtitle: context.t(AdminTextKeys.groupRemoveText),
+      body: failure == null
+          ? null
+          : Builder(
               builder: (context) {
                 final keys = failureTextKeysFor(failure);
                 return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
               },
             ),
-          ],
-        ],
-      ),
       actions: [
-        JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: _busy ? null : () => Navigator.of(context).pop(false)),
-        JitanPrimaryButton(label: context.t(AdminTextKeys.groupRemoveConfirm), busy: _busy, onPressed: _remove),
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: _busy ? null : () => Navigator.of(context).pop(false)),
+            JitanPrimaryButton(
+              label: context.t(AdminTextKeys.groupRemoveConfirm),
+              color: JitanColors.errorStrong,
+              busy: _busy,
+              onPressed: _busy ? null : _remove,
+            ),
+          ],
+        ),
       ],
     );
   }

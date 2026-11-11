@@ -1,6 +1,6 @@
 import 'package:admin_web/src/app/admin_app.dart';
-import 'package:admin_web/src/groups/employee_picker.dart';
 import 'package:admin_web/src/schedules/schedule_form_fields.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -53,68 +53,102 @@ Future<void> _tapPrimary(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
+/// The text fields of the open dialog: the name first, then the search.
+Finder _dialogField(int index) => find.descendant(of: find.byType(Dialog), matching: find.byType(TextField)).at(index);
+
+/// Chooses the working days by their round buttons.
+Future<void> _days(WidgetTester tester, List<String> names) async {
+  for (final name in names) {
+    await tester.tap(find.byTooltip(name));
+    await tester.pump();
+  }
+}
+
+/// Opens [employee]'s "Hours: …" choice and picks [option].
+Future<void> _hoursFrom(WidgetTester tester, String option) async {
+  await tester.tap(find.byType(JitanInlineSelect<bool>).first);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(option).last);
+  await tester.pumpAndSettle();
+}
+
 void main() {
-  testWidgets('the list: name, employees, schedule, status; search and status filter', (tester) async {
+  testWidgets('the list (1554:2): name, employees, schedule, status; a count; search and the status pills', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups');
 
-    expect(find.text('Employee groups'), findsWidgets);
+    expect(find.text('Groups'), findsWidgets);
+    expect(find.text('4 groups'), findsOneWidget);
     expect(find.text('Blue collar'), findsOneWidget);
     expect(find.text('64'), findsOneWidget);
     expect(find.text('Mon–Fri 08:00–16:30'), findsOneWidget);
     expect(find.text('No schedule yet'), findsNWidgets(2), reason: 'White collar, and Old (deactivated)');
     expect(find.text('No schedule of its own'), findsOneWidget, reason: 'Drivers: nobody only in it');
-    expect(find.text('Inactive'), findsOneWidget, reason: 'Old');
+    expect(find.byTooltip('Group actions'), findsNothing, reason: 'a row opens the page, which holds the actions');
 
+    await tester.tap(find.text('Inactive').first);
+    await tester.pump();
+    expect(find.text('Blue collar'), findsNothing);
+    expect(find.text('Old'), findsOneWidget);
+
+    await tester.tap(find.text('All'));
     await tester.enterText(find.byType(TextField).first, 'driv');
     await tester.pump();
     expect(find.text('Blue collar'), findsNothing);
     expect(find.text('Drivers'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, 'nobody');
+    await tester.pump();
+    expect(find.text('No matching groups'), findsOneWidget);
+    expect(find.text('Try another name.'), findsOneWidget);
   });
 
-  testWidgets('Create group: name, employees (someone only in it), hours and break, saved together', (tester) async {
+  testWidgets('nothing yet: a calm page with Add group (1558:104)', (tester) async {
+    final fakes = TestServices();
+    await _pump(tester, fakes, '/groups');
+
+    expect(find.text('No groups yet'), findsOneWidget);
+    expect(find.widgetWithText(JitanPrimaryButton, 'Add group'), findsOneWidget, reason: 'one button, not two');
+  });
+
+  testWidgets('Create group: name and employees, hours, rules, review; saved together', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups');
 
     await _tapPrimary(tester, 'Add group');
-    expect(find.text('Set up an employee group in five steps.'), findsOneWidget);
+    for (final step in ['Group', 'Hours', 'Rules', 'Review']) {
+      expect(find.text(step), findsWidgets, reason: step);
+    }
     expect(_primary(tester, 'Continue').onPressed, isNull, reason: 'no name yet');
-    await tester.enterText(find.byType(TextField).last, '  Van drivers ');
+    await tester.enterText(_dialogField(0), '  Van drivers ');
     await tester.pump();
-    await _tapPrimary(tester, 'Continue');
-
-    // Step 2: the list opens under "Select employees".
-    expect(find.text('Select employees'), findsOneWidget);
-    await tester.tap(find.byType(EmployeePicker));
-    await tester.pumpAndSettle();
     expect(fakes.groupMembers.calls, contains('candidates new'), reason: 'the group does not exist yet');
-    expect(find.text('No other groups'), findsOneWidget, reason: 'Kevin');
+
+    // Step 1: the employees, on the same step.
     await tester.tap(find.text('Fabian Peeters · FPT'));
     await tester.pump();
+    expect(find.text('Also in White collar'), findsOneWidget);
     expect(
       find.text('Everyone keeps their current hours, so Van drivers needs no work hours now. You can set them later on the group page.'),
       findsOneWidget,
       reason: 'Fabian keeps White collar hours by default',
     );
-    expect(_primary(tester, 'Create group').onPressed, isNotNull, reason: 'no hours to ask: step 2 creates the group');
-    expect(find.text('Keep White collar hours'), findsOneWidget, reason: '1405:242');
+    expect(_primary(tester, 'Create group').onPressed, isNotNull, reason: 'no hours to ask: the first step creates the group');
+    expect(find.text('Hours: White collar'), findsOneWidget, reason: 'his choice, on his line');
     await tester.tap(find.text('Kevin De Vos · KDV'));
     await tester.pump();
-    expect(find.text('Uses Van drivers hours'), findsOneWidget, reason: 'Kevin is in no other group');
-    expect(find.text('1 of 2 employees will work the Van drivers hours.'), findsOneWidget);
-    await tester.tap(find.text('Use Van drivers hours'));
-    await tester.pump();
-    expect(find.text('2 of 2 employees will work the Van drivers hours.'), findsOneWidget, reason: '1405:473');
+    expect(find.text('2 chosen'), findsOneWidget);
+    await _hoursFrom(tester, 'Hours: Van drivers');
     await _tapPrimary(tester, 'Continue');
 
-    // Step 3: work hours and break.
+    // Step 2: work hours and break.
     fakes.schedules.succeedOptions();
     await tester.pumpAndSettle();
-    expect(find.text('Working days'), findsOneWidget);
-    expect(find.text('Set hours later'), findsOneWidget, reason: 'hours are optional (1461:5)');
+    expect(find.text('Work days'), findsOneWidget);
+    expect(find.text('Van drivers'), findsWidgets, reason: 'the name under the title');
+    expect(find.text('Set hours later'), findsOneWidget, reason: 'hours are optional');
     expect(_primary(tester, 'Continue').onPressed, isNull, reason: 'no hours entered yet');
-    await tester.tap(find.text('Mon–Fri'));
-    await tester.pump();
+    await _days(tester, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
     expect(_primary(tester, 'Continue').onPressed, isNull, reason: 'days chosen but no times yet');
     final times = tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList();
     times[0].onChanged!('08:00');
@@ -122,32 +156,28 @@ void main() {
     await tester.pump();
     expect(find.text('Finish must be after the start'), findsOneWidget);
     tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList()[1].onChanged!('16:30');
-    await tester.enterText(find.byType(TextField).last, '20');
-    await tester.pump();
-    expect(find.text('Enter 15, 30, 45, 60 minutes.'), findsOneWidget, reason: 'the allowed break lengths');
-    await tester.enterText(find.byType(TextField).last, '30');
+    tester.widgetList<JitanInlineSelect<int>>(find.byType(JitanInlineSelect<int>)).last.onChanged!(30);
     await tester.pump();
     await _tapPrimary(tester, 'Continue');
 
-    // Step 4: attendance rules (1461:74).
+    // Step 3: tolerance and rounding.
     expect(find.text('Arrival tolerance'), findsOneWidget);
-    await tester.enterText(find.descendant(of: find.byType(ScheduleMinutesField).first, matching: find.byType(TextField)), '99');
+    await tester.enterText(find.descendant(of: find.byType(ScheduleMinutesChip).first, matching: find.byType(TextField)), '99');
     await tester.pump();
     await _tapPrimary(tester, 'Continue');
     expect(find.textContaining('Enter 0 to'), findsOneWidget, reason: 'beyond the allowed tolerance');
-    await tester.enterText(find.descendant(of: find.byType(ScheduleMinutesField).first, matching: find.byType(TextField)), '5');
+    await tester.enterText(find.descendant(of: find.byType(ScheduleMinutesChip).first, matching: find.byType(TextField)), '5');
     await tester.pump();
-    tester.widget<ScheduleRoundingField>(find.byType(ScheduleRoundingField).first).onChanged!(
+    tester.widget<ScheduleRoundingSelect>(find.byType(ScheduleRoundingSelect).first).onChanged!(
       const ScheduleRounding(intervalMinutes: 15, roundUp: true),
     );
     await tester.pump();
     await _tapPrimary(tester, 'Continue');
 
-    // Step 5: the review (1461:130).
-    expect(find.text('Review group'), findsOneWidget);
-    expect(find.text('Van drivers'), findsWidgets);
-    expect(find.text('Mon–Fri 08:00–16:30'), findsWidgets);
-    expect(find.text('Arrival 5 min · leaving 0 min'), findsOneWidget);
+    // Step 4: the review.
+    expect(find.text('Mon–Fri'), findsOneWidget);
+    expect(find.text('08:00 – 16:30'), findsOneWidget);
+    expect(find.text('5 min arriving · 0 min leaving'), findsOneWidget);
     expect(find.text('Start: Up, every 15 min · Finish: No rounding'), findsOneWidget);
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Create group'));
     await tester.pump();
@@ -162,93 +192,84 @@ void main() {
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
     expect(find.text('Group Van drivers created.'), findsOneWidget);
-    expect(find.text('Employee groups'), findsOneWidget, reason: 'back on the list, not the group page');
+    expect(find.text('5 groups'), findsOneWidget, reason: 'the new group is in the list');
     expect(fakes.groupManagement.calls.where((c) => c == 'overview'), hasLength(2), reason: 'the list reloads');
   });
 
-  testWidgets('a duplicate name found at the save is shown under the name, on step 1', (tester) async {
+  testWidgets('a duplicate name found at the save is shown under the name, on the first step', (tester) async {
     final fakes = _fakes();
     fakes.groupManagement.failNext =
         const ApiClientException.server(409, ApiError(code: ApiErrorCode.duplicateGroupName, message: 'x', field: 'name'));
     await _pump(tester, fakes, '/groups');
 
     await _tapPrimary(tester, 'Add group');
-    await tester.enterText(find.byType(TextField).last, 'Blue collar');
+    await tester.enterText(_dialogField(0), 'Blue collar');
     await tester.pump();
-    await _tapPrimary(tester, 'Continue');
-    await tester.tap(find.byType(EmployeePicker));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Kevin De Vos · KDV'));
     await tester.pump();
     await _tapPrimary(tester, 'Continue');
     fakes.schedules.succeedOptions();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Mon–Fri'));
-    await tester.pump();
+    await _days(tester, ['Mon']);
     final times = tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList();
     times[0].onChanged!('08:00');
     times[1].onChanged!('16:30');
-    await tester.enterText(find.byType(TextField).last, '30');
+    tester.widgetList<JitanInlineSelect<int>>(find.byType(JitanInlineSelect<int>)).last.onChanged!(30);
     await tester.pump();
     await _tapPrimary(tester, 'Continue');
     await _tapPrimary(tester, 'Continue');
     await _tapPrimary(tester, 'Create group');
 
-    expect(find.text('Group details'), findsWidgets, reason: 'back on step 1');
+    expect(find.text('Name'), findsOneWidget, reason: 'back on the first step');
     expect(find.text('A group with this name already exists.'), findsOneWidget);
   });
 
-  testWidgets('Manage group: rename; deactivate a group with employees is refused with the reason', (tester) async {
+  testWidgets('the group page: Rename waits for a change; deactivating a group with employees says why not', (tester) async {
     final fakes = _fakes();
-    await _pump(tester, fakes, '/groups');
+    await _pump(tester, fakes, '/groups/2');
 
-    await tester.tap(find.byTooltip('Group actions').at(1));
+    await tester.tap(find.text('Deactivate'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Deactivate group'));
+    expect(find.text('White collar still has employees'), findsOneWidget, reason: '1558:567');
+    expect(find.text('Remove or move its 60 employees first, then deactivate the group.'), findsOneWidget);
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'OK'));
     await tester.pumpAndSettle();
-    expect(find.text('Cannot deactivate group'), findsOneWidget);
-    expect(find.text('White collar · 60 employees'), findsOneWidget);
-    expect(find.text('Remove or reassign all 60 employees before deactivating this group.'), findsOneWidget);
-    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Manage employees →'));
-    await tester.pump();
-    await tester.pump();
-    fakes.schedules.succeedList([_blue, _white, _drivers]);
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(JitanOutlineButton, 'Rename'), findsOneWidget, reason: 'on the group page');
-    await tester.tap(find.text('Groups').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
-    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/groups');
-    await tester.pumpAndSettle();
+    expect(fakes.groupManagement.calls, isNot(contains('deactivate 2')));
 
-    await tester.tap(find.byTooltip('Group actions').first);
+    await tester.tap(find.widgetWithText(JitanSecondaryButton, 'Rename'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Rename group'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, 'Blue');
-    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Save changes'));
+    expect(_primary(tester, 'Save').onPressed, isNull, reason: 'nothing changed yet');
+    await tester.enterText(_dialogField(0), 'White');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Save'));
     await tester.pump();
     await tester.pump();
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
 
-    expect(fakes.groupManagement.calls, contains('rename 1 Blue'));
-    expect(find.text('Group renamed to Blue.'), findsOneWidget);
+    expect(fakes.groupManagement.calls, contains('rename 2 White'));
+    expect(find.text('Group renamed to White.'), findsOneWidget);
   });
 
-  testWidgets('the group page: members with their companies; remove; nobody only in it means no hours of its own', (tester) async {
+  testWidgets('the group page: members with their companies; Remove asks; nobody only in it means no hours of its own', (tester) async {
     final fakes = _fakes();
     fakes.groupMembers.byGroup[3] = [member(11, 'Fabian', 'Peeters', 'FPT', groups: ['Drivers', 'White collar'])];
     await _pump(tester, fakes, '/groups/3');
 
     expect(find.text('Drivers'), findsWidgets);
+    expect(find.text('Active · 1 employee in 1 company'), findsOneWidget);
     expect(find.text('Fabian Peeters'), findsOneWidget);
     expect(find.text('FPT'), findsOneWidget);
     expect(find.text('White collar'), findsWidgets, reason: 'the other group');
     expect(find.text('Every employee here is also in another group, so this group has no work hours of its own yet.'), findsOneWidget);
 
-    await tester.tap(find.text('Remove').first);
+    // Remove shows while the row is hovered.
+    final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await gesture.addPointer(location: tester.getCenter(find.text('Fabian Peeters')));
+    await tester.pump();
+    await tester.tap(find.text('Remove'));
     await tester.pumpAndSettle();
-    expect(find.text('Remove from group?'), findsOneWidget);
+    expect(find.text('Remove Fabian Peeters from Drivers?'), findsOneWidget);
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Remove'));
     await tester.pump();
     await tester.pump();
@@ -256,7 +277,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fakes.groupMembers.calls, contains('remove 3 11'));
-    expect(find.text('No employees in this group yet'), findsOneWidget);
+    expect(find.text('Fabian Peeters removed from Drivers.'), findsOneWidget);
+    expect(find.text('Add the employees who work these hours.'), findsOneWidget);
     expect(find.text('Set the days, hours and break the employees of this group work.'), findsOneWidget);
   });
 
@@ -264,7 +286,6 @@ void main() {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups/2');
 
-    expect(find.text('No work hours yet'), findsOneWidget);
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Set work hours'));
     await tester.pump();
     fakes.schedules.succeedOptions();
@@ -277,21 +298,22 @@ void main() {
     expect(find.widgetWithText(JitanSecondaryButton, 'Cancel'), findsOneWidget, reason: 'no step to go back to');
   });
 
-  testWidgets('a configured group shows its hours and break', (tester) async {
+  testWidgets('a configured group shows its hours in the grouped card (1554:101)', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups/1');
 
-    // 1455:2: the week, the break and the summary cards.
-    expect(find.text('Monday'), findsOneWidget);
-    expect(find.text('08:00–16:30'), findsWidgets);
-    expect(find.text('Saturday'), findsOneWidget);
-    expect(find.text('Day off'), findsNWidgets(2));
-    expect(find.text('30 min, deducted'), findsOneWidget);
-    expect(find.text('Mon–Fri'), findsOneWidget, reason: 'the work hours card');
-    expect(find.widgetWithText(JitanPrimaryButton, 'Edit work hours'), findsOneWidget);
+    expect(find.text('Work hours & break'), findsOneWidget);
+    expect(find.text('Mon–Fri'), findsOneWidget);
+    expect(find.text('08:00 – 16:30'), findsOneWidget);
+    expect(find.text('30 min'), findsOneWidget);
+    expect(find.text('5 min · 5 min'), findsOneWidget);
+    expect(find.text('Up · Down, 15 min'), findsOneWidget);
+    expect(find.text('Every employee in this group works these hours.'), findsOneWidget);
+    expect(find.text('Monday'), findsNothing, reason: 'no day-by-day list');
+    expect(find.text('Edit'), findsOneWidget);
   });
 
-  testWidgets('the group page (1455:2): where each member works from; someone in two groups without hours is chosen here', (tester) async {
+  testWidgets('the group page (1556:761): where each member works from; someone in two groups without hours is chosen here', (tester) async {
     final fakes = _fakes();
     fakes.groupMembers.byGroup[1] = [
       member(11, 'Fabian', 'Peeters', 'FPT', groups: ['Blue collar', 'White collar']),
@@ -308,16 +330,18 @@ void main() {
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
 
-    expect(find.text('Employee group · 3 employees in 1 company'), findsOneWidget);
+    expect(find.text('Active · 3 employees in 1 company'), findsOneWidget);
     expect(find.text('This group'), findsOneWidget, reason: 'Kevin');
-    expect(find.text('Keeps Drivers'), findsOneWidget, reason: 'Ann');
     expect(find.text('Needs a choice'), findsOneWidget, reason: 'Fabian');
-    expect(find.text('1 needs a choice'), findsOneWidget, reason: 'the employees card');
-    expect(find.text('Fabian Peeters has no work hours'), findsOneWidget);
+    expect(
+      find.text('Fabian Peeters has no work hours. They are also in another group; choose which group the hours come from.'),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.text('Choose group'));
+    await tester.tap(find.text('Choose group →'));
     await tester.pumpAndSettle();
-    expect(find.text('Choose where the hours come from'), findsOneWidget);
+    expect(find.text('Where do Fabian Peeters’s hours come from?'), findsOneWidget);
+    expect(find.text('Mon–Fri 08:00–16:30'), findsOneWidget, reason: 'Blue collar, with its hours');
     expect(fakes.scheduleSource.calls, ['get 7/11'], reason: 'in the company of the employee');
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Use these hours'));
     await tester.pump();
@@ -348,81 +372,70 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Work hours & break'), findsOneWidget, reason: 'the group page');
-    expect(find.widgetWithText(JitanPrimaryButton, 'Edit work hours'), findsOneWidget);
+    expect(find.text('Edit'), findsOneWidget);
   });
 
-  testWidgets('an empty group asks to confirm; an inactive group says so and offers Reactivate group', (tester) async {
+  testWidgets('an empty group asks to confirm; an inactive group says so and offers Reactivate (1558:409)', (tester) async {
     final fakes = _fakes();
-    await _pump(tester, fakes, '/groups');
+    await _pump(tester, fakes, '/groups/3');
 
-    await tester.tap(find.byTooltip('Group actions').at(2));
+    await tester.tap(find.text('Deactivate'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Deactivate group'));
-    await tester.pumpAndSettle();
-    expect(find.text('Deactivate Drivers?'), findsOneWidget, reason: '1378:186');
-    expect(find.text('The group can no longer be assigned. You can reactivate it later.'), findsOneWidget);
+    expect(find.text('Deactivate Drivers?'), findsOneWidget);
+    expect(find.text('The group can no longer be chosen. You can reactivate it later.'), findsOneWidget);
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Deactivate'));
     await tester.pump();
     await tester.pump();
     expect(fakes.groupManagement.calls, contains('deactivate 3'));
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
+    expect(find.text('Drivers deactivated.'), findsOneWidget);
 
-    // A row opens the group's page (1455:2).
-    await tester.tap(find.text('Old'));
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/groups/4');
     await tester.pump();
     await tester.pump();
     fakes.schedules.succeedList([_blue, _white, _drivers]);
     await tester.pumpAndSettle();
-    expect(find.text('Inactive'), findsWidgets, reason: '1378:363');
-    await tester.tap(find.text('Reactivate group'));
+    expect(find.text('Inactive · no employees'), findsOneWidget);
+    expect(find.text('This group is inactive. Reactivate it to add employees or change its hours.'), findsOneWidget);
+    expect(find.widgetWithText(JitanSecondaryButton, 'Add employees'), findsNothing);
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Reactivate'));
     await tester.pump();
     await tester.pump();
     expect(fakes.groupManagement.calls, contains('reactivate 4'));
   });
 
-  testWidgets('Create group step 2: clicks beside the list or outside the dialog change nothing', (tester) async {
+  testWidgets('Create group: a click outside the dialog changes nothing', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups');
     await _tapPrimary(tester, 'Add group');
-    await tester.enterText(find.byType(TextField).last, 'Drivers');
+    await tester.enterText(_dialogField(0), 'Drivers');
     await tester.pump();
-    await _tapPrimary(tester, 'Continue');
-
-    await tester.tap(find.byType(EmployeePicker));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Kevin De Vos · KDV'));
     await tester.pump();
-
-    await tester.tap(find.text('Set up an employee group in five steps.'));
-    await tester.pumpAndSettle();
-    expect(find.text('Kevin De Vos · KDV'), findsNWidgets(2), reason: 'still in the open list, and in the chosen list below it');
 
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
     expect(find.text('Create group'), findsWidgets, reason: 'a click outside does not close the dialog');
-    expect(find.text('1 of 1 employees will work the Drivers hours.'), findsOneWidget, reason: 'nothing lost');
+    expect(find.text('1 chosen'), findsOneWidget, reason: 'nothing lost');
   });
 
   testWidgets('Create group where everyone keeps their hours: no work hours step', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups');
     await _tapPrimary(tester, 'Add group');
-    await tester.enterText(find.byType(TextField).last, 'Testing');
+    await tester.enterText(_dialogField(0), 'Testing');
     await tester.pump();
-    await _tapPrimary(tester, 'Continue');
-    await tester.tap(find.byType(EmployeePicker));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Fabian Peeters · FPT'));
     await tester.pump();
-    expect(find.text('Keep White collar hours'), findsOneWidget);
+    expect(find.text('Hours: White collar'), findsOneWidget);
     expect(find.widgetWithText(JitanPrimaryButton, 'Continue'), findsNothing);
 
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Create group'));
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Working days'), findsNothing, reason: 'step 3 never shown');
+    expect(find.text('Work days'), findsNothing, reason: 'the hours step is never shown');
     final sent = fakes.groupManagement.created!;
     expect((sent.name, sent.schedule), ('Testing', null));
     expect(sent.employeeIds, [11]);
@@ -433,9 +446,8 @@ void main() {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups');
     await _tapPrimary(tester, 'Add group');
-    await tester.enterText(find.byType(TextField).last, 'Cleaners');
+    await tester.enterText(_dialogField(0), 'Cleaners');
     await tester.pump();
-    await _tapPrimary(tester, 'Continue');
     expect(_primary(tester, 'Continue').onPressed, isNotNull, reason: 'employees are optional');
     await _tapPrimary(tester, 'Continue');
     fakes.schedules.succeedOptions();
@@ -454,18 +466,18 @@ void main() {
     expect(sent.schedule, isNull);
   });
 
-  testWidgets('Add employees on a group with hours: "Use Blue collar hours" is sent for that employee', (tester) async {
+  testWidgets('Add employees on a group with hours (1555:162): "Hours: Blue collar" is sent for that employee', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/groups/1');
 
-    await tester.tap(find.widgetWithText(JitanOutlineButton, 'Add employees'));
+    await tester.tap(find.widgetWithText(JitanSecondaryButton, 'Add employees'));
     await tester.pumpAndSettle();
-    expect(find.text('Keep White collar hours'), findsOneWidget, reason: '1390:1106, Fabian is in White collar');
+    expect(find.text('Hours: White collar'), findsNothing, reason: 'only on a ticked line');
     await tester.tap(find.text('Fabian Peeters · FPT'));
     await tester.pump();
-    await tester.tap(find.text('Use Blue collar hours'));
-    await tester.pump();
-    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add (1)'));
+    expect(find.text('Hours: White collar'), findsOneWidget, reason: 'Fabian is in White collar');
+    await _hoursFrom(tester, 'Hours: Blue collar');
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add 1 employee'));
     await tester.pump();
     await tester.pump();
 

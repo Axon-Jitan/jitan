@@ -5,13 +5,13 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 
 /// Where a member's work hours come from, as the group page shows it
-/// (Figma `1455:2`, "Work hours" column). The server tells the group
+/// (Figma `1554:101`, "Work hours" column). The server tells the group
 /// ([GroupMember.hoursFromGroupId]); this only names the case.
 enum GroupMemberHours {
   /// This group's hours.
   thisGroup,
 
-  /// Another of the employee's groups ("Keeps Blue collar").
+  /// Another of the employee's groups ("White collar").
   otherGroup,
 
   /// No hours, in several groups, while this group has hours: HR chooses.
@@ -28,21 +28,22 @@ enum GroupMemberHours {
   };
 }
 
-/// The badge of a member's [GroupMemberHours].
-class GroupMemberHoursBadge extends StatelessWidget {
-  const GroupMemberHoursBadge({super.key, required this.member, required this.hours});
+/// A member's [GroupMemberHours] as plain text: "This group" in ink, the
+/// other group muted, "Needs a choice" in amber (Figma `1556:761`).
+class GroupMemberHoursText extends StatelessWidget {
+  const GroupMemberHoursText({super.key, required this.member, required this.hours});
 
   final GroupMember member;
   final GroupMemberHours hours;
 
   @override
-  Widget build(BuildContext context) => switch (hours) {
-    GroupMemberHours.thisGroup => JitanBadge(label: context.t(AdminTextKeys.groupDetailHoursThisGroup)),
-    GroupMemberHours.otherGroup => JitanBadge.neutral(
-      label: context.t(AdminTextKeys.groupDetailHoursKeeps, args: {'group': member.hoursFromGroup ?? ''}),
-      dot: true,
-    ),
-    GroupMemberHours.needsChoice => JitanBadge.warning(label: context.t(AdminTextKeys.groupDetailHoursNeedsChoice)),
-    GroupMemberHours.none => JitanBadge.neutral(label: context.t(AdminTextKeys.groupDetailHoursNone), dot: true),
-  };
+  Widget build(BuildContext context) {
+    final (text, color) = switch (hours) {
+      GroupMemberHours.thisGroup => (context.t(AdminTextKeys.groupDetailHoursThisGroup), JitanColors.ink),
+      GroupMemberHours.otherGroup => (member.hoursFromGroup ?? '', JitanColors.inkMuted),
+      GroupMemberHours.needsChoice => (context.t(AdminTextKeys.groupDetailHoursNeedsChoice), JitanColors.warning),
+      GroupMemberHours.none => (context.t(AdminTextKeys.groupDetailHoursNone), JitanColors.inkMuted),
+    };
+    return Text(text, overflow: TextOverflow.ellipsis, style: JitanTextStyles.tableCell.copyWith(color: color));
+  }
 }

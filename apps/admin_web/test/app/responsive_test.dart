@@ -7,7 +7,6 @@ import 'package:admin_web/src/company_context/current_company.dart';
 import 'package:admin_web/src/employees/employees_screen.dart';
 import 'package:admin_web/src/employees/import/employee_import_screen.dart';
 import 'package:admin_web/src/employees/import/platform/import_file_picker.dart';
-import 'package:admin_web/src/groups/employee_picker.dart';
 import 'package:admin_web/src/groups/group_page.dart';
 import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/locations/locations_screen.dart';
@@ -21,6 +20,7 @@ import 'package:admin_web/src/schedules/schedule_form_fields.dart';
 import 'package:admin_web/src/schedules/schedule_dialog.dart';
 import 'package:admin_web/src/schedules/schedules_screen.dart';
 import 'package:admin_web/src/time_records/time_records_screen.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_core/jitan_core.dart';
@@ -405,43 +405,43 @@ void main() {
 
       await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add group'));
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'Create group, step 1');
-      await tester.enterText(find.byType(TextField).last, 'Drivers');
+      await tester.enterText(find.descendant(of: find.byType(Dialog), matching: find.byType(TextField)).first, 'Drivers');
       await tester.pump();
-      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(EmployeePicker));
-      await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'Create group, step 2 with the list open');
       await tester.tap(find.text('Fabian Peeters · FPT'));
       await tester.pump();
+      _fitsTheWindow(tester, width, 'Create group, Group');
+      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.pump();
       schedules.succeedOptions();
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'Create group, step 3');
-      await tester.tap(find.text('Mon–Fri'));
+      _fitsTheWindow(tester, width, 'Create group, Hours');
+      for (final dot in tester.widgetList<ScheduleDayDot>(find.byType(ScheduleDayDot)).take(5).toList()) {
+        dot.onPressed!();
+      }
       await tester.pump();
-      await tester.tap(find.text('Same hours every working day'));
+      await tester.ensureVisible(find.text('Set hours per day'));
+      await tester.tap(find.text('Set hours per day'));
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'Create group, step 3, hours per day');
-      await tester.tap(find.text('Same hours every working day'));
+      _fitsTheWindow(tester, width, 'Create group, hours per day');
+      await tester.ensureVisible(find.text('Use the same hours every day'));
+      await tester.tap(find.text('Use the same hours every day'));
       await tester.pumpAndSettle();
       final times = tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList();
       times[0].onChanged!('08:00');
       times[1].onChanged!('16:30');
-      await tester.enterText(find.byType(TextField).last, '30');
+      tester.widgetList<JitanInlineSelect<int>>(find.byType(JitanInlineSelect<int>)).last.onChanged!(30);
       await tester.pump();
       await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.pumpAndSettle();
       expect(find.text('Arrival tolerance'), findsOneWidget);
-      _fitsTheWindow(tester, width, 'Create group, step 4 attendance rules');
+      _fitsTheWindow(tester, width, 'Create group, Rules');
       await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.pumpAndSettle();
-      expect(find.text('Review group'), findsOneWidget);
-      _fitsTheWindow(tester, width, 'Create group, step 5 review');
+      expect(find.text('Create group'), findsWidgets);
+      _fitsTheWindow(tester, width, 'Create group, Review');
     });
 
     testWidgets('a group page at $width px', (tester) async {
@@ -607,10 +607,12 @@ void main() {
       }
 
       await open('Rename', 'Rename group');
-      await tester.tap(find.byTooltip('More actions'));
-      await tester.pumpAndSettle();
       await open('Deactivate', 'Cannot deactivate group');
       await open('Add employees', 'Add employees');
+      // Remove shows while the row is hovered.
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: tester.getCenter(find.text('Fabian Peeters')));
+      await tester.pump();
       await open('Remove', 'Remove from group?');
     });
 

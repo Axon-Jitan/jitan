@@ -18,15 +18,7 @@ String dayLetter(Translations t, int weekday) => t.t(const [
 ][weekday - 1]);
 
 /// The full name of an ISO weekday ("Monday").
-String dayLongName(Translations t, int weekday) => t.t(const [
-  AdminTextKeys.scheduleDayLong1,
-  AdminTextKeys.scheduleDayLong2,
-  AdminTextKeys.scheduleDayLong3,
-  AdminTextKeys.scheduleDayLong4,
-  AdminTextKeys.scheduleDayLong5,
-  AdminTextKeys.scheduleDayLong6,
-  AdminTextKeys.scheduleDayLong7,
-][weekday - 1]);
+String dayLongName(Translations t, int weekday) => t.t(AdminTextKeys.weekdayLong[weekday - 1]);
 
 const _dayKeys = [
   AdminTextKeys.scheduleDayShort1,
@@ -158,4 +150,14 @@ String roundingShortText(Translations t, ScheduleRounding? start, ScheduleRoundi
     AdminTextKeys.scheduleRoundingSame,
     args: {'start': word(start), 'finish': word(finish), 'minutes': start.intervalMinutes},
   );
+}
+
+/// "Up · Down, 15 min" for a narrow card when both round by the same
+/// interval; otherwise as [roundingPairText].
+String roundingCompactText(Translations t, ScheduleRounding? start, ScheduleRounding? finish) {
+  if (start == null || finish == null || start.intervalMinutes != finish.intervalMinutes) {
+    return roundingPairText(t, start, finish);
+  }
+  String word(ScheduleRounding r) => t.t(r.roundUp ? AdminTextKeys.scheduleRoundingShortUp : AdminTextKeys.scheduleRoundingShortDown);
+  return t.t(AdminTextKeys.scheduleRoundingCompact, args: {'start': word(start), 'finish': word(finish), 'minutes': start.intervalMinutes});
 }
