@@ -301,7 +301,12 @@ class ScheduleTimeField extends StatefulWidget {
     this.info,
     this.chip = false,
     this.semanticLabel,
+    this.failed = false,
   });
+
+  /// A [chip] outlined in red: this time is refused (the message is under
+  /// the card, Figma `1553:752`).
+  final bool failed;
 
   /// A small soft chip for a settings row (Figma `1551:2`, "07:30"),
   /// instead of an outlined field.
@@ -393,7 +398,11 @@ class _ScheduleTimeFieldState extends State<ScheduleTimeField> {
       width: 66,
       height: 32,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+        color: JitanColors.inputFill,
+        borderRadius: BorderRadius.circular(8),
+        border: widget.failed ? Border.all(color: JitanColors.error) : null,
+      ),
       child: TextField(
         controller: _controller,
         focusNode: _focus,
@@ -573,8 +582,8 @@ class ScheduleRoundingField extends StatelessWidget {
   }
 }
 
-/// The message strip at the top of the form (Figma blocked / warning /
-/// conflict states).
+/// The soft note above the card (Figma `HR / Schedules V3`: blocked
+/// `1553:257`, already has one `1553:423`, employees differ `1553:588`).
 class ScheduleFormBanner extends StatelessWidget {
   const ScheduleFormBanner._(this.text, this.background, this.foreground, {super.key, this.action, this.onAction});
 
@@ -593,22 +602,24 @@ class ScheduleFormBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 20),
+    padding: const EdgeInsets.only(bottom: 14),
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(8)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(12)),
       child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
         crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 6,
+        spacing: 12,
+        runSpacing: 4,
         children: [
-          Text(text, style: JitanTextStyles.stateTitle.copyWith(fontSize: 16, color: foreground)),
+          Text(text, style: JitanTextStyles.tableCell.copyWith(color: foreground)),
           if (action != null)
             TextButton(
               onPressed: onAction,
               style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24)),
               child: Text(
                 '$action →',
-                style: JitanTextStyles.stateTitle.copyWith(fontSize: 16, color: JitanColors.vermilion),
+                style: JitanTextStyles.tableCell.copyWith(fontWeight: FontWeight.w500, color: JitanColors.vermilion),
               ),
             ),
         ],

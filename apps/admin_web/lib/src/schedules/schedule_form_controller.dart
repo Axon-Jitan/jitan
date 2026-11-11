@@ -335,7 +335,7 @@ class ScheduleFormController extends ChangeNotifier {
         for (final day in days) {
           final workStart = _minutes(effectiveHoursOf(day.id).start), workFinish = _minutes(effectiveHoursOf(day.id).finish);
           // Missing or wrong hours are already reported above.
-          if (workStart != null && workFinish != null && length >= workFinish - workStart) {
+          if (workStart != null && workFinish != null && workFinish > workStart && length >= workFinish - workStart) {
             _error(fieldBreak, AdminTextKeys.scheduleErrorBreakOutside);
           }
         }

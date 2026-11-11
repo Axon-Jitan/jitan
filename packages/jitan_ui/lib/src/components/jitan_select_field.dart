@@ -275,6 +275,17 @@ class JitanInlineSelect<T> extends StatefulWidget {
 
 class _JitanInlineSelectState<T> extends State<JitanInlineSelect<T>> {
   final _menu = MenuController();
+  final _anchor = GlobalKey();
+
+  /// Moves the menu left so its right edge lines up with the value's.
+  Offset _offset = const Offset(0, 6);
+
+  void _toggle() {
+    if (_menu.isOpen) return _menu.close();
+    final width = (_anchor.currentContext?.findRenderObject() as RenderBox?)?.size.width ?? widget.menuWidth;
+    setState(() => _offset = Offset(width - widget.menuWidth, 6));
+    _menu.open();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -292,7 +303,7 @@ class _JitanInlineSelectState<T> extends State<JitanInlineSelect<T>> {
     const inset = _JitanSelectFieldState._menuInset;
     return MenuAnchor(
       controller: _menu,
-      alignmentOffset: const Offset(0, 6),
+      alignmentOffset: _offset,
       style: MenuStyle(
         backgroundColor: const WidgetStatePropertyAll(JitanColors.surface),
         surfaceTintColor: const WidgetStatePropertyAll(JitanColors.surface),
@@ -320,10 +331,11 @@ class _JitanInlineSelectState<T> extends State<JitanInlineSelect<T>> {
           ),
       ],
       builder: (context, menu, _) => Semantics(
+        key: _anchor,
         button: true,
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () => menu.isOpen ? menu.close() : menu.open(),
+          onTap: _toggle,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: Row(

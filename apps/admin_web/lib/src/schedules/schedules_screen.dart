@@ -6,7 +6,7 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../app/admin_routes.dart';
-import '../common/api_failure_text.dart';
+import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'schedule_details_dialog.dart';
 import 'schedule_dialog.dart';
@@ -148,8 +148,11 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   }
 
   Widget _content(BuildContext context) => switch (_controller.state) {
-    SchedulesLoading() => JitanTableStateSliver(child: JitanLoadingState(label: context.t(AdminTextKeys.scheduleListLoading))),
-    SchedulesFailed(:final failure) => JitanTableStateSliver(child: _error(context, failure)),
+    // One quiet line, as on Terminals (Figma `1553:1218`, `1553:1318`).
+    SchedulesLoading() => SliverToBoxAdapter(child: GroupStateText(context.t(AdminTextKeys.scheduleListLoading))),
+    SchedulesFailed() => SliverToBoxAdapter(
+      child: GroupStateText(context.t(AdminTextKeys.scheduleListLoadFailed), onRetry: _controller.load),
+    ),
     SchedulesLoaded() when _isEmpty => SliverToBoxAdapter(
       child: JitanEmptyPage(
         title: context.t(AdminTextKeys.scheduleEmptyTitle),
@@ -175,13 +178,4 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     return JitanNoResults(title: context.t(title), message: context.t(message));
   }
 
-  Widget _error(BuildContext context, ApiClientException failure) {
-    final keys = failureTextKeysFor(failure);
-    return JitanErrorState(
-      title: context.t(keys.title),
-      message: context.t(keys.message),
-      retryLabel: context.t(CommonTextKeys.retry),
-      onRetry: _controller.load,
-    );
-  }
 }

@@ -127,7 +127,7 @@ void main() {
     api.failList(const ApiClientException.network('offline'));
     await tester.pump();
 
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Unable to load schedules. Try again →'));
     await tester.pump();
     expect(api.listCalls, 2);
     await _loaded(tester, api);
@@ -224,6 +224,8 @@ void main() {
     await tester.pump();
     await _continue(tester);
     expect(find.text('Finish must be after start.'), findsOneWidget);
+    expect([for (final f in tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField))) f.failed], [false, true],
+        reason: 'the finish is outlined in red');
 
     _pickTime(tester, 1, '17:00');
     await tester.pump();
@@ -267,7 +269,7 @@ void main() {
     expect(find.text('Blue collar already has a schedule.'), findsOneWidget);
     expect(_button(tester, 'Continue'), isNull);
 
-    await tester.tap(find.text('Edit that schedule instead →'));
+    await tester.tap(find.text('Edit it instead →'));
     await tester.pumpAndSettle();
     expect(find.text('Edit schedule'), findsOneWidget);
     expect(find.text('08:00'), findsOneWidget);

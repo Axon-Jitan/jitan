@@ -215,21 +215,29 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     final t = TranslationScope.of(context);
     final hint = context.t(AdminTextKeys.scheduleFormTimeHint);
     final start = context.t(AdminTextKeys.scheduleFormStart), finish = context.t(AdminTextKeys.scheduleFormFinish);
+    final hoursRefused = c.fieldErrors.containsKey(ScheduleFormController.fieldHours);
     Widget range({
       required String? from,
       required String? to,
       required ValueChanged<String?> onFrom,
       required ValueChanged<String?> onTo,
       required String day,
-    }) => Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 8,
-      children: [
-        ScheduleTimeField(chip: true, hint: hint, value: from, onChanged: busy ? null : onFrom, semanticLabel: '$day $start'),
-        Text('–', style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted)),
-        ScheduleTimeField(chip: true, hint: hint, value: to, onChanged: busy ? null : onTo, semanticLabel: '$day $finish'),
-      ],
-    );
+    }) {
+      // Which time is wrong, once the hours were refused: a missing one, or
+      // a finish that is not after the start.
+      final (fromMinutes, toMinutes) = (_minutesOf(from), _minutesOf(to));
+      final badFrom = hoursRefused && fromMinutes == null;
+      final badTo = hoursRefused && (toMinutes == null || (fromMinutes != null && toMinutes <= fromMinutes));
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 8,
+        children: [
+          ScheduleTimeField(chip: true, hint: hint, value: from, onChanged: busy ? null : onFrom, semanticLabel: '$day $start', failed: badFrom),
+          Text('–', style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted)),
+          ScheduleTimeField(chip: true, hint: hint, value: to, onChanged: busy ? null : onTo, semanticLabel: '$day $finish', failed: badTo),
+        ],
+      );
+    }
     final hoursLabel = context.t(AdminTextKeys.scheduleRowHours);
     return [
       ?_groupBanner(context),
@@ -444,4 +452,10 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
   }
 
   static final _note = JitanTextStyles.stateMessage.copyWith(fontSize: 13);
+
+  /// Minutes since midnight of a typed time, `null` when it is not one.
+  static int? _minutesOf(String? time) => switch (tidyTime(time ?? '')) {
+    null => null,
+    final t => int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3)),
+  };
 }

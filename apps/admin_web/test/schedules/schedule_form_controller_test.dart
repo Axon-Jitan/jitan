@@ -141,6 +141,8 @@ void main() {
       ..next();
     expect(c.step, ScheduleStep.hours);
     expect(c.fieldErrors[ScheduleFormController.fieldHours]?.key, AdminTextKeys.scheduleErrorFinishBeforeStart);
+    expect(c.fieldErrors[ScheduleFormController.fieldBreak]?.key, isNot(AdminTextKeys.scheduleErrorBreakOutside),
+        reason: 'wrong hours are not also a break that does not fit');
 
     c
       ..setStart('08:00')
