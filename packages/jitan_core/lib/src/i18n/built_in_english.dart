@@ -968,7 +968,7 @@ const builtInEnglish = <String, String>{
   'groups.schedule.none': 'No schedule yet',
   'groups.schedule.differ': 'Different hours',
   'groups.schedule.noOwn': 'No schedule of its own',
-  'groups.loading': 'Loading employee groups…',
+  'groups.loading': 'Loading groups…',
   'groups.empty.message': 'Add a group, then give it its work hours.',
   'groups.noMatch.message': 'Try another name.',
   'groups.create.title': 'Create group',
