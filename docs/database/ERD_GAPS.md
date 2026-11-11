@@ -270,6 +270,11 @@ Built on IT's tables on 2026-11-10 (that ERD is in `jitandev`); the proposed `tb
   name), Office / Vehicle / Workshop (2026-11-11) as `tblDeviceType` rows linked through `tblDeviceDeviceType`,
   serial number typed by HR from the tablet's label (`deviceSN`; apps can't read it),
   on/off in `deviceActive`, removal in `deviceMFD`.
+- **`tblDeviceType.deviceTypeOS`** is the platform of a kind of **phone**: Android or iOS
+  (product owner, 2026-11-11). Terminal kinds leave it empty, and Jitan asks HR nothing
+  about a tablet's OS. Employee phones are not stored in V1 (GAP-05, accepted); if a later
+  version keeps them, each phone is a `tblDevice` of an Android or iOS phone kind. It is on
+  the kind, so a device's OS version or model has no column.
 - **The tablet's secret:** each terminal has a kiosk account, a `tblUser` with
   `userKioskMode = 1`, its secret hashed in `userPassword`, linked to the device through
   `tblUserDevice`. Kiosk accounts are left out of employee lists, sign-in and reports.

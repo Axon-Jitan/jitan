@@ -163,10 +163,11 @@ WHERE NOT EXISTS (SELECT 1 FROM tblLocationType x WHERE x.locationTypeName = 'Pr
 
 -- ---------- Terminal kinds (tblDeviceType) ---------------------------
 -- A terminal is a shared tablet (tblDevice, deviceMultiUser = 1) of one of
--- these kinds (GAP-09). Phones and other devices would be other rows.
+-- these kinds (GAP-09). deviceTypeOS is a phone's platform (Android / iOS,
+-- product owner 2026-11-11), so terminal kinds leave it empty.
 
 INSERT INTO tblDeviceType (deviceTypeName, deviceTypeOS, deviceTypeActive, deviceTypeMFD)
-SELECT d.name, 'Android', 1, 0 FROM (
+SELECT d.name, NULL, 1, 0 FROM (
   SELECT 'Office terminal' AS name UNION ALL SELECT 'Vehicle terminal' UNION ALL SELECT 'Workshop terminal'
 ) d WHERE NOT EXISTS (SELECT 1 FROM tblDeviceType x WHERE x.deviceTypeName = d.name);
 
