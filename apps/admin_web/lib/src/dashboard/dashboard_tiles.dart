@@ -40,7 +40,11 @@ class DashboardTiles extends StatelessWidget {
       _Tile(
         label: context.t(AdminTextKeys.dashboardHours),
         value: DashboardText.hours(context, dashboard.registeredMinutes),
-        note: context.t(AdminTextKeys.dashboardHoursNote, args: {'hours': DashboardText.hours(context, dashboard.plannedMinutes)}),
+        note: [
+          context.t(AdminTextKeys.dashboardHoursNote, args: {'hours': DashboardText.hours(context, dashboard.plannedMinutes)}),
+          if (dashboard.travelMinutes > 0)
+            context.t(AdminTextKeys.dashboardHoursTravel, args: {'hours': DashboardText.hours(context, dashboard.travelMinutes)}),
+        ].join(' · '),
         path: AdminRoutes.reports,
       ),
     ];

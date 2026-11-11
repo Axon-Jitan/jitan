@@ -12,6 +12,7 @@ Dashboard dashboardWith({
   int corrections = 2,
   int registered = 187620,
   int planned = 192000,
+  int travel = 0,
   List<DashboardCompany> companies = const [
     DashboardCompany(id: 1, name: 'Almeco', employees: 48),
     DashboardCompany(id: 2, name: 'PCA', employees: 36),
@@ -45,6 +46,7 @@ Dashboard dashboardWith({
   leftEarly: 6,
   toReview: toReview,
   correctionsWaiting: corrections,
+  travelMinutes: travel,
 );
 
 /// Stand-in for [DashboardApi].

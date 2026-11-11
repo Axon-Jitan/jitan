@@ -1,4 +1,5 @@
 import 'package:admin_web/src/time_records/time_records_controller.dart';
+import 'package:admin_web/src/time_records/time_record_status_filter.dart';
 import 'package:admin_web/src/time_records/time_records_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,7 +43,11 @@ final _working = recordDay(
   start: recordTime('08:01', rounded: '08:15', method: TimeRecordMethod.geofence),
 );
 
-Future<(FakeTimeRecordsApi, FakeCompaniesApi)> _pump(WidgetTester tester) async {
+Future<(FakeTimeRecordsApi, FakeCompaniesApi)> _pump(
+  WidgetTester tester, {
+  TimeRecordStatusFilter? status,
+  ({DateTime from, DateTime to})? range,
+}) async {
   tester.view.physicalSize = const Size(1440, 1000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -53,7 +58,9 @@ Future<(FakeTimeRecordsApi, FakeCompaniesApi)> _pump(WidgetTester tester) async 
       translations: Translations.english(),
       child: MaterialApp(
         theme: JitanTheme.web(),
-        home: Scaffold(body: TimeRecordsScreen(api: api, companiesApi: companies, today: _today)),
+        home: Scaffold(
+          body: TimeRecordsScreen(api: api, companiesApi: companies, today: _today, status: status, range: range),
+        ),
       ),
     ),
   );
@@ -106,8 +113,8 @@ void main() {
     api.succeed([_working, _complete, _missing]);
     await tester.pump();
 
-    tester.widget<JitanSelectField<TimeRecordStatus?>>(find.byType(JitanSelectField<TimeRecordStatus?>)).onChanged!(
-      TimeRecordStatus.missingFinish,
+    tester.widget<JitanSelectField<TimeRecordStatusFilter?>>(find.byType(JitanSelectField<TimeRecordStatusFilter?>)).onChanged!(
+      const TimeRecordStatusFilter.only(TimeRecordStatus.missingFinish),
     );
     await tester.pump();
     expect(find.text('Kevin De Vos'), findsOneWidget);
@@ -120,7 +127,7 @@ void main() {
     api.succeed([]);
     await tester.pump();
 
-    tester.widget<JitanSelectField<TimeRecordPeriod>>(find.byType(JitanSelectField<TimeRecordPeriod>)).onChanged!(
+    tester.widget<JitanSelectField<TimeRecordPeriod?>>(find.byType(JitanSelectField<TimeRecordPeriod?>)).onChanged!(
       TimeRecordPeriod.lastMonth,
     );
     await tester.pump();
@@ -167,7 +174,7 @@ void main() {
     await tester.pump();
     expect(find.text('No time records'), findsOneWidget);
 
-    tester.widget<JitanSelectField<TimeRecordPeriod>>(find.byType(JitanSelectField<TimeRecordPeriod>)).onChanged!(
+    tester.widget<JitanSelectField<TimeRecordPeriod?>>(find.byType(JitanSelectField<TimeRecordPeriod?>)).onChanged!(
       TimeRecordPeriod.lastWeek,
     );
     await tester.pump();
@@ -176,5 +183,36 @@ void main() {
     await tester.tap(find.text('Try again'));
     await tester.pump();
     expect(api.calls, hasLength(3));
+  });
+
+  testWidgets('opened from the Dashboard: exact days and "To review", until a period is chosen', (tester) async {
+    final (api, _) = await _pump(
+      tester,
+      status: TimeRecordStatusFilter.toReview,
+      range: (from: DateTime.utc(2026, 10, 1), to: DateTime.utc(2026, 10, 23)),
+    );
+    api.succeed([_working, _complete, _missing]);
+    await tester.pump();
+
+    expect((api.calls.single.$1, api.calls.single.$2), (DateTime.utc(2026, 10, 1), DateTime.utc(2026, 10, 23)));
+    expect(find.text('1 – 23 Oct 2026'), findsOneWidget);
+    expect(find.text('To review'), findsOneWidget);
+    expect(find.text('Kevin De Vos'), findsOneWidget, reason: 'the missing finish');
+    expect(find.text('Disan Ssebowa'), findsNothing);
+
+    tester.widget<JitanSelectField<TimeRecordPeriod?>>(find.byType(JitanSelectField<TimeRecordPeriod?>)).onChanged!(
+      TimeRecordPeriod.thisWeek,
+    );
+    await tester.pump();
+    expect((api.calls.last.$1, api.calls.last.$2), (DateTime.utc(2026, 10, 19), DateTime.utc(2026, 10, 25)));
+  });
+
+  test('a link names the status, and only a known one', () {
+    expect(TimeRecordStatusFilter.fromWire('to_review'), TimeRecordStatusFilter.toReview);
+    expect(
+      TimeRecordStatusFilter.fromWire(TimeRecordStatus.pendingReview.wireName),
+      const TimeRecordStatusFilter.only(TimeRecordStatus.pendingReview),
+    );
+    expect(TimeRecordStatusFilter.fromWire('anything'), isNull);
   });
 }

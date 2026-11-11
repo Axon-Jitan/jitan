@@ -2,6 +2,7 @@ import 'package:admin_web/src/period/chosen_period.dart';
 import 'package:admin_web/src/dashboard/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
@@ -243,6 +244,69 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(api.calls.last, (DateTime(2026, 10, 1), DateTime(2026, 10, 31)));
+    });
+  });
+
+  testWidgets('Worked hours, with the travel next to it (D46)', (tester) async {
+    final api = FakeDashboardApi()..answer = dashboardWith(travel: 4505);
+
+    await _pump(tester, api);
+
+    expect(find.text('Worked hours'), findsWidgets);
+    expect(find.text('of 3,200h planned · 75h travel'), findsOneWidget);
+  });
+
+  group('each attention row opens what it counted', () {
+    Future<List<Uri>> open(WidgetTester tester, String row) async {
+      final opened = <Uri>[];
+      tester.view.physicalSize = const Size(1440, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final router = GoRouter(
+        initialLocation: '/dashboard',
+        routes: [
+          GoRoute(
+            path: '/dashboard',
+            builder: (_, _) => Scaffold(
+              body: DashboardScreen(api: FakeDashboardApi(), store: MemorySessionStore(), today: () => _today),
+            ),
+          ),
+          for (final path in ['/time-records', '/employees'])
+            GoRoute(
+              path: path,
+              builder: (_, state) {
+                opened.add(state.uri);
+                return const SizedBox();
+              },
+            ),
+        ],
+      );
+      await tester.pumpWidget(
+        TranslationScope(
+          translations: Translations.english(),
+          child: MaterialApp.router(theme: JitanTheme.web(), routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(row));
+      await tester.pumpAndSettle();
+      return opened;
+    }
+
+    testWidgets('corrections: Time records waiting for HR, the last 62 days', (tester) async {
+      final uri = (await open(tester, 'Corrections waiting for you')).single;
+      expect(uri.path, '/time-records');
+      expect(uri.queryParameters, {'status': 'pending_review', 'from': '2026-08-31', 'to': '2026-10-31'});
+    });
+
+    testWidgets('days to review: Time records to review, in the Dashboard’s period', (tester) async {
+      final uri = (await open(tester, 'Days to review')).single;
+      expect(uri.queryParameters, {'status': 'to_review', 'from': '2026-10-25', 'to': '2026-10-31'});
+    });
+
+    testWidgets('not set up: Employees filtered on it', (tester) async {
+      final uri = (await open(tester, 'Employees not set up yet')).single;
+      expect(uri.toString(), '/employees?status=not_set_up');
     });
   });
 }

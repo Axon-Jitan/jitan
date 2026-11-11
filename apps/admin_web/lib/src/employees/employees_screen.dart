@@ -19,7 +19,19 @@ import 'reset_access_dialog.dart';
 import 'temporary_qr/temporary_qr_dialog.dart';
 
 /// Which employees the Status filter shows.
-enum EmployeeStatusFilter { active, inactive }
+enum EmployeeStatusFilter {
+  active,
+  inactive,
+
+  /// Active, but onboarding isn't done (`userPassword IS NULL`).
+  notSetUp;
+
+  bool lets(EmployeeSummary e) => switch (this) {
+    active => e.isActive,
+    inactive => !e.isActive,
+    notSetUp => e.isActive && !e.isActivated,
+  };
+}
 
 /// HR/Admin "Employees" page (Figma `HR / Employees — Company switcher open`
 /// 1401:2, `No company selected` 1401:121): the employees of the company
@@ -33,12 +45,16 @@ class EmployeesScreen extends StatefulWidget {
     required this.groupsApi,
     required this.companiesApi,
     required this.schedulesApi,
+    this.status,
   });
 
   final EmployeesApi api;
   final GroupsApi groupsApi;
   final CompaniesApi companiesApi;
   final SchedulesApi schedulesApi;
+
+  /// Opened from the Dashboard: the status filter at first.
+  final EmployeeStatusFilter? status;
 
   @override
   State<EmployeesScreen> createState() => _EmployeesScreenState();
@@ -53,7 +69,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   final _searchText = TextEditingController();
 
   String _search = '';
-  EmployeeStatusFilter? _status;
+  late EmployeeStatusFilter? _status = widget.status;
 
   @override
   void didChangeDependencies() {
@@ -227,6 +243,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         JitanSelectOption(value: null, label: context.t(AdminTextKeys.employeeFilterStatusAll)),
         JitanSelectOption(value: EmployeeStatusFilter.active, label: context.t(CommonTextKeys.statusActive)),
         JitanSelectOption(value: EmployeeStatusFilter.inactive, label: context.t(CommonTextKeys.statusInactive)),
+        JitanSelectOption(value: EmployeeStatusFilter.notSetUp, label: context.t(AdminTextKeys.employeeFilterStatusNotSetUp)),
       ],
       onChanged: (value) => setState(() => _status = value),
     );
@@ -265,7 +282,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         ),
         EmployeesLoaded(:final employees) => switch ([
           for (final e in employees)
-            if (_status == null || e.isActive == (_status == EmployeeStatusFilter.active)) e,
+            if (_status?.lets(e) ?? true) e,
         ]) {
           [] => _centered(
             JitanEmptyState(

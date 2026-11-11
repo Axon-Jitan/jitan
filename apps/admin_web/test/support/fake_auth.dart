@@ -1,7 +1,7 @@
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
-const testAccount = EmployeeAccount(firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', companies: ['Almeco']);
+const testAccount = EmployeeAccount(firstName: 'Disan', lastName: 'Ssebowa', code: 'SBW', companies: ['Almeco'], roles: ['HR']);
 
 class FakeAuthApi implements AuthApi {
   final requests = <SignInRequest>[];
@@ -12,7 +12,7 @@ class FakeAuthApi implements AuthApi {
     requests.add(request);
     if (failure case final f?) throw f;
     return SessionResponse(
-      account: EmployeeAccount(firstName: 'Disan', lastName: 'Ssebowa', code: request.code, companies: const ['Almeco']),
+      account: EmployeeAccount(firstName: 'Disan', lastName: 'Ssebowa', code: request.code, companies: const ['Almeco'], roles: const ['HR']),
       session: SessionInfo(accessToken: 'token-1', expiresAt: DateTime(2026, 11, 30, 9)),
     );
   }

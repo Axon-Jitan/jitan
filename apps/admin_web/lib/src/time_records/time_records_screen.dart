@@ -9,6 +9,8 @@ import '../l10n/admin_text_keys.dart';
 import 'time_correction_flow.dart';
 import 'time_record_dialog.dart';
 import 'time_record_text.dart';
+import '../period/period_text.dart';
+import 'time_record_status_filter.dart';
 import 'time_records_controller.dart';
 import 'time_records_table.dart';
 
@@ -16,7 +18,7 @@ import 'time_records_table.dart';
 /// employee's working days in a period, with filters for company, employee,
 /// period and status, and the day detail (160:94).
 class TimeRecordsScreen extends StatefulWidget {
-  const TimeRecordsScreen({super.key, required this.api, required this.companiesApi, this.today});
+  const TimeRecordsScreen({super.key, required this.api, required this.companiesApi, this.today, this.status, this.range});
 
   final TimeRecordsApi api;
   final CompaniesApi companiesApi;
@@ -24,12 +26,16 @@ class TimeRecordsScreen extends StatefulWidget {
   /// "Today" for the period filter; the device's date when `null`.
   final DateTime Function()? today;
 
+  /// Opened from the Dashboard: what to show at first.
+  final TimeRecordStatusFilter? status;
+  final ({DateTime from, DateTime to})? range;
+
   @override
   State<TimeRecordsScreen> createState() => _TimeRecordsScreenState();
 }
 
 class _TimeRecordsScreenState extends State<TimeRecordsScreen> {
-  late final _controller = TimeRecordsController(widget.api, today: widget.today)..load();
+  late final _controller = TimeRecordsController(widget.api, today: widget.today, status: widget.status, range: widget.range)..load();
   final _search = TextEditingController();
   List<CompanySummary>? _companies;
 
@@ -102,20 +108,27 @@ class _TimeRecordsScreenState extends State<TimeRecordsScreen> {
         onChanged: _controller.updateSearch,
       ),
     );
-    final period = JitanSelectField<TimeRecordPeriod>(
+    final range = _controller.range;
+    final period = JitanSelectField<TimeRecordPeriod?>(
       label: context.t(AdminTextKeys.timeRecordsFilterPeriod),
       value: _controller.period,
       options: [
+        // The exact days a Dashboard link opened, until a period is chosen.
+        if (range != null) JitanSelectOption(value: null, label: PeriodText.range(context, range.from, range.to)),
         for (final p in TimeRecordPeriod.values) JitanSelectOption(value: p, label: TimeRecordText.period(context, p)),
       ],
-      onChanged: (p) => _controller.selectPeriod(p ?? TimeRecordPeriod.thisWeek),
+      onChanged: (p) {
+        if (p != null) _controller.selectPeriod(p);
+      },
     );
-    final status = JitanSelectField<TimeRecordStatus?>(
+    final status = JitanSelectField<TimeRecordStatusFilter?>(
       label: context.t(AdminTextKeys.timeRecordsFilterStatus),
       value: _controller.status,
       options: [
         JitanSelectOption(value: null, label: context.t(AdminTextKeys.timeRecordsStatusAll)),
-        for (final s in TimeRecordStatus.values) JitanSelectOption(value: s, label: TimeRecordText.status(context, s)),
+        JitanSelectOption(value: TimeRecordStatusFilter.toReview, label: context.t(AdminTextKeys.timeRecordsStatusToReview)),
+        for (final s in TimeRecordStatus.values)
+          JitanSelectOption(value: TimeRecordStatusFilter.only(s), label: TimeRecordText.status(context, s)),
       ],
       onChanged: _controller.selectStatus,
     );

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
+import 'time_record_status_filter.dart';
+
 /// The periods HR can pick (Figma `160:2` "Period").
 enum TimeRecordPeriod { thisWeek, lastWeek, thisMonth, lastMonth }
 
@@ -31,8 +33,13 @@ class TimeRecordsFailed extends TimeRecordsState {
 /// employee search. The status filter only narrows what is loaded; the
 /// server calculates every status.
 class TimeRecordsController extends ChangeNotifier {
-  TimeRecordsController(this._api, {DateTime Function()? today, this.searchDelay = const Duration(milliseconds: 300)})
-    : _today = today ?? DateTime.now;
+  TimeRecordsController(
+    this._api, {
+    DateTime Function()? today,
+    this.searchDelay = const Duration(milliseconds: 300),
+    this._status,
+    this._range,
+  }) : _today = today ?? DateTime.now;
 
   final TimeRecordsApi _api;
   final DateTime Function() _today;
@@ -45,9 +52,16 @@ class TimeRecordsController extends ChangeNotifier {
   int? get companyId => _companyId;
   String _search = '';
   TimeRecordPeriod _period = TimeRecordPeriod.thisWeek;
-  TimeRecordPeriod get period => _period;
-  TimeRecordStatus? _status;
-  TimeRecordStatus? get status => _status;
+
+  /// `null` while an exact [range] is shown instead (opened from a link).
+  TimeRecordPeriod? get period => _range == null ? _period : null;
+
+  /// Exact days, opened from the Dashboard; a period chosen here replaces it.
+  ({DateTime from, DateTime to})? _range;
+  ({DateTime from, DateTime to})? get range => _range;
+
+  TimeRecordStatusFilter? _status;
+  TimeRecordStatusFilter? get status => _status;
 
   Timer? _searchTimer;
   int _request = 0;
@@ -55,7 +69,7 @@ class TimeRecordsController extends ChangeNotifier {
 
   /// The days the status filter lets through.
   List<TimeRecordDay> get visibleDays => switch (_state) {
-    TimeRecordsLoaded(:final days) => [for (final d in days) if (_status == null || d.status == _status) d],
+    TimeRecordsLoaded(:final days) => [for (final d in days) if (_status?.lets(d) ?? true) d],
     _ => const [],
   };
 
@@ -65,12 +79,16 @@ class TimeRecordsController extends ChangeNotifier {
     _ => 0,
   };
 
-  bool get isFiltered => _companyId != null || _search.isNotEmpty || _period != TimeRecordPeriod.thisWeek || _status != null;
+  bool get isFiltered =>
+      _companyId != null || _search.isNotEmpty || _period != TimeRecordPeriod.thisWeek || _range != null || _status != null;
 
   Future<void> load() async {
     final request = ++_request;
     _emit(const TimeRecordsLoading());
-    final (from, to) = rangeOf(_period, _today());
+    final (from, to) = switch (_range) {
+      (:final from, :final to) => (from, to),
+      null => rangeOf(_period, _today()),
+    };
     try {
       final days = await _api.list(from: from, to: to, companyId: _companyId, search: _search);
       if (request == _request) _emit(TimeRecordsLoaded(days));
@@ -86,12 +104,13 @@ class TimeRecordsController extends ChangeNotifier {
   }
 
   void selectPeriod(TimeRecordPeriod period) {
-    if (period == _period) return;
+    if (period == _period && _range == null) return;
     _period = period;
+    _range = null;
     load();
   }
 
-  void selectStatus(TimeRecordStatus? status) {
+  void selectStatus(TimeRecordStatusFilter? status) {
     _status = status;
     _emit(_state);
   }
@@ -110,6 +129,7 @@ class TimeRecordsController extends ChangeNotifier {
     _companyId = null;
     _search = '';
     _period = TimeRecordPeriod.thisWeek;
+    _range = null;
     _status = null;
     load();
   }

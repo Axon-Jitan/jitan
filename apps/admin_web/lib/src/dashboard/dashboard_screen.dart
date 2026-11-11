@@ -110,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           first: _companies(context, dashboard),
           second: _attendance(context, dashboard),
         ),
-        DashboardAttention(dashboard: dashboard),
+        DashboardAttention(dashboard: dashboard, period: _controller.period, today: _now),
       ],
     ),
   );

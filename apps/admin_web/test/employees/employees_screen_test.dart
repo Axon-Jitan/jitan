@@ -179,6 +179,24 @@ void main() {
     expect(find.text('Thomas Vermeulen'), findsOneWidget);
   });
 
+  testWidgets('"Not set up": active employees whose onboarding isn’t done', (tester) async {
+    final (api, _) = await _pump(tester, selected: _almeco);
+    api.succeed([
+      employee(1, 'Disan', 'Ssebowa', 'SBW'),
+      employee(2, 'Kevin', 'De Vos', 'KDV', activated: true),
+      employee(3, 'Thomas', 'Vermeulen', 'TVM', active: false),
+    ]);
+    await tester.pump();
+
+    tester.widget<JitanSelectField<EmployeeStatusFilter?>>(find.byType(JitanSelectField<EmployeeStatusFilter?>)).onChanged!(
+      EmployeeStatusFilter.notSetUp,
+    );
+    await tester.pump();
+    expect(find.text('Disan Ssebowa'), findsOneWidget);
+    expect(find.text('Kevin De Vos'), findsNothing);
+    expect(find.text('Thomas Vermeulen'), findsNothing, reason: 'inactive');
+  });
+
   testWidgets('title and filters stay in place; only the list scrolls, its heading row pinned; results footer', (tester) async {
     final (api, _) = await _pump(tester, selected: _almeco);
     api.succeed([for (var i = 1; i <= 60; i++) employee(i, 'First$i', 'Last', 'C$i')]);

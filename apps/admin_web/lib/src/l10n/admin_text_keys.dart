@@ -212,6 +212,7 @@ abstract final class AdminTextKeys {
   static const timeRecordsPeriodLastWeek = 'timeRecords.period.lastWeek';
   static const timeRecordsPeriodThisMonth = 'timeRecords.period.thisMonth';
   static const timeRecordsPeriodLastMonth = 'timeRecords.period.lastMonth';
+  static const timeRecordsStatusToReview = 'timeRecords.status.toReview';
   static const timeRecordsStatusAll = 'timeRecords.status.all';
   static const timeRecordsStatusComplete = 'timeRecords.status.complete';
   static const timeRecordsStatusWorking = 'timeRecords.status.working';
@@ -333,6 +334,7 @@ abstract final class AdminTextKeys {
   static const employeeColumnActions = 'employee.column.actions';
   static const employeeActionsMenu = 'employee.actions.menu';
   static const employeeFilterStatus = 'employee.filter.status';
+  static const employeeFilterStatusNotSetUp = 'employee.filter.status.notSetUp';
   static const employeeFilterStatusAll = 'employee.filter.status.all';
   static const employeeFilterCompany = 'employee.filter.company';
   static const employeeFilterCompanyHint = 'employee.filter.company.hint';
@@ -945,6 +947,7 @@ abstract final class AdminTextKeys {
   static const dashboardLocations = 'dashboard.locations';
   static const dashboardLocationsNote = 'dashboard.locations.note';
   static const dashboardHours = 'dashboard.hours';
+  static const dashboardHoursTravel = 'dashboard.hours.travel';
   static const dashboardHoursNote = 'dashboard.hours.note';
   static const dashboardHoursDay = 'dashboard.hours.perDay';
   static const dashboardHoursWeek = 'dashboard.hours.perWeek';

@@ -197,6 +197,7 @@ void main() {
 
       expect(find.byType(JitanNavItem), findsNWidgets(11));
       expect(find.text('Disan Ssebowa'), findsOneWidget);
+      expect(find.text('HR'), findsOneWidget, reason: 'the role, as the server names it');
       expect(
         tester.widget<JitanNavItem>(find.widgetWithText(JitanNavItem, 'Time records')).selected,
         true,

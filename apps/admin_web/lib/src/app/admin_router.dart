@@ -18,6 +18,7 @@ import '../projects/projects_screen.dart';
 import '../terminals/terminals_screen.dart';
 import '../reports/reports_screen.dart';
 import '../schedules/schedules_screen.dart';
+import '../time_records/time_record_status_filter.dart';
 import '../time_records/time_records_screen.dart';
 import 'admin_routes.dart';
 import 'admin_services.dart';
@@ -84,10 +85,12 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
             path: AdminRoutes.employees,
             pageBuilder: (context, state) => NoTransitionPage(
               child: EmployeesScreen(
+                key: ValueKey(state.uri.query),
                 api: services.employeesApi,
                 groupsApi: services.groupsApi,
                 companiesApi: services.companiesApi,
                 schedulesApi: services.schedulesApi,
+                status: state.uri.queryParameters['status'] == 'not_set_up' ? EmployeeStatusFilter.notSetUp : null,
               ),
             ),
             routes: [
@@ -103,7 +106,13 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
           GoRoute(
             path: AdminRoutes.timeRecords,
             pageBuilder: (context, state) => NoTransitionPage(
-              child: TimeRecordsScreen(api: services.timeRecordsApi, companiesApi: services.companiesApi),
+              child: TimeRecordsScreen(
+                key: ValueKey(state.uri.query),
+                api: services.timeRecordsApi,
+                companiesApi: services.companiesApi,
+                status: TimeRecordStatusFilter.fromWire(state.uri.queryParameters['status']),
+                range: _range(state.uri.queryParameters),
+              ),
             ),
           ),
           GoRoute(
@@ -175,4 +184,12 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
       ),
     ],
   );
+}
+
+/// `from` and `to` (`yyyy-MM-dd`) of a link, when both are real dates and in
+/// order; otherwise `null`, and the page opens on its own period.
+({DateTime from, DateTime to})? _range(Map<String, String> query) {
+  final from = DateTime.tryParse(query['from'] ?? ''), to = DateTime.tryParse(query['to'] ?? '');
+  if (from == null || to == null || to.isBefore(from)) return null;
+  return (from: DateTime.utc(from.year, from.month, from.day), to: DateTime.utc(to.year, to.month, to.day));
 }
