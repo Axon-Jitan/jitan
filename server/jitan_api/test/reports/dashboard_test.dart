@@ -120,6 +120,21 @@ void main() {
     expect(d.bucketSize, DashboardBucketSize.day);
   });
 
+  test('travel: next to the worked hours and never part of them (D46)', () async {
+    final app = _app();
+    app.timeRecords.rows = [
+      ..._start(11, 19, 8),
+      _row(11, 'Activity – Transport', _at(19, 8, 10)),
+      _row(11, 'Activity – Client on site', _at(19, 9)),
+      ..._finish(11, 19, 16, 30),
+    ];
+
+    final d = await _dashboard(app, from: '2026-10-19', to: '2026-10-25');
+
+    expect(d.travelMinutes, 50);
+    expect(d.registeredMinutes, 480 - 50, reason: 'worked leaves travel out, as in Reports');
+  });
+
   group('attendance (D11b)', () {
     Future<Dashboard> withDay(List<RegistrationRow> rows) async {
       final app = _app();

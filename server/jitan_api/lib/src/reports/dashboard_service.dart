@@ -110,7 +110,7 @@ class DashboardService {
     final buckets = _buckets(first, last, length);
     final registeredIn = List.filled(buckets.length, 0);
     final plannedIn = List.filled(buckets.length, 0);
-    var onTime = 0, late = 0, leftEarly = 0, toReview = 0;
+    var onTime = 0, late = 0, leftEarly = 0, toReview = 0, travel = 0;
     for (final employee in employees) {
       final week = plans[employee.id] ?? const <int, DayPlan>{};
       var bucket = 0;
@@ -123,6 +123,7 @@ class DashboardService {
         if (day?.status != TimeRecordStatus.nonWork) plannedIn[bucket] += WeekPlans.plannedMinutes(plan) ?? 0;
         if (day == null) continue;
         registeredIn[bucket] += MyDayService.registeredMinutes(day, plan?.breakMinutes ?? 0) ?? 0;
+        travel += day.transportMinutes;
         if (_toReview.contains(day.status)) {
           toReview++;
         } else if (day.status == TimeRecordStatus.complete || day.status == TimeRecordStatus.corrected) {
@@ -169,6 +170,7 @@ class DashboardService {
       leftEarly: leftEarly,
       toReview: toReview,
       correctionsWaiting: corrections,
+      travelMinutes: travel,
     );
   }
 

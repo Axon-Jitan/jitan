@@ -79,6 +79,7 @@ class Dashboard {
     required this.leftEarly,
     required this.toReview,
     required this.correctionsWaiting,
+    this.travelMinutes = 0,
   });
 
   factory Dashboard.fromJson(Map<String, Object?> json) => Dashboard(
@@ -98,6 +99,7 @@ class Dashboard {
     leftEarly: json.readInt('leftEarly'),
     toReview: json.readInt('toReview'),
     correctionsWaiting: json.readInt('correctionsWaiting'),
+    travelMinutes: json.readOptionalInt('travelMinutes') ?? 0,
   );
 
   /// The longest period the Dashboard takes.
@@ -120,6 +122,10 @@ class Dashboard {
   // The period.
   final int registeredMinutes;
   final int plannedMinutes;
+
+  /// Finished travel in the period, shown next to [registeredMinutes] and
+  /// never part of it (D46).
+  final int travelMinutes;
   final DashboardBucketSize bucketSize;
   final List<DashboardHoursBucket> buckets;
   final int onTime;
@@ -146,5 +152,6 @@ class Dashboard {
     'leftEarly': leftEarly,
     'toReview': toReview,
     'correctionsWaiting': correctionsWaiting,
+    'travelMinutes': travelMinutes,
   };
 }

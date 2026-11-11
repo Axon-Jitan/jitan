@@ -54,6 +54,7 @@ void main() {
         'lastName': 'Ssebowa',
         'code': 'SBW',
         'companies': ['Almeco', 'PCA'],
+        'roles': <String>[],
       });
       expect(response.headers['cache-control'], 'no-store');
       expect((await app.post('/onboarding/start', _start(qr))).statusCode, 200, reason: 'not consumed when scanned');

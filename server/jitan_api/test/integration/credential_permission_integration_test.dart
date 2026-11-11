@@ -6,6 +6,7 @@ import 'package:jitan_api/src/auth/credential_permission_evaluator.dart';
 import 'package:jitan_api/src/auth/permission.dart';
 import 'package:jitan_api/src/auth/request_identity.dart';
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/users/user_repository.dart';
 import 'package:test/test.dart';
 
 import '../support/test_database.dart';
@@ -110,5 +111,14 @@ void main() {
 
   test('another person gets nothing from it', () async {
     expect(await evaluator.isAllowed(const RequestIdentity(userId: -1), Permission.viewCompanies), false);
+  });
+
+  test('the account names the role, as IT named it; a role switched off is not named', () async {
+    final users = UserRepository(db);
+    expect((await users.account(user))!.roles, ['[DEV-TEST] $stamp']);
+
+    await db.execute('UPDATE tblUserCredGroup SET userCredGroupActive = 0 WHERE userCredGroupID = :id', {'id': userLink});
+    expect((await users.account(user))!.roles, isEmpty);
+    await db.execute('UPDATE tblUserCredGroup SET userCredGroupActive = 1 WHERE userCredGroupID = :id', {'id': userLink});
   });
 }

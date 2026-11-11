@@ -68,6 +68,7 @@ class EmployeeAccount {
     required this.lastName,
     required this.code,
     required this.companies,
+    this.roles = const [],
   });
 
   factory EmployeeAccount.fromJson(Map<String, Object?> json) => EmployeeAccount(
@@ -75,6 +76,7 @@ class EmployeeAccount {
         lastName: json.readOptionalString('lastName'),
         code: json.readString('code'),
         companies: json.readStringList('companies'),
+        roles: json['roles'] == null ? const [] : json.readStringList('roles'),
       );
 
   final String? firstName;
@@ -86,11 +88,16 @@ class EmployeeAccount {
   /// Names of the employee's (non-deleted) companies.
   final List<String> companies;
 
+  /// Names of the access roles (`tblCredGroup`) the person has, the highest
+  /// level first: "HR", "Admin". Shown, never used to decide access (§18).
+  final List<String> roles;
+
   Map<String, Object?> toJson() => {
         'firstName': firstName,
         'lastName': lastName,
         'code': code,
         'companies': companies,
+        'roles': roles,
       };
 }
 

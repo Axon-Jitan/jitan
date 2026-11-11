@@ -54,12 +54,19 @@ class UserRepository {
       'ORDER BY c.companyName',
       {'userId': userId},
     );
+    final roles = await _db.query(
+      'SELECT g.credGroupName FROM tblUserCredGroup ucg JOIN tblCredGroup g ON g.credGroupID = ucg.credGroupID '
+      'WHERE ucg.userID = :userId AND ucg.userCredGroupActive = 1 AND ucg.userCredGroupMFD = 0 '
+      'AND g.credGroupActive = 1 AND g.credGroupMFD = 0 ORDER BY g.credGroupLevel DESC, g.credGroupName',
+      {'userId': userId},
+    );
     final row = rows.first;
     return EmployeeAccount(
       firstName: row.readOptionalString('userName'),
       lastName: row.readOptionalString('userSurname'),
       code: row.readString('userCode'),
       companies: [for (final c in companies) c.readString('companyName')],
+      roles: [for (final r in roles) r.readString('credGroupName')],
     );
   }
 }
