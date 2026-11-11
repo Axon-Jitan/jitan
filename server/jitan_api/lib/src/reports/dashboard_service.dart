@@ -152,7 +152,12 @@ class DashboardService {
       ],
       employees: active.length,
       employeesSetUp: active.where((e) => e.isActivated).length,
-      locations: (await _locations.recognised()).length,
+      // The workplaces, as the Locations page lists them: a project's client
+      // site is a project, not a location (D44).
+      locations: [
+        for (final location in await _locations.all())
+          if (location.isActive && location.point != null) location,
+      ].length,
       registeredMinutes: sum(registeredIn),
       plannedMinutes: sum(plannedIn),
       bucketSize: _sizeOf(length),

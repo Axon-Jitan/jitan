@@ -120,6 +120,21 @@ void main() {
     expect(d.bucketSize, DashboardBucketSize.day);
   });
 
+  test('locations: the workplaces with a pin, as the Locations page lists them; not project sites', () async {
+    final app = _app();
+    Location place(int id, {bool active = true, GeoPoint? point = const GeoPoint(latitude: 50.7, longitude: 3.2)}) =>
+        Location(id: id, name: 'Place $id', street: 'Street', point: point, radiusMeters: 100, isActive: active);
+    app.locations.locations.addAll({
+      1: place(1),
+      2: place(2, active: false),
+      3: place(3, point: null),
+      4: place(4),
+    });
+    app.locations.projectIds.add(4);
+
+    expect((await _dashboard(app)).locations, 1);
+  });
+
   test('travel: next to the worked hours and never part of them (D46)', () async {
     final app = _app();
     app.timeRecords.rows = [

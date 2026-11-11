@@ -6,6 +6,9 @@ import 'package:jitan_models/jitan_models.dart';
 /// Locations in memory. The name is unique, as in `tblAddress`.
 class FakeLocationRepository implements LocationRepository {
   final locations = <int, Location>{};
+
+  /// Addresses that are a project's client site (D44).
+  final projectIds = <int>{};
   var _next = 1;
 
   LocationKeys _keys(int id) => (addressId: id, geofenceId: id + 100, geofenceAddressId: id + 200);
@@ -30,7 +33,10 @@ class FakeLocationRepository implements LocationRepository {
   );
 
   @override
-  Future<List<Location>> all(SqlExecutor executor, {bool withProjects = true}) async => locations.values.toList();
+  Future<List<Location>> all(SqlExecutor executor, {bool withProjects = true}) async => [
+    for (final location in locations.values)
+      if (withProjects || !projectIds.contains(location.id)) location,
+  ];
 
   @override
   Future<Location?> find(SqlExecutor executor, int addressId) async => locations[addressId];
