@@ -80,7 +80,11 @@ class SchedulesController extends ChangeNotifier {
     }
   }
 
-  void updateFilter(ScheduleFilter filter) {
+  void updateSearch(String text) => _setFilter(ScheduleFilter(search: text.trim(), status: _filter.status));
+
+  void updateStatus(ScheduleRowStatus? status) => _setFilter(ScheduleFilter(search: _filter.search, status: status));
+
+  void _setFilter(ScheduleFilter filter) {
     _filter = filter;
     if (!_disposed) notifyListeners();
   }

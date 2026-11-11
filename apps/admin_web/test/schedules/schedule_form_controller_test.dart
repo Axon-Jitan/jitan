@@ -46,11 +46,9 @@ void main() {
 
   test('the steps in order; Continue needs a group and a day; the break is asked with the hours', () async {
     final c = await ready();
-    expect((c.step, c.canContinue), (ScheduleStep.group, false));
+    expect((c.step, c.canContinue), (ScheduleStep.hours, false), reason: 'no group yet');
 
-    c
-      ..selectGroup(2)
-      ..next();
+    c.selectGroup(2);
     expect((c.step, c.canContinue), (ScheduleStep.hours, false), reason: 'no day yet');
 
     c
@@ -70,6 +68,22 @@ void main() {
 
     c.back();
     expect(c.step, ScheduleStep.attendance);
+  });
+
+  test('per day, every chosen day starts with the shared hours; a day added later too', () async {
+    final c = await ready();
+    c
+      ..selectGroup(2)
+      ..toggleDay(11)
+      ..setStart('07:30')
+      ..setFinish('16:00')
+      ..setSameHours(false);
+    expect(c.hoursOf(11), (start: '07:30', finish: '16:00'));
+    c.toggleDay(12);
+    expect(c.hoursOf(12), (start: '07:30', finish: '16:00'));
+    c.setDayFinish(12, '13:00');
+    expect(c.effectiveHoursOf(12), (start: '07:30', finish: '13:00'));
+    expect(c.effectiveHoursOf(11), (start: '07:30', finish: '16:00'));
   });
 
   test('saves the whole schedule in one request: hours, break on every working day, tolerance, rounding', () async {
@@ -193,7 +207,7 @@ void main() {
 
     api.writeFailure = serverError(409, ApiErrorCode.groupWithoutEmployees);
     await c.submit();
-    expect(c.step, ScheduleStep.group);
+    expect(c.step, ScheduleStep.hours);
     expect(c.fieldErrors[ScheduleFormController.fieldForm]?.key, AdminTextKeys.scheduleFormBlocked);
 
     api.writeFailure = serverError(503, ApiErrorCode.databaseUnavailable);

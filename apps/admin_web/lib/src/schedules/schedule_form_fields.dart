@@ -292,7 +292,23 @@ class ScheduleCheckRow extends StatelessWidget {
 /// outlined box as the other fields. [onChanged] gets the text as typed;
 /// the form checks it is a valid HH:mm.
 class ScheduleTimeField extends StatefulWidget {
-  const ScheduleTimeField({super.key, this.label, required this.value, required this.onChanged, this.hint, this.info});
+  const ScheduleTimeField({
+    super.key,
+    this.label,
+    required this.value,
+    required this.onChanged,
+    this.hint,
+    this.info,
+    this.chip = false,
+    this.semanticLabel,
+  });
+
+  /// A small soft chip for a settings row (Figma `1551:2`, "07:30"),
+  /// instead of an outlined field.
+  final bool chip;
+
+  /// What a screen reader says for a [chip] ("Monday start").
+  final String? semanticLabel;
 
   /// `null` in a table row, where the column heading names the field.
   final String? label;
@@ -344,6 +360,7 @@ class _ScheduleTimeFieldState extends State<ScheduleTimeField> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.onChanged != null;
+    if (widget.chip) return _chip(enabled);
     final box = Container(
       height: JitanDimensions.fieldHeight,
       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -368,6 +385,131 @@ class _ScheduleTimeFieldState extends State<ScheduleTimeField> {
     final label = widget.label;
     return label == null ? box : JitanFieldLabel(label: label, info: widget.info, child: box);
   }
+
+  Widget _chip(bool enabled) => Semantics(
+    label: widget.semanticLabel,
+    textField: true,
+    child: Container(
+      width: 66,
+      height: 32,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(8)),
+      child: TextField(
+        controller: _controller,
+        focusNode: _focus,
+        enabled: enabled,
+        textAlign: TextAlign.center,
+        keyboardType: TextInputType.datetime,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9:.]')), LengthLimitingTextInputFormatter(5)],
+        style: JitanTextStyles.tableCell.copyWith(color: JitanColors.ink, fontWeight: FontWeight.w500),
+        cursorColor: JitanColors.ink,
+        decoration: InputDecoration.collapsed(hintText: widget.hint, hintStyle: JitanTextStyles.inputHint),
+        onChanged: (text) => widget.onChanged?.call(tidyTime(text) ?? text),
+      ),
+    ),
+  );
+}
+
+/// A round one-letter day button ("M"), dark when chosen (Figma `1551:2`,
+/// as the Repeat days of the iPhone Clock app).
+class ScheduleDayDot extends StatelessWidget {
+  const ScheduleDayDot({super.key, required this.letter, required this.name, required this.selected, required this.onPressed});
+
+  final String letter;
+
+  /// The day's name, for the tooltip and screen readers ("Mon").
+  final String name;
+  final bool selected;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: name,
+    child: Semantics(
+      button: true,
+      selected: selected,
+      label: name,
+      excludeSemantics: true,
+      child: Material(
+        color: selected ? JitanColors.ink : JitanColors.inputFill,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: SizedBox(
+            width: 30,
+            height: 30,
+            child: Center(
+              child: Text(
+                letter,
+                style: JitanTextStyles.tableCell.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? JitanColors.surface : JitanColors.inkMuted,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// A whole number of minutes in a soft chip with "min" (Figma `1552:12`,
+/// "5 min"), for a settings row.
+class ScheduleMinutesChip extends StatelessWidget {
+  const ScheduleMinutesChip({
+    super.key,
+    required this.controller,
+    required this.unit,
+    required this.enabled,
+    required this.semanticLabel,
+    this.failed = false,
+  });
+
+  final TextEditingController controller;
+  final String unit;
+  final bool enabled;
+  final String semanticLabel;
+
+  /// Outlined in red: the value is refused (the message is under the card).
+  final bool failed;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: semanticLabel,
+    textField: true,
+    child: Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: JitanColors.inputFill,
+        borderRadius: BorderRadius.circular(8),
+        border: failed ? Border.all(color: JitanColors.error) : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 4,
+        children: [
+          SizedBox(
+            width: 22,
+            child: TextField(
+              controller: controller,
+              enabled: enabled,
+              textAlign: TextAlign.end,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
+              style: JitanTextStyles.tableCell.copyWith(color: JitanColors.ink, fontWeight: FontWeight.w500),
+              cursorColor: JitanColors.ink,
+              decoration: const InputDecoration.collapsed(hintText: null),
+            ),
+          ),
+          Text(unit, style: JitanTextStyles.tableCell.copyWith(color: JitanColors.ink, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    ),
+  );
 }
 
 /// "07:30" for "0730", "730", "7:30", "7.30" or "07:30"; `null` when it is
@@ -473,4 +615,33 @@ class ScheduleFormBanner extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// No rounding, or up / down by one of the intervals, as plain text with a
+/// chevron for a settings row (Figma `1552:12`, "Up, every 15 min ⌄").
+class ScheduleRoundingSelect extends StatelessWidget {
+  const ScheduleRoundingSelect({super.key, required this.value, required this.intervals, required this.onChanged});
+
+  final ScheduleRounding? value;
+  final List<int> intervals;
+  final ValueChanged<ScheduleRounding?>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = TranslationScope.of(context);
+    final choices = <String, ScheduleRounding?>{
+      'none': null,
+      for (final minutes in intervals) ...{
+        'up:$minutes': ScheduleRounding(intervalMinutes: minutes, roundUp: true),
+        'down:$minutes': ScheduleRounding(intervalMinutes: minutes, roundUp: false),
+      },
+    };
+    return JitanInlineSelect<String>(
+      value: ScheduleRoundingField._keyOf(value),
+      options: [
+        for (final MapEntry(:key, :value) in choices.entries) JitanSelectOption(value: key, label: roundingText(t, value)),
+      ],
+      onChanged: onChanged == null ? null : (key) => onChanged!(choices[key]),
+    );
+  }
 }

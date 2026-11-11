@@ -27,14 +27,10 @@ Future<GroupSchedule?> showScheduleDialog(
   builder: (_) => ScheduleDialog(api: api, groups: groups, options: options, group: group, groupId: groupId, fromGroupPage: fromGroupPage),
 );
 
-/// The Create / Edit schedule wizard: Group → Working hours & break →
-/// Attendance rules → Review, then one save of the whole schedule. Every
-/// field has an ⓘ explaining it with an example.
-///
-/// Built from the Figma wizard (1365:…, `Daily hours` 1367:2, the blocked,
-/// warning and conflict states 1317:742, 933, 1124) with the flow agreed on
-/// 2026-10-20: work hours and break together in one pass. Also agreed: the
-/// "Mon–Fri" shortcut and dark chosen days.
+/// The Create / Edit schedule wizard (Figma `HR / Schedules V3`: Hours
+/// `1551:2`, hours per day `1551:207`, Rules `1552:12`, Review `1552:201`):
+/// one calm card per step, then one save of the whole schedule. The
+/// explanations are behind the ⓘ of each line.
 class ScheduleDialog extends StatefulWidget {
   const ScheduleDialog({
     super.key,
@@ -56,7 +52,7 @@ class ScheduleDialog extends StatefulWidget {
   /// A new schedule for this group, already chosen.
   final int? groupId;
 
-  /// Opened on the group's page: the group step is skipped.
+  /// Opened on the group's page: the group is fixed.
   final bool fromGroupPage;
 
   @override
@@ -107,9 +103,8 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
   }
 
   static const _stepNames = {
-    ScheduleStep.group: AdminTextKeys.scheduleStepGroup,
-    ScheduleStep.hours: AdminTextKeys.scheduleStepHoursBreak,
-    ScheduleStep.attendance: AdminTextKeys.scheduleStepAttendance,
+    ScheduleStep.hours: AdminTextKeys.scheduleStepHours,
+    ScheduleStep.attendance: AdminTextKeys.scheduleStepRules,
     ScheduleStep.review: AdminTextKeys.scheduleStepReview,
   };
 
@@ -119,40 +114,31 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     builder: (context, _) {
       final c = _controller;
       return JitanModal(
-        width: 680,
+        width: 520,
         title: context.t(c.editing ? AdminTextKeys.scheduleFormEditTitle : AdminTextKeys.scheduleFormCreateTitle),
-        subtitle: context.t(AdminTextKeys.scheduleFormSubtitle),
+        subtitle: c.groupLocked ? c.group?.group.name : null,
         onClose: c.submitting ? null : () => Navigator.of(context).pop(),
-        bandFooter: true,
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ScheduleStepper(
               current: c.step.index,
-              labels: [
-                for (final step in ScheduleStep.values)
-                  context.t(AdminTextKeys.scheduleStepLabel, args: {'n': step.index + 1, 'label': context.t(_stepNames[step]!)}),
-              ],
+              labels: [for (final step in ScheduleStep.values) context.t(_stepNames[step]!)],
             ),
-            const SizedBox(height: 28),
-            // The same size on every step; a long step (7 days of hours)
-            // scrolls inside it.
-            SizedBox(
-              height: _stepHeight,
-              child: switch (c.options) {
-                ScheduleOptionsLoading() => JitanLoadingState(label: context.t(AdminTextKeys.scheduleFormOptionsLoading)),
-                ScheduleOptionsFailed(:final failure) => _optionsError(context, failure),
-                ScheduleOptionsLoaded(:final options) => SingleChildScrollView(child: _step(context, options)),
-              },
-            ),
+            const SizedBox(height: 22),
+            switch (c.options) {
+              ScheduleOptionsLoading() => JitanLoadingState(label: context.t(AdminTextKeys.scheduleFormOptionsLoading)),
+              ScheduleOptionsFailed(:final failure) => _optionsError(context, failure),
+              ScheduleOptionsLoaded(:final options) => _step(context, options),
+            },
           ],
         ),
         leadingActions: [
           JitanSecondaryButton(
-            label: context.t(c.step == c.firstStep ? CommonTextKeys.cancel : CommonTextKeys.back),
+            label: context.t(c.onFirstStep ? CommonTextKeys.cancel : CommonTextKeys.back),
             onPressed: c.submitting
                 ? null
-                : c.step == c.firstStep
+                : c.onFirstStep
                 ? () => Navigator.of(context).pop()
                 : () {
                     _syncTolerance();
@@ -187,9 +173,8 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       ...switch (_controller.step) {
-        ScheduleStep.group => _group(context),
         ScheduleStep.hours => _hours(context, options),
-        ScheduleStep.attendance => _attendance(context, options),
+        ScheduleStep.attendance => _rules(context, options),
         ScheduleStep.review => _review(context, options),
       },
       _fieldError(context, ScheduleFormController.fieldForm),
@@ -205,278 +190,235 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
     ],
   );
 
-  /// Step 1: which group.
-  List<Widget> _group(BuildContext context) {
+  /// What HR should know about the chosen group before going on.
+  Widget? _groupBanner(BuildContext context) {
     final c = _controller;
     final group = c.group;
-    return [
-      if (group != null && c.blocked)
-        ScheduleFormBanner.error(context.t(AdminTextKeys.scheduleFormBlocked, args: {'group': group.group.name}))
-      else if (group != null && c.conflict)
-        ScheduleFormBanner.note(
-          context.t(AdminTextKeys.scheduleFormConflict, args: {'group': group.group.name}),
-          action: context.t(AdminTextKeys.scheduleFormConflictAction),
-          onAction: _editExisting,
-        )
-      else if (group != null && c.employeesDiffer)
-        ScheduleFormBanner.warning(context.t(AdminTextKeys.scheduleFormDiffer, args: {'group': group.group.name})),
-      JitanSelectField<int>(
-        label: context.t(AdminTextKeys.scheduleFormGroup),
-        info: context.t(AdminTextKeys.scheduleInfoGroup),
-        hintText: context.t(AdminTextKeys.scheduleFormGroupHint),
-        value: c.groupId,
-        options: [for (final g in c.groups) JitanSelectOption(value: g.group.id, label: g.group.name)],
-        onChanged: c.submitting || c.editing ? null : c.selectGroup,
-      ),
-      const SizedBox(height: 14),
-      Text(context.t(AdminTextKeys.scheduleFormAppliesToGroup), style: _note),
-    ];
+    if (group == null) return null;
+    if (c.blocked) return ScheduleFormBanner.error(context.t(AdminTextKeys.scheduleFormBlocked, args: {'group': group.group.name}));
+    if (c.conflict) {
+      return ScheduleFormBanner.note(
+        context.t(AdminTextKeys.scheduleFormConflict, args: {'group': group.group.name}),
+        action: context.t(AdminTextKeys.scheduleFormConflictAction),
+        onAction: _editExisting,
+      );
+    }
+    if (c.employeesDiffer) return ScheduleFormBanner.warning(context.t(AdminTextKeys.scheduleFormDiffer, args: {'group': group.group.name}));
+    return null;
   }
 
-  /// Step 2: working days, their hours and the break (Figma 1365:222,
-  /// `Daily hours` 1367:2).
+  /// Step 1 (Figma `1551:2`, per day `1551:207`): the group, the days, the
+  /// hours and the break.
   List<Widget> _hours(BuildContext context, ScheduleOptions options) {
     final c = _controller;
     final busy = c.submitting;
     final t = TranslationScope.of(context);
     final hint = context.t(AdminTextKeys.scheduleFormTimeHint);
-    return [
-      ..._days(context, options),
-      const SizedBox(height: 14),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: ScheduleCheckRow(
-          label: context.t(AdminTextKeys.scheduleFormSameHours),
-          value: c.sameHours,
-          onChanged: busy ? null : c.setSameHours,
-        ),
-      ),
-      const SizedBox(height: 20),
-      if (c.sameHours)
-        ScheduleFieldColumns(
-          children: [
-            ScheduleTimeField(
-              label: context.t(AdminTextKeys.scheduleFormStart),
-              info: context.t(AdminTextKeys.scheduleInfoStart),
-              hint: hint,
-              value: c.start,
-              onChanged: busy ? null : c.setStart,
-            ),
-            ScheduleTimeField(
-              label: context.t(AdminTextKeys.scheduleFormFinish),
-              info: context.t(AdminTextKeys.scheduleInfoFinish),
-              hint: hint,
-              value: c.finish,
-              onChanged: busy ? null : c.setFinish,
-            ),
-          ],
-        )
-      else ...[
-        ScheduleHoursTable(
-          dayLabel: context.t(AdminTextKeys.scheduleFormDay),
-          startLabel: context.t(AdminTextKeys.scheduleFormStart),
-          finishLabel: context.t(AdminTextKeys.scheduleFormFinish),
-          startInfo: context.t(AdminTextKeys.scheduleInfoStart),
-          finishInfo: context.t(AdminTextKeys.scheduleInfoFinish),
-          timeHint: hint,
-          lines: [
-            for (final day in options.days)
-              if (c.dayIds.contains(day.id))
-                (
-                  day: dayShortName(t, day.weekday),
-                  start: c.hoursOf(day.id).start,
-                  finish: c.hoursOf(day.id).finish,
-                  onStart: busy ? null : (String? time) => c.setDayStart(day.id, time),
-                  onFinish: busy ? null : (String? time) => c.setDayFinish(day.id, time),
-                ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(context.t(AdminTextKeys.scheduleFormDailyNote), style: _note),
+    final start = context.t(AdminTextKeys.scheduleFormStart), finish = context.t(AdminTextKeys.scheduleFormFinish);
+    Widget range({
+      required String? from,
+      required String? to,
+      required ValueChanged<String?> onFrom,
+      required ValueChanged<String?> onTo,
+      required String day,
+    }) => Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 8,
+      children: [
+        ScheduleTimeField(chip: true, hint: hint, value: from, onChanged: busy ? null : onFrom, semanticLabel: '$day $start'),
+        Text('–', style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted)),
+        ScheduleTimeField(chip: true, hint: hint, value: to, onChanged: busy ? null : onTo, semanticLabel: '$day $finish'),
       ],
-      _fieldError(context, ScheduleFormController.fieldHours),
-      // The break: always part of a schedule; HR only sets its length and
-      // the server places it in the middle of each working day (D28).
-      const SizedBox(height: 24),
-      ScheduleFieldColumns(
-        children: [
-          JitanSelectField<int>(
-            label: context.t(AdminTextKeys.scheduleFormLength),
-            info: context.t(AdminTextKeys.scheduleInfoBreak),
-            value: c.breakLength,
-            options: [
-              for (final minutes in options.breakLengthMinutes)
-                JitanSelectOption(
-                  value: minutes,
-                  label: context.t(AdminTextKeys.scheduleFormLengthOption, args: {'minutes': minutes}),
-                ),
-            ],
-            onChanged: busy ? null : c.setBreakLength,
-          ),
-        ],
-      ),
-      const SizedBox(height: 10),
-      Text(context.t(AdminTextKeys.scheduleBreakEveryDayText), style: _note),
-      _fieldError(context, ScheduleFormController.fieldBreak),
-    ];
-  }
-
-  /// Step 3: attendance tolerance and rounding (Figma 1365:457).
-  List<Widget> _attendance(BuildContext context, ScheduleOptions options) {
-    final c = _controller;
-    final busy = c.submitting;
-    return [
-      ScheduleFieldColumns(
-        children: [
-          _toleranceField(context, AdminTextKeys.scheduleFormArrivalTolerance, AdminTextKeys.scheduleInfoArrival, _arrival,
-              ScheduleFormController.fieldArrival),
-          _toleranceField(context, AdminTextKeys.scheduleFormLeavingTolerance, AdminTextKeys.scheduleInfoLeaving, _leaving,
-              ScheduleFormController.fieldLeaving),
-        ],
-      ),
-      const SizedBox(height: 20),
-      ScheduleFieldColumns(
-        children: [
-          ScheduleRoundingField(
-            label: context.t(AdminTextKeys.scheduleFormStartRounding),
-            info: context.t(AdminTextKeys.scheduleInfoStartRounding),
-            value: c.startRounding,
-            intervals: options.roundingIntervalMinutes,
-            onChanged: busy ? null : c.setStartRounding,
-          ),
-          ScheduleRoundingField(
-            label: context.t(AdminTextKeys.scheduleFormFinishRounding),
-            info: context.t(AdminTextKeys.scheduleInfoFinishRounding),
-            value: c.finishRounding,
-            intervals: options.roundingIntervalMinutes,
-            onChanged: busy ? null : c.setFinishRounding,
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      Text(context.t(AdminTextKeys.scheduleFormAttendanceNote), style: _note),
-    ];
-  }
-
-  /// Step 4: everything that will be saved.
-  List<Widget> _review(BuildContext context, ScheduleOptions options) {
-    final c = _controller;
-    final t = TranslationScope.of(context);
-    final hours = workHoursDaysSummary(
-      t,
-      ScheduleVariant(
-        employeeCount: 0,
-        breaks: const [],
-        workDays: [
-          for (final day in options.days)
-            if (c.dayIds.contains(day.id))
-              WorkDaySchedule(
-                day: day,
-                start: WorkBoundary(time: c.effectiveHoursOf(day.id).start ?? '', toleranceMinutes: 0),
-                finish: WorkBoundary(time: c.effectiveHoursOf(day.id).finish ?? '', toleranceMinutes: 0),
-              ),
-        ],
-      ),
     );
-    final rows = [
-      (AdminTextKeys.scheduleReviewGroup, c.group?.group.name ?? ''),
-      (AdminTextKeys.scheduleReviewHours, hours),
-      (
-        AdminTextKeys.scheduleReviewBreak,
-        context.t(AdminTextKeys.scheduleReviewBreakValue, args: {'minutes': c.breakLength ?? 0}),
-      ),
-      (
-        AdminTextKeys.scheduleReviewAttendance,
-        context.t(AdminTextKeys.scheduleReviewAttendanceValue, args: {'arrival': c.arrivalTolerance, 'leaving': c.leavingTolerance}),
-      ),
-      (
-        AdminTextKeys.scheduleReviewRounding,
-        roundingPairText(t, c.startRounding, c.finishRounding),
-      ),
-    ];
+    final hoursLabel = context.t(AdminTextKeys.scheduleRowHours);
     return [
-      Text(context.t(AdminTextKeys.scheduleReviewTitle), style: JitanTextStyles.stateTitle),
-      const SizedBox(height: 14),
-      for (final (index, (label, value)) in rows.indexed)
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: index.isOdd ? JitanColors.warmWhite : null,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      ?_groupBanner(context),
+      JitanSettingsCard(
+        rows: [
+          if (!c.groupLocked)
+            JitanSettingsRow(
+              label: context.t(AdminTextKeys.scheduleRowGroup),
+              info: context.t(AdminTextKeys.scheduleInfoGroup),
+              value: JitanInlineSelect<int>(
+                hintText: context.t(AdminTextKeys.scheduleFormGroupHint),
+                value: c.groupId,
+                options: [for (final g in c.groups) JitanSelectOption(value: g.group.id, label: g.group.name)],
+                onChanged: busy ? null : c.selectGroup,
+              ),
+            ),
+          JitanSettingsRow(
+            label: context.t(AdminTextKeys.scheduleRowWorkDays),
+            info: context.t(AdminTextKeys.scheduleInfoDays),
+            value: Wrap(
+              spacing: 6,
+              runSpacing: 6,
               children: [
-                SizedBox(width: 140, child: Text(context.t(label), style: JitanTextStyles.fieldLabel)),
-                Expanded(child: Text(value, style: JitanTextStyles.inputText)),
+                for (final day in options.days)
+                  ScheduleDayDot(
+                    letter: dayLetter(t, day.weekday),
+                    name: dayShortName(t, day.weekday),
+                    selected: c.dayIds.contains(day.id),
+                    onPressed: busy ? null : () => c.toggleDay(day.id),
+                  ),
               ],
             ),
           ),
-        ),
-      const SizedBox(height: 14),
-      Text(context.t(AdminTextKeys.scheduleReviewNote), style: _note),
-    ];
-  }
-
-  /// "Working days" with the "Mon–Fri" shortcut and a chip per day.
-  List<Widget> _days(BuildContext context, ScheduleOptions options) {
-    final c = _controller;
-    final busy = c.submitting;
-    final weekdays = [for (final day in options.days) if (day.weekday <= DateTime.friday) day.id];
-    return [
-      Row(
-        children: [
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: JitanLabelText(
-                label: context.t(AdminTextKeys.scheduleFormDays),
-                info: context.t(AdminTextKeys.scheduleInfoDays),
-                style: JitanTextStyles.stateTitle,
-              ),
+          if (c.sameHours)
+            JitanSettingsRow(
+              label: hoursLabel,
+              info: context.t(AdminTextKeys.scheduleInfoHours),
+              value: range(from: c.start, to: c.finish, onFrom: c.setStart, onTo: c.setFinish, day: hoursLabel),
+            )
+          else
+            for (final day in options.days)
+              if (c.dayIds.contains(day.id))
+                JitanSettingsRow(
+                  label: dayLongName(t, day.weekday),
+                  value: range(
+                    from: c.hoursOf(day.id).start,
+                    to: c.hoursOf(day.id).finish,
+                    onFrom: (time) => c.setDayStart(day.id, time),
+                    onTo: (time) => c.setDayFinish(day.id, time),
+                    day: dayLongName(t, day.weekday),
+                  ),
+                ),
+          JitanSettingsRow(
+            label: context.t(AdminTextKeys.scheduleRowBreak),
+            info: context.t(AdminTextKeys.scheduleInfoBreak),
+            value: JitanInlineSelect<int>(
+              menuWidth: 160,
+              value: c.breakLength,
+              hintText: context.t(CommonTextKeys.valueUnavailable),
+              options: [
+                for (final minutes in options.breakLengthMinutes)
+                  JitanSelectOption(value: minutes, label: context.t(AdminTextKeys.scheduleFormLengthOption, args: {'minutes': minutes})),
+              ],
+              onChanged: busy ? null : c.setBreakLength,
             ),
           ),
-          TextButton(
-            onPressed: busy ? null : () => c.selectDays(weekdays),
-            child: Text(
-              context.t(AdminTextKeys.scheduleFormWeekdays),
-              style: JitanTextStyles.inputText.copyWith(fontWeight: FontWeight.w600, color: JitanColors.vermilion),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 10),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final day in options.days)
-            ScheduleDayToggle(
-              label: dayShortName(TranslationScope.of(context), day.weekday),
-              selected: c.dayIds.contains(day.id),
-              onPressed: busy ? null : () => c.toggleDay(day.id),
-            ),
         ],
       ),
       _fieldError(context, ScheduleFormController.fieldDays),
+      _fieldError(context, ScheduleFormController.fieldHours),
+      _fieldError(context, ScheduleFormController.fieldBreak),
+      const SizedBox(height: 8),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          onPressed: busy ? null : () => c.setSameHours(!c.sameHours),
+          style: TextButton.styleFrom(
+            foregroundColor: JitanColors.inkMuted,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            minimumSize: Size.zero,
+          ),
+          child: Text(
+            context.t(c.sameHours ? AdminTextKeys.scheduleFormPerDay : AdminTextKeys.scheduleFormSameEveryDay),
+            style: JitanTextStyles.tableCell.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: JitanColors.inkMuted),
+          ),
+        ),
+      ),
     ];
   }
 
-  Widget _toleranceField(
-    BuildContext context,
-    String labelKey,
-    String infoKey,
-    TextEditingController controller,
-    String field,
-  ) => ScheduleMinutesField(
-        label: context.t(labelKey),
+  /// Step 2 (Figma `1552:12`): tolerance and rounding.
+  List<Widget> _rules(BuildContext context, ScheduleOptions options) {
+    final c = _controller;
+    final busy = c.submitting;
+    final unit = context.t(AdminTextKeys.scheduleFormMinutesUnit);
+    Widget minutes(String labelKey, String infoKey, TextEditingController controller, String field) {
+      final label = context.t(labelKey);
+      return JitanSettingsRow(
+        label: label,
         info: context.t(infoKey),
-        controller: controller,
-        unit: context.t(AdminTextKeys.scheduleFormMinutesUnit),
-        enabled: !_controller.submitting,
-        errorText: _errorText(context, field),
+        value: ScheduleMinutesChip(
+          controller: controller,
+          unit: unit,
+          enabled: !busy,
+          semanticLabel: label,
+          failed: c.fieldErrors.containsKey(field),
+        ),
       );
+    }
+
+    Widget rounding(String labelKey, String infoKey, ScheduleRounding? value, ValueChanged<ScheduleRounding?> onChanged) =>
+        JitanSettingsRow(
+          label: context.t(labelKey),
+          info: context.t(infoKey),
+          value: ScheduleRoundingSelect(
+            value: value,
+            intervals: options.roundingIntervalMinutes,
+            onChanged: busy ? null : onChanged,
+          ),
+        );
+
+    return [
+      JitanSettingsCard(
+        rows: [
+          minutes(AdminTextKeys.scheduleRowArrival, AdminTextKeys.scheduleInfoArrival, _arrival, ScheduleFormController.fieldArrival),
+          minutes(AdminTextKeys.scheduleRowLeaving, AdminTextKeys.scheduleInfoLeaving, _leaving, ScheduleFormController.fieldLeaving),
+          rounding(AdminTextKeys.scheduleRowStartRounding, AdminTextKeys.scheduleInfoStartRounding, c.startRounding, c.setStartRounding),
+          rounding(AdminTextKeys.scheduleRowFinishRounding, AdminTextKeys.scheduleInfoFinishRounding, c.finishRounding, c.setFinishRounding),
+        ],
+      ),
+      _fieldError(context, ScheduleFormController.fieldArrival),
+      _fieldError(context, ScheduleFormController.fieldLeaving),
+    ];
+  }
+
+  /// Step 3 (Figma `1552:201`): everything that will be saved.
+  List<Widget> _review(BuildContext context, ScheduleOptions options) {
+    final c = _controller;
+    final t = TranslationScope.of(context);
+    final variant = ScheduleVariant(
+      employeeCount: 0,
+      breaks: const [],
+      workDays: [
+        for (final day in options.days)
+          if (c.dayIds.contains(day.id))
+            WorkDaySchedule(
+              day: day,
+              start: WorkBoundary(time: c.effectiveHoursOf(day.id).start ?? '', toleranceMinutes: 0),
+              finish: WorkBoundary(time: c.effectiveHoursOf(day.id).finish ?? '', toleranceMinutes: 0),
+            ),
+      ],
+    );
+    final group = c.group;
+    return [
+      JitanSettingsCard(
+        rows: [
+          if (!c.groupLocked && group != null)
+            JitanSettingsRow(label: context.t(AdminTextKeys.scheduleRowGroup), value: JitanSettingsRow.text(group.group.name)),
+          JitanSettingsRow(label: context.t(AdminTextKeys.scheduleRowWorkDays), value: JitanSettingsRow.text(workDaysText(t, variant))),
+          JitanSettingsRow(label: context.t(AdminTextKeys.scheduleRowHours), value: JitanSettingsRow.text(workHoursText(t, variant))),
+          JitanSettingsRow(
+            label: context.t(AdminTextKeys.scheduleRowBreak),
+            value: JitanSettingsRow.text(context.t(AdminTextKeys.scheduleFormLengthOption, args: {'minutes': c.breakLength ?? 0})),
+          ),
+          JitanSettingsRow(
+            label: context.t(AdminTextKeys.scheduleRowTolerance),
+            value: JitanSettingsRow.text(
+              toleranceText(t, int.tryParse(c.arrivalTolerance.trim()) ?? 0, int.tryParse(c.leavingTolerance.trim()) ?? 0),
+            ),
+          ),
+          JitanSettingsRow(
+            label: context.t(AdminTextKeys.scheduleRowRounding),
+            value: JitanSettingsRow.text(roundingShortText(t, c.startRounding, c.finishRounding)),
+          ),
+        ],
+      ),
+      if (group != null) ...[
+        const SizedBox(height: 14),
+        Text(
+          context.tPlural(
+            AdminTextKeys.scheduleReviewApplies,
+            group.singleGroupEmployeeCount,
+            args: {'group': group.group.name},
+          ),
+          style: _note,
+        ),
+      ],
+    ];
+  }
 
   String? _errorText(BuildContext context, String field) => switch (_controller.fieldErrors[field]) {
     null => null,
@@ -486,7 +428,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
   Widget _fieldError(BuildContext context, String field) => switch (_errorText(context, field)) {
     null => const SizedBox.shrink(),
     final text => Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(top: 10),
       child: Text(text, style: JitanTextStyles.fieldError),
     ),
   };
@@ -502,8 +444,4 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
   }
 
   static final _note = JitanTextStyles.stateMessage.copyWith(fontSize: 13);
-
-  /// Height of every step's content: fits the days, the hours, the break
-  /// and a message; a longer hours table scrolls.
-  static const _stepHeight = 430.0;
 }

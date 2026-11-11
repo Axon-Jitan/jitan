@@ -29,11 +29,12 @@ class ScheduleOptionsFailed extends ScheduleOptionsState {
 /// A text key and its arguments, shown under the form.
 typedef ScheduleFormMessage = ({String key, Map<String, Object> args});
 
-/// The steps of the schedule wizard, in order.
-enum ScheduleStep { group, hours, attendance, review }
+/// The steps of the schedule wizard, in order (Figma `HR / Schedules V3`):
+/// Hours (the group, days, hours and break), Rules, Review.
+enum ScheduleStep { hours, attendance, review }
 
 /// State of the Create / Edit schedule wizard: a group's whole schedule in
-/// one pass, Group → Working hours & break → Attendance rules → Review, and
+/// one pass, Hours → Rules → Review, and
 /// one save (`PUT /schedules/groups/{groupId}`, hours and break together in
 /// one transaction). Every schedule has a break; HR only chooses its length
 /// and the server places it in the middle of each working day (product
@@ -47,8 +48,8 @@ class ScheduleFormController extends ChangeNotifier {
   /// With [group], the wizard edits that group's schedule, filled in. With
   /// [groupId] only, it creates a schedule for that group, already chosen
   /// (e.g. from the group's page). With [options] already loaded, it is
-  /// ready at once. With [fromGroupPage], the group step is skipped: HR
-  /// opened the wizard on that group, so it starts at the working hours.
+  /// ready at once. With [fromGroupPage], the group can't be changed: HR
+  /// opened the wizard on that group.
   ScheduleFormController(
     this._api, {
     required this.groups,
@@ -58,13 +59,15 @@ class ScheduleFormController extends ChangeNotifier {
     bool fromGroupPage = false,
   }) : _groupId = group?.group.id ?? groupId,
        _options = options == null ? const ScheduleOptionsLoading() : ScheduleOptionsLoaded(options),
-       firstStep = fromGroupPage && (group != null || groupId != null) ? ScheduleStep.hours : ScheduleStep.group {
+       _groupFixed = fromGroupPage && (group != null || groupId != null) {
     if (group != null) editExisting();
-    _step = firstStep;
   }
 
-  /// Where the wizard starts, and where Back becomes Cancel.
-  final ScheduleStep firstStep;
+  final bool _groupFixed;
+
+  /// The group is set and shown under the title, not picked: when editing,
+  /// or when opened on the group's page.
+  bool get groupLocked => _editing || _groupFixed;
 
   final SchedulesApi _api;
 
@@ -81,7 +84,8 @@ class ScheduleFormController extends ChangeNotifier {
   bool _editing = false;
   bool get editing => _editing;
 
-  ScheduleStep _step = ScheduleStep.group;
+  ScheduleStep _step = ScheduleStep.hours;
+  bool get onFirstStep => _step == ScheduleStep.hours;
   ScheduleStep get step => _step;
   bool get onLastStep => _step == ScheduleStep.review;
 
@@ -144,8 +148,8 @@ class ScheduleFormController extends ChangeNotifier {
   bool get canContinue =>
       !_submitting &&
       switch (_step) {
-        ScheduleStep.group => group != null && !blocked && !conflict && _options is ScheduleOptionsLoaded,
-        ScheduleStep.hours => _dayIds.isNotEmpty,
+        ScheduleStep.hours =>
+          group != null && !blocked && !conflict && _options is ScheduleOptionsLoaded && _dayIds.isNotEmpty,
         ScheduleStep.attendance => true,
         ScheduleStep.review => false,
       };
@@ -171,14 +175,29 @@ class ScheduleFormController extends ChangeNotifier {
 
   void selectGroup(int? id) => _change(() => _groupId = id);
 
-  void toggleDay(int dayId) => _change(() => _dayIds.contains(dayId) ? _dayIds.remove(dayId) : _dayIds.add(dayId));
+  void toggleDay(int dayId) => _change(() {
+    if (!_dayIds.remove(dayId)) {
+      _dayIds.add(dayId);
+      // A day added while setting hours per day starts with the shared hours.
+      if (!_sameHours && _dayHours[dayId] == null) _dayHours[dayId] = (start: _start, finish: _finish);
+    }
+  });
 
   /// Selects exactly [dayIds] (the "Mon–Fri" shortcut).
   void selectDays(Iterable<int> dayIds) => _change(() => _dayIds
     ..clear()
     ..addAll(dayIds));
 
-  void setSameHours(bool same) => _change(() => _sameHours = same);
+  /// Per day, every chosen day starts with the shared hours, so HR only
+  /// changes the days that differ.
+  void setSameHours(bool same) => _change(() {
+    _sameHours = same;
+    if (same) return;
+    for (final id in _dayIds) {
+      final day = hoursOf(id);
+      if (day.start == null && day.finish == null) _dayHours[id] = (start: _start, finish: _finish);
+    }
+  });
 
   void setStart(String? time) => _change(() => _start = time);
 
@@ -208,7 +227,7 @@ class ScheduleFormController extends ChangeNotifier {
   }
 
   void back() {
-    if (_step == firstStep || _submitting) return;
+    if (onFirstStep || _submitting) return;
     _step = ScheduleStep.values[_step.index - 1];
     _fieldErrors.clear();
     _failure = null;
@@ -293,7 +312,7 @@ class ScheduleFormController extends ChangeNotifier {
     for (final day in options.days) if (_dayIds.contains(day.id)) day,
   ];
 
-  /// The checks of one step (the group and review steps have none).
+  /// The checks of one step (the review step has none).
   void _validate(ScheduleStep step, ScheduleOptions options) {
     final days = _selectedDays(options);
     switch (step) {
@@ -327,7 +346,7 @@ class ScheduleFormController extends ChangeNotifier {
             _error(field, AdminTextKeys.scheduleErrorTolerance, {'max': options.maxToleranceMinutes});
           }
         }
-      case ScheduleStep.group || ScheduleStep.review:
+      case ScheduleStep.review:
     }
   }
 
@@ -345,7 +364,7 @@ class ScheduleFormController extends ChangeNotifier {
         _step = step;
         _error(field, AdminTextKeys.scheduleErrorDays);
       case ApiErrorCode.groupWithoutEmployees:
-        _step = ScheduleStep.group;
+        _step = ScheduleStep.hours;
         _error(fieldForm, AdminTextKeys.scheduleFormBlocked, {'group': current.group.name});
       default:
         _failure = failure;

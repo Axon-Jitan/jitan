@@ -12,9 +12,9 @@ enum ScheduleRowStatus {
   employeesDiffer,
 }
 
-/// One line of the Schedules table (Figma `HR / Schedules — One row per
-/// group` 1458:2): one group's work hours, break and rounding together. A
-/// click opens the group's page, where its schedule is managed.
+/// One line of the Schedules table (Figma `HR / Schedules V2 — page`
+/// `1547:2`): one group's days, hours and break together. A click opens the
+/// schedule's pop-up.
 ///
 /// There is no schedule name or group link in the ERD: a row is derived
 /// from what the server found on the group's employees ([GroupSchedule]).
@@ -54,19 +54,15 @@ bool hasSchedule(GroupSchedule group, ScheduleKind kind) =>
       ScheduleKind.breaks => group.variants.any((v) => v.breaks.isNotEmpty),
     };
 
-/// The toolbar's search and filters. `null` filter = all.
+/// The toolbar's search and All · Active · Different hours. `null` status = all.
 class ScheduleFilter {
-  const ScheduleFilter({this.search = '', this.groupId, this.status});
+  const ScheduleFilter({this.search = '', this.status});
 
   final String search;
-  final int? groupId;
   final ScheduleRowStatus? status;
 
   /// Search matches the group name, ignoring case.
   bool matches(ScheduleRow row) =>
-      (groupId == null || row.group.id == groupId) &&
       (status == null || row.status == status) &&
       (search.isEmpty || row.group.name.toLowerCase().contains(search.toLowerCase()));
-
-  bool get isEmpty => search.isEmpty && groupId == null && status == null;
 }

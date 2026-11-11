@@ -271,7 +271,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Create schedule'), findsOneWidget, reason: 'a new schedule, not an edit');
-    expect(find.text('Working days'), findsOneWidget, reason: 'the group step is skipped');
+    expect(find.text('Work days'), findsOneWidget, reason: 'the hours at once');
+    expect(find.text('White collar'), findsWidgets, reason: 'the group under the title, not picked');
+    expect(find.byType(JitanInlineSelect<int>), findsOneWidget, reason: 'only the break');
     expect(find.widgetWithText(JitanSecondaryButton, 'Cancel'), findsOneWidget, reason: 'no step to go back to');
   });
 
@@ -332,12 +334,14 @@ void main() {
     expect(find.text('Kevin De Vos'), findsOneWidget);
   });
 
-  testWidgets('Schedules: a row opens the group page, where its hours are managed (1458:2)', (tester) async {
+  testWidgets('Schedules: a schedule’s Open group opens the group page, where its hours are managed', (tester) async {
     final fakes = _fakes();
     await _pump(tester, fakes, '/schedules');
 
     expect(find.text('Mon–Fri 08:00–16:30'), findsWidgets);
     await tester.tap(find.text('Blue collar').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open group'));
     await tester.pump();
     await tester.pump();
     fakes.schedules.succeedList([_blue, _white, _drivers]);

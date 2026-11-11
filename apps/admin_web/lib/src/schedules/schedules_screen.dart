@@ -1,28 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import 'package:go_router/go_router.dart';
-
 import '../app/admin_routes.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
-import 'deactivate_schedule_dialog.dart';
-import 'manage_schedule_dialog.dart';
+import 'schedule_details_dialog.dart';
 import 'schedule_dialog.dart';
 import 'schedule_rows.dart';
 import 'schedules_controller.dart';
 import 'schedules_table.dart';
 
-/// HR/Admin "Schedules" page (Figma `HR / Schedules — One row per group`
-/// 1458:2; `Empty list` 1320:173, `Loading list` 1320:300, `List error`
-/// 1320:427): the overview of every group's work hours, break and rounding.
-/// A row opens the group's page; "Add schedule" and "···" Edit schedule open
-/// the schedule wizard here too, so HR/Admin can set a group's hours from
-/// this page as well as in Create group and on the group's page (product
-/// owner, 2026-10-22).
+/// HR/Admin "Schedules" (Figma `HR / Schedules V2 — page` `1547:2`; a
+/// schedule `1552:386`, remove break `1547:393`, no match `1548:567`,
+/// nothing yet `1548:618`): every group's work days, hours and break. A row
+/// opens the schedule's pop-up; "Add schedule" opens the wizard.
 ///
 /// Schedules are global, not company-scoped. Status is Active or "Different
 /// hours" (a switched-off schedule is no longer listed).
@@ -49,7 +44,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     _ => const [],
   };
 
-  Future<void> _open({GroupSchedule? group}) async {
+  void _say(String text, {bool failed = false}) => showJitanToast(context, text, failed: failed);
+
+  Future<void> _edit({GroupSchedule? group}) async {
     final saved = await showScheduleDialog(
       context,
       api: widget.api,
@@ -58,156 +55,125 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       group: group,
     );
     if (saved == null || !mounted) return;
+    _say(context.t(AdminTextKeys.scheduleSaved, args: {'group': saved.group.name}));
     await _controller.load();
-    if (!mounted) return;
-    ScaffoldMessenger.maybeOf(
-      context,
-    )?.showSnackBar(SnackBar(content: Text(context.t(AdminTextKeys.scheduleSaved, args: {'group': saved.group.name}))));
   }
 
-  void _openGroup(ScheduleRow row) => context.go(AdminRoutes.group(row.group.id));
-
-  /// "···": Manage schedules (Figma 1359:2): the group's page, Edit, or
-  /// removing the work hours or the break.
-  Future<void> _manage(ScheduleRow row) async {
-    final action = await showManageScheduleDialog(context, row: row);
+  Future<void> _open(ScheduleRow row) async {
+    final action = await showScheduleDetailsDialog(context, row: row);
     if (action == null || !mounted) return;
     switch (action) {
       case ScheduleRowAction.openGroup:
-        _openGroup(row);
+        context.go(AdminRoutes.group(row.group.id));
       case ScheduleRowAction.edit:
-        await _open(group: row.schedule);
-      case ScheduleRowAction.removeWorkHours || ScheduleRowAction.removeBreaks:
-        final done = await showDeactivateScheduleDialog(
-          context,
-          controller: _controller,
-          row: row,
-          kind: action == ScheduleRowAction.removeWorkHours ? ScheduleKind.workHours : ScheduleKind.breaks,
-        );
-        if (!done || !mounted) return;
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(context.t(AdminTextKeys.scheduleDeactivated, args: {'group': row.group.name}))),
-        );
+        await _edit(group: row.schedule);
+      case ScheduleRowAction.removeWorkHours:
+        await _remove(row, ScheduleKind.workHours, AdminTextKeys.scheduleRemovedHours);
+      case ScheduleRowAction.removeBreaks:
+        await _remove(row, ScheduleKind.breaks, AdminTextKeys.scheduleRemovedBreak);
     }
   }
+
+  /// Asks first; the toast follows the server's answer, never before it.
+  Future<void> _remove(ScheduleRow row, ScheduleKind kind, String doneKey) async {
+    final sure = await confirmScheduleRemove(context, row: row, kind: kind);
+    if (!sure || !mounted) return;
+    final failure = await _controller.deactivate(row, kind);
+    if (!mounted) return;
+    if (failure == null) {
+      _say(context.t(doneKey, args: {'group': row.group.name}));
+    } else {
+      _say(context.t(AdminTextKeys.scheduleChangeFailed), failed: true);
+    }
+  }
+
+  bool get _isEmpty => _controller.state is SchedulesLoaded && _controller.allRows.isEmpty;
 
   @override
   Widget build(BuildContext context) => JitanListPage(
     top: ListenableBuilder(
       listenable: _controller,
-      builder: (context, _) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          JitanPageHeader(
-            title: context.t(AdminTextKeys.scheduleTitle),
-            subtitle: context.t(AdminTextKeys.scheduleListSubtitle),
-            action: JitanPrimaryButton(
-              label: context.t(AdminTextKeys.scheduleAddAction),
-              icon: Icons.add,
-              height: JitanDimensions.controlHeight,
-              onPressed: _controller.state is SchedulesLoaded ? _open : null,
+      builder: (context, _) {
+        final rows = _controller.allRows;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            JitanPageHeader(
+              title: context.t(AdminTextKeys.scheduleTitle),
+              subtitle: rows.isEmpty
+                  ? context.t(AdminTextKeys.scheduleListSubtitle)
+                  : context.tPlural(AdminTextKeys.scheduleCount, rows.length),
+              action: _isEmpty
+                  ? null
+                  : JitanPrimaryButton(
+                      label: context.t(AdminTextKeys.scheduleAddAction),
+                      icon: Icons.add,
+                      height: JitanDimensions.controlHeight,
+                      onPressed: _controller.state is SchedulesLoaded ? _edit : null,
+                    ),
             ),
-          ),
-          const SizedBox(height: JitanDimensions.headerToToolbar),
-          _toolbar(context),
-          const SizedBox(height: JitanDimensions.toolbarToTable),
-        ],
-      ),
+            const SizedBox(height: JitanDimensions.headerToToolbar),
+            if (!_isEmpty) ...[_toolbar(context), const SizedBox(height: JitanDimensions.toolbarToTable)],
+          ],
+        );
+      },
     ),
     list: [ListenableBuilder(listenable: _controller, builder: (context, _) => _content(context))],
   );
 
+  /// A search box and All · Active · Different hours, as on Terminals.
   Widget _toolbar(BuildContext context) {
-    final filter = _controller.filter;
-    void update(ScheduleFilter next) => _controller.updateFilter(next);
-    final groups = {for (final g in _groups) g.group.id: g.group.name};
-    final search = JitanFieldLabel(
-      label: context.t(CommonTextKeys.searchLabel),
-      child: JitanSearchField(
-        clearTooltip: context.t(CommonTextKeys.searchClear),
-        outlined: true,
-        hintText: context.t(AdminTextKeys.scheduleSearch),
-        onChanged: (text) => update(
-          ScheduleFilter(search: text.trim(), groupId: filter.groupId, status: filter.status),
-        ),
-      ),
+    final search = JitanSearchField(
+      clearTooltip: context.t(CommonTextKeys.searchClear),
+      outlined: true,
+      hintText: context.t(AdminTextKeys.scheduleSearch),
+      onChanged: _controller.updateSearch,
     );
-    final group = JitanSelectField<int?>(
-      label: context.t(AdminTextKeys.scheduleFilterGroup),
-      value: filter.groupId,
+    final status = JitanPillSwitch<ScheduleRowStatus?>(
       options: [
-        JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterGroupAll)),
-        for (final MapEntry(:key, :value) in groups.entries) JitanSelectOption(value: key, label: value),
+        (null, context.t(AdminTextKeys.scheduleFilterAll)),
+        (ScheduleRowStatus.active, context.t(CommonTextKeys.statusActive)),
+        (ScheduleRowStatus.employeesDiffer, context.t(AdminTextKeys.scheduleStatusDiffer)),
       ],
-      onChanged: (id) =>
-          update(ScheduleFilter(search: filter.search, groupId: id, status: filter.status)),
+      value: _controller.filter.status,
+      onChanged: _controller.updateStatus,
     );
-    final status = JitanSelectField<ScheduleRowStatus?>(
-      label: context.t(AdminTextKeys.scheduleFilterStatus),
-      value: filter.status,
-      options: [
-        JitanSelectOption(value: null, label: context.t(AdminTextKeys.scheduleFilterStatusAll)),
-        JitanSelectOption(value: ScheduleRowStatus.active, label: context.t(CommonTextKeys.statusActive)),
-        JitanSelectOption(
-          value: ScheduleRowStatus.employeesDiffer,
-          label: context.t(AdminTextKeys.scheduleStatusDiffer),
-        ),
-      ],
-      onChanged: (status) =>
-          update(ScheduleFilter(search: filter.search, groupId: filter.groupId, status: status)),
-    );
-    // As Figma 1458:2: Search 420, Group 200, Status 220; on a narrow
-    // window they wrap, the search on its own line.
-    const widths = (search: JitanDimensions.filterSearchWidth, group: 200.0, status: 220.0);
-    const gap = 16.0;
     return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < widths.search + widths.group + widths.status + 2 * gap) {
-          final half = (constraints.maxWidth - 14) / 2;
-          return Wrap(
-            spacing: 14,
-            runSpacing: 14,
-            crossAxisAlignment: WrapCrossAlignment.end,
-            children: [
-              SizedBox(width: constraints.maxWidth, child: search),
-              SizedBox(width: half, child: group),
-              SizedBox(width: half, child: status),
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            SizedBox(width: widths.search, child: search),
-            const SizedBox(width: gap),
-            SizedBox(width: widths.group, child: group),
-            const SizedBox(width: gap),
-            SizedBox(width: widths.status, child: status),
-          ],
-        );
-      },
+      builder: (context, constraints) => constraints.maxWidth < JitanDimensions.phoneBreakpoint
+          ? Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: [search, status])
+          // "Different hours" makes the pills wide: they go under the
+          // search when the page is narrow.
+          : Wrap(spacing: 12, runSpacing: 12, crossAxisAlignment: WrapCrossAlignment.center, children: [SizedBox(width: 320, child: search), status]),
     );
   }
 
   Widget _content(BuildContext context) => switch (_controller.state) {
-    SchedulesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.scheduleListLoading))),
-    SchedulesFailed(:final failure) => _centered(_error(context, failure)),
-    SchedulesLoaded() when _controller.allRows.isEmpty => _centered(
-      JitanEmptyState(
+    SchedulesLoading() => JitanTableStateSliver(child: JitanLoadingState(label: context.t(AdminTextKeys.scheduleListLoading))),
+    SchedulesFailed(:final failure) => JitanTableStateSliver(child: _error(context, failure)),
+    SchedulesLoaded() when _isEmpty => SliverToBoxAdapter(
+      child: JitanEmptyPage(
         title: context.t(AdminTextKeys.scheduleEmptyTitle),
         message: context.t(AdminTextKeys.scheduleEmptyMessage),
+        actionLabel: context.t(AdminTextKeys.scheduleAddAction),
+        onAction: _edit,
       ),
     ),
     SchedulesLoaded() => switch (_controller.visibleRows) {
-      [] => _centered(
-        JitanEmptyState(
-          title: context.t(AdminTextKeys.scheduleNoMatchTitle),
-          message: context.t(AdminTextKeys.scheduleNoMatchMessage),
-        ),
-      ),
-      final rows => SchedulesTable(rows: rows, onManage: _manage, onOpen: _openGroup),
+      [] => SliverToBoxAdapter(child: _nothingShown(context)),
+      final rows => SchedulesTable(rows: rows, onOpen: _open),
     },
   };
+
+  /// Nothing to show, said for what HR did: a search or a status (`1548:567`).
+  Widget _nothingShown(BuildContext context) {
+    final filter = _controller.filter;
+    final (title, message) = switch ((filter.search, filter.status)) {
+      ('', ScheduleRowStatus.employeesDiffer) => (AdminTextKeys.scheduleNoDifferTitle, AdminTextKeys.scheduleNoDifferText),
+      ('', ScheduleRowStatus.active) => (AdminTextKeys.scheduleNoActiveTitle, AdminTextKeys.scheduleNoActiveText),
+      _ => (AdminTextKeys.scheduleNoMatchTitle, AdminTextKeys.scheduleNoMatchMessage),
+    };
+    return JitanNoResults(title: context.t(title), message: context.t(message));
+  }
 
   Widget _error(BuildContext context, ApiClientException failure) {
     final keys = failureTextKeysFor(failure);
@@ -218,6 +184,4 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       onRetry: _controller.load,
     );
   }
-
-  static Widget _centered(Widget child) => JitanTableStateSliver(child: child);
 }

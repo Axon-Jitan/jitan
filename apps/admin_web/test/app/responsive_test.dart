@@ -366,32 +366,31 @@ void main() {
       await tester.pump();
       api.succeedOptions();
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'wizard step 1');
+      _fitsTheWindow(tester, width, 'wizard, Hours');
 
-      tester.widget<JitanSelectField<int>>(find.widgetWithText(JitanSelectField<int>, 'Employee group *')).onChanged!(2);
+      tester.widget<JitanInlineSelect<int>>(find.byType(JitanInlineSelect<int>).first).onChanged!(2);
       await tester.pump();
-      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
-      await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'wizard step 2');
-
-      await tester.tap(find.text('Mon–Fri'));
+      for (final dot in tester.widgetList<ScheduleDayDot>(find.byType(ScheduleDayDot)).take(5).toList()) {
+        dot.onPressed!();
+      }
       await tester.pump();
-      await tester.tap(find.text('Same hours every working day'));
+      await tester.tap(find.text('Set hours per day'));
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'wizard step 2, hours per day');
+      _fitsTheWindow(tester, width, 'wizard, hours per day');
       for (final field in tester.widgetList<ScheduleTimeField>(find.byType(ScheduleTimeField)).toList().asMap().entries) {
         field.value.onChanged!(field.key.isEven ? '08:00' : '16:00');
       }
-      tester.widget<JitanSelectField<int>>(find.widgetWithText(JitanSelectField<int>, 'Length')).onChanged!(30);
+      tester.widgetList<JitanInlineSelect<int>>(find.byType(JitanInlineSelect<int>)).last.onChanged!(30);
       await tester.pump();
+      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'wizard step 3');
+      _fitsTheWindow(tester, width, 'wizard, Rules');
 
       await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'wizard review');
-      expect(find.text('Review schedule'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'wizard, Review');
+      expect(find.text('Save schedule'), findsOneWidget);
     });
 
     testWidgets('Groups page and Create group at $width px', (tester) async {
@@ -615,19 +614,26 @@ void main() {
       await open('Remove', 'Remove from group?');
     });
 
-    testWidgets('Manage schedules and Remove at $width px', (tester) async {
+    testWidgets('a schedule and Remove break at $width px', (tester) async {
       final api = FakeSchedulesApi();
       await _pump(tester, width, SchedulesScreen(api: api));
       api.succeedList([blue, white]);
       await tester.pump();
 
-      await tester.ensureVisible(find.byTooltip('Schedule actions').first);
-      await tester.tap(find.byTooltip('Schedule actions').first);
+      await tester.tap(find.text('Blue collar').first);
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'Manage schedules');
+      _fitsTheWindow(tester, width, 'a schedule');
       await tester.tap(find.text('Remove break'));
       await tester.pumpAndSettle();
-      _fitsTheWindow(tester, width, 'Remove schedule?');
+      _fitsTheWindow(tester, width, 'Remove break?');
+    });
+
+    testWidgets('Schedules with nothing to show at $width px', (tester) async {
+      final api = FakeSchedulesApi();
+      await _pump(tester, width, SchedulesScreen(api: api));
+      api.succeedList([white]);
+      await tester.pump();
+      _fitsTheWindow(tester, width, 'No schedules yet');
     });
   }
 

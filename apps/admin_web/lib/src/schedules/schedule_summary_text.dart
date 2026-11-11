@@ -6,6 +6,28 @@ import '../l10n/admin_text_keys.dart';
 /// The short name of an ISO weekday (1 = Monday … 7 = Sunday).
 String dayShortName(Translations t, int weekday) => t.t(_dayKeys[weekday - 1]);
 
+/// The one-letter name of an ISO weekday ("M"), for the round day buttons.
+String dayLetter(Translations t, int weekday) => t.t(const [
+  AdminTextKeys.scheduleDayLetter1,
+  AdminTextKeys.scheduleDayLetter2,
+  AdminTextKeys.scheduleDayLetter3,
+  AdminTextKeys.scheduleDayLetter4,
+  AdminTextKeys.scheduleDayLetter5,
+  AdminTextKeys.scheduleDayLetter6,
+  AdminTextKeys.scheduleDayLetter7,
+][weekday - 1]);
+
+/// The full name of an ISO weekday ("Monday").
+String dayLongName(Translations t, int weekday) => t.t(const [
+  AdminTextKeys.scheduleDayLong1,
+  AdminTextKeys.scheduleDayLong2,
+  AdminTextKeys.scheduleDayLong3,
+  AdminTextKeys.scheduleDayLong4,
+  AdminTextKeys.scheduleDayLong5,
+  AdminTextKeys.scheduleDayLong6,
+  AdminTextKeys.scheduleDayLong7,
+][weekday - 1]);
+
 const _dayKeys = [
   AdminTextKeys.scheduleDayShort1,
   AdminTextKeys.scheduleDayShort2,
@@ -99,4 +121,41 @@ String dayListText(Translations t, List<int> weekdays) {
     start = i;
   }
   return parts.join(', ');
+}
+
+/// "07:30 – 16:00".
+String hoursRangeText(Translations t, String start, String finish) =>
+    t.t(AdminTextKeys.scheduleHoursRange, args: {'start': start, 'finish': finish});
+
+/// The working days of [variant]: "Mon–Fri".
+String workDaysText(Translations t, ScheduleVariant variant) {
+  final days = [for (final d in variant.workDays) if (d.start != null && d.finish != null) d.day.weekday]..sort();
+  return days.isEmpty ? t.t(CommonTextKeys.valueUnavailable) : dayListText(t, days);
+}
+
+/// The hours of [variant]: "07:30 – 16:00" when every day has the same,
+/// otherwise per day ("Mon–Thu 07:30–16:00, Fri 07:30–13:00").
+String workHoursText(Translations t, ScheduleVariant variant) {
+  final days = variant.workDays.where((d) => d.start != null && d.finish != null).toList();
+  if (days.isEmpty) return t.t(CommonTextKeys.valueUnavailable);
+  final first = days.first;
+  final same = days.every((d) => d.start!.time == first.start!.time && d.finish!.time == first.finish!.time);
+  return same ? hoursRangeText(t, first.start!.time, first.finish!.time) : workHoursDaysSummary(t, variant);
+}
+
+/// "5 min arriving · 5 min leaving".
+String toleranceText(Translations t, int arrival, int leaving) =>
+    t.t(AdminTextKeys.scheduleToleranceValue, args: {'arrival': arrival, 'leaving': leaving});
+
+/// "Start up, finish down · 15 min" when both round by the same interval;
+/// otherwise as [roundingPairText].
+String roundingShortText(Translations t, ScheduleRounding? start, ScheduleRounding? finish) {
+  if (start == null || finish == null || start.intervalMinutes != finish.intervalMinutes) {
+    return roundingPairText(t, start, finish);
+  }
+  String word(ScheduleRounding r) => t.t(r.roundUp ? AdminTextKeys.scheduleRoundingWordUp : AdminTextKeys.scheduleRoundingWordDown);
+  return t.t(
+    AdminTextKeys.scheduleRoundingSame,
+    args: {'start': word(start), 'finish': word(finish), 'minutes': start.intervalMinutes},
+  );
 }

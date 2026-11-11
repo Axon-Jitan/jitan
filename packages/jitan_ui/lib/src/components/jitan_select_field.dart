@@ -247,3 +247,96 @@ class _Field extends StatelessWidget {
     );
   }
 }
+
+/// A choice shown as plain text with a small chevron, for the value side
+/// of a settings row (Figma `1551:2`, "Blue collar ⌄"). The menu opens
+/// under it, right-aligned, [menuWidth] wide.
+class JitanInlineSelect<T> extends StatefulWidget {
+  const JitanInlineSelect({
+    super.key,
+    required this.options,
+    required this.value,
+    required this.onChanged,
+    this.hintText,
+    this.menuWidth = 240,
+  });
+
+  final List<JitanSelectOption<T>> options;
+  final T? value;
+
+  /// `null` shows the value without a chevron, unchangeable.
+  final ValueChanged<T?>? onChanged;
+  final String? hintText;
+  final double menuWidth;
+
+  @override
+  State<JitanInlineSelect<T>> createState() => _JitanInlineSelectState<T>();
+}
+
+class _JitanInlineSelectState<T> extends State<JitanInlineSelect<T>> {
+  final _menu = MenuController();
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.options.where((o) => o.value == widget.value).firstOrNull?.label;
+    final enabled = widget.onChanged != null;
+    final text = Text(
+      selected ?? widget.hintText ?? '',
+      overflow: TextOverflow.ellipsis,
+      style: JitanTextStyles.tableCell.copyWith(
+        color: selected == null ? JitanColors.inkMuted : JitanColors.ink,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+    if (!enabled) return text;
+    const inset = _JitanSelectFieldState._menuInset;
+    return MenuAnchor(
+      controller: _menu,
+      alignmentOffset: const Offset(0, 6),
+      style: MenuStyle(
+        backgroundColor: const WidgetStatePropertyAll(JitanColors.surface),
+        surfaceTintColor: const WidgetStatePropertyAll(JitanColors.surface),
+        shadowColor: WidgetStatePropertyAll(JitanColors.ink.withValues(alpha: 0.35)),
+        elevation: const WidgetStatePropertyAll(10),
+        padding: const WidgetStatePropertyAll(EdgeInsets.all(inset)),
+        shape: const WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+            side: BorderSide(color: JitanColors.cardBorder),
+          ),
+        ),
+        minimumSize: WidgetStatePropertyAll(Size(widget.menuWidth, 0)),
+        maximumSize: WidgetStatePropertyAll(Size(widget.menuWidth, _JitanSelectFieldState._menuMaxHeight)),
+      ),
+      menuChildren: [
+        for (final option in widget.options)
+          _MenuItem(
+            label: option.label,
+            selected: option.value == widget.value,
+            width: widget.menuWidth - inset * 2,
+            height: _JitanSelectFieldState._itemHeight,
+            radius: _JitanSelectFieldState._itemRadius,
+            onPressed: () => widget.onChanged?.call(option.value),
+          ),
+      ],
+      builder: (context, menu, _) => Semantics(
+        button: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => menu.isOpen ? menu.close() : menu.open(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
+              children: [
+                Flexible(child: text),
+                const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: JitanColors.inkMuted),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

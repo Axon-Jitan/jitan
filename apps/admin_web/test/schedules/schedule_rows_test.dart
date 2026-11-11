@@ -49,8 +49,7 @@ void main() {
       List<String> names(ScheduleFilter f) => [for (final r in rows.where(f.matches)) r.group.name];
 
       expect(names(const ScheduleFilter(search: 'BLUE')), ['Blue collar']);
-      expect(names(const ScheduleFilter(groupId: 2)), ['White collar']);
-      expect(names(const ScheduleFilter(groupId: 2, status: ScheduleRowStatus.employeesDiffer)), isEmpty);
+      expect(names(const ScheduleFilter(search: 'white', status: ScheduleRowStatus.employeesDiffer)), isEmpty);
       expect(names(const ScheduleFilter(status: ScheduleRowStatus.active)), ['Blue collar', 'White collar']);
     });
   });

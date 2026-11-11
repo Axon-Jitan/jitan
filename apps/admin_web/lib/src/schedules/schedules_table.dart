@@ -7,55 +7,45 @@ import '../l10n/admin_text_keys.dart';
 import 'schedule_rows.dart';
 import 'schedule_summary_text.dart';
 
-/// What HR picked in "Manage schedules".
-enum ScheduleRowAction { edit, openGroup, removeWorkHours, removeBreaks }
-
-/// The Schedules table (Figma `HR / Schedules — One row per group` 1458:2):
-/// group, days and hours, break, rounding and status. A click on
-/// a row opens the group's page; "···" opens Manage schedules.
+/// The Schedules table (Figma `HR / Schedules V2 — page` `1547:2`): group,
+/// days and hours, break and status. A click on a row opens its pop-up. A
+/// phone keeps the group and its days and hours.
 class SchedulesTable extends StatelessWidget {
-  const SchedulesTable({super.key, required this.rows, required this.onManage, required this.onOpen});
+  const SchedulesTable({super.key, required this.rows, required this.onOpen});
 
   final List<ScheduleRow> rows;
-  final ValueChanged<ScheduleRow> onManage;
   final ValueChanged<ScheduleRow> onOpen;
 
-  /// Proportional to Figma (210 / 300 / 120 / 190 / 140 / 46).
-  static const _flex = [210, 300, 120, 190, 140, 46];
+  /// As Figma (440 / 220 / 220 / 200).
+  static const _flex = [440, 220, 220, 200];
+  static const _flexPhone = [150, 190];
 
   @override
   Widget build(BuildContext context) {
     final t = TranslationScope.of(context);
+    final phone = MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint;
+    final keys = [
+      AdminTextKeys.scheduleColumnName,
+      AdminTextKeys.scheduleColumnDaysHours,
+      if (!phone) ...[AdminTextKeys.scheduleColumnBreak, AdminTextKeys.scheduleColumnStatus],
+    ];
     return JitanSliverTable(
+      minWidth: phone ? 0 : 760,
       onRowTap: (i) => onOpen(rows[i]),
+      hoverChevron: true,
       columns: [
-        for (final (i, key) in [
-          AdminTextKeys.scheduleColumnName,
-          AdminTextKeys.scheduleColumnDaysHours,
-          AdminTextKeys.scheduleColumnBreak,
-          AdminTextKeys.scheduleColumnRounding,
-          AdminTextKeys.scheduleColumnStatus,
-        ].indexed)
-          JitanTableColumn(label: t.t(key), flex: _flex[i]),
-        JitanTableColumn(label: '', flex: _flex[5], align: JitanColumnAlign.end),
+        for (final (i, key) in keys.indexed) JitanTableColumn(label: t.t(key), flex: (phone ? _flexPhone : _flex)[i]),
       ],
       rowCount: rows.length,
-      footer: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
-        child: Text(
-          context.tPlural(AdminTextKeys.scheduleListCount, rows.length),
-          style: JitanTextStyles.stateMessage.copyWith(fontSize: 13),
-        ),
-      ),
-      cells: (i) => _cells(t, rows[i]),
+      cells: (i) => _cells(t, rows[i], phone: phone),
     );
   }
 
-  List<Widget> _cells(Translations t, ScheduleRow row) {
+  List<Widget> _cells(Translations t, ScheduleRow row, {required bool phone}) {
     final variant = row.variant;
     final none = t.t(CommonTextKeys.valueUnavailable);
     final daysAndHours = switch (variant) {
-      null => t.t(AdminTextKeys.scheduleSettingDiffer),
+      null => t.t(AdminTextKeys.scheduleStatusDiffer),
       _ when !row.hasWorkHours => none,
       final v => workHoursDaysSummary(t, v),
     };
@@ -66,23 +56,23 @@ class SchedulesTable extends StatelessWidget {
       _ when lengths.length == 1 => t.t(AdminTextKeys.scheduleBreakMinutes, args: {'minutes': lengths.single}),
       final v => breaksSummary(t, v),
     };
-    final first = variant?.workDays.where((d) => d.start != null && d.finish != null).firstOrNull;
-    final rounding = first == null ? none : roundingPairText(t, first.start!.rounding, first.finish!.rounding);
-    Widget cell(String text, {bool strong = false}) => Tooltip(
-      message: text,
-      child: Text(text, style: strong ? JitanTextStyles.tableCellStrong : JitanTextStyles.tableCell, overflow: TextOverflow.ellipsis),
+    Widget cell(String text, {bool strong = false}) => Text(
+      text,
+      overflow: TextOverflow.ellipsis,
+      style: strong ? JitanTextStyles.tableCellStrong : JitanTextStyles.tableCell,
     );
+    final active = row.status == ScheduleRowStatus.active;
     return [
       cell(row.group.name, strong: true),
       cell(daysAndHours),
-      cell(breaks),
-      cell(rounding),
-      JitanStatusLabel(
-        label: t.t(row.status == ScheduleRowStatus.active ? CommonTextKeys.statusActive : AdminTextKeys.scheduleStatusDiffer),
-        isPositive: row.status == ScheduleRowStatus.active,
-        color: row.status == ScheduleRowStatus.active ? null : JitanColors.warning,
-      ),
-      JitanRowActionsButton(tooltip: t.t(AdminTextKeys.scheduleActionsMenu), onPressed: () => onManage(row)),
+      if (!phone) ...[
+        cell(breaks),
+        JitanStatusLabel(
+          label: t.t(active ? CommonTextKeys.statusActive : AdminTextKeys.scheduleStatusDiffer),
+          isPositive: active,
+          color: active ? null : JitanColors.warning,
+        ),
+      ],
     ];
   }
 }
