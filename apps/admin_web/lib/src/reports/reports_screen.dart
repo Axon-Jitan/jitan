@@ -7,16 +7,20 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../employees/import/platform/file_download.dart';
 import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
+import 'project_reports_controller.dart';
+import 'project_reports_view.dart';
 import 'report_employee_dialog.dart';
 import 'report_export.dart';
 import 'report_text.dart';
 import 'report_totals_card.dart';
+import 'report_view_switch.dart';
 import 'reports_controller.dart';
 import 'reports_table.dart';
 
 /// HR/Admin "Reports" (Figma `1467:2`, export `1467:230`, empty `1467:631`):
 /// one month, per employee, with only what Jitan can calculate. The page is
-/// its own preview.
+/// its own preview. "Employees | Projects" switches to the project report
+/// (Figma `1515:2`, D24).
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({
     super.key,
@@ -41,6 +45,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   late final _now = (widget.today ?? DateTime.now)();
   late final _months = ReportText.recentMonths(_now);
   late final _controller = ReportsController(widget.api, month: _months.first)..load();
+  ProjectReportsController? _projects;
+  ReportView _view = ReportView.employees;
   final _menu = MenuController();
   List<CompanySummary>? _companies;
 
@@ -62,8 +68,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _projects?.dispose();
     super.dispose();
   }
+
+  /// The project report loads the first time it is shown, for the month the
+  /// employees' report is on.
+  void _show(ReportView view) => setState(() {
+    _view = view;
+    if (view == ReportView.projects && _projects == null) {
+      _projects = ProjectReportsController(widget.api, month: _controller.month)..load();
+    }
+  });
+
+  Widget _switch() => ReportViewSwitch(value: _view, onChanged: _show);
 
   List<String> _titles() => [
     for (final key in [
@@ -100,7 +118,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
   };
 
   @override
-  Widget build(BuildContext context) => JitanListPage(
+  Widget build(BuildContext context) => _view == ReportView.projects
+      ? ProjectReportsView(controller: _projects!, months: _months, viewSwitch: _switch(), download: widget.download)
+      : _employees(context);
+
+  Widget _employees(BuildContext context) => JitanListPage(
     top: ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
@@ -125,7 +147,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: JitanDimensions.headerToToolbar),
+            const SizedBox(height: 16),
+            _switch(),
+            const SizedBox(height: 24),
             _toolbar(context),
             const SizedBox(height: JitanDimensions.toolbarToTable),
             if (loaded) ...[ReportTotalsCard(employees: _controller.visible), const SizedBox(height: 16)],

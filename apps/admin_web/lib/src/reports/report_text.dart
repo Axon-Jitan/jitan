@@ -25,10 +25,22 @@ abstract final class ReportText {
       e.travelMinutes == 0 ? '—' : hours(context, e.travelMinutes);
 
   /// "1 268 km"; "—" without trips.
-  static String kilometres(BuildContext context, HoursReportEmployee e) {
-    if (e.trips == 0) return '—';
-    final km = (e.distanceMetres / 1000).round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+$)'), (_) => ' ');
+  static String kilometres(BuildContext context, HoursReportEmployee e) => distance(context, e.trips, e.distanceMetres);
+
+  /// "1 268 km" for [metres]; "—" without [trips].
+  static String distance(BuildContext context, int trips, int metres) {
+    if (trips == 0) return '—';
+    final km = (metres / 1000).round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+$)'), (_) => ' ');
     return context.t(AdminTextKeys.reportKilometres, args: {'km': km});
+  }
+
+  /// "52h 15m"; "—" without any.
+  static String hoursOrNone(BuildContext context, int minutes) => minutes == 0 ? '—' : hours(context, minutes);
+
+  /// "Hanne Claes", or the code without a name.
+  static String person(String? firstName, String? lastName, String code) {
+    final name = [firstName, lastName].whereType<String>().where((n) => n.isNotEmpty).join(' ');
+    return name.isEmpty ? code : name;
   }
 
   /// "October 2026" for `2026-10`.
@@ -42,10 +54,7 @@ abstract final class ReportText {
       '${context.t(CommonTextKeys.weekdayShort[date.weekday - 1])} ${date.day} '
       '${context.t(CommonTextKeys.monthLong[date.month - 1])}';
 
-  static String name(HoursReportEmployee e) {
-    final name = [e.firstName, e.lastName].whereType<String>().where((n) => n.isNotEmpty).join(' ');
-    return name.isEmpty ? e.code : name;
-  }
+  static String name(HoursReportEmployee e) => person(e.firstName, e.lastName, e.code);
 
   /// [today]'s month and the twelve before it, newest first, as `yyyy-MM`.
   static List<String> recentMonths(DateTime today) => [

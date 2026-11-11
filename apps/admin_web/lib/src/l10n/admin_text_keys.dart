@@ -1035,6 +1035,23 @@ abstract final class AdminTextKeys {
   static const reportFileTravel = 'report.file.travel';
   static const reportFileDifference = 'report.file.difference';
   static const reportFileToReview = 'report.file.toReview';
+  static const reportViewEmployees = 'report.view.employees';
+  static const reportViewProjects = 'report.view.projects';
+  static const reportProjectsSubtitle = 'report.projects.subtitle';
+  static const reportProjectsSearch = 'report.projects.search';
+  static const reportTotalProjects = 'report.total.projects';
+  static const reportColumnProject = 'report.column.project';
+  static const reportColumnEmployees = 'report.column.employees';
+  static const reportColumnTrips = 'report.column.trips';
+  static const reportColumnDays = 'report.column.days';
+  static const reportProjectsNoMatch = 'report.projects.noMatch';
+  static const reportProjectsEmptyTitle = 'report.projects.empty.title';
+  static const reportProjectsEmptyText = 'report.projects.empty.text';
+  static const reportFileSapNumber = 'report.file.sapNumber';
+  static const reportFileProject = 'report.file.project';
+  static const reportFilePlace = 'report.file.place';
+  static const reportFileEmployees = 'report.file.employees';
+  static const reportProjects = 'report.projects';
 
   // Locations (Figma HR / Locations 1465:2 to 1465:846)
   static const navLocations = 'nav.locations';

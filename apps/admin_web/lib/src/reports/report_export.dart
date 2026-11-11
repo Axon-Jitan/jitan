@@ -25,13 +25,32 @@ abstract final class ReportExport {
     e.tripsWithoutDistance,
   ];
 
-  static List<int> excel(List<String> titles, List<HoursReportEmployee> employees) {
+  /// One row per project (D24): for invoicing, nothing is stored.
+  static List<Object> projectRow(ProjectReportProject p) => [
+    p.project.sapNumber,
+    p.project.name,
+    p.project.placeName ?? '',
+    p.employees.length,
+    _hours(p.workedMinutes),
+    _hours(p.travelMinutes),
+    p.trips,
+    double.parse((p.distanceMetres / 1000).toStringAsFixed(1)),
+    p.tripsWithoutDistance,
+  ];
+
+  static List<int> excel(List<String> titles, List<HoursReportEmployee> employees) =>
+      excelOf(titles, [for (final e in employees) _row(e)]);
+
+  static List<int> csv(List<String> titles, List<HoursReportEmployee> employees) =>
+      csvOf(titles, [for (final e in employees) _row(e)]);
+
+  static List<int> excelOf(List<String> titles, List<List<Object>> rows) {
     final workbook = Excel.createExcel();
     final sheet = workbook[workbook.getDefaultSheet()!];
     sheet.appendRow([for (final title in titles) TextCellValue(title)]);
-    for (final employee in employees) {
+    for (final row in rows) {
       sheet.appendRow([
-        for (final value in _row(employee))
+        for (final value in row)
           switch (value) {
             final int v => IntCellValue(v),
             final double v => DoubleCellValue(v),
@@ -43,10 +62,10 @@ abstract final class ReportExport {
   }
 
   /// Semicolons, as Excel expects in Belgium. A byte order mark keeps é and ü.
-  static List<int> csv(List<String> titles, List<HoursReportEmployee> employees) {
+  static List<int> csvOf(List<String> titles, List<List<Object>> rows) {
     final lines = [
       titles.map(_cell).join(';'),
-      for (final employee in employees) _row(employee).map(_cell).join(';'),
+      for (final row in rows) row.map(_cell).join(';'),
     ];
     return [0xEF, 0xBB, 0xBF, ...utf8.encode('${lines.join('\r\n')}\r\n')];
   }
@@ -62,4 +81,7 @@ abstract final class ReportExport {
 
   /// `jitan-hours-2026-10.xlsx`.
   static String fileName(String month, String extension) => 'jitan-hours-$month.$extension';
+
+  /// `jitan-projects-2026-10.xlsx`.
+  static String projectFileName(String month, String extension) => 'jitan-projects-$month.$extension';
 }

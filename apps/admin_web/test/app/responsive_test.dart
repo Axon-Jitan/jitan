@@ -203,9 +203,38 @@ void main() {
       _fitsTheWindow(tester, width, 'Reports');
       expect(find.text('Difference'), findsNWidgets(width < JitanDimensions.phoneBreakpoint ? 1 : 2), reason: 'a phone keeps the table simple');
 
+      await tester.scrollUntilVisible(find.textContaining('Fabian Peeters'), 200, scrollable: find.byType(Scrollable).first);
       await tester.tap(find.textContaining('Fabian Peeters'));
       await _settle(tester);
       _fitsTheWindow(tester, width, 'An employee\'s month');
+    });
+
+    testWidgets('Reports, Projects and a project’s month at $width px', (tester) async {
+      final api = FakeReportsApi()
+        ..projectRows = [
+          reportProject(
+            3,
+            'P-1042',
+            'Office refurbishment with a long name',
+            travel: 310,
+            trips: 3,
+            metres: 412000,
+            unknownTrips: 1,
+            employees: const [
+              ProjectReportEmployee(employeeId: 1, firstName: 'Fabian', lastName: 'Peeters', code: 'FPT', days: 9, workedMinutes: 4350, travelMinutes: 270, trips: 2),
+            ],
+          ),
+        ];
+      await _pump(tester, width, ReportsScreen(api: api, companiesApi: FakeCompaniesApi(), today: () => DateTime(2026, 10, 23)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Projects'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'Reports, Projects');
+
+      await tester.scrollUntilVisible(find.textContaining('P-1042'), 200, scrollable: find.byType(Scrollable).first);
+      await tester.tap(find.textContaining('P-1042'));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'A project’s month');
     });
 
     testWidgets('empty Reports at $width px', (tester) async {
