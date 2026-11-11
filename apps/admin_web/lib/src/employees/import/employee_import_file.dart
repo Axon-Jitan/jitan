@@ -128,5 +128,19 @@ abstract final class EmployeeImportFileReader {
   /// computer's list separator.
   static List<int> template(List<String> titles) => XlsxReader.workbookWithHeader(titles);
 
+  /// "Download them" (Figma `1538:273`): the skipped [rows] in the
+  /// template's columns, each with its problems in a last column, so HR
+  /// fixes them and imports the file again.
+  static List<int> skippedRows(
+    List<String> titles,
+    String problemsTitle,
+    List<EmployeeImportRow> rows,
+    Map<int, String> problemsByRow,
+  ) => XlsxReader.workbookWithRows([...titles, problemsTitle], [
+    for (final row in rows)
+      if (problemsByRow[row.row] case final problems?)
+        [row.firstName, row.lastName, row.code, row.phone ?? '', row.email ?? '', row.groups.join('; '), problems],
+  ]);
+
   static String _normalized(String name) => name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 }

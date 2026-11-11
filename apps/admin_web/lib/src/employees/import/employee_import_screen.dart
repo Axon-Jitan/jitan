@@ -60,7 +60,8 @@ class _EmployeeImportScreenState extends State<EmployeeImportScreen> {
     if (retry) setState(() => _companiesFailed = false);
     try {
       final companies = await widget.companiesApi.listCompanies();
-      if (mounted) setState(() => _companies = companies);
+      // Employees are imported into an active company only.
+      if (mounted) setState(() => _companies = [for (final c in companies) if (c.isActive) c]);
     } on ApiClientException {
       if (mounted) setState(() => _companiesFailed = true);
     }
@@ -94,6 +95,20 @@ class _EmployeeImportScreenState extends State<EmployeeImportScreen> {
     );
   }
 
+  /// "Download them": the skipped rows as a workbook, each with its problems.
+  void _downloadSkipped(ImportDone done) {
+    final titles = [for (final column in ImportColumn.values) context.t(EmployeeImportText.columnKey(column))];
+    final problems = {
+      for (final MapEntry(key: row, value: list) in done.skipped.entries)
+        row: [for (final p in list) EmployeeImportText.problem(context, p)].join('; '),
+    };
+    widget.download(
+      context.t(AdminTextKeys.employeeImportSkippedFile),
+      EmployeeImportFileReader.skippedRows(titles, context.t(AdminTextKeys.employeeImportProblemsColumn), done.file.rows, problems),
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
@@ -122,11 +137,12 @@ class _EmployeeImportScreenState extends State<EmployeeImportScreen> {
             ListenableBuilder(
               listenable: controller,
               builder: (context, _) => switch (controller.state) {
-                ImportDone(:final result) => EmployeeImportDone(
-                  result: result,
+                final ImportDone done => EmployeeImportDone(
+                  state: done,
                   companyName: _company!.name,
-                  onBack: () => context.go(AdminRoutes.employees),
+                  onDone: () => context.go(AdminRoutes.employees),
                   onAgain: controller.reset,
+                  onDownloadSkipped: () => _downloadSkipped(done),
                 ),
                 final state => Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

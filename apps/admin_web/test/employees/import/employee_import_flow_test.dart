@@ -73,7 +73,7 @@ void main() {
       ),
     );
     await tester.pump();
-    companies.succeed([company(7, 'Almeco'), company(8, 'PCA')]);
+    companies.succeed([company(7, 'Almeco'), company(8, 'PCA'), company(9, 'Proceq', active: false)]);
     await tester.pump();
     await tester.pump();
   }
@@ -122,7 +122,14 @@ void main() {
     expect(XlsxReader.read(bytes).first, ['First name', 'Last name', 'Employee code', 'Phone', 'Email', 'Groups']);
   });
 
-  testWidgets('choose → reading → preview with problems → import → done', (tester) async {
+  testWidgets('only active companies can be chosen', (tester) async {
+    await pumpPage(tester);
+
+    final options = tester.widget<JitanSelectField<int>>(find.byType(JitanSelectField<int>)).options;
+    expect([for (final o in options) o.label], ['Almeco', 'PCA'], reason: 'Proceq is inactive');
+  });
+
+  testWidgets('choose → reading → preview (1538:2) with every problem → import → done (1538:273)', (tester) async {
     await pumpPage(tester);
     await chooseCompany(tester);
 
@@ -136,18 +143,21 @@ void main() {
     api.checkSucceeds(const [
       EmployeeImportProblem(row: 3, kind: EmployeeImportProblemKind.lastNameMissing),
       EmployeeImportProblem(row: 4, kind: EmployeeImportProblemKind.codeUsed, detail: 'SBW'),
+      EmployeeImportProblem(row: 4, kind: EmployeeImportProblemKind.groupUnknown, detail: 'Night shift'),
     ]);
     await tester.pump();
 
-    expect(find.text('rows in file'), findsOneWidget);
-    expect(find.text('ready to import'), findsOneWidget);
-    expect(find.text('with problems'), findsOneWidget);
+    expect(find.text('1 ready  ·  2 with problems', findRichText: true), findsOneWidget);
     expect(find.text('almeco.csv'), findsOneWidget);
+    expect(find.text('Change'), findsOneWidget);
+    expect(find.text('Choose another file'), findsNothing, reason: 'one way to change the file');
+    expect(find.text('Email'), findsOneWidget, reason: 'the email column is shown');
     expect(find.text('Ready'), findsOneWidget);
     expect(find.text('Last name is missing'), findsOneWidget);
-    expect(find.text('Code SBW is already used'), findsOneWidget);
+    expect(find.text('Code SBW is already used'), findsOneWidget, reason: 'row 4, first problem');
+    expect(find.textContaining('Night shift'), findsOneWidget, reason: 'row 4, second problem');
     expect(find.text('+32 470 12 34 56'), findsOneWidget);
-    expect(find.text('Rows with problems are skipped. Fix them in the file and import it again to add them later.'), findsOneWidget);
+    expect(find.text('Rows with problems are skipped; you can download them afterwards.'), findsOneWidget);
 
     await tester.tap(find.text('Import 1 employee'));
     await tester.pump();
@@ -162,17 +172,28 @@ void main() {
       skipped: [
         EmployeeImportProblem(row: 3, kind: EmployeeImportProblemKind.lastNameMissing),
         EmployeeImportProblem(row: 4, kind: EmployeeImportProblemKind.codeUsed, detail: 'SBW'),
+        EmployeeImportProblem(row: 4, kind: EmployeeImportProblemKind.groupUnknown, detail: 'Night shift'),
       ],
     ));
     await tester.pump();
 
     expect(find.text('1 employee added to Almeco'), findsOneWidget);
-    expect(
-      find.text('2 rows with problems were skipped. Each new employee sets up the app with an onboarding QR from Employees.'),
-      findsOneWidget,
-    );
+    expect(find.text('2 rows were skipped.'), findsOneWidget, reason: 'rows, not problems');
+    expect(find.byType(JitanSurfaceCard), findsNothing, reason: 'no card: on the page itself');
 
-    await tester.tap(find.text('Back to Employees'));
+    await tester.tap(find.text('Download them'));
+    final (name, bytes, type) = downloads.single;
+    expect(name, 'Jitan skipped employees.xlsx');
+    expect(type, contains('spreadsheetml'));
+    final sheet = XlsxReader.read(bytes);
+    expect(sheet.first, ['First name', 'Last name', 'Employee code', 'Phone', 'Email', 'Groups', 'Problems']);
+    expect(sheet[1].take(3), ['Dries', '', 'DRI']);
+    expect(sheet[1].last, 'Last name is missing');
+    expect(sheet[2].first, 'Elise');
+    expect(sheet[2].last, contains('Code SBW is already used; '), reason: 'every problem of the row');
+    expect(sheet, hasLength(3), reason: 'only the skipped rows');
+
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Done'));
     await tester.pumpAndSettle();
     expect(find.text('[Employees page]'), findsOneWidget);
   });
@@ -191,7 +212,7 @@ void main() {
 
     expect(find.text('Import 3 employees'), findsOneWidget);
     expect(find.textContaining(RegExp(r'employees? added to')), findsNothing);
-    expect(find.text('Rows with problems are skipped. Fix them in the file and import it again to add them later.'), findsNothing);
+    expect(find.text('Rows with problems are skipped; you can download them afterwards.'), findsNothing, reason: 'the failure is said instead');
   });
 
   testWidgets("a file that can't be used says why; another file can be chosen", (tester) async {
@@ -211,14 +232,14 @@ void main() {
     expect(find.text('Reading file…'), findsOneWidget);
   });
 
-  testWidgets('phone: rows as cards, buttons stacked, nothing overflows', (tester) async {
+  testWidgets('phone: rows as cards, nothing overflows', (tester) async {
     await pumpPage(tester, size: const Size(390, 844));
     await chooseCompany(tester);
     await chooseFile(tester, 'almeco.csv', utf8.encode(_csv));
     api.checkSucceeds(const [EmployeeImportProblem(row: 3, kind: EmployeeImportProblemKind.lastNameMissing)]);
     await tester.pump();
 
-    expect(find.text('3 rows in file · 2 ready to import · 1 with a problem'), findsOneWidget);
+    expect(find.text('2 ready  ·  1 with problems', findRichText: true), findsOneWidget);
     expect(find.text('Row 3'), findsOneWidget);
     expect(find.byType(JitanDataTable), findsNothing);
     expect(find.text('Import 2 employees'), findsOneWidget);

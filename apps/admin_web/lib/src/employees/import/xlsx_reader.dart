@@ -65,6 +65,17 @@ abstract final class XlsxReader {
     }
   }
 
+  /// A workbook with one sheet: [titles], then [rows].
+  static List<int> workbookWithRows(List<String> titles, List<List<String>> rows) {
+    final workbook = Excel.createExcel();
+    final sheet = workbook[workbook.getDefaultSheet()!];
+    sheet.appendRow([for (final title in titles) TextCellValue(title)]);
+    for (final row in rows) {
+      sheet.appendRow([for (final value in row) TextCellValue(value)]);
+    }
+    return workbook.encode() ?? (throw StateError('The workbook could not be written.'));
+  }
+
   /// A workbook with one sheet whose first row holds [titles].
   static List<int> workbookWithHeader(List<String> titles) {
     final workbook = Excel.createExcel();

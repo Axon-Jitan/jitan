@@ -77,6 +77,16 @@ abstract final class AdminTextKeys {
   // Import employees (Figma 1419:2 … 1419:404)
   static const employeeImportAction = 'employee.import.action';
   static const employeeImportBack = 'employee.import.back';
+  // Import V3 (Figma 1538:2, 1538:273).
+  /// Plural: "2 ready".
+  static const employeeImportReadyCount = 'employee.import.readyCount';
+
+  /// Plural: "3 with problems".
+  static const employeeImportProblemCount = 'employee.import.problemCount';
+  static const employeeImportDownloadSkipped = 'employee.import.downloadSkipped';
+  static const employeeImportDone = 'employee.import.done';
+  static const employeeImportSkippedFile = 'employee.import.skippedFile';
+  static const employeeImportProblemsColumn = 'employee.import.problemsColumn';
   static const employeeImportTitle = 'employee.import.title';
   static const employeeImportSubtitle = 'employee.import.subtitle';
   static const employeeImportCompany = 'employee.import.company';
@@ -114,19 +124,11 @@ abstract final class AdminTextKeys {
   static const employeeImportUnusableEmpty = 'employee.import.unusable.empty';
   /// Argument: `{count}`, `{max}`.
   static const employeeImportUnusableTooMany = 'employee.import.unusable.tooMany';
-  /// Plural (`.one`/`.other`); the number is shown beside it.
-  static const employeeImportSummaryRows = 'employee.import.summary.rows';
-  static const employeeImportSummaryReady = 'employee.import.summary.ready';
-  /// Plural; the number is shown beside it.
-  static const employeeImportSummaryProblems = 'employee.import.summary.problems';
   /// Plural; argument `{size}`.
   static const employeeImportFileRows = 'employee.import.file.rows';
   static const employeeImportChange = 'employee.import.change';
   static const employeeImportTableRow = 'employee.import.table.row';
   static const employeeImportTableCode = 'employee.import.table.code';
-  static const employeeImportTableStatus = 'employee.import.table.status';
-  /// Argument: `{shown}`, `{total}`.
-  static const employeeImportTableMore = 'employee.import.table.more';
   /// Argument: `{row}`.
   static const employeeImportRowLabel = 'employee.import.rowLabel';
   static const employeeImportReady = 'employee.import.ready';
@@ -153,8 +155,6 @@ abstract final class AdminTextKeys {
   static const employeeImportDoneTitle = 'employee.import.done.title';
   /// Plural.
   static const employeeImportDoneSkipped = 'employee.import.done.skipped';
-  static const employeeImportDoneOnboarding = 'employee.import.done.onboarding';
-  static const employeeImportDoneBack = 'employee.import.done.back';
   static const employeeImportDoneAgain = 'employee.import.done.again';
 
   // Remove employee (Figma 238:3689, 238:3853)

@@ -37,8 +37,9 @@ class ImportPreview extends EmployeeImportState {
 
   final ImportFile file;
 
-  /// Row number → its problem; rows not in it are ready.
-  final Map<int, EmployeeImportProblem> problems;
+  /// Row number → its problems (Figma `1538:2`: all of them); rows not in
+  /// it are ready.
+  final Map<int, List<EmployeeImportProblem>> problems;
 
   /// The import request is running ("Importing").
   final bool importing;
@@ -52,11 +53,24 @@ class ImportPreview extends EmployeeImportState {
       ImportPreview(file: file, problems: problems, importing: importing, failure: failure);
 }
 
-/// "Done": the server added [result.added] employees.
+/// "Done": the server added [result.added] employees; the skipped rows of
+/// [file] can be downloaded to fix them.
 class ImportDone extends EmployeeImportState {
-  const ImportDone(this.result);
+  const ImportDone(this.result, this.file);
 
   final EmployeeImportResult result;
+  final ImportFile file;
+
+  /// Row number → its problems, for the rows the server skipped.
+  Map<int, List<EmployeeImportProblem>> get skipped => _byRow(result.skipped);
+}
+
+Map<int, List<EmployeeImportProblem>> _byRow(List<EmployeeImportProblem> problems) {
+  final byRow = <int, List<EmployeeImportProblem>>{};
+  for (final p in problems) {
+    byRow.putIfAbsent(p.row, () => []).add(p);
+  }
+  return byRow;
 }
 
 /// Import employees into [companyId]: read a file, show the server's check
@@ -94,7 +108,7 @@ class EmployeeImportController extends ChangeNotifier {
     try {
       final check = await _api.checkImport(companyId, EmployeeImportRequest(rows: file.rows));
       if (attempt != _attempt) return;
-      _set(ImportPreview(file: file, problems: {for (final p in check.problems) p.row: p}));
+      _set(ImportPreview(file: file, problems: _byRow(check.problems)));
     } on ApiClientException catch (failure) {
       if (attempt != _attempt) return;
       _set(ImportUnusable(failure: failure));
@@ -110,7 +124,7 @@ class EmployeeImportController extends ChangeNotifier {
     try {
       final result = await _api.importEmployees(companyId, EmployeeImportRequest(rows: preview.file.rows));
       if (attempt != _attempt) return;
-      _set(ImportDone(result));
+      _set(ImportDone(result, preview.file));
     } on ApiClientException catch (failure) {
       if (attempt != _attempt) return;
       _set(preview.copyWith(importing: false, failure: failure));
