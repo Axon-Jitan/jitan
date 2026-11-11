@@ -252,7 +252,6 @@ named so it can be found:
 |---|---|---|
 | `DevelopmentIdentityMiddleware` | Nothing: sign-in exists, so run the API without `JITAN_DEV_USER_ID`. Only for curl in development | remove before production |
 | `DevelopmentPermissionEvaluator` | Nothing: production already uses `CredentialPermissionEvaluator` | selected only outside production |
-| Sidebar role caption omitted | signed-in user's credential group from a `/me` endpoint | CLARIFY-11 |
 | Cleartext `http://` in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`) | HTTPS API; release builds already refuse cleartext | production hosting |
 
 Backend modules today (routes / service / repository where they have endpoints and data):

@@ -165,6 +165,20 @@ dart run tool/dev_seed.dart --remove          # deletes everything the seed crea
 
 Refuses to run outside `development`/`test`.
 
+**Sample data for judging the pages** (product owner, 2026-11-11: realistic names, no
+`[DEV]` prefix, the local database only). With the API running on port 8080, on a freshly
+built local database:
+
+```sh
+cd server/jitan_api
+JITAN_ENV=development python -I ../../dev/local-db/with_local_db.py dart run tool/sample_data.dart
+```
+
+It adds 22 employees in Almeco, PCA and Akwa Plus, schedules for both groups, 3 places and
+5 projects through the API, then four weeks of starts, finishes, project switches and trips
+through the same services the phone uses. It refuses unless the database is on this
+computer, so it can never reach IT's database.
+
 ## Run the HR/Admin web app
 
 ```sh
