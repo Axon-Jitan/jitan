@@ -167,7 +167,7 @@ WHERE NOT EXISTS (SELECT 1 FROM tblLocationType x WHERE x.locationTypeName = 'Pr
 
 INSERT INTO tblDeviceType (deviceTypeName, deviceTypeOS, deviceTypeActive, deviceTypeMFD)
 SELECT d.name, 'Android', 1, 0 FROM (
-  SELECT 'Office terminal' AS name UNION ALL SELECT 'Vehicle terminal'
+  SELECT 'Office terminal' AS name UNION ALL SELECT 'Vehicle terminal' UNION ALL SELECT 'Workshop terminal'
 ) d WHERE NOT EXISTS (SELECT 1 FROM tblDeviceType x WHERE x.deviceTypeName = d.name);
 
 -- ---------- Not proposed yet -----------------------------------------

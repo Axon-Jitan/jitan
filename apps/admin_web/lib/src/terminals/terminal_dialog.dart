@@ -189,7 +189,8 @@ class _TerminalDialogState extends State<_TerminalDialog> {
   }
 }
 
-/// Office or Vehicle: the types come from the database.
+/// Office, Vehicle or Workshop: the types come from the database. On a
+/// phone the names wrap onto two lines, all the same size.
 class _TypeSwitch extends StatelessWidget {
   const _TypeSwitch({required this.types, required this.selected, required this.onChanged});
 
@@ -201,35 +202,44 @@ class _TypeSwitch extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(12)),
-    child: Row(
-      spacing: 3,
-      children: [
-        for (final type in types)
-          Expanded(
-            child: Semantics(
-              button: true,
-              selected: type.id == selected,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(9),
-                onTap: () => onChanged(type.id),
-                child: Container(
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: type.id == selected ? JitanColors.surface : null,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Text(
-                    type.name,
-                    style: type.id == selected
-                        ? JitanTextStyles.tableCellStrong
-                        : JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
+    // One height for all: when one name needs two lines, every segment has them.
+    child: IntrinsicHeight(
+      child: Row(
+        spacing: 3,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final type in types)
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: type.id == selected,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(9),
+                  onTap: () => onChanged(type.id),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 36),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: type.id == selected ? JitanColors.surface : null,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Text(
+                      type.name,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: (type.id == selected
+                              ? JitanTextStyles.tableCellStrong
+                              : JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted))
+                          .copyWith(fontSize: 13),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }

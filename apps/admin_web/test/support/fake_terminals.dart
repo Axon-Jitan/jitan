@@ -3,6 +3,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 const office = TerminalTypeChoice(id: 1, name: 'Office terminal');
 const vehicle = TerminalTypeChoice(id: 2, name: 'Vehicle terminal');
+const workshop = TerminalTypeChoice(id: 3, name: 'Workshop terminal');
 
 Terminal officeTerminal({
   int id = 1,
@@ -37,7 +38,7 @@ class FakeTerminalsApi implements TerminalsApi {
   DateTime qrExpires = DateTime.now().toUtc().add(const Duration(minutes: 10));
 
   @override
-  Future<TerminalOptions> options() async => const TerminalOptions(types: [office, vehicle], vehicleTypeIds: [2]);
+  Future<TerminalOptions> options() async => const TerminalOptions(types: [office, vehicle, workshop], vehicleTypeIds: [2]);
 
   @override
   Future<List<Terminal>> list() async {

@@ -267,7 +267,7 @@ Built on IT's tables on 2026-11-10 (that ERD is in `jitandev`); the proposed `tb
 
 - **A terminal is a `tblDevice` with `deviceMultiUser = 1`**, used by employees of every
   company (no company on the terminal). Name in `deviceName` (place or plate go in the
-  name), Office / Vehicle as `tblDeviceType` rows linked through `tblDeviceDeviceType`,
+  name), Office / Vehicle / Workshop (2026-11-11) as `tblDeviceType` rows linked through `tblDeviceDeviceType`,
   serial number typed by HR from the tablet's label (`deviceSN`; apps can't read it),
   on/off in `deviceActive`, removal in `deviceMFD`.
 - **The tablet's secret:** each terminal has a kiosk account, a `tblUser` with

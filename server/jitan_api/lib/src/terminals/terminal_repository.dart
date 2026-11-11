@@ -33,14 +33,18 @@ class TerminalRepository {
   /// `tblDeviceType` names Jitan reads as terminals; HR adds these rows.
   static const officeTypeName = 'Office terminal';
   static const vehicleTypeName = 'Vehicle terminal';
-  static const _typeNames = {'office': officeTypeName, 'vehicle': vehicleTypeName};
+
+  /// Works like an office terminal (D18); its own kind so HR sees which is
+  /// the workshop's (product owner, 2026-11-11).
+  static const workshopTypeName = 'Workshop terminal';
+  static const _typeNames = {'office': officeTypeName, 'vehicle': vehicleTypeName, 'workshop': workshopTypeName};
 
   static const _select =
       'SELECT d.deviceID, d.deviceName, d.deviceSN, d.deviceActive, y.deviceTypeID, y.deviceTypeName, '
       'k.userID AS kioskUserID, k.userPassword AS secretHash '
       'FROM tblDevice d '
       'JOIN tblDeviceDeviceType dt ON dt.deviceID = d.deviceID AND dt.deviceDeviceTypeActive = 1 AND dt.deviceDeviceTypeMFD = 0 '
-      'JOIN tblDeviceType y ON y.deviceTypeID = dt.deviceTypeID AND y.deviceTypeName IN (:office, :vehicle) '
+      'JOIN tblDeviceType y ON y.deviceTypeID = dt.deviceTypeID AND y.deviceTypeName IN (:office, :vehicle, :workshop) '
       'LEFT JOIN (SELECT ud.deviceID, u.userID, u.userPassword FROM tblUserDevice ud '
       '  JOIN tblUser u ON u.userID = ud.userID AND u.userKioskMode = 1 AND u.userMFD = 0 '
       '  WHERE ud.userDeviceActive = 1 AND ud.userDeviceMFD = 0) k ON k.deviceID = d.deviceID '
@@ -50,7 +54,7 @@ class TerminalRepository {
   Future<List<TerminalTypeChoice>> types(SqlExecutor executor) async => [
     for (final row in await executor.query(
       'SELECT deviceTypeID, deviceTypeName FROM tblDeviceType '
-      'WHERE deviceTypeName IN (:office, :vehicle) AND deviceTypeActive = 1 AND deviceTypeMFD = 0 ORDER BY deviceTypeID',
+      'WHERE deviceTypeName IN (:office, :vehicle, :workshop) AND deviceTypeActive = 1 AND deviceTypeMFD = 0 ORDER BY deviceTypeID',
       _typeNames,
     ))
       TerminalTypeChoice(id: row.readInt('deviceTypeID'), name: row.readString('deviceTypeName')),

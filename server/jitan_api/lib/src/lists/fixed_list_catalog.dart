@@ -100,7 +100,7 @@ abstract final class FixedListCatalog {
       nameColumn: 'deviceTypeName',
       activeColumn: 'deviceTypeActive',
       mfdColumn: 'deviceTypeMFD',
-      required: [TerminalRepository.officeTypeName, TerminalRepository.vehicleTypeName],
+      required: [TerminalRepository.officeTypeName, TerminalRepository.vehicleTypeName, TerminalRepository.workshopTypeName],
       reference: EventLogReference.deviceType,
     ),
     FixedListKind.auditNames => FixedListTable(

@@ -6,7 +6,7 @@ import 'package:jitan_models/jitan_models.dart';
 class FakeListsApi implements FixedListsApi {
   final calls = <String>[];
   final _missing = <FixedListKind, List<String>>{
-    FixedListKind.terminalKinds: ['Office terminal', 'Vehicle terminal'],
+    FixedListKind.terminalKinds: ['Office terminal', 'Vehicle terminal', 'Workshop terminal'],
     FixedListKind.placeKinds: ['Project location'],
   };
 
@@ -15,7 +15,7 @@ class FakeListsApi implements FixedListsApi {
     FixedListKind.scheduleTypes: 3,
     FixedListKind.days: 7,
     FixedListKind.placeKinds: 1,
-    FixedListKind.terminalKinds: 2,
+    FixedListKind.terminalKinds: 3,
     FixedListKind.auditNames: 47,
   };
 

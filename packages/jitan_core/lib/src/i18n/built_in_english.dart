@@ -1225,7 +1225,7 @@ const builtInEnglish = <String, String>{
   'lists.kind.place_kinds': 'Kinds of place',
   'lists.kind.place_kinds.text': 'Project location',
   'lists.kind.terminal_kinds': 'Terminal kinds',
-  'lists.kind.terminal_kinds.text': 'Office terminal and Vehicle terminal',
+  'lists.kind.terminal_kinds.text': 'Office, Vehicle and Workshop terminal',
   'lists.kind.audit_names': 'Audit names',
   'lists.kind.audit_names.text': 'What each event in the audit log is called',
   'nav.dashboard': 'Dashboard',

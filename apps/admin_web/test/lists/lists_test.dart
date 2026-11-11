@@ -32,8 +32,8 @@ void main() {
 
     expect(find.text('2 lists are missing something'), findsOneWidget);
     expect(find.text('Terminal kinds'), findsOneWidget);
-    expect(find.text('2 missing'), findsOneWidget);
-    expect(find.text('0 of 2'), findsOneWidget);
+    expect(find.text('3 missing'), findsOneWidget);
+    expect(find.text('0 of 3'), findsOneWidget);
     expect(find.text('15 of 15'), findsOneWidget);
     expect(find.text('Ready'), findsNWidgets(6));
   });
@@ -56,12 +56,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Office terminal'), findsOneWidget);
-    expect(find.text('Missing'), findsNWidgets(2));
-    await tester.tap(find.text('Add both'));
+    expect(find.text('Missing'), findsNWidgets(3));
+    await tester.tap(find.text('Add all 3'));
     await tester.pumpAndSettle();
 
     expect(api.calls, ['add terminal_kinds']);
-    expect(find.text('Added'), findsNWidgets(2));
+    expect(find.text('Added'), findsNWidgets(3));
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
     expect(find.text('1 list is missing something'), findsOneWidget);

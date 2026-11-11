@@ -121,6 +121,26 @@ void main() {
     expect(find.text('Number plate'), findsNothing);
   });
 
+  testWidgets('a workshop terminal is its own kind, and works like an office one (D18)', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Add terminal'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Workshop terminal'));
+    await tester.pumpAndSettle();
+    expect(find.text('Include the number plate, so drivers find their van.'), findsNothing);
+
+    await tester.enterText(find.byType(TextField).at(1), 'Almeco workshop');
+    await tester.enterText(find.byType(TextField).at(2), 'R9TW40WORK');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(api.created.single.typeId, workshop.id);
+    await tester.tap(find.text('Finish later'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('Manage: the kind, the serial number and the last scan (Figma 1507:434)', (tester) async {
     await pump(tester);
     await tester.tap(find.text('Almeco Reception'));
