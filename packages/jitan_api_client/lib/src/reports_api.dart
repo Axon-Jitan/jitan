@@ -22,4 +22,15 @@ class ReportsApi {
       throw ApiClientException.invalidResponse(200, 'Hours report: ${e.message}');
     }
   }
+
+  /// Each project's [month] (`yyyy-MM`), with the employees of every company
+  /// the viewer may see (D24).
+  Future<ProjectReport> projects(String month) async {
+    final json = await _transport.getJson('reports/projects', query: {'month': month});
+    try {
+      return ProjectReport.fromJson(json);
+    } on FormatException catch (e) {
+      throw ApiClientException.invalidResponse(200, 'Project report: ${e.message}');
+    }
+  }
 }

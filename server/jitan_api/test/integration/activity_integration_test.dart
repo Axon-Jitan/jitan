@@ -137,9 +137,10 @@ void main() {
 
   /// [user] worked on [project] earlier today, and finished.
   Future<void> usedEarlier(int user, int project, ActivityKind kind) async {
-    await start(user, moment(400));
-    await activities.switchTo(user, SwitchActivityRequest(kind: kind, at: moment(390), projectId: project));
-    await finish(user, moment(380));
+    // Close to now, so it is still today just after midnight.
+    await start(user, moment(40));
+    await activities.switchTo(user, SwitchActivityRequest(kind: kind, at: moment(35), projectId: project));
+    await finish(user, moment(30));
   }
 
   setUpAll(() async {

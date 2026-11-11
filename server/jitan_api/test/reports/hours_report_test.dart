@@ -195,5 +195,9 @@ void main() {
     test('a session is required', () async {
       expect((await TestApp(devUserId: null).get('/reports/hours?month=2026-10')).statusCode, 401);
     });
+
+    test('the project report needs a session too', () async {
+      expect((await TestApp(devUserId: null).get('/reports/projects?month=2026-10')).statusCode, 401);
+    });
   });
 }

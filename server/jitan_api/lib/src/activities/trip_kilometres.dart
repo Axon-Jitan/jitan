@@ -63,6 +63,13 @@ class TripKilometres {
     return from == null || to == null ? null : _distance.metres(from, to);
   }
 
+  /// The normal route of each of [trips]; `null` where a place or the route
+  /// is not known. Each pair is asked once.
+  Future<Map<Trip, int?>> metresOf(Iterable<Trip> trips) async {
+    final points = await _points();
+    return {for (final trip in trips.toSet()) trip: await _metres(trip, points)};
+  }
+
   /// The totals of one day's activities.
   Future<TripTotals> ofDay(List<ActivityRow> day) async => _total(tripsOf(day), await _points());
 

@@ -44,7 +44,12 @@ import 'package:jitan_api/src/projects/project_routes.dart';
 import 'package:jitan_api/src/projects/project_service.dart';
 import 'package:jitan_api/src/reports/dashboard_service.dart';
 import 'package:jitan_api/src/reports/report_routes.dart';
+import 'package:jitan_api/src/reports/project_report_service.dart';
 import 'package:jitan_api/src/reports/report_service.dart';
+import 'package:jitan_api/src/activities/activity_repository.dart';
+import 'package:jitan_api/src/activities/trip_kilometres.dart';
+import 'package:jitan_api/src/locations/location_repository.dart';
+import 'package:jitan_api/src/routing/driving_distance.dart';
 import 'package:jitan_api/src/time_records/week_plans.dart';
 import 'package:jitan_api/src/recovery/recovery_routes.dart';
 import 'package:jitan_api/src/recovery/recovery_service.dart';
@@ -271,6 +276,25 @@ class TestApp {
           locations: LocationService(locations: locations, audit: audit, transactions: transactions, executor: UnusedExecutor()),
           clock: WorkplaceClock('Europe/Brussels'),
           now: () => now,
+        ),
+        // Not called by these tests: the project report is tested against MySQL.
+        ProjectReportService(
+          days: timeRecordService,
+          plans: WeekPlans(schedules),
+          employees: employees,
+          companies: companies,
+          activities: const ActivityRepository(),
+          projects: const ProjectRepository(),
+          locations: const LocationRepository(),
+          kilometres: TripKilometres(
+            activities: const ActivityRepository(),
+            locations: const LocationRepository(),
+            distance: const NoDrivingDistance(),
+            executor: unusedExecutor,
+            clock: WorkplaceClock('Europe/Brussels'),
+          ),
+          executor: unusedExecutor,
+          clock: WorkplaceClock('Europe/Brussels'),
         ),
       ),
       me: MeRoutes(

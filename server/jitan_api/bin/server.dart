@@ -60,6 +60,7 @@ import 'package:jitan_api/src/terminals/terminal_routes.dart';
 import 'package:jitan_api/src/terminals/terminal_service.dart';
 import 'package:jitan_api/src/reports/dashboard_service.dart';
 import 'package:jitan_api/src/reports/report_routes.dart';
+import 'package:jitan_api/src/reports/project_report_service.dart';
 import 'package:jitan_api/src/reports/report_service.dart';
 import 'package:jitan_api/src/time_records/week_plans.dart';
 import 'package:jitan_api/src/locations/location_repository.dart';
@@ -446,6 +447,18 @@ Future<void> main() async {
         employees: EmployeeRepository(db),
         companies: companyRepository,
         locations: locationService,
+        clock: workplaceClock,
+      ),
+      ProjectReportService(
+        days: timeRecordService,
+        plans: WeekPlans(ScheduleRepository(db)),
+        employees: EmployeeRepository(db),
+        companies: companyRepository,
+        activities: const ActivityRepository(),
+        projects: const ProjectRepository(),
+        locations: const LocationRepository(),
+        kilometres: tripKilometres,
+        executor: db,
         clock: workplaceClock,
       ),
     ),

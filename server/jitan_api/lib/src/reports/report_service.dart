@@ -35,6 +35,15 @@ class ReportService {
 
   static final _month = RegExp(r'^(\d{4})-(0[1-9]|1[0-2])$');
 
+  /// [month] as `yyyy-MM`: the text, and its first and last day. 400 for a
+  /// missing or malformed month.
+  static ({String text, DateTime first, DateTime last}) monthOf(String? month) {
+    final match = _month.firstMatch(month ?? '');
+    if (match == null) throw const ApiException.validation('month', 'Give the month as yyyy-MM, e.g. 2026-10.');
+    final year = int.parse(match.group(1)!), number = int.parse(match.group(2)!);
+    return (text: '${match.group(1)}-${match.group(2)}', first: DateTime.utc(year, number), last: DateTime.utc(year, number + 1, 0));
+  }
+
   static const _toReview = {
     TimeRecordStatus.missingStart,
     TimeRecordStatus.missingFinish,
