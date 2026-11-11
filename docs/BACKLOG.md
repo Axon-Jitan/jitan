@@ -405,7 +405,7 @@ Different on purpose: the Sent to HR window uses the shared success window. A da
 registered shows its hours on a phone width, and otherwise its status.
 
 ## TERM-01: Terminals
-Status: `IN PROGRESS`: built on proposed tables, local only (GAP-09); needs a real tablet
+Status: `IN PROGRESS`: built on IT's device tables (GAP-09, 2026-11-10); needs a real tablet
 
 HR manages terminals (Figma `1488:2` …, `1494:*`) and connects a tablet with a temporary QR. The
 tablet app (`apps/terminal`, Figma `1489:*`, `1494:*`) is a scanner from the first screen, so
