@@ -246,6 +246,7 @@ const builtInEnglish = <String, String>{
   'timeRecords.period.lastWeek': 'Last week',
   'timeRecords.period.thisMonth': 'This month',
   'timeRecords.status.toReview': 'To review',
+  'timeRecords.status.finished': 'Finished',
   'employee.filter.status.notSetUp': 'Not set up',
   'timeRecords.period.lastMonth': 'Last month',
   'timeRecords.status.all': 'All records',

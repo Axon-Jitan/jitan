@@ -213,6 +213,7 @@ void main() {
       TimeRecordStatusFilter.fromWire(TimeRecordStatus.pendingReview.wireName),
       const TimeRecordStatusFilter.only(TimeRecordStatus.pendingReview),
     );
+    expect(TimeRecordStatusFilter.fromWire('finished'), TimeRecordStatusFilter.finished);
     expect(TimeRecordStatusFilter.fromWire('anything'), isNull);
   });
 }

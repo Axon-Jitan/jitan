@@ -1,5 +1,6 @@
 import 'package:admin_web/src/period/chosen_period.dart';
 import 'package:admin_web/src/dashboard/dashboard_screen.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -257,7 +258,7 @@ void main() {
   });
 
   group('each attention row opens what it counted', () {
-    Future<List<Uri>> open(WidgetTester tester, String row) async {
+    Future<List<Uri>> openAt(WidgetTester tester, Finder target) async {
       final opened = <Uri>[];
       tester.view.physicalSize = const Size(1440, 1400);
       tester.view.devicePixelRatio = 1;
@@ -288,10 +289,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text(row));
+      await tester.tap(target.first);
       await tester.pumpAndSettle();
       return opened;
     }
+
+    Future<List<Uri>> open(WidgetTester tester, String row) => openAt(tester, find.text(row));
 
     testWidgets('corrections: Time records waiting for HR, the last 62 days', (tester) async {
       final uri = (await open(tester, 'Corrections waiting for you')).single;
@@ -304,9 +307,45 @@ void main() {
       expect(uri.queryParameters, {'status': 'to_review', 'from': '2026-10-25', 'to': '2026-10-31'});
     });
 
+    testWidgets('Today: working now and finished open today’s Time records with that status', (tester) async {
+      expect((await open(tester, 'Working now')).single.queryParameters, {'status': 'working', 'from': '2026-10-31', 'to': '2026-10-31'});
+    });
+
+    testWidgets('Today: finished', (tester) async {
+      expect((await open(tester, 'Finished')).single.queryParameters['status'], 'finished');
+    });
+
+    testWidgets('a bar opens its days in Time records', (tester) async {
+      final uri = (await openAt(tester, find.byType(Tooltip))).single;
+      expect(uri.path, '/time-records');
+      expect(uri.queryParameters, {'from': '2026-10-01', 'to': '2026-10-01'});
+    });
+
+    testWidgets('a company opens Employees', (tester) async {
+      expect((await open(tester, 'Almeco')).single.path, '/employees');
+    });
+
+    testWidgets('not started, on time, late and left early open nothing: no page lists them', (tester) async {
+      expect(await open(tester, 'Not started'), isEmpty);
+      expect(await open(tester, 'Late'), isEmpty);
+    });
+
     testWidgets('not set up: Employees filtered on it', (tester) async {
       final uri = (await open(tester, 'Employees not set up yet')).single;
       expect(uri.toString(), '/employees?status=not_set_up');
     });
+  });
+
+  testWidgets('pointing at a part shows its number in the centre of the ring', (tester) async {
+    await _pump(tester, FakeDashboardApi());
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(find.text('Not started')));
+    await tester.pump();
+
+    expect(find.text('14'), findsNWidgets(2), reason: 'in the legend and in the centre');
+    expect(find.text('120'), findsNothing);
   });
 }

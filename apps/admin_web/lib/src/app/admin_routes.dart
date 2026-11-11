@@ -25,9 +25,10 @@ abstract final class AdminRoutes {
   /// Employees whose onboarding isn't done (from the Dashboard).
   static const employeesNotSetUp = '$employees?status=not_set_up';
 
-  /// Time records of exact days, with a status filter (from the Dashboard).
-  static String timeRecordsOf({required String status, required DateTime from, required DateTime to}) =>
-      Uri(path: timeRecords, queryParameters: {'status': status, 'from': _date(from), 'to': _date(to)}).toString();
+  /// Time records of exact days, with a status filter or none (from the
+  /// Dashboard).
+  static String timeRecordsOf({String? status, required DateTime from, required DateTime to}) =>
+      Uri(path: timeRecords, queryParameters: {'status': ?status, 'from': _date(from), 'to': _date(to)}).toString();
 
   static String _date(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

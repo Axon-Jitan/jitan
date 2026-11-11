@@ -25,13 +25,20 @@ class DashboardAttention extends StatelessWidget {
   /// Time records shows at most this many days at once.
   static const _maxDays = TimeRecordList.maxPeriodDays;
 
+  /// The days to review of [period] in Time records: a longer period opens
+  /// its last 62 days.
+  static (DateTime, DateTime) reviewDays(ChosenPeriod period) {
+    final to = DateTime(period.to.year, period.to.month, period.to.day);
+    final earliest = DateTime(to.year, to.month, to.day - (_maxDays - 1));
+    final from = DateTime(period.from.year, period.from.month, period.from.day);
+    return (from.isBefore(earliest) ? earliest : from, to);
+  }
+
   @override
   Widget build(BuildContext context) {
     DateTime date(DateTime d) => DateTime(d.year, d.month, d.day);
     DateTime back(DateTime d, int days) => DateTime(d.year, d.month, d.day - days);
-    final to = date(period.to);
-    // A longer period opens its last 62 days.
-    final from = date(period.from).isBefore(back(to, _maxDays - 1)) ? back(to, _maxDays - 1) : date(period.from);
+    final (from, to) = reviewDays(period);
     final rows = [
       (
         AdminTextKeys.dashboardCorrections,

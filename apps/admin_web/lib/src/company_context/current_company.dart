@@ -23,6 +23,10 @@ class CurrentCompanyScope extends InheritedNotifier<CurrentCompanyController> {
   const CurrentCompanyScope({super.key, required CurrentCompanyController controller, required super.child})
     : super(notifier: controller);
 
+  /// The controller, or `null` outside the app's shell.
+  static CurrentCompanyController? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<CurrentCompanyScope>()?.notifier;
+
   /// The controller, rebuilding [context] when the company changes.
   static CurrentCompanyController of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<CurrentCompanyScope>();

@@ -10,13 +10,25 @@ import '../reports/report_text.dart';
 import '../period/period_text.dart';
 import 'dashboard_text.dart';
 
-/// Registered hours per bar with a tick at what was planned; the exact
-/// numbers on hover. One scale for both, in hours.
-class DashboardHoursChart extends StatelessWidget {
-  const DashboardHoursChart({super.key, required this.buckets, required this.size});
+/// Worked hours per bar with a tick at what was planned; one scale for both,
+/// in hours. Pointing at a bar highlights its column and shows the exact
+/// numbers; a click opens those days in Time records.
+class DashboardHoursChart extends StatefulWidget {
+  const DashboardHoursChart({super.key, required this.buckets, required this.size, required this.onOpen});
 
   final List<DashboardHoursBucket> buckets;
   final DashboardBucketSize size;
+  final ValueChanged<DashboardHoursBucket> onOpen;
+
+  @override
+  State<DashboardHoursChart> createState() => _DashboardHoursChartState();
+}
+
+class _DashboardHoursChartState extends State<DashboardHoursChart> {
+  List<DashboardHoursBucket> get buckets => widget.buckets;
+  DashboardBucketSize get size => widget.size;
+
+  int? _hovered;
 
   static const _axisWidth = 40.0;
   static const _baseline = 152.0;
@@ -89,29 +101,42 @@ class DashboardHoursChart extends StatelessWidget {
                   width: step,
                   top: 0,
                   height: _baseline,
-                  child: Tooltip(
-                    message: _tooltip(context, bucket),
-                    waitDuration: Duration.zero,
-                    child: ColoredBox(
-                      color: Colors.transparent,
-                      child: Stack(
-                        alignment: Alignment.bottomCenter,
-                        children: [
-                          if (bucket.registeredMinutes > 0)
-                            Container(
-                              width: barWidth,
-                              height: math.max(heightOf(bucket.registeredMinutes), 2),
-                              decoration: BoxDecoration(
-                                color: JitanColors.ink,
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                              ),
-                            ),
-                          if (bucket.plannedMinutes > 0)
-                            Positioned(
-                              bottom: heightOf(bucket.plannedMinutes) + 5,
-                              child: Container(width: tickWidth, height: 2, color: JitanColors.chartAmber),
-                            ),
-                        ],
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    onEnter: (_) => setState(() => _hovered = i),
+                    onExit: (_) => setState(() => _hovered = null),
+                    child: GestureDetector(
+                      onTap: () => widget.onOpen(bucket),
+                      child: Tooltip(
+                        message: _tooltip(context, bucket),
+                        waitDuration: Duration.zero,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: _hovered == i ? JitanColors.tableHover : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.bottomCenter,
+                            children: [
+                              if (bucket.registeredMinutes > 0)
+                                Container(
+                                  width: barWidth,
+                                  height: math.max(heightOf(bucket.registeredMinutes), 2),
+                                  decoration: BoxDecoration(
+                                    color: _hovered == null || _hovered == i
+                                        ? JitanColors.ink
+                                        : JitanColors.ink.withValues(alpha: 0.45),
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                                  ),
+                                ),
+                              if (bucket.plannedMinutes > 0)
+                                Positioned(
+                                  bottom: heightOf(bucket.plannedMinutes) + 5,
+                                  child: Container(width: tickWidth, height: 2, color: JitanColors.chartAmber),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),

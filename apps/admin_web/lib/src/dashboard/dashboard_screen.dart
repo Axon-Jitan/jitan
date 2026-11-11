@@ -1,11 +1,15 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../app/admin_routes.dart';
+import '../company_context/current_company.dart';
 import '../groups/group_state_text.dart';
+import '../time_records/time_record_status_filter.dart';
 import '../l10n/admin_text_keys.dart';
 import 'dashboard_attention.dart';
 import 'dashboard_card.dart';
@@ -54,6 +58,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _open(String location) => context.go(location);
+
+  /// Today's Time records with [status].
+  VoidCallback _todayWith(TimeRecordStatusFilter status) {
+    final today = DateTime(_now.year, _now.month, _now.day);
+    return () => _open(AdminRoutes.timeRecordsOf(status: status.wireName, from: today, to: today));
+  }
+
+  /// A bar's last day, within what Time records shows at once.
+  static DateTime _lastOf(DateTime from, DateTime to) {
+    final latest = DateTime(from.year, from.month, from.day + TimeRecordList.maxPeriodDays - 1);
+    return to.isAfter(latest) ? latest : to;
   }
 
   @override
@@ -142,9 +160,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       centre: DashboardText.number(dashboard.working + dashboard.finished + dashboard.notStarted),
       caption: context.t(AdminTextKeys.dashboardScheduled),
       parts: [
-        (label: context.t(AdminTextKeys.dashboardWorking), value: dashboard.working, color: JitanColors.chartGreen),
-        (label: context.t(AdminTextKeys.dashboardFinished), value: dashboard.finished, color: JitanColors.chartViolet),
-        (label: context.t(AdminTextKeys.dashboardNotStarted), value: dashboard.notStarted, color: JitanColors.chartAmber),
+        (
+          label: context.t(AdminTextKeys.dashboardWorking),
+          value: dashboard.working,
+          color: JitanColors.chartGreen,
+          onOpen: _todayWith(TimeRecordStatusFilter.only(TimeRecordStatus.working)),
+        ),
+        (
+          label: context.t(AdminTextKeys.dashboardFinished),
+          value: dashboard.finished,
+          color: JitanColors.chartViolet,
+          onOpen: _todayWith(TimeRecordStatusFilter.finished),
+        ),
+        // Nobody who hasn't started has a day in Time records yet.
+        (label: context.t(AdminTextKeys.dashboardNotStarted), value: dashboard.notStarted, color: JitanColors.chartAmber, onOpen: null),
       ],
     ),
   );
@@ -157,13 +186,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
       DashboardBucketSize.month => AdminTextKeys.dashboardHoursMonth,
     }),
     trailing: const DashboardHoursLegend(),
-    child: DashboardHoursChart(buckets: dashboard.buckets, size: dashboard.bucketSize),
+    child: DashboardHoursChart(
+      buckets: dashboard.buckets,
+      size: dashboard.bucketSize,
+      onOpen: (bucket) => _open(AdminRoutes.timeRecordsOf(from: bucket.from, to: _lastOf(bucket.from, bucket.to))),
+    ),
   );
 
   Widget _companies(BuildContext context, Dashboard dashboard) => DashboardCard(
     title: context.t(AdminTextKeys.dashboardByCompany),
     note: context.t(AdminTextKeys.dashboardByCompanyNote),
-    child: DashboardCompanyBars(companies: dashboard.companies),
+    child: DashboardCompanyBars(
+      companies: dashboard.companies,
+      onOpen: (company) {
+        // Employees shows the company HR works in: this one, from now on.
+        CurrentCompanyScope.maybeOf(context)?.select(
+          CompanySummary(id: company.id, name: company.name, isActive: true, employeeCount: company.employees, lastUpdatedAt: null),
+        );
+        _open(AdminRoutes.employees);
+      },
+    ),
   );
 
   Widget _attendance(BuildContext context, Dashboard dashboard) {
@@ -177,10 +219,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             : context.t(AdminTextKeys.dashboardPercent, args: {'percent': (dashboard.onTime / total * 100).round()}),
         caption: context.t(AdminTextKeys.dashboardOnTimeCaption),
         parts: [
-          (label: context.t(AdminTextKeys.dashboardOnTime), value: dashboard.onTime, color: JitanColors.chartGreen),
-          (label: context.t(AdminTextKeys.dashboardLate), value: dashboard.late, color: JitanColors.chartAmber),
-          (label: context.t(AdminTextKeys.dashboardLeftEarly), value: dashboard.leftEarly, color: JitanColors.chartViolet),
-          (label: context.t(AdminTextKeys.dashboardToReview), value: dashboard.toReview, color: JitanColors.chartBlue),
+          // On time, late and left early: no page lists them yet.
+          (label: context.t(AdminTextKeys.dashboardOnTime), value: dashboard.onTime, color: JitanColors.chartGreen, onOpen: null),
+          (label: context.t(AdminTextKeys.dashboardLate), value: dashboard.late, color: JitanColors.chartAmber, onOpen: null),
+          (label: context.t(AdminTextKeys.dashboardLeftEarly), value: dashboard.leftEarly, color: JitanColors.chartViolet, onOpen: null),
+          (
+            label: context.t(AdminTextKeys.dashboardToReview),
+            value: dashboard.toReview,
+            color: JitanColors.chartBlue,
+            onOpen: () {
+              final (from, to) = DashboardAttention.reviewDays(_controller.period);
+              _open(AdminRoutes.timeRecordsOf(status: TimeRecordStatusFilter.toReview.wireName, from: from, to: to));
+            },
+          ),
         ],
       ),
     );
