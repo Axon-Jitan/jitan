@@ -43,7 +43,7 @@ class EmployeePicker extends StatefulWidget {
 class _EmployeePickerState extends State<EmployeePicker> {
   static const _searchDelay = Duration(milliseconds: 300);
 
-  /// The list scrolls inside the card past this height.
+  /// The list area's one height; a long list scrolls inside the card.
   static const _maxListHeight = 280.0;
 
   List<GroupMember>? _employees;
@@ -116,9 +116,10 @@ class _EmployeePickerState extends State<EmployeePicker> {
         : employees.isEmpty
         ? GroupStateText(context.t(AdminTextKeys.groupsPickerEmptyMessage))
         : null;
-    if (state != null) return Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: state);
+    // One height whether loading, empty or full, so the pop-up never jumps.
+    if (state != null) return SizedBox(height: _maxListHeight, child: Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: state));
     return Container(
-      constraints: const BoxConstraints(maxHeight: _maxListHeight),
+      height: _maxListHeight,
       decoration: BoxDecoration(
         color: JitanColors.surface,
         borderRadius: BorderRadius.circular(14),

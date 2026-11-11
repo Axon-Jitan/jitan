@@ -7,6 +7,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
+import 'terminal_dialog.dart';
 
 /// Generates a QR for [terminal] straight away and waits for the tablet.
 Future<void> showConnectTerminalDialog(
@@ -97,27 +98,40 @@ class _ConnectTerminalDialogState extends State<ConnectTerminalDialog> {
   @override
   Widget build(BuildContext context) => _connected ? _ready(context) : _connecting(context);
 
-  Widget _ready(BuildContext context) => JitanSuccessModal(
+  /// Connected: the same pop-up, one size, a calm check in the middle.
+  Widget _ready(BuildContext context) => JitanModal(
+    width: 480,
     title: context.t(AdminTextKeys.terminalReadyTitle, args: {'terminal': widget.terminal.name}),
-    message: context.t(AdminTextKeys.terminalReadyText),
-    buttonLabel: context.t(AdminTextKeys.terminalDone),
-    onDone: _close,
+    subtitle: context.t(AdminTextKeys.terminalReadyText),
+    onClose: _close,
+    body: const SizedBox(
+      height: terminalBodyHeight,
+      width: double.infinity,
+      child: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: JitanColors.successSurface, shape: BoxShape.circle),
+          child: SizedBox.square(dimension: 64, child: Icon(Icons.check, size: 30, color: JitanColors.success)),
+        ),
+      ),
+    ),
+    actions: [JitanPrimaryButton(label: context.t(AdminTextKeys.terminalDone), color: JitanColors.ink, onPressed: _close)],
   );
 
   Widget _connecting(BuildContext context) {
     final qr = _qr;
     final failure = _failure;
     return JitanModal(
-      width: 440,
+      width: 480,
       title: context.t(AdminTextKeys.terminalConnectTitle),
       subtitle: context.t(AdminTextKeys.terminalConnectText),
       onClose: _close,
-      body: SizedBox(
-        width: double.infinity,
+      // At least the body of Add terminal, so going on to Connect never jumps.
+      body: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: terminalBodyHeight, minWidth: double.infinity),
         child: failure != null
             ? _error(context, failure)
             : qr == null
-            ? SizedBox(height: _qrSize, child: JitanLoadingState(label: context.t(AdminTextKeys.terminalsLoading)))
+            ? SizedBox(height: terminalBodyHeight, child: JitanLoadingState(label: context.t(AdminTextKeys.terminalsLoading)))
             : Column(
                 spacing: 16,
                 children: [

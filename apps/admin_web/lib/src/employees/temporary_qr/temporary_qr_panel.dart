@@ -35,8 +35,15 @@ class TemporaryQrPanel extends StatelessWidget {
   static String _clockText(Duration d) =>
       '${d.inMinutes.toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
+  /// The panel's one height in every state (loading, the code, expired,
+  /// failed), so the pop-up never jumps (product owner, 2026-11-11). Only a
+  /// long translation on a narrow phone makes it taller rather than cut.
+  double get height => size + 150;
+
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
+  Widget build(BuildContext context) => ConstrainedBox(constraints: BoxConstraints(minHeight: height), child: _content(context));
+
+  Widget _content(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder: (context, _) {
       final expired = controller.isExpired;
@@ -86,7 +93,7 @@ class TemporaryQrPanel extends StatelessWidget {
             ),
           ],
         ),
-        _ => SizedBox(height: size + 128, child: JitanLoadingState(label: context.t(AdminTextKeys.temporaryQrLoading))),
+        _ => SizedBox(height: height, child: JitanLoadingState(label: context.t(AdminTextKeys.temporaryQrLoading))),
       };
     },
   );
@@ -124,7 +131,7 @@ class TemporaryQrPanel extends StatelessWidget {
   Widget _error(BuildContext context, ApiClientException failure) {
     final keys = failureTextKeysFor(failure);
     return SizedBox(
-      height: size + 88,
+      height: height,
       child: JitanErrorState(
         title: context.t(keys.title),
         message: context.t(keys.message),

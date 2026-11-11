@@ -151,16 +151,28 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
               label: context.t(details ? AdminTextKeys.employeeAddStepDetails : AdminTextKeys.employeeAddStepWork),
             ),
             const SizedBox(height: 22),
-            ...details ? _details(context) : _work(context),
-            if (failure != null) ...[
-              const SizedBox(height: 16),
-              Builder(
-                builder: (context) {
-                  final keys = failureTextKeysFor(failure);
-                  return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
-                },
+            // One height on every step, so the pop-up never jumps; a long
+            // step scrolls inside it.
+            SizedBox(
+              height: _stepHeight(MediaQuery.sizeOf(context)),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ...details ? _details(context) : _work(context),
+                    if (failure != null) ...[
+                      const SizedBox(height: 16),
+                      Builder(
+                        builder: (context) {
+                          final keys = failureTextKeysFor(failure);
+                          return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
+                        },
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
+            ),
           ],
         ),
         leadingActions: [
@@ -201,11 +213,16 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
           children: [
             AddEmployeeProgress(step: 3, label: context.t(AdminTextKeys.employeeAddStepSetUp)),
             const SizedBox(height: 22),
-            TemporaryQrPanel(
-              controller: qr,
-              fullName: fullName,
-              callName: created.firstName ?? (fullName.isEmpty ? created.code : fullName),
-              size: 208,
+            SizedBox(
+              height: _stepHeight(MediaQuery.sizeOf(context)),
+              child: SingleChildScrollView(
+                child: TemporaryQrPanel(
+                  controller: qr,
+                  fullName: fullName,
+                  callName: created.firstName ?? (fullName.isEmpty ? created.code : fullName),
+                  size: 208,
+                ),
+              ),
             ),
           ],
         ),
@@ -371,4 +388,8 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
       ),
     ];
   }
+
+  /// The height of every step: room for the QR of step 3 (208 + its
+  /// lines); less on a short window, so the pop-up still fits.
+  static double _stepHeight(Size screen) => (screen.height - 300).clamp(240.0, 370.0);
 }

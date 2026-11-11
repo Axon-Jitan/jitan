@@ -7,6 +7,11 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../common/api_failure_text.dart';
 import '../l10n/admin_text_keys.dart';
 
+/// The body height of Add terminal and of Connect after it, so going from
+/// one to the other never makes the pop-up jump (product owner,
+/// 2026-11-11): room for the pairing QR and its line.
+const terminalBodyHeight = 344.0;
+
 /// Adds a terminal, or changes [terminal]. Returns what the server saved.
 Future<Terminal?> showTerminalDialog(BuildContext context, {required TerminalsApi api, Terminal? terminal}) =>
     showJitanModal<Terminal>(
@@ -171,12 +176,19 @@ class _TerminalDialogState extends State<_TerminalDialog> {
     return JitanModal(
       width: 480,
       title: context.t(_editing ? AdminTextKeys.terminalEditTitle : AdminTextKeys.terminalAddTitle),
+      // A line under the title, as Connect has, so both are one size.
+      subtitle: widget.terminal?.name ?? context.t(AdminTextKeys.terminalAddSubtitle),
       onClose: () => Navigator.of(context).pop(),
-      body: options != null
-          ? _form(options)
-          : _failure != null
-          ? _failureNote(_failure!)
-          : JitanLoadingState(label: context.t(AdminTextKeys.terminalsLoading)),
+      body: SizedBox(
+        height: terminalBodyHeight,
+        child: SingleChildScrollView(
+          child: options != null
+              ? _form(options)
+              : _failure != null
+              ? _failureNote(_failure!)
+              : JitanLoadingState(label: context.t(AdminTextKeys.terminalsLoading)),
+        ),
+      ),
       actions: [
         JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: () => Navigator.of(context).pop()),
         JitanPrimaryButton(

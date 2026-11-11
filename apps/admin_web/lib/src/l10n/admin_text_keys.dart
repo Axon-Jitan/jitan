@@ -765,6 +765,7 @@ abstract final class AdminTextKeys {
   static const terminalSeenMinutes = 'terminal.seen.minutes';
   static const terminalSeenYesterday = 'terminal.seen.yesterday';
   static const terminalAddTitle = 'terminal.addTitle';
+  static const terminalAddSubtitle = 'terminal.add.subtitle';
   static const terminalEditTitle = 'terminal.editTitle';
   static const terminalName = 'terminal.name';
   static const terminalSerial = 'terminal.serial';
