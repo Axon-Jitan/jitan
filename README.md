@@ -179,6 +179,9 @@ It adds 22 employees in Almeco, PCA and Akwa Plus, schedules for both groups, 3 
 through the same services the phone uses. It refuses unless the database is on this
 computer, so it can never reach IT's database.
 
+Add `--this-morning` afterwards to let a dozen people arrive in the last hour and a half (a few
+already on the road to a client site), so a day still running can be seen counting (D47).
+
 ## Run the HR/Admin web app
 
 ```sh

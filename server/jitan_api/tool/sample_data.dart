@@ -9,6 +9,12 @@
 // computer (127.0.0.1 / localhost): it can never touch IT's database.
 // Runs once: it stops when registrations already exist.
 //
+//   ... dart run tool/sample_data.dart --this-morning
+//
+// Afterwards, on the sample data: a dozen people arrive in the last hour and a
+// half (a few already drive to a client site), so a day still running can be
+// seen counting (D47). Stops when anyone registered today already.
+//
 // Everything goes through Jitan's own code, so it is stored as real use would
 // store it: employees, groups, schedules, places and projects through the API
 // (audited), and four weeks of starts, finishes, project switches and trips
@@ -50,7 +56,7 @@ const _days = 28;
 /// happened.
 var _now = DateTime.now().toUtc();
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
   final config = AppConfig.fromSources(ConfigSources.load(Platform.environment));
   if (config.environment.name != 'development') return _refuse('JITAN_ENV must be development.');
   if (!{'127.0.0.1', 'localhost', '::1'}.contains(config.database.host)) {
@@ -59,6 +65,10 @@ Future<void> main() async {
   final db = Database.connect(config.database, maxConnections: 2);
   try {
     final existing = await db.query('SELECT COUNT(*) AS n FROM tblTimeReg');
+    if (args.contains('--this-morning')) {
+      if (existing.single.readInt('n') == 0) return _refuse('there is no sample data yet; run it without --this-morning first.');
+      return await _thisMorning(db);
+    }
     if (existing.single.readInt('n') > 0) return _refuse('registrations already exist; rebuild the local database first.');
     await _fill(db);
   } finally {
@@ -161,8 +171,8 @@ Future<void> _fill(Database db) async {
   }
 
   final almeco = await place('Almeco workshop', 'Rue de la Royenne', '70', '7700', 'Mouscron', 50.7446, 3.2149);
-  final pcaOffice = await place('PCA office', 'Doorniksesteenweg', '214', '8500', 'Kortrijk', 50.8098, 3.2627);
-  final akwa = await place('Akwa Plus depot', 'Industriepark', '12', '8790', 'Waregem', 50.8885, 3.4269);
+  await place('PCA office', 'Doorniksesteenweg', '214', '8500', 'Kortrijk', 50.8098, 3.2627);
+  await place('Akwa Plus depot', 'Industriepark', '12', '8790', 'Waregem', 50.8885, 3.4269);
   stdout.writeln('Places: 3');
 
   // Projects: client sites with their own area, and internal work at Almeco.
@@ -238,8 +248,21 @@ Future<void> _fill(Database db) async {
   await schedule(blue, '07:30', '16:00');
   stdout.writeln('Schedules: White collar 08:30–17:00, Blue collar 07:30–16:00, 30 min break');
 
-  // Who registers: active, set up, with a schedule.
-  final workers = [
+  await _registrations(db, await _workers(db), clientSites: clientSites, internal: internal);
+}
+
+/// Who registers: active, set up, in a group with a schedule; each at the
+/// workplace of their company.
+Future<List<_Worker>> _workers(Database db) async {
+  Future<int> id(String sql, String name) async => (await db.query(sql, {'n': name})).single.readInt('id');
+  final blue = await id('SELECT groupID AS id FROM tblGroup WHERE groupName = :n', 'Blue collar');
+  final place = 'SELECT addressID AS id FROM tblAddress WHERE addressLogicalName = :n AND addressMFD = 0';
+  final company = 'SELECT companyID AS id FROM tblCompany WHERE companyName = :n';
+  final almeco = await id(place, 'Almeco workshop');
+  final pcaOffice = await id(place, 'PCA office');
+  final akwa = await id(place, 'Akwa Plus depot');
+  final companies = {'PCA': await id(company, 'PCA'), 'Akwa Plus': await id(company, 'Akwa Plus')};
+  return [
     for (final row in await db.query(
       'SELECT u.userID, MIN(u.userCode) AS userCode, MIN(g.groupID) AS groupID, MIN(uc.companyID) AS companyID FROM tblUser u '
       'JOIN tblUserGroup g ON g.userID = u.userID AND g.userGroupActive = 1 AND g.userGroupMFD = 0 '
@@ -258,13 +281,37 @@ Future<void> _fill(Database db) async {
         },
       ),
   ];
+}
 
-  await _registrations(db, workers, clientSites: clientSites, internal: internal);
+/// This morning's arrivals, on the sample data (see the header).
+Future<void> _thisMorning(Database db) async {
+  final clock = WorkplaceClock('Europe/Brussels');
+  final local = clock.wallClockOf(DateTime.now().toUtc());
+  final today = await db.query(
+    'SELECT COUNT(*) AS n FROM tblTimeReg WHERE timeRegTimestamp >= :from',
+    {'from': TimeRecordRepository.sqlDateTime(clock.utcOf(DateTime(local.year, local.month, local.day)))},
+  );
+  if (today.single.readInt('n') > 0) return _refuse('someone registered today already.');
+  Future<List<int>> projects(String where) async => [
+    for (final row in await db.query(
+      "SELECT addressID FROM tblAddress WHERE addressLogicalName LIKE 'P-%' AND addressMFD = 0 AND $where ORDER BY addressLogicalName",
+    ))
+      row.readInt('addressID'),
+  ];
+  final clientSites = await projects("addressLogicalName <> 'P-0990 Clean the workshop'");
+  final internal = (await projects("addressLogicalName = 'P-0990 Clean the workshop'")).single;
+  await _registrations(db, await _workers(db), clientSites: clientSites, internal: internal, thisMorning: true);
 }
 
 typedef _Worker = ({int id, String code, bool blue, int home});
 
-Future<void> _registrations(Database db, List<_Worker> workers, {required List<int> clientSites, required int internal}) async {
+Future<void> _registrations(
+  Database db,
+  List<_Worker> workers, {
+  required List<int> clientSites,
+  required int internal,
+  bool thisMorning = false,
+}) async {
   final clock = WorkplaceClock('Europe/Brussels');
   final schedules = ScheduleRepository(db);
   final records = TimeRecordRepository(db);
@@ -328,6 +375,29 @@ Future<void> _registrations(Database db, List<_Worker> workers, {required List<i
   Future<void> switchTo(int user, ActivityKind kind, DateTime moment, int? project) async {
     _now = moment.add(const Duration(minutes: 1));
     await activities.switchTo(user, SwitchActivityRequest(kind: kind, at: moment, projectId: project));
+  }
+
+  if (thisMorning) {
+    final realNow = DateTime.now().toUtc();
+    var arrived = 0;
+    for (final (i, w) in workers.indexed) {
+      if (i % 2 == 1 && arrived > 3) continue; // not everyone is in yet
+      final arrives = realNow.subtract(Duration(minutes: 25 + _random.nextInt(65)));
+      await register(w.id, RegistrationBoundary.start, arrives, place: _random.nextInt(100) < 70 ? w.home : null);
+      if (w.blue && i % 3 == 0) {
+        // On the road to a client site; one has arrived already.
+        final site = clientSites[i % clientSites.length];
+        final leaves = arrives.add(Duration(minutes: 8 + _random.nextInt(8)));
+        await switchTo(w.id, ActivityKind.transport, leaves, site);
+        if (i % 2 == 0 && leaves.add(const Duration(minutes: 20)).isBefore(realNow)) {
+          await switchTo(w.id, ActivityKind.clientOnSite, leaves.add(const Duration(minutes: 20)), site);
+        }
+      }
+      arrived++;
+    }
+    _now = realNow;
+    stdout.writeln('This morning: $arrived people started');
+    return;
   }
 
   var count = 0;
