@@ -323,16 +323,24 @@ class _PeriodPickerState extends State<_PeriodPicker> {
     ],
   );
 
+  /// A hairline and a soft, light shadow: calm, like the page's cards.
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: widget.wide ? _PeriodPicker.width : double.infinity,
-    child: Material(
-      color: JitanColors.surface,
-      elevation: 12,
-      shadowColor: const Color(0x33000000),
-      borderRadius: BorderRadius.circular(JitanDimensions.tableCardRadius),
-      clipBehavior: Clip.antiAlias,
-      child: widget.wide ? _wide() : _narrow(),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(JitanDimensions.tableCardRadius);
+    return SizedBox(
+      width: widget.wide ? _PeriodPicker.width : double.infinity,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: [BoxShadow(color: JitanColors.ink.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, 8))],
+        ),
+        child: Material(
+          color: JitanColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: radius, side: const BorderSide(color: JitanColors.inputBorder)),
+          clipBehavior: Clip.antiAlias,
+          child: widget.wide ? _wide() : _narrow(),
+        ),
+      ),
+    );
+  }
 }
