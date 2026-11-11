@@ -230,4 +230,24 @@ void main() {
     const late = TimeRecordStatusFilter.attended(DayAttendance.late);
     expect([late.lets(day(DayAttendance.late)), late.lets(day(DayAttendance.onTime)), late.lets(day(null))], [true, false, false]);
   });
+
+  testWidgets('a late or left-early day carries a mark after its status; a day on time none (Figma 1521:2)', (tester) async {
+    final (api, _) = await _pump(tester);
+    api.succeed([
+      _complete.copyWith(attendance: DayAttendance.late),
+      _working,
+    ]);
+    await tester.pump();
+
+    expect(find.text('Late'), findsOneWidget);
+    expect(find.text('Left early'), findsNothing);
+
+    tester.widget<JitanSelectField<TimeRecordPeriod?>>(find.byType(JitanSelectField<TimeRecordPeriod?>)).onChanged!(
+      TimeRecordPeriod.lastWeek,
+    );
+    await tester.pump();
+    api.succeed([_complete.copyWith(attendance: DayAttendance.onTime)]);
+    await tester.pump();
+    expect(find.text('On time'), findsNothing, reason: 'on time needs no mark');
+  });
 }

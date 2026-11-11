@@ -4,6 +4,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/admin_text_keys.dart';
 import 'time_correction_flow.dart';
+import 'attendance_mark.dart';
 import 'time_record_text.dart';
 
 /// The Time records table (Figma `160:2`): employee, date, rounded and actual
@@ -54,10 +55,20 @@ class TimeRecordsTable extends StatelessWidget {
       Text(TimeRecordText.range(day.start?.roundedLocal, day.finish?.roundedLocal), style: JitanTextStyles.tableCell),
       Text(TimeRecordText.range(day.start?.actualLocal, day.finish?.actualLocal), style: JitanTextStyles.tableCell),
       Text(method == null ? '—' : TimeRecordText.method(context, method), style: JitanTextStyles.tableCell),
-      JitanStatusLabel(
-        label: TimeRecordText.status(context, day.status),
-        isPositive: day.status == TimeRecordStatus.complete,
-        color: TimeRecordText.statusColor(day.status),
+      Row(
+        spacing: 8,
+        children: [
+          Flexible(
+            child: JitanStatusLabel(
+              label: TimeRecordText.status(context, day.status),
+              isPositive: day.status == TimeRecordStatus.complete,
+              color: TimeRecordText.statusColor(day.status),
+            ),
+          ),
+          // On time needs no mark: only what HR should notice.
+          if (day.attendance case final attendance? when attendance != DayAttendance.onTime)
+            AttendanceMark(attendance: attendance),
+        ],
       ),
       TextButton(
         onPressed: () => step == null ? onView(day) : onCorrect(day, step),
