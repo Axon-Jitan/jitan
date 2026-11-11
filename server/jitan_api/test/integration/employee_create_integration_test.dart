@@ -185,32 +185,37 @@ void main() {
     );
   });
 
-  test('Remove employee: userMFD = 1, gone from the list, row and memberships kept, audited', () async {
+  test('Deactivate and reactivate: userActive switches, listed as inactive, memberships kept, audited', () async {
     final created = await service().create(actorId, companyId, request('RM1'));
 
-    await service().remove(actorId, companyId, created.id);
+    await service().setActive(actorId, companyId, created.id, active: false);
 
-    final user = (await db.query('SELECT userMFD FROM tblUser WHERE userID = :id', {'id': created.id})).single;
-    expect(user.readBool('userMFD'), isTrue, reason: 'kept in the database, marked for deletion');
+    final user = (await db.query('SELECT userActive, userMFD FROM tblUser WHERE userID = :id', {'id': created.id})).single;
+    expect(user.readBool('userActive'), isFalse);
+    expect(user.readBool('userMFD'), isFalse, reason: 'not marked for deletion: it can be undone');
     expect(
       await scalar('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :id', {'id': created.id}, 'n'),
       1,
       reason: 'nothing else is touched',
     );
     final listed = await EmployeeRepository(db).listForCompany(companyId, nameOrCodeContains: 'DT${stamp}RM1');
-    expect(listed, isEmpty);
+    expect(listed.single.isActive, isFalse, reason: 'still listed, as Inactive');
+    await expectLater(
+      service().setActive(actorId, companyId, created.id, active: false),
+      throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 404)),
+    );
+
+    await service().setActive(actorId, companyId, created.id, active: true);
+    final again = (await db.query('SELECT userActive FROM tblUser WHERE userID = :id', {'id': created.id})).single;
+    expect(again.readBool('userActive'), isTrue);
     expect(
       await scalar(
         'SELECT COUNT(*) AS n FROM tblEventLog WHERE userIDTarget = :id AND userIDInit = :actor AND companyID = :company',
         {'id': created.id, 'actor': actorId, 'company': companyId},
         'n',
       ),
-      2,
-      reason: 'created and removed',
-    );
-    await expectLater(
-      service().remove(actorId, companyId, created.id),
-      throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 404)),
+      3,
+      reason: 'created, deactivated and reactivated',
     );
   });
 

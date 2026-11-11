@@ -53,12 +53,13 @@ class EmployeeRoutes {
     ..post('$_employeePath/onboarding-qr', (Request r, String c, String u) => _temporaryQr(r, c, u, TemporaryQrPurpose.onboarding))
     ..post('$_employeePath/recovery-qr', (Request r, String c, String u) => _temporaryQr(r, c, u, TemporaryQrPurpose.recovery))
     ..post('$_employeePath/reset-access', _resetAccess)
-    ..post('$_employeePath/remove', _remove);
+    ..post('$_employeePath/deactivate', (Request r, String c, String u) => _setActive(r, c, u, active: false))
+    ..post('$_employeePath/reactivate', (Request r, String c, String u) => _setActive(r, c, u, active: true));
 
-  Future<Response> _remove(Request request, String companyId, String userId) async {
+  Future<Response> _setActive(Request request, String companyId, String userId, {required bool active}) async {
     final id = _companyId(companyId);
-    final identity = await _authorizer.require(request, Permission.removeEmployee, companyId: id);
-    await _employees.remove(identity.userId, id, _id(userId));
+    final identity = await _authorizer.require(request, Permission.changeEmployeeStatus, companyId: id);
+    await _employees.setActive(identity.userId, id, _id(userId), active: active);
     return Response(204);
   }
 

@@ -39,7 +39,7 @@ class EmployeeImportService {
     _requireRows(request);
     final groups = await _groupIdsByName();
     final rows = _checked(request.rows, groups, await _employees.existingCodes(_codes(request)));
-    return EmployeeImportCheck(problems: [for (final row in rows) ?row.problem]);
+    return EmployeeImportCheck(problems: [for (final row in rows) ...row.problems]);
   }
 
   /// Adds the ready rows of [request] to [companyId] on behalf of
@@ -72,7 +72,7 @@ class EmployeeImportService {
           );
           added++;
         }
-        return EmployeeImportResult(added: added, skipped: [for (final row in rows) ?row.problem]);
+        return EmployeeImportResult(added: added, skipped: [for (final row in rows) ...row.problems]);
       });
     } on DatabaseQueryException catch (e) {
       if (e.isDuplicateKey) {
@@ -124,7 +124,7 @@ class EmployeeImportService {
     return byName;
   }
 
-  /// Each row with its problem, or its checked values. Codes compare
+  /// Each row with its problems, or its checked values. Codes compare
   /// without regard to case, as MySQL does.
   static List<_CheckedRow> _checked(List<EmployeeImportRow> rows, Map<String, List<int>> groups, List<String> takenCodes) {
     final taken = {for (final code in takenCodes) _key(code)};
@@ -132,34 +132,45 @@ class EmployeeImportService {
     return [for (final row in rows) _check(row, groups, taken, firstRowOfCode)];
   }
 
+  /// Every problem of [row] at once (Figma `1538:2`), so HR fixes the file
+  /// in one go; its checked values when there is none.
   static _CheckedRow _check(
     EmployeeImportRow row,
     Map<String, List<int>> groups,
     Set<String> taken,
     Map<String, int> firstRowOfCode,
   ) {
-    _CheckedRow problem(EmployeeImportProblemKind kind, [String? detail]) =>
-        _CheckedRow(problem: EmployeeImportProblem(row: row.row, kind: kind, detail: detail));
+    final problems = <EmployeeImportProblem>[];
+    void problem(EmployeeImportProblemKind kind, [String? detail]) =>
+        problems.add(EmployeeImportProblem(row: row.row, kind: kind, detail: detail));
 
     final firstName = row.firstName.trim();
     final lastName = row.lastName.trim();
     final code = EmployeeCodes.normalize(row.code);
     var phone = _blankToNull(row.phone);
     final email = _blankToNull(row.email);
-    if (firstName.isEmpty) return problem(EmployeeImportProblemKind.firstNameMissing);
-    if (lastName.isEmpty) return problem(EmployeeImportProblemKind.lastNameMissing);
-    if (code.isEmpty) return problem(EmployeeImportProblemKind.codeMissing);
-
-    // A repeated code is reported on every later row that has it.
-    final earlier = firstRowOfCode.putIfAbsent(_key(code), () => row.row);
-    if (earlier != row.row) return problem(EmployeeImportProblemKind.codeRepeated, '$earlier');
-    if (taken.contains(_key(code))) return problem(EmployeeImportProblemKind.codeUsed, code);
+    if (firstName.isEmpty) problem(EmployeeImportProblemKind.firstNameMissing);
+    if (lastName.isEmpty) problem(EmployeeImportProblemKind.lastNameMissing);
+    if (code.isEmpty) {
+      problem(EmployeeImportProblemKind.codeMissing);
+    } else {
+      // A repeated code is reported on every later row that has it.
+      final earlier = firstRowOfCode.putIfAbsent(_key(code), () => row.row);
+      if (earlier != row.row) {
+        problem(EmployeeImportProblemKind.codeRepeated, '$earlier');
+      } else if (taken.contains(_key(code))) {
+        problem(EmployeeImportProblemKind.codeUsed, code);
+      }
+    }
 
     // The phone is stored in Jitan's form; its length is checked in that form.
     if (phone != null) {
       final (:formatted, problem: phoneProblem) = PhoneNumbers.check(phone);
-      if (phoneProblem != null) return problem(EmployeeImportProblemKind.phoneInvalid, phoneProblem.name);
-      phone = formatted;
+      if (phoneProblem != null) {
+        problem(EmployeeImportProblemKind.phoneInvalid, phoneProblem.name);
+      } else {
+        phone = formatted;
+      }
     }
     for (final (value, field, max) in [
       (firstName, EmployeeImportRow.fieldFirstName, CreateEmployeeRequest.maxFirstNameLength),
@@ -169,23 +180,24 @@ class EmployeeImportService {
       (email ?? '', EmployeeImportRow.fieldEmail, CreateEmployeeRequest.maxEmailLength),
     ]) {
       // Characters as MySQL counts them.
-      if (value.runes.length > max) return problem(EmployeeImportProblemKind.tooLong, field);
+      if (value.runes.length > max) problem(EmployeeImportProblemKind.tooLong, field);
     }
     if (email != null && !EmployeeService.emailShape.hasMatch(email)) {
-      return problem(EmployeeImportProblemKind.emailInvalid);
+      problem(EmployeeImportProblemKind.emailInvalid);
     }
 
     final groupIds = <int>{};
     for (final name in row.groups.map((g) => g.trim()).where((g) => g.isNotEmpty)) {
       switch (groups[_key(name)]) {
         case null:
-          return problem(EmployeeImportProblemKind.groupUnknown, name);
+          problem(EmployeeImportProblemKind.groupUnknown, name);
         case [final id]:
           groupIds.add(id);
         case _:
-          return problem(EmployeeImportProblemKind.groupAmbiguous, name);
+          problem(EmployeeImportProblemKind.groupAmbiguous, name);
       }
     }
+    if (problems.isNotEmpty) return _CheckedRow(problems: problems);
     return _CheckedRow(
       ready: _ReadyRow(
         firstName: firstName,
@@ -206,11 +218,11 @@ class EmployeeImportService {
   static String _key(String value) => value.trim().toLowerCase();
 }
 
-/// A row with either its problem or its checked values.
+/// A row with either its problems or its checked values.
 class _CheckedRow {
-  const _CheckedRow({this.problem, this.ready});
+  const _CheckedRow({this.problems = const [], this.ready});
 
-  final EmployeeImportProblem? problem;
+  final List<EmployeeImportProblem> problems;
   final _ReadyRow? ready;
 }
 

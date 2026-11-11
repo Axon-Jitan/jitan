@@ -50,7 +50,7 @@ Future<List<EmployeeImportProblem>> _problems(TestApp app, List<EmployeeImportRo
 
 void main() {
   group('POST …/employees/import/check', () {
-    test('reports one problem per row, the first found; ready rows are not listed', () async {
+    test('reports every problem of each row (Figma 1538:2); ready rows are not listed', () async {
       final app = _app()..employees.takenCodes = {'SBW'};
 
       final problems = await _problems(app, [
@@ -81,10 +81,21 @@ void main() {
         (11, EmployeeImportProblemKind.tooLong, EmployeeImportRow.fieldFirstName),
         (12, EmployeeImportProblemKind.phoneInvalid, PhoneNumberProblem.missingCountryCode.name),
         (13, EmployeeImportProblemKind.firstNameMissing, null),
+        (13, EmployeeImportProblemKind.lastNameMissing, null),
         (14, EmployeeImportProblemKind.phoneInvalid, PhoneNumberProblem.notANumber.name),
       ]);
       expect(app.employees.writes, isEmpty, reason: 'a check writes nothing');
       expect(app.audit.events, isEmpty);
+    });
+
+    test('a row with several problems lists them all, in the order of the columns', () async {
+      final problems = await _problems(_app(), [_row(2, last: '', phone: '0470 12', groups: ['Night shift'])]);
+
+      expect([for (final p in problems) (p.row, p.kind)], [
+        (2, EmployeeImportProblemKind.lastNameMissing),
+        (2, EmployeeImportProblemKind.phoneInvalid),
+        (2, EmployeeImportProblemKind.groupUnknown),
+      ]);
     });
 
     test('codes repeated in the file compare without regard to case or spaces', () async {

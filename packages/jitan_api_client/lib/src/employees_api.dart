@@ -65,10 +65,13 @@ class EmployeesApi {
   Future<void> resetAccess(int companyId, int userId) =>
       _transport.postNoContent('companies/$companyId/employees/$userId/reset-access');
 
-  /// "Remove employee": hides the employee everywhere; they stay in the
-  /// database (marked for deletion) with all their history.
-  Future<void> remove(int companyId, int userId) =>
-      _transport.postNoContent('companies/$companyId/employees/$userId/remove');
+  /// Deactivate: the employee can't sign in or register time, in any
+  /// company; their history stays and [reactivate] undoes it.
+  Future<void> deactivate(int companyId, int userId) =>
+      _transport.postNoContent('companies/$companyId/employees/$userId/deactivate');
+
+  Future<void> reactivate(int companyId, int userId) =>
+      _transport.postNoContent('companies/$companyId/employees/$userId/reactivate');
 
   Future<EmployeeSummary> create(int companyId, CreateEmployeeRequest request) async {
     final json = await _transport.postJson('companies/$companyId/employees', request.toJson());

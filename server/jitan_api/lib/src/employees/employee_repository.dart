@@ -109,11 +109,15 @@ class EmployeeRepository {
       ))
           .lastInsertId;
 
-  /// Marks [userId] for deletion (`userMFD = 1`): hidden from every list,
-  /// refused at sign-in; the row and everything that refers to it stay.
-  /// `false` when the user was already marked.
-  Future<bool> markRemoved(SqlExecutor tx, int userId) async =>
-      (await tx.execute('UPDATE tblUser SET userMFD = 1 WHERE userID = :userId AND userMFD = 0', {'userId': userId}))
+  /// Switches [userId] on or off (`userActive`): an inactive user stays in
+  /// every list as Inactive and is refused at sign-in and at the terminal;
+  /// the row and everything that refers to it stay. `false` when it already
+  /// was.
+  Future<bool> setActive(SqlExecutor tx, int userId, {required bool active}) async =>
+      (await tx.execute(
+            'UPDATE tblUser SET userActive = :active WHERE userID = :userId AND userActive <> :active AND userMFD = 0',
+            {'userId': userId, 'active': active ? 1 : 0},
+          ))
           .affectedRows ==
       1;
 

@@ -9,7 +9,11 @@ enum AuditEventType {
 
   /// HR/Admin removed the employee: `tblUser.userMFD = 1`, hidden from every
   /// list; nothing is deleted.
+  /// No longer written (Remove became Deactivate, 2026-11-11); kept for
+  /// the audit rows that have it.
   employeeRemoved('employee.removed'),
+  employeeDeactivated('employee.deactivated'),
+  employeeReactivated('employee.reactivated'),
 
   /// The employee registered a start or finish (the actual row; its rounded
   /// row is written in the same transaction).

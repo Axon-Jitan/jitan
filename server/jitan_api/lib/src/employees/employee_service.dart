@@ -103,27 +103,29 @@ class EmployeeService {
     return user == null ? null : AccountSetupRules.stateOf(_accounts, executor, user);
   }
 
-  /// HR/Admin "Remove employee" (Figma `238:3853`): hides the employee from
-  /// the interface and keeps them in the database (`tblUser.userMFD = 1`,
-  /// product owner 2026-10-21). One audited transaction. Their sessions end
-  /// at once (a marked user is refused on every request); memberships,
-  /// registrations and audit history stay. In every company, since the
-  /// record is the person's.
+  /// HR/Admin Deactivate / Reactivate (Figma `1534:366`, `1534:188`): an
+  /// inactive employee can't sign in or register time, in any company, and
+  /// shows as Inactive; their memberships, registrations and history stay.
+  /// Reversible, unlike marking for deletion (product owner, 2026-11-11).
+  /// One audited transaction; deactivating ends their sessions at once (an
+  /// inactive user is refused on every request).
   ///
-  /// 403 for one's own account; 404 outside [companyId].
-  Future<void> remove(int actorUserId, int companyId, int userId) async {
+  /// 403 for one's own account; 404 outside [companyId] or when it already
+  /// is so.
+  Future<void> setActive(int actorUserId, int companyId, int userId, {required bool active}) async {
     if (actorUserId == userId) {
-      throw const ApiException.forbidden('You can’t remove your own account.');
+      throw const ApiException.forbidden('You can’t deactivate or reactivate your own account.');
     }
     await _requireCompany(companyId);
     await _transactions.transaction((tx) async {
-      if (await _employees.findInCompany(tx, companyId, userId) == null || !await _employees.markRemoved(tx, userId)) {
-        throw ApiException.notFound('Employee $userId is not in company $companyId.');
+      if (await _employees.findInCompany(tx, companyId, userId) == null ||
+          !await _employees.setActive(tx, userId, active: active)) {
+        throw ApiException.notFound('Employee $userId is not in company $companyId, or already ${active ? 'active' : 'inactive'}.');
       }
       await _audit.record(
         tx,
         AuditEvent(
-          type: AuditEventType.employeeRemoved,
+          type: active ? AuditEventType.employeeReactivated : AuditEventType.employeeDeactivated,
           actorUserId: actorUserId,
           references: {EventLogReference.user: userId, EventLogReference.company: companyId},
         ),

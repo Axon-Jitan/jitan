@@ -127,6 +127,8 @@ SELECT e.name FROM (
   UNION ALL SELECT 'schedule.created'
   UNION ALL SELECT 'schedule.deactivated'
   UNION ALL SELECT 'employee.removed'
+  UNION ALL SELECT 'employee.deactivated'
+  UNION ALL SELECT 'employee.reactivated'
   UNION ALL SELECT 'time.registered'
   UNION ALL SELECT 'time.correction.requested'
   UNION ALL SELECT 'time.correction.approved'

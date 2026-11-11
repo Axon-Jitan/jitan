@@ -127,8 +127,9 @@ class EmployeeImportProblem {
   Map<String, Object?> toJson() => {'row': row, 'kind': kind.wireName, 'detail': detail};
 }
 
-/// Response of `…/employees/import/check`: the rows that can't be imported.
-/// Every other row is ready.
+/// Response of `…/employees/import/check`: every problem of the rows that
+/// can't be imported, several for one row when it has several. Every other
+/// row is ready.
 class EmployeeImportCheck {
   const EmployeeImportCheck({required this.problems});
 
@@ -141,7 +142,7 @@ class EmployeeImportCheck {
 }
 
 /// Response of `…/employees/import`: how many employees were added, and the
-/// rows skipped because of a problem.
+/// problems of the rows skipped (several for one row when it has several).
 class EmployeeImportResult {
   const EmployeeImportResult({required this.added, required this.skipped});
 
