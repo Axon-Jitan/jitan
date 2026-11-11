@@ -53,26 +53,28 @@ ProjectReportProject reportProject(
 );
 
 /// Stand-in for [ReportsApi]: the same employees and projects for every
-/// month, except [emptyMonths].
+/// period, except one starting in one of [emptyMonths] (`yyyy-MM`).
 class FakeReportsApi implements ReportsApi {
   List<HoursReportEmployee> employees = [];
   List<ProjectReportProject> projectRows = [];
-  final projectCalls = <String>[];
+  final projectCalls = <(DateTime, DateTime)>[];
   Set<String> emptyMonths = {};
   ApiClientException? fail;
-  final calls = <(String, int?)>[];
+  final calls = <(DateTime, DateTime, int?)>[];
 
   @override
-  Future<HoursReport> hours(String month, {int? companyId}) async {
-    calls.add((month, companyId));
+  Future<HoursReport> hours(DateTime from, DateTime to, {int? companyId}) async {
+    calls.add((from, to, companyId));
     if (fail case final failure?) throw failure;
-    return HoursReport(month: month, employees: emptyMonths.contains(month) ? const [] : employees);
+    return HoursReport(from: from, to: to, employees: _empty(from) ? const [] : employees);
   }
 
   @override
-  Future<ProjectReport> projects(String month) async {
-    projectCalls.add(month);
+  Future<ProjectReport> projects(DateTime from, DateTime to) async {
+    projectCalls.add((from, to));
     if (fail case final failure?) throw failure;
-    return ProjectReport(month: month, projects: emptyMonths.contains(month) ? const [] : projectRows);
+    return ProjectReport(from: from, to: to, projects: _empty(from) ? const [] : projectRows);
   }
+
+  bool _empty(DateTime from) => emptyMonths.contains('${from.year}-${from.month.toString().padLeft(2, '0')}');
 }

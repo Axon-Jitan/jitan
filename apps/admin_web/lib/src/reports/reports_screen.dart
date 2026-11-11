@@ -7,11 +7,12 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../employees/import/platform/file_download.dart';
 import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
+import '../period/chosen_period.dart';
+import '../period/period_button.dart';
 import 'project_reports_controller.dart';
 import 'project_reports_view.dart';
 import 'report_employee_dialog.dart';
 import 'report_export.dart';
-import 'report_text.dart';
 import 'report_totals_card.dart';
 import 'report_view_switch.dart';
 import 'reports_controller.dart';
@@ -26,12 +27,16 @@ class ReportsScreen extends StatefulWidget {
     super.key,
     required this.api,
     required this.companiesApi,
+    this.store,
     this.today,
     this.download = downloadFile,
   });
 
   final ReportsApi api;
   final CompaniesApi companiesApi;
+
+  /// Where the chosen period is remembered; nowhere when `null`.
+  final SessionStore? store;
 
   /// `DateTime.now` when `null`.
   final DateTime Function()? today;
@@ -43,8 +48,7 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   late final _now = (widget.today ?? DateTime.now)();
-  late final _months = ReportText.recentMonths(_now);
-  late final _controller = ReportsController(widget.api, month: _months.first)..load();
+  late final _controller = ReportsController(widget.api, widget.store ?? MemorySessionStore(), today: _now)..load();
   ProjectReportsController? _projects;
   ReportView _view = ReportView.employees;
   final _menu = MenuController();
@@ -77,11 +81,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
   void _show(ReportView view) => setState(() {
     _view = view;
     if (view == ReportView.projects && _projects == null) {
-      _projects = ProjectReportsController(widget.api, month: _controller.month)..load();
+      _projects = ProjectReportsController(widget.api, period: _controller.period)..load();
     }
   });
 
   Widget _switch() => ReportViewSwitch(value: _view, onChanged: _show);
+
+  /// One period for both views, remembered in this browser.
+  void _changePeriod(ChosenPeriod period) {
+    _controller.updatePeriod(period);
+    _projects?.updatePeriod(period);
+  }
 
   List<String> _titles() => [
     for (final key in [
@@ -101,13 +111,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   ];
 
   void _exportExcel() => widget.download(
-    ReportExport.fileName(_controller.month, 'xlsx'),
+    ReportExport.fileName(_controller.period.from, _controller.period.to, 'xlsx'),
     ReportExport.excel(_titles(), _controller.visible),
     ReportExport.excelType,
   );
 
   void _exportCsv() => widget.download(
-    ReportExport.fileName(_controller.month, 'csv'),
+    ReportExport.fileName(_controller.period.from, _controller.period.to, 'csv'),
     ReportExport.csv(_titles(), _controller.visible),
     ReportExport.csvType,
   );
@@ -119,7 +129,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) => _view == ReportView.projects
-      ? ProjectReportsView(controller: _projects!, months: _months, viewSwitch: _switch(), download: widget.download)
+      ? ProjectReportsView(
+          controller: _projects!,
+          today: _now,
+          onPeriodChanged: _changePeriod,
+          viewSwitch: _switch(),
+          download: widget.download,
+        )
       : _employees(context);
 
   Widget _employees(BuildContext context) => JitanListPage(
@@ -161,13 +177,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   );
 
   Widget _toolbar(BuildContext context) {
-    final month = JitanSelectField<String>(
-      label: context.t(AdminTextKeys.reportMonth),
-      value: _controller.month,
-      options: [for (final m in _months) JitanSelectOption(value: m, label: ReportText.month(context, m))],
-      onChanged: (m) {
-        if (m != null) _controller.updateMonth(m);
-      },
+    final phone = MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint;
+    final period = JitanFieldLabel(
+      label: context.t(AdminTextKeys.reportPeriod),
+      child: PeriodButton(period: _controller.period, today: _now, onChanged: _changePeriod, expanded: phone),
     );
     final company = JitanSelectField<int?>(
       label: context.t(AdminTextKeys.reportCompany),
@@ -192,13 +205,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 14,
-              children: [month, company, search],
+              children: [period, company, search],
             )
           : Wrap(
               spacing: 16,
               runSpacing: 14,
               children: [
-                SizedBox(width: 200, child: month),
+                period,
                 SizedBox(width: 220, child: company),
                 SizedBox(width: 300, child: search),
               ],
@@ -214,7 +227,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       [] => _state(GroupStateText(context.t(AdminTextKeys.reportNoMatch))),
       final employees => ReportsTable(
         employees: employees,
-        onOpen: (employee) => showReportEmployeeDialog(context, employee: employee, month: _controller.month),
+        onOpen: (employee) => showReportEmployeeDialog(context, employee: employee, period: _controller.period),
       ),
     },
   };

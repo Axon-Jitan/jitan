@@ -7,6 +7,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/admin_text_keys.dart';
 import '../reports/report_text.dart';
+import '../period/period_text.dart';
 import 'dashboard_text.dart';
 
 /// Registered hours per bar with a tick at what was planned; the exact
@@ -41,13 +42,13 @@ class DashboardHoursChart extends StatelessWidget {
   String _label(BuildContext context, DashboardHoursBucket bucket) => switch (size) {
     DashboardBucketSize.month => context.t(CommonTextKeys.monthShort[bucket.from.month - 1]),
     DashboardBucketSize.day when buckets.length <= 7 => context.t(CommonTextKeys.weekdayShort[bucket.from.weekday - 1]),
-    _ => DashboardText.shortDate(context, bucket.from),
+    _ => PeriodText.shortDate(context, bucket.from),
   };
 
   String _tooltip(BuildContext context, DashboardHoursBucket bucket) => context.t(
     AdminTextKeys.dashboardBarTooltip,
     args: {
-      'date': DashboardText.range(context, bucket.from, bucket.to),
+      'date': PeriodText.range(context, bucket.from, bucket.to),
       'registered': ReportText.hours(context, bucket.registeredMinutes),
       'planned': ReportText.hours(context, bucket.plannedMinutes),
     },

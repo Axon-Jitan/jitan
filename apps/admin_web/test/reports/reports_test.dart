@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:admin_web/src/period/period_button.dart';
 import 'package:admin_web/src/reports/report_export.dart';
 import 'package:admin_web/src/reports/reports_screen.dart';
 import 'package:excel/excel.dart';
@@ -17,10 +18,12 @@ const _titles = ['Code', 'First name', 'Last name', 'Planned', 'Worked', 'Differ
 
 void main() {
   late FakeReportsApi api;
+  late MemorySessionStore store;
   late List<(String, List<int>, String)> downloads;
 
   setUp(() {
     downloads = [];
+    store = MemorySessionStore();
     api = FakeReportsApi()
       ..employees = [
         reportEmployee(1, 'Kevin', 'De Vos', 'KDV', registered: 9960),
@@ -58,12 +61,23 @@ void main() {
           body: ReportsScreen(
             api: api,
             companiesApi: FakeCompaniesApi(),
+            store: store,
             today: () => DateTime(2026, 10, 23),
             download: (name, bytes, type) => downloads.add((name, bytes, type)),
           ),
         ),
       ),
     ));
+    await tester.pumpAndSettle();
+  }
+
+  /// The period picker's "Last month" (Figma `1475:16`): September 2026.
+  Future<void> pickLastMonth(WidgetTester tester) async {
+    await tester.tap(find.byType(PeriodButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Last month'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
   }
 
@@ -74,20 +88,19 @@ void main() {
     expect(find.textContaining('A distance in amber'), findsNothing);
 
     api.employees = [reportEmployee(1, 'Kevin', 'De Vos', 'KDV', trips: 40, metres: 1267600, unknownTrips: 1)];
-    await tester.tap(find.text('October 2026').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('September 2026').last);
-    await tester.pumpAndSettle();
+    await pickLastMonth(tester);
 
     expect(find.text('1 268 km'), findsOneWidget);
     expect(find.textContaining('A distance in amber'), findsOneWidget);
   });
 
-  testWidgets('the month: totals, one row per employee, and what to review', (tester) async {
+  testWidgets('the period: this month up to today at first, totals, one row per employee, and what to review', (tester) async {
     await pump(tester);
 
-    expect(api.calls.single, ('2026-10', null));
-    expect(find.text('October 2026'), findsWidgets);
+    expect(api.calls.single, (DateTime(2026, 10), DateTime(2026, 10, 23), null));
+    expect(find.text('Period'), findsOneWidget);
+    expect(find.text('This month'), findsOneWidget);
+    expect(find.text('1 – 23 Oct 2026'), findsOneWidget);
     expect(find.text('320h'), findsOneWidget, reason: 'planned');
     expect(find.text('+6h'), findsOneWidget);
     expect(find.text('−19h'), findsOneWidget);
@@ -101,7 +114,7 @@ void main() {
     await tester.tap(find.textContaining('Fabian Peeters'));
     await tester.pumpAndSettle();
 
-    expect(find.text('October 2026 · FPT'), findsOneWidget);
+    expect(find.text('1 – 23 Oct 2026 · FPT'), findsOneWidget);
     expect(find.text('Wed 21 October'), findsOneWidget);
     expect(find.text('Missing finish'), findsOneWidget);
     expect(find.text('Time away 2h'), findsOneWidget);
@@ -122,17 +135,15 @@ void main() {
     expect(find.text('No employees match your search.'), findsOneWidget);
   });
 
-  testWidgets('another month loads from the server; an empty one says so and offers no export', (tester) async {
+  testWidgets('another period loads from the server and is remembered; an empty one says so and offers no export', (tester) async {
     api.emptyMonths = {'2026-09'};
     await pump(tester);
 
-    await tester.tap(find.byType(JitanSelectField<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('September 2026').last);
-    await tester.pumpAndSettle();
+    await pickLastMonth(tester);
 
-    expect(api.calls.last, ('2026-09', null));
-    expect(find.text('Nothing registered in this month'), findsOneWidget);
+    expect(api.calls.last, (DateTime(2026, 9), DateTime(2026, 9, 30), null));
+    expect(store.read('jitan.reports.period'), 'lastMonth');
+    expect(find.text('Nothing registered in this period'), findsOneWidget);
     expect(tester.widget<JitanPrimaryButton>(find.byType(JitanPrimaryButton)).onPressed, isNull);
   });
 
@@ -147,7 +158,7 @@ void main() {
     expect(find.textContaining('2 employees.'), findsOneWidget);
   });
 
-  testWidgets('export: Excel and CSV of what is on screen, named by month', (tester) async {
+  testWidgets('export: Excel and CSV of what is on screen, named by period', (tester) async {
     await pump(tester);
 
     await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Export'));
@@ -159,7 +170,7 @@ void main() {
     await tester.tap(find.text('CSV (.csv)'));
     await tester.pumpAndSettle();
 
-    expect(downloads.map((d) => d.$1), ['jitan-hours-2026-10.xlsx', 'jitan-hours-2026-10.csv']);
+    expect(downloads.map((d) => d.$1), ['jitan-hours-2026-10-01_2026-10-23.xlsx', 'jitan-hours-2026-10-01_2026-10-23.csv']);
   });
 
   group('the file', () {

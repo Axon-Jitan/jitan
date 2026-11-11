@@ -43,23 +43,10 @@ abstract final class ReportText {
     return name.isEmpty ? code : name;
   }
 
-  /// "October 2026" for `2026-10`.
-  static String month(BuildContext context, String month) {
-    final [year, number] = month.split('-');
-    return '${context.t(CommonTextKeys.monthLong[int.parse(number) - 1])} $year';
-  }
-
   /// "Thu 22 October".
   static String day(BuildContext context, DateTime date) =>
       '${context.t(CommonTextKeys.weekdayShort[date.weekday - 1])} ${date.day} '
       '${context.t(CommonTextKeys.monthLong[date.month - 1])}';
 
   static String name(HoursReportEmployee e) => person(e.firstName, e.lastName, e.code);
-
-  /// [today]'s month and the twelve before it, newest first, as `yyyy-MM`.
-  static List<String> recentMonths(DateTime today) => [
-    for (var i = 0; i < 13; i++) monthOf(DateTime(today.year, today.month - i)),
-  ];
-
-  static String monthOf(DateTime date) => '${date.year}-${date.month.toString().padLeft(2, '0')}';
 }

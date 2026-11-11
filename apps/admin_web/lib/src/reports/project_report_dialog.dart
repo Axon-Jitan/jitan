@@ -3,18 +3,20 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/admin_text_keys.dart';
+import '../period/chosen_period.dart';
+import '../period/period_text.dart';
 import 'report_text.dart';
 
-Future<void> showProjectReportDialog(BuildContext context, {required ProjectReportProject project, required String month}) =>
-    showJitanModal<void>(context, builder: (_) => ProjectReportDialog(project: project, month: month));
+Future<void> showProjectReportDialog(BuildContext context, {required ProjectReportProject project, required ChosenPeriod period}) =>
+    showJitanModal<void>(context, builder: (_) => ProjectReportDialog(project: project, period: period));
 
-/// One project's month (Figma `1515:190`): its numbers, and each employee who
+/// One project's period (Figma `1515:190`): its numbers, and each employee who
 /// worked on it or travelled for it.
 class ProjectReportDialog extends StatelessWidget {
-  const ProjectReportDialog({super.key, required this.project, required this.month});
+  const ProjectReportDialog({super.key, required this.project, required this.period});
 
   final ProjectReportProject project;
-  final String month;
+  final ChosenPeriod period;
 
   static const _flexEmployee = 210;
   static const _flexDays = 110;
@@ -35,7 +37,7 @@ class ProjectReportDialog extends StatelessWidget {
     final summary = project.project;
     final kind = context.t(summary.isClientSite ? AdminTextKeys.projectPlaceClientOnly : AdminTextKeys.projectPlaceWorkshopOnly);
     return [
-      ReportText.month(context, month),
+      PeriodText.range(context, period.from, period.to),
       kind,
       if (summary.placeName case final place? when place.isNotEmpty) place,
     ].join(' · ');

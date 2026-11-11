@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import 'dashboard_period.dart';
-import 'dashboard_period_picker.dart';
-import 'dashboard_text.dart';
+import 'chosen_period.dart';
+import 'period_picker.dart';
+import 'period_text.dart';
 
 /// The period at the top right; opens the picker under itself.
-class DashboardPeriodButton extends StatelessWidget {
-  const DashboardPeriodButton({
+class PeriodButton extends StatelessWidget {
+  const PeriodButton({
     super.key,
     required this.period,
     required this.today,
@@ -15,9 +15,9 @@ class DashboardPeriodButton extends StatelessWidget {
     this.expanded = false,
   });
 
-  final DashboardPeriod period;
+  final ChosenPeriod period;
   final DateTime today;
-  final ValueChanged<DashboardPeriod> onChanged;
+  final ValueChanged<ChosenPeriod> onChanged;
 
   /// Full width, on a phone.
   final bool expanded;
@@ -25,7 +25,7 @@ class DashboardPeriodButton extends StatelessWidget {
   Future<void> _open(BuildContext context) async {
     final box = context.findRenderObject()! as RenderBox;
     final anchor = box.localToGlobal(Offset.zero) & box.size;
-    final chosen = await showDashboardPeriodPicker(context, anchor: anchor, period: period, today: today);
+    final chosen = await showPeriodPicker(context, anchor: anchor, period: period, today: today);
     if (chosen != null) onChanged(chosen);
   }
 
@@ -53,7 +53,7 @@ class DashboardPeriodButton extends StatelessWidget {
                 Flexible(
                   fit: expanded ? FlexFit.tight : FlexFit.loose,
                   child: Text(
-                    DashboardText.range(context, period.from, period.to),
+                    PeriodText.range(context, period.from, period.to),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: JitanTextStyles.tableCell.copyWith(fontSize: 13, color: JitanColors.inkMuted),

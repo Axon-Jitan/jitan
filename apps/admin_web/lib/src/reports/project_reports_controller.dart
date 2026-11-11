@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
+import '../period/chosen_period.dart';
+
 /// What the Projects view of Reports is showing.
 sealed class ProjectReportsState {
   const ProjectReportsState();
@@ -23,19 +25,19 @@ class ProjectReportsFailed extends ProjectReportsState {
   final ApiClientException failure;
 }
 
-/// Loads a month's project report and filters it by SAP number or name.
+/// Loads a period's project report and filters it by SAP number or name.
 /// Every number comes from the server; here they are only added up for what
 /// is on screen.
 class ProjectReportsController extends ChangeNotifier {
-  ProjectReportsController(this._api, {required this._month});
+  ProjectReportsController(this._api, {required this._period});
 
   final ReportsApi _api;
 
   ProjectReportsState _state = const ProjectReportsLoading();
   ProjectReportsState get state => _state;
 
-  String _month;
-  String get month => _month;
+  ChosenPeriod _period;
+  ChosenPeriod get period => _period;
 
   String _search = '';
   int _latestRequest = 0;
@@ -54,15 +56,15 @@ class ProjectReportsController extends ChangeNotifier {
     final request = ++_latestRequest;
     _emit(const ProjectReportsLoading());
     try {
-      final report = await _api.projects(_month);
+      final report = await _api.projects(_period.from, _period.to);
       if (request == _latestRequest) _emit(ProjectReportsLoaded(report));
     } on ApiClientException catch (failure) {
       if (request == _latestRequest) _emit(ProjectReportsFailed(failure));
     }
   }
 
-  void updateMonth(String month) {
-    _month = month;
+  void updatePeriod(ChosenPeriod period) {
+    _period = period;
     load();
   }
 

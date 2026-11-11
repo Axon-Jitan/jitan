@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
+import '../period/chosen_period.dart';
+
 /// What the Reports page is showing.
 sealed class ReportsState {
   const ReportsState();
@@ -23,18 +25,23 @@ class ReportsFailed extends ReportsState {
   final ApiClientException failure;
 }
 
-/// Loads a month's report and filters it by name or code. Every number comes
-/// from the server; here they are only added up for what is on screen.
+/// Loads a period's report and filters it by name or code. Every number comes
+/// from the server; here they are only added up for what is on screen. The
+/// period is remembered in this browser, like the Dashboard's.
 class ReportsController extends ChangeNotifier {
-  ReportsController(this._api, {required this._month});
+  ReportsController(this._api, this._store, {required DateTime today})
+    : _period = ChosenPeriod.decode(_store.read(_storeKey), today, byDefault: PeriodPreset.thisMonth);
+
+  static const _storeKey = 'jitan.reports.period';
 
   final ReportsApi _api;
+  final SessionStore _store;
 
   ReportsState _state = const ReportsLoading();
   ReportsState get state => _state;
 
-  String _month;
-  String get month => _month;
+  ChosenPeriod _period;
+  ChosenPeriod get period => _period;
 
   int? _companyId;
   int? get companyId => _companyId;
@@ -61,15 +68,16 @@ class ReportsController extends ChangeNotifier {
     final request = ++_latestRequest;
     _emit(const ReportsLoading());
     try {
-      final report = await _api.hours(_month, companyId: _companyId);
+      final report = await _api.hours(_period.from, _period.to, companyId: _companyId);
       if (request == _latestRequest) _emit(ReportsLoaded(report));
     } on ApiClientException catch (failure) {
       if (request == _latestRequest) _emit(ReportsFailed(failure));
     }
   }
 
-  void updateMonth(String month) {
-    _month = month;
+  void updatePeriod(ChosenPeriod period) {
+    _period = period;
+    _store.write(_storeKey, period.encode());
     load();
   }
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:admin_web/src/period/period_button.dart';
 import 'package:admin_web/src/reports/reports_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,14 +72,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Employees first; Projects loads the project report for the same month (Figma 1515:2)', (tester) async {
+  testWidgets('Employees first; Projects loads the project report for the same period (Figma 1515:2)', (tester) async {
     await pump(tester);
     expect(api.projectCalls, isEmpty, reason: 'loaded only when shown');
 
     await tester.tap(find.text('Projects'));
     await tester.pumpAndSettle();
 
-    expect(api.projectCalls, ['2026-10']);
+    expect(api.projectCalls, [(DateTime(2026, 10), DateTime(2026, 10, 23))]);
+    expect(find.text('Period'), findsOneWidget);
     expect(find.text('Worked hours and travel per project, for invoicing.'), findsOneWidget);
     expect(find.text('Company'), findsNothing, reason: 'a project has no company');
     expect(find.textContaining('P-1042 Office refurbishment'), findsOneWidget);
@@ -112,17 +114,32 @@ void main() {
     await tester.tap(find.textContaining('P-1042 Office refurbishment'));
     await tester.pumpAndSettle();
 
-    expect(find.text('October 2026 · Client site · Mouscron'), findsOneWidget);
+    expect(find.text('1 – 23 Oct 2026 · Client site · Mouscron'), findsOneWidget);
     expect(find.textContaining('Hanne Claes'), findsOneWidget);
     expect(find.text('12'), findsOneWidget);
     expect(find.text('96h'), findsOneWidget);
     expect(find.text('5h 10m'), findsOneWidget);
   });
 
-  testWidgets('a month without project time says so', (tester) async {
+  testWidgets('a new period reloads both reports', (tester) async {
+    await openProjects(tester);
+
+    await tester.tap(find.byType(PeriodButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Last month'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    final september = (DateTime(2026, 9), DateTime(2026, 9, 30));
+    expect(api.projectCalls.last, september);
+    expect((api.calls.last.$1, api.calls.last.$2), september);
+  });
+
+  testWidgets('a period without project time says so', (tester) async {
     api.emptyMonths = {'2026-10'};
     await openProjects(tester);
-    expect(find.text('No project time in this month'), findsOneWidget);
+    expect(find.text('No project time in this period'), findsOneWidget);
   });
 
   testWidgets('a failure, with a retry', (tester) async {
@@ -142,7 +159,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final (name, bytes, _) = downloads.single;
-    expect(name, 'jitan-projects-2026-10.csv');
+    expect(name, 'jitan-projects-2026-10-01_2026-10-23.csv');
     final lines = utf8.decode(bytes.skip(3).toList()).trim().split('\r\n');
     expect(lines.first, 'SAP number;Project;Place;Employees;Worked hours;Travel hours;Trips;Kilometres;Trips without a distance');
     expect(lines[1], 'P-1042;Office refurbishment;Mouscron;1;312.5;18.67;9;412.0;0');

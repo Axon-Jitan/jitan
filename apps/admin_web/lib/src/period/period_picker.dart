@@ -3,17 +3,17 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/admin_text_keys.dart';
-import 'dashboard_period.dart';
-import 'dashboard_text.dart';
+import 'chosen_period.dart';
+import 'period_text.dart';
 
 /// Opens the period picker (Figma `1475:16`) under [anchor]. Returns the new
 /// period on Apply; `null` on Cancel, Escape or a click outside.
-Future<DashboardPeriod?> showDashboardPeriodPicker(
+Future<ChosenPeriod?> showPeriodPicker(
   BuildContext context, {
   required Rect anchor,
-  required DashboardPeriod period,
+  required ChosenPeriod period,
   required DateTime today,
-}) => showGeneralDialog<DashboardPeriod>(
+}) => showGeneralDialog<ChosenPeriod>(
   context: context,
   barrierDismissible: true,
   barrierLabel: context.t(AdminTextKeys.periodDismiss),
@@ -23,15 +23,21 @@ Future<DashboardPeriod?> showDashboardPeriodPicker(
     final window = MediaQuery.sizeOf(context);
     final wide = window.width >= _PeriodPicker.width + 32;
     final picker = _PeriodPicker(period: period, today: today, wide: wide);
+    // Under the button, toward the side with room: from its left edge when it
+    // fits (Reports), else ending at its right edge (the Dashboard).
+    final fromLeft = wide && anchor.left + _PeriodPicker.width <= window.width - 16;
     return SafeArea(
       child: Stack(
         children: [
           Positioned(
             top: anchor.bottom + 8,
             bottom: 16,
-            right: wide ? window.width - anchor.right : 16,
-            left: wide ? null : 16,
-            child: Align(alignment: Alignment.topRight, child: SingleChildScrollView(child: picker)),
+            right: !wide ? 16 : (fromLeft ? null : window.width - anchor.right),
+            left: !wide ? 16 : (fromLeft ? anchor.left : null),
+            child: Align(
+              alignment: fromLeft ? Alignment.topLeft : Alignment.topRight,
+              child: SingleChildScrollView(child: picker),
+            ),
           ),
         ],
       ),
@@ -42,7 +48,7 @@ Future<DashboardPeriod?> showDashboardPeriodPicker(
 class _PeriodPicker extends StatefulWidget {
   const _PeriodPicker({required this.period, required this.today, required this.wide});
 
-  final DashboardPeriod period;
+  final ChosenPeriod period;
   final DateTime today;
 
   /// Two months with the shortcuts beside them; else one month under them.
@@ -55,7 +61,7 @@ class _PeriodPicker extends StatefulWidget {
 }
 
 class _PeriodPickerState extends State<_PeriodPicker> {
-  late DashboardPreset _preset = widget.period.preset;
+  late PeriodPreset _preset = widget.period.preset;
   late DateTime _from = widget.period.from;
   late DateTime _to = widget.period.to;
 
@@ -86,18 +92,18 @@ class _PeriodPickerState extends State<_PeriodPicker> {
   }
 
   void _fillFields() {
-    _fromField.text = DashboardText.date(context, _from);
-    _toField.text = DashboardText.date(context, _to);
+    _fromField.text = PeriodText.date(context, _from);
+    _toField.text = PeriodText.date(context, _to);
     _typedDateInvalid = false;
   }
 
-  DashboardPeriod get _draft => DashboardPeriod(_preset, _from, _to);
+  ChosenPeriod get _draft => ChosenPeriod(_preset, _from, _to);
 
-  void _pickPreset(DashboardPreset preset) => setState(() {
+  void _pickPreset(PeriodPreset preset) => setState(() {
     _preset = preset;
     _endingPeriod = false;
-    if (preset != DashboardPreset.custom) {
-      final period = DashboardPeriod.of(preset, widget.today);
+    if (preset != PeriodPreset.custom) {
+      final period = ChosenPeriod.of(preset, widget.today);
       _from = period.from;
       _to = period.to;
       _month = DateTime(_to.year, _to.month);
@@ -106,7 +112,7 @@ class _PeriodPickerState extends State<_PeriodPicker> {
   });
 
   void _pickDay(DateTime day) => setState(() {
-    _preset = DashboardPreset.custom;
+    _preset = PeriodPreset.custom;
     if (!_endingPeriod) {
       _from = _to = day;
     } else if (day.isBefore(_from)) {
@@ -119,13 +125,13 @@ class _PeriodPickerState extends State<_PeriodPicker> {
   });
 
   void _typed() {
-    final from = DashboardText.parseDate(context, _fromField.text);
-    final to = DashboardText.parseDate(context, _toField.text);
-    final valid = from != null && to != null && DashboardPeriod(DashboardPreset.custom, from, to).isValid(widget.today);
+    final from = PeriodText.parseDate(context, _fromField.text);
+    final to = PeriodText.parseDate(context, _toField.text);
+    final valid = from != null && to != null && ChosenPeriod(PeriodPreset.custom, from, to).isValid(widget.today);
     setState(() {
       _typedDateInvalid = !valid;
       if (!valid) return;
-      _preset = DashboardPreset.custom;
+      _preset = PeriodPreset.custom;
       _from = from;
       _to = to;
       _endingPeriod = false;
@@ -139,9 +145,9 @@ class _PeriodPickerState extends State<_PeriodPicker> {
 
   /// While ending a period, days too far from its start can't be chosen.
   bool _selectable(DateTime day) =>
-      !_endingPeriod || DashboardPeriod(DashboardPreset.custom, _from, day.isBefore(_from) ? _from : day).isValid(widget.today);
+      !_endingPeriod || ChosenPeriod(PeriodPreset.custom, _from, day.isBefore(_from) ? _from : day).isValid(widget.today);
 
-  Widget _shortcut(DashboardPreset preset, {required bool list}) {
+  Widget _shortcut(PeriodPreset preset, {required bool list}) {
     final selected = preset == _preset;
     return Material(
       color: selected ? JitanColors.inputFill : Colors.transparent,
@@ -259,7 +265,7 @@ class _PeriodPickerState extends State<_PeriodPicker> {
                 padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [for (final preset in DashboardPreset.values) _shortcut(preset, list: true)],
+                  children: [for (final preset in PeriodPreset.values) _shortcut(preset, list: true)],
                 ),
               ),
             ),
@@ -305,7 +311,7 @@ class _PeriodPickerState extends State<_PeriodPicker> {
             Wrap(
               spacing: 2,
               runSpacing: 2,
-              children: [for (final preset in DashboardPreset.values) _shortcut(preset, list: false)],
+              children: [for (final preset in PeriodPreset.values) _shortcut(preset, list: false)],
             ),
             _dateFields(),
             _monthView(_month, previous: true, next: true),

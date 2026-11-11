@@ -1,4 +1,4 @@
-import 'package:admin_web/src/dashboard/dashboard_period.dart';
+import 'package:admin_web/src/period/chosen_period.dart';
 import 'package:admin_web/src/dashboard/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,24 +32,24 @@ Future<void> _pump(WidgetTester tester, FakeDashboardApi api, {SessionStore? sto
 
 void main() {
   group('periods', () {
-    (DateTime, DateTime) of(DashboardPreset preset) {
-      final period = DashboardPeriod.of(preset, DateTime(2026, 3, 31, 15));
+    (DateTime, DateTime) of(PeriodPreset preset) {
+      final period = ChosenPeriod.of(preset, DateTime(2026, 3, 31, 15));
       return (period.from, period.to);
     }
 
     test('each shortcut, from a day at the end of a month', () {
       final today = DateTime(2026, 3, 31);
-      expect(of(DashboardPreset.today), (today, today));
-      expect(of(DashboardPreset.yesterday), (DateTime(2026, 3, 30), DateTime(2026, 3, 30)));
-      expect(of(DashboardPreset.last7Days), (DateTime(2026, 3, 25), today));
-      expect(of(DashboardPreset.last30Days), (DateTime(2026, 3, 2), today));
-      expect(of(DashboardPreset.thisMonth), (DateTime(2026, 3), today));
-      expect(of(DashboardPreset.lastMonth), (DateTime(2026, 2), DateTime(2026, 2, 28)));
-      expect(of(DashboardPreset.thisYear), (DateTime(2026), today));
+      expect(of(PeriodPreset.today), (today, today));
+      expect(of(PeriodPreset.yesterday), (DateTime(2026, 3, 30), DateTime(2026, 3, 30)));
+      expect(of(PeriodPreset.last7Days), (DateTime(2026, 3, 25), today));
+      expect(of(PeriodPreset.last30Days), (DateTime(2026, 3, 2), today));
+      expect(of(PeriodPreset.thisMonth), (DateTime(2026, 3), today));
+      expect(of(PeriodPreset.lastMonth), (DateTime(2026, 2), DateTime(2026, 2, 28)));
+      expect(of(PeriodPreset.thisYear), (DateTime(2026), today));
     });
 
     test('last month in January is December', () {
-      final period = DashboardPeriod.of(DashboardPreset.lastMonth, DateTime(2026, 1, 15));
+      final period = ChosenPeriod.of(PeriodPreset.lastMonth, DateTime(2026, 1, 15));
 
       expect((period.from, period.to), (DateTime(2025, 12), DateTime(2025, 12, 31)));
     });
@@ -57,20 +57,20 @@ void main() {
     test('a shortcut comes back moved on; custom days stay', () {
       final later = DateTime(2026, 11, 2);
 
-      expect(DashboardPeriod.decode('last7Days', later).to, later);
-      final custom = DashboardPeriod(DashboardPreset.custom, DateTime(2026, 9, 1), DateTime(2026, 9, 5));
-      final back = DashboardPeriod.decode(custom.encode(), later);
-      expect((back.preset, back.from, back.to), (DashboardPreset.custom, custom.from, custom.to));
+      expect(ChosenPeriod.decode('last7Days', later).to, later);
+      final custom = ChosenPeriod(PeriodPreset.custom, DateTime(2026, 9, 1), DateTime(2026, 9, 5));
+      final back = ChosenPeriod.decode(custom.encode(), later);
+      expect((back.preset, back.from, back.to), (PeriodPreset.custom, custom.from, custom.to));
     });
 
     test('anything unusable falls back to the last 7 days', () {
       for (final value in [null, 'nonsense', 'custom', 'x:y', '2026-12-01:2026-12-02']) {
-        expect(DashboardPeriod.decode(value, _today).preset, DashboardPreset.last7Days, reason: '$value');
+        expect(ChosenPeriod.decode(value, _today).preset, PeriodPreset.last7Days, reason: '$value');
       }
     });
 
     test('reversed, future and too long periods are not valid', () {
-      DashboardPeriod p(DateTime from, DateTime to) => DashboardPeriod(DashboardPreset.custom, from, to);
+      ChosenPeriod p(DateTime from, DateTime to) => ChosenPeriod(PeriodPreset.custom, from, to);
 
       expect(p(DateTime(2026, 10, 2), DateTime(2026, 10, 1)).isValid(_today), isFalse);
       expect(p(DateTime(2026, 10, 2), DateTime(2026, 11, 1)).isValid(_today), isFalse);

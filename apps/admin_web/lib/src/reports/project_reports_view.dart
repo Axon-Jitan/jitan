@@ -6,6 +6,8 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../employees/import/platform/file_download.dart';
 import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
+import '../period/chosen_period.dart';
+import '../period/period_button.dart';
 import 'project_report_dialog.dart';
 import 'project_reports_controller.dart';
 import 'project_reports_table.dart';
@@ -13,22 +15,25 @@ import 'report_export.dart';
 import 'report_numbers_card.dart';
 import 'report_text.dart';
 
-/// Reports, Projects (Figma `1515:2`, a project `1515:190`, D24): one month,
+/// Reports, Projects (Figma `1515:2`, a project `1515:190`, D24): one period,
 /// per project, with only what Jitan records. A project has no company (D44),
 /// so there is no company filter.
 class ProjectReportsView extends StatefulWidget {
   const ProjectReportsView({
     super.key,
     required this.controller,
-    required this.months,
+    required this.today,
+    required this.onPeriodChanged,
     required this.viewSwitch,
     required this.download,
   });
 
   final ProjectReportsController controller;
 
-  /// `yyyy-MM`, newest first.
-  final List<String> months;
+  final DateTime today;
+
+  /// The period is the page's, shared with the employees' report.
+  final ValueChanged<ChosenPeriod> onPeriodChanged;
   final Widget viewSwitch;
   final DownloadFile download;
 
@@ -60,7 +65,7 @@ class _ProjectReportsViewState extends State<ProjectReportsView> {
     final rows = [for (final p in _controller.visible) ReportExport.projectRow(p)];
     final excel = extension == 'xlsx';
     widget.download(
-      ReportExport.projectFileName(_controller.month, extension),
+      ReportExport.projectFileName(_controller.period.from, _controller.period.to, extension),
       excel ? ReportExport.excelOf(_titles(), rows) : ReportExport.csvOf(_titles(), rows),
       excel ? ReportExport.excelType : ReportExport.csvType,
     );
@@ -129,13 +134,10 @@ class _ProjectReportsViewState extends State<ProjectReportsView> {
   }
 
   Widget _toolbar(BuildContext context) {
-    final month = JitanSelectField<String>(
-      label: context.t(AdminTextKeys.reportMonth),
-      value: _controller.month,
-      options: [for (final m in widget.months) JitanSelectOption(value: m, label: ReportText.month(context, m))],
-      onChanged: (m) {
-        if (m != null) _controller.updateMonth(m);
-      },
+    final phone = MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint;
+    final period = JitanFieldLabel(
+      label: context.t(AdminTextKeys.reportPeriod),
+      child: PeriodButton(period: _controller.period, today: widget.today, onChanged: widget.onPeriodChanged, expanded: phone),
     );
     final search = JitanFieldLabel(
       label: context.t(CommonTextKeys.searchLabel),
@@ -148,11 +150,11 @@ class _ProjectReportsViewState extends State<ProjectReportsView> {
     );
     return LayoutBuilder(
       builder: (context, constraints) => constraints.maxWidth < JitanDimensions.phoneBreakpoint
-          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 14, children: [month, search])
+          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 14, children: [period, search])
           : Wrap(
               spacing: 16,
               runSpacing: 14,
-              children: [SizedBox(width: 200, child: month), SizedBox(width: 300, child: search)],
+              children: [period, SizedBox(width: 300, child: search)],
             ),
     );
   }
@@ -165,7 +167,7 @@ class _ProjectReportsViewState extends State<ProjectReportsView> {
       [] => _state(GroupStateText(context.t(AdminTextKeys.reportProjectsNoMatch))),
       final projects => ProjectReportsTable(
         projects: projects,
-        onOpen: (project) => showProjectReportDialog(context, project: project, month: _controller.month),
+        onOpen: (project) => showProjectReportDialog(context, project: project, period: _controller.period),
       ),
     },
   };

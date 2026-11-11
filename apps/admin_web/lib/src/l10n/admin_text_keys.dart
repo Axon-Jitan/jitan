@@ -994,7 +994,7 @@ abstract final class AdminTextKeys {
   static const reportExport = 'report.export';
   static const reportExportExcel = 'report.export.excel';
   static const reportExportCsv = 'report.export.csv';
-  static const reportMonth = 'report.month';
+  static const reportPeriod = 'report.period';
   static const reportCompany = 'report.company';
   static const reportCompanyAll = 'report.company.all';
   static const reportSearch = 'report.search';

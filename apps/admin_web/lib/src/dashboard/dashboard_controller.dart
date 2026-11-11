@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 
-import 'dashboard_period.dart';
+import '../period/chosen_period.dart';
 
 /// What the Dashboard is showing.
 sealed class DashboardState {
@@ -29,7 +29,7 @@ class DashboardFailed extends DashboardState {
 /// browser. A new period keeps the old numbers up until the new ones arrive.
 class DashboardController extends ChangeNotifier {
   DashboardController(this._api, this._store, {required DateTime today})
-    : _period = DashboardPeriod.decode(_store.read(_storeKey), today);
+    : _period = ChosenPeriod.decode(_store.read(_storeKey), today);
 
   static const _storeKey = 'jitan.dashboard.period';
 
@@ -39,8 +39,8 @@ class DashboardController extends ChangeNotifier {
   DashboardState _state = const DashboardLoading();
   DashboardState get state => _state;
 
-  DashboardPeriod _period;
-  DashboardPeriod get period => _period;
+  ChosenPeriod _period;
+  ChosenPeriod get period => _period;
 
   int _latestRequest = 0;
   bool _disposed = false;
@@ -56,7 +56,7 @@ class DashboardController extends ChangeNotifier {
     }
   }
 
-  void updatePeriod(DashboardPeriod period) {
+  void updatePeriod(ChosenPeriod period) {
     _period = period;
     _store.write(_storeKey, period.encode());
     _notify();

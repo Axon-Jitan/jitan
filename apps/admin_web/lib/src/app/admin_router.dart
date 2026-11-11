@@ -109,7 +109,7 @@ GoRouter buildAdminRouter({required AdminServices services, String? initialLocat
           GoRoute(
             path: AdminRoutes.reports,
             pageBuilder: (context, state) => NoTransitionPage(
-              child: ReportsScreen(api: services.reportsApi, companiesApi: services.companiesApi),
+              child: ReportsScreen(api: services.reportsApi, companiesApi: services.companiesApi, store: browserSessionStore()),
             ),
           ),
           GoRoute(

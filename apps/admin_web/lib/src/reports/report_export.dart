@@ -79,9 +79,12 @@ abstract final class ReportExport {
     return text.contains(RegExp('[;"\r\n]')) ? '"${text.replaceAll('"', '""')}"' : text;
   }
 
-  /// `jitan-hours-2026-10.xlsx`.
-  static String fileName(String month, String extension) => 'jitan-hours-$month.$extension';
+  /// `jitan-hours-2026-10-01_2026-10-31.xlsx`.
+  static String fileName(DateTime from, DateTime to, String extension) => 'jitan-hours-${_period(from, to)}.$extension';
 
-  /// `jitan-projects-2026-10.xlsx`.
-  static String projectFileName(String month, String extension) => 'jitan-projects-$month.$extension';
+  /// `jitan-projects-2026-10-01_2026-10-31.xlsx`.
+  static String projectFileName(DateTime from, DateTime to, String extension) =>
+      'jitan-projects-${_period(from, to)}.$extension';
+
+  static String _period(DateTime from, DateTime to) => '${TimeRecordDay.dateText(from)}_${TimeRecordDay.dateText(to)}';
 }

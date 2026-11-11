@@ -13,7 +13,7 @@ import 'dashboard_company_bars.dart';
 import 'dashboard_controller.dart';
 import 'dashboard_donut.dart';
 import 'dashboard_hours_chart.dart';
-import 'dashboard_period_button.dart';
+import '../period/period_button.dart';
 import 'dashboard_text.dart';
 import 'dashboard_tiles.dart';
 
@@ -67,7 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: JitanPageHeader(
             title: context.t(AdminTextKeys.dashboardTitle),
             subtitle: DashboardText.longDate(context, _now),
-            action: DashboardPeriodButton(
+            action: PeriodButton(
               period: _controller.period,
               today: _now,
               onChanged: _controller.updatePeriod,

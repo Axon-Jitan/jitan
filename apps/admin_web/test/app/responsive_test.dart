@@ -13,6 +13,7 @@ import 'package:admin_web/src/groups/group_page.dart';
 import 'package:admin_web/src/groups/groups_screen.dart';
 import 'package:admin_web/src/locations/locations_screen.dart';
 import 'package:admin_web/src/dashboard/dashboard_screen.dart';
+import 'package:admin_web/src/period/period_button.dart';
 import 'package:admin_web/src/projects/projects_screen.dart';
 import 'package:admin_web/src/lists/lists_screen.dart';
 import 'package:admin_web/src/terminals/terminals_screen.dart';
@@ -201,6 +202,13 @@ void main() {
       await _pump(tester, width, ReportsScreen(api: api, companiesApi: FakeCompaniesApi(), today: () => DateTime(2026, 10, 23)));
       await tester.pumpAndSettle();
       _fitsTheWindow(tester, width, 'Reports');
+
+      await tester.tap(find.byType(PeriodButton));
+      await _settle(tester);
+      _fitsTheWindow(tester, width, 'The Reports period picker');
+      await tester.ensureVisible(find.text('Cancel'));
+      await tester.tap(find.text('Cancel'));
+      await _settle(tester);
       expect(find.text('Difference'), findsNWidgets(width < JitanDimensions.phoneBreakpoint ? 1 : 2), reason: 'a phone keeps the table simple');
 
       await tester.scrollUntilVisible(find.textContaining('Fabian Peeters'), 200, scrollable: find.byType(Scrollable).first);

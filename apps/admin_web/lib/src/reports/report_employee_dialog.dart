@@ -3,18 +3,20 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/admin_text_keys.dart';
+import '../period/chosen_period.dart';
+import '../period/period_text.dart';
 import '../time_records/time_record_text.dart';
 import 'report_text.dart';
 
-Future<void> showReportEmployeeDialog(BuildContext context, {required HoursReportEmployee employee, required String month}) =>
-    showJitanModal<void>(context, builder: (_) => ReportEmployeeDialog(employee: employee, month: month));
+Future<void> showReportEmployeeDialog(BuildContext context, {required HoursReportEmployee employee, required ChosenPeriod period}) =>
+    showJitanModal<void>(context, builder: (_) => ReportEmployeeDialog(employee: employee, period: period));
 
-/// One employee's month (Figma `1467:391`): their numbers and their days.
+/// One employee's period (Figma `1467:391`): their numbers and their days.
 class ReportEmployeeDialog extends StatelessWidget {
-  const ReportEmployeeDialog({super.key, required this.employee, required this.month});
+  const ReportEmployeeDialog({super.key, required this.employee, required this.period});
 
   final HoursReportEmployee employee;
-  final String month;
+  final ChosenPeriod period;
 
   static const _flexDay = 210;
   static const _flexTime = 110;
@@ -47,7 +49,7 @@ class ReportEmployeeDialog extends StatelessWidget {
   Widget build(BuildContext context) => JitanModal(
     width: 760,
     title: ReportText.name(employee),
-    subtitle: '${ReportText.month(context, month)} · ${employee.code}',
+    subtitle: '${PeriodText.range(context, period.from, period.to)} · ${employee.code}',
     onClose: () => Navigator.of(context).pop(),
     body: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
