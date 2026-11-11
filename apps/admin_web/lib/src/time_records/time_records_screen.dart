@@ -128,6 +128,12 @@ class _TimeRecordsScreenState extends State<TimeRecordsScreen> {
         JitanSelectOption(value: null, label: context.t(AdminTextKeys.timeRecordsStatusAll)),
         JitanSelectOption(value: TimeRecordStatusFilter.toReview, label: context.t(AdminTextKeys.timeRecordsStatusToReview)),
         JitanSelectOption(value: TimeRecordStatusFilter.finished, label: context.t(AdminTextKeys.timeRecordsStatusFinished)),
+        for (final (attendance, key) in [
+          (DayAttendance.onTime, AdminTextKeys.timeRecordsAttendanceOnTime),
+          (DayAttendance.late, AdminTextKeys.timeRecordsAttendanceLate),
+          (DayAttendance.leftEarly, AdminTextKeys.timeRecordsAttendanceLeftEarly),
+        ])
+          JitanSelectOption(value: TimeRecordStatusFilter.attended(attendance), label: context.t(key)),
         for (final s in TimeRecordStatus.values)
           JitanSelectOption(value: TimeRecordStatusFilter.only(s), label: TimeRecordText.status(context, s)),
       ],

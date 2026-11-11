@@ -159,4 +159,53 @@ void main() {
       expect((await app.get('/time-records?$query')).statusCode, 400, reason: query);
     }
   });
+
+  group('only in HR’s list, as the Dashboard counts them', () {
+    /// Disan and Kevin work Wednesday and Thursday 08:00–16:30, 5 minutes
+    /// tolerance both ways.
+    TestApp scheduled() {
+      final app = _app();
+      app.schedules.days = const [(id: 3, name: 'Wednesday'), (id: 4, name: 'Thursday')];
+      app.schedules.userSchedules = [
+        for (final userId in [1, 2])
+          for (final dayId in [3, 4])
+            for (final (kind, type) in [(1, 'Work – start'), (2, 'Work – finish')])
+              (userId: userId, scheduleId: userId * 100 + dayId * 10 + kind, typeName: type, dayId: dayId, startHour: 8, startMinute: 0, stopHour: 16, stopMinute: 30, marginMinutes: 5),
+      ];
+      return app;
+    }
+
+    List<RegistrationRow> day(int user, int date, (int, int) start, (int, int) finish) => [
+      _row(user, 'Start – actual – Manual', DateTime.utc(2026, 10, date, start.$1 - 2, start.$2)),
+      _row(user, 'Start – rounded', DateTime.utc(2026, 10, date, start.$1 - 2, start.$2)),
+      _row(user, 'Finish – actual – Manual', DateTime.utc(2026, 10, date, finish.$1 - 2, finish.$2)),
+      _row(user, 'Finish – rounded', DateTime.utc(2026, 10, date, finish.$1 - 2, finish.$2)),
+    ];
+
+    test('a finished day says on time, late or left early', () async {
+      final app = scheduled();
+      app.timeRecords.rows = [...day(1, 21, (8, 3), (16, 30)), ...day(2, 21, (8, 20), (16, 30))];
+
+      final days = await _days(app, 'from=2026-10-21&to=2026-10-21&company=7');
+
+      expect({for (final d in days) d.employeeCode: d.attendance}, {'SBW': DayAttendance.onTime, 'KDV': DayAttendance.late});
+    });
+
+    test('today: someone scheduled without a registration is "Not started"; someone working is not', () async {
+      final app = scheduled();
+      app.timeRecords.rows = [
+        _row(1, 'Start – actual – Manual', DateTime.utc(2026, 10, 22, 6)),
+        _row(1, 'Start – rounded', DateTime.utc(2026, 10, 22, 6)),
+      ];
+
+      final days = await _days(app, 'from=2026-10-22&to=2026-10-22&company=7');
+
+      expect({for (final d in days) d.employeeCode: d.status}, {'SBW': TimeRecordStatus.working, 'KDV': TimeRecordStatus.notStarted});
+    });
+
+    test('an earlier period has no "Not started"', () async {
+      final days = await _days(scheduled(), 'from=2026-10-21&to=2026-10-21&company=7');
+      expect(days.where((d) => d.status == TimeRecordStatus.notStarted), isEmpty);
+    });
+  });
 }

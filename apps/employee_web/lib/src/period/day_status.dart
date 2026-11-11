@@ -17,7 +17,8 @@ enum DayStatus {
   static DayStatus of(MyPeriodDay day) => switch (day.day?.status) {
     TimeRecordStatus.missingFinish => finishMissing,
     TimeRecordStatus.missingStart => startMissing,
-    TimeRecordStatus.noRegistration || null => noRegistration,
+    // notStarted: only HR's Time records has it.
+    TimeRecordStatus.noRegistration || TimeRecordStatus.notStarted || null => noRegistration,
     TimeRecordStatus.pendingReview => waiting,
     TimeRecordStatus.working => working,
     TimeRecordStatus.nonWork => nonWork,

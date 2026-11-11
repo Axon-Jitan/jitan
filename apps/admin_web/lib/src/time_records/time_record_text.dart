@@ -14,6 +14,7 @@ abstract final class TimeRecordText {
     TimeRecordStatus.pendingReview => AdminTextKeys.timeRecordsStatusPendingReview,
     TimeRecordStatus.nonWork => AdminTextKeys.timeRecordsStatusNonWork,
     TimeRecordStatus.noRegistration => AdminTextKeys.timeRecordsStatusNoRegistration,
+    TimeRecordStatus.notStarted => AdminTextKeys.timeRecordsStatusNotStarted,
     TimeRecordStatus.working => AdminTextKeys.timeRecordsStatusWorking,
     TimeRecordStatus.missingFinish => AdminTextKeys.timeRecordsStatusMissingFinish,
     TimeRecordStatus.missingStart => AdminTextKeys.timeRecordsStatusMissingStart,
@@ -25,7 +26,7 @@ abstract final class TimeRecordText {
     TimeRecordStatus.complete => JitanColors.success,
     TimeRecordStatus.corrected => JitanColors.info,
     TimeRecordStatus.missingFinish || TimeRecordStatus.missingStart || TimeRecordStatus.pendingReview => JitanColors.warning,
-    TimeRecordStatus.working || TimeRecordStatus.nonWork || TimeRecordStatus.noRegistration => JitanColors.inkMuted,
+    TimeRecordStatus.working || TimeRecordStatus.nonWork || TimeRecordStatus.noRegistration || TimeRecordStatus.notStarted => JitanColors.inkMuted,
   };
 
   static String method(BuildContext context, TimeRecordMethod method) => context.t(switch (method) {

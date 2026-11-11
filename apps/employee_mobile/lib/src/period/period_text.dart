@@ -46,6 +46,8 @@ abstract final class PeriodText {
     TimeRecordStatus.missingStart => EmployeeTextKeys.periodStatusMissingStart,
     TimeRecordStatus.noRegistration => EmployeeTextKeys.periodStatusNoRegistration,
     TimeRecordStatus.nonWork => EmployeeTextKeys.periodStatusNonWork,
+    // Only HR's Time records has it; the employee's own days never do.
+    TimeRecordStatus.notStarted => EmployeeTextKeys.periodStatusNoRegistration,
   });
 
   /// Orange for what the employee should act on or wait for.

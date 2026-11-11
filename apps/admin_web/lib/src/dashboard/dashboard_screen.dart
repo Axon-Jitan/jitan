@@ -68,6 +68,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return () => _open(AdminRoutes.timeRecordsOf(status: status.wireName, from: today, to: today));
   }
 
+  /// Time records with [status] in the Dashboard's period (its last 62 days
+  /// when longer).
+  VoidCallback _inPeriod(TimeRecordStatusFilter status) => () {
+    final (from, to) = DashboardAttention.reviewDays(_controller.period);
+    _open(AdminRoutes.timeRecordsOf(status: status.wireName, from: from, to: to));
+  };
+
   /// A bar's last day, within what Time records shows at once.
   static DateTime _lastOf(DateTime from, DateTime to) {
     final latest = DateTime(from.year, from.month, from.day + TimeRecordList.maxPeriodDays - 1);
@@ -172,8 +179,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           color: JitanColors.chartViolet,
           onOpen: _todayWith(TimeRecordStatusFilter.finished),
         ),
-        // Nobody who hasn't started has a day in Time records yet.
-        (label: context.t(AdminTextKeys.dashboardNotStarted), value: dashboard.notStarted, color: JitanColors.chartAmber, onOpen: null),
+        (
+          label: context.t(AdminTextKeys.dashboardNotStarted),
+          value: dashboard.notStarted,
+          color: JitanColors.chartAmber,
+          onOpen: _todayWith(const TimeRecordStatusFilter.only(TimeRecordStatus.notStarted)),
+        ),
       ],
     ),
   );
@@ -219,18 +230,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
             : context.t(AdminTextKeys.dashboardPercent, args: {'percent': (dashboard.onTime / total * 100).round()}),
         caption: context.t(AdminTextKeys.dashboardOnTimeCaption),
         parts: [
-          // On time, late and left early: no page lists them yet.
-          (label: context.t(AdminTextKeys.dashboardOnTime), value: dashboard.onTime, color: JitanColors.chartGreen, onOpen: null),
-          (label: context.t(AdminTextKeys.dashboardLate), value: dashboard.late, color: JitanColors.chartAmber, onOpen: null),
-          (label: context.t(AdminTextKeys.dashboardLeftEarly), value: dashboard.leftEarly, color: JitanColors.chartViolet, onOpen: null),
+          (
+            label: context.t(AdminTextKeys.dashboardOnTime),
+            value: dashboard.onTime,
+            color: JitanColors.chartGreen,
+            onOpen: _inPeriod(const TimeRecordStatusFilter.attended(DayAttendance.onTime)),
+          ),
+          (
+            label: context.t(AdminTextKeys.dashboardLate),
+            value: dashboard.late,
+            color: JitanColors.chartAmber,
+            onOpen: _inPeriod(const TimeRecordStatusFilter.attended(DayAttendance.late)),
+          ),
+          (
+            label: context.t(AdminTextKeys.dashboardLeftEarly),
+            value: dashboard.leftEarly,
+            color: JitanColors.chartViolet,
+            onOpen: _inPeriod(const TimeRecordStatusFilter.attended(DayAttendance.leftEarly)),
+          ),
           (
             label: context.t(AdminTextKeys.dashboardToReview),
             value: dashboard.toReview,
             color: JitanColors.chartBlue,
-            onOpen: () {
-              final (from, to) = DashboardAttention.reviewDays(_controller.period);
-              _open(AdminRoutes.timeRecordsOf(status: TimeRecordStatusFilter.toReview.wireName, from: from, to: to));
-            },
+            onOpen: _inPeriod(TimeRecordStatusFilter.toReview),
           ),
         ],
       ),

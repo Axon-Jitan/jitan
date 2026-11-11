@@ -7,7 +7,7 @@ import '../locations/location_service.dart';
 import '../time_records/my_day_service.dart';
 import '../time_records/time_record_service.dart';
 import '../time_records/week_plans.dart';
-import '../time_registration/rounding/attendance_calculator.dart';
+import '../time_records/day_attendances.dart';
 import '../time_registration/workplace_clock.dart';
 
 /// The HR Dashboard (Figma `1470:2`, period picker `1475:16`): calculated when
@@ -130,14 +130,14 @@ class DashboardService {
         if (_toReview.contains(day.status)) {
           toReview++;
         } else if (day.status == TimeRecordStatus.complete || day.status == TimeRecordStatus.corrected) {
-          switch (_attendanceOf(day, plan)) {
+          switch (DayAttendances.of(day, plan, _clock)) {
             case null:
               break;
-            case _Attendance.onTime:
+            case DayAttendance.onTime:
               onTime++;
-            case _Attendance.late:
+            case DayAttendance.late:
               late++;
-            case _Attendance.leftEarly:
+            case DayAttendance.leftEarly:
               leftEarly++;
           }
         }
@@ -182,32 +182,6 @@ class DashboardService {
     );
   }
 
-  /// One finished day against its schedule (D11b); a day both late and left
-  /// early counts once, as late. `null` without a schedule to compare with.
-  _Attendance? _attendanceOf(TimeRecordDay day, DayPlan? plan) {
-    final start = _at(day.date, plan?.start), finish = _at(day.date, plan?.finish);
-    final startTime = day.start?.actual, finishTime = day.finish?.actual;
-    if (plan == null || start == null || finish == null || startTime == null || finishTime == null) return null;
-    final arrival = AttendanceCalculator.arrival(
-      actual: _clock.wallClockOf(startTime),
-      scheduledStart: start,
-      tolerance: Duration(minutes: plan.startMargin),
-    );
-    if (arrival == ArrivalStatus.late) return _Attendance.late;
-    final departure = AttendanceCalculator.departure(
-      actual: _clock.wallClockOf(finishTime),
-      scheduledFinish: finish,
-      tolerance: Duration(minutes: plan.finishMargin),
-    );
-    return departure == DepartureStatus.early ? _Attendance.leftEarly : _Attendance.onTime;
-  }
-
-  static DateTime? _at(DateTime date, String? hhmm) {
-    final match = RegExp(r'^(\d\d):(\d\d)$').firstMatch(hhmm ?? '');
-    if (match == null) return null;
-    return DateTime.utc(date.year, date.month, date.day, int.parse(match.group(1)!), int.parse(match.group(2)!));
-  }
-
   static DashboardBucketSize _sizeOf(int days) => days <= _maxDailyDays
       ? DashboardBucketSize.day
       : days <= _maxWeeklyDays
@@ -241,4 +215,3 @@ class DashboardService {
   }
 }
 
-enum _Attendance { onTime, late, leftEarly }

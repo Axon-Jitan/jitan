@@ -11,7 +11,9 @@ import '../time_registration/rounding/rounding_calculator.dart';
 import '../time_registration/rounding/rounding_policy.dart';
 import '../time_registration/workplace_clock.dart';
 import 'time_record_days.dart';
+import 'day_attendances.dart';
 import 'time_record_repository.dart';
+import 'week_plans.dart';
 
 /// HR/Admin Time records (phase 3, slice 2; Figma `160:2`): the employees'
 /// working days in a period, each with its actual and rounded start and
@@ -78,7 +80,50 @@ class TimeRecordService {
     }
 
     final employees = await _employees.listForCompanies(companyIds, nameOrCodeContains: term.isEmpty ? null : term);
-    return TimeRecordList(days: await daysOf(employees, first, last));
+    return TimeRecordList(days: await _forHr(employees, await daysOf(employees, first, last), first, last));
+  }
+
+  /// What only HR's list has, as the Dashboard counts it: each finished day's
+  /// attendance against the schedule (D11b), and today's scheduled employees
+  /// without any registration yet, as "Not started".
+  Future<List<TimeRecordDay>> _forHr(
+    List<EmployeeSummary> employees,
+    List<TimeRecordDay> days,
+    DateTime first,
+    DateTime last,
+  ) async {
+    final plans = await WeekPlans(_schedules).of([for (final e in employees) e.id]);
+    final local = _clock.wallClockOf(_now().toUtc());
+    final today = DateTime.utc(local.year, local.month, local.day);
+    final result = [
+      for (final day in days)
+        switch (DayAttendances.of(day, plans[day.employeeId]?[day.date.weekday], _clock)) {
+          final DayAttendance attendance => day.copyWith(attendance: attendance),
+          null => day,
+        },
+    ];
+    if (today.isBefore(first) || today.isAfter(last)) return result;
+    final hasToday = {for (final day in days) if (day.date == today) day.employeeId};
+    for (final employee in employees) {
+      if (!employee.isActive || hasToday.contains(employee.id)) continue;
+      if (WeekPlans.plannedMinutes(plans[employee.id]?[today.weekday]) == null) continue;
+      result.add(
+        TimeRecordDay(
+          employeeId: employee.id,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          employeeCode: employee.code,
+          date: today,
+          status: TimeRecordStatus.notStarted,
+          companyIds: employee.companyIds,
+        ),
+      );
+    }
+    String name(TimeRecordDay d) => '${d.lastName ?? ''} ${d.firstName ?? ''} ${d.employeeCode}'.toLowerCase();
+    return result..sort((a, b) {
+      final byDate = b.date.compareTo(a.date);
+      return byDate != 0 ? byDate : name(a).compareTo(name(b));
+    });
   }
 
   /// The days of [employees] from [first] to [last] (local dates), with each

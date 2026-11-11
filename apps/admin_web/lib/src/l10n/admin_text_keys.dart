@@ -214,6 +214,10 @@ abstract final class AdminTextKeys {
   static const timeRecordsPeriodLastMonth = 'timeRecords.period.lastMonth';
   static const timeRecordsStatusToReview = 'timeRecords.status.toReview';
   static const timeRecordsStatusFinished = 'timeRecords.status.finished';
+  static const timeRecordsStatusNotStarted = 'timeRecords.status.notStarted';
+  static const timeRecordsAttendanceOnTime = 'timeRecords.attendance.onTime';
+  static const timeRecordsAttendanceLate = 'timeRecords.attendance.late';
+  static const timeRecordsAttendanceLeftEarly = 'timeRecords.attendance.leftEarly';
   static const timeRecordsStatusAll = 'timeRecords.status.all';
   static const timeRecordsStatusComplete = 'timeRecords.status.complete';
   static const timeRecordsStatusWorking = 'timeRecords.status.working';

@@ -214,6 +214,20 @@ void main() {
       const TimeRecordStatusFilter.only(TimeRecordStatus.pendingReview),
     );
     expect(TimeRecordStatusFilter.fromWire('finished'), TimeRecordStatusFilter.finished);
+    expect(TimeRecordStatusFilter.fromWire('left_early'), const TimeRecordStatusFilter.attended(DayAttendance.leftEarly));
+    expect(TimeRecordStatusFilter.fromWire('not_started'), const TimeRecordStatusFilter.only(TimeRecordStatus.notStarted));
     expect(TimeRecordStatusFilter.fromWire('anything'), isNull);
+  });
+
+  test('the attendance filter lets through only those days', () {
+    TimeRecordDay day(DayAttendance? attendance) => TimeRecordDay(
+      employeeId: 1,
+      employeeCode: 'KDV',
+      date: DateTime.utc(2026, 10, 21),
+      status: TimeRecordStatus.complete,
+      attendance: attendance,
+    );
+    const late = TimeRecordStatusFilter.attended(DayAttendance.late);
+    expect([late.lets(day(DayAttendance.late)), late.lets(day(DayAttendance.onTime)), late.lets(day(null))], [true, false, false]);
   });
 }

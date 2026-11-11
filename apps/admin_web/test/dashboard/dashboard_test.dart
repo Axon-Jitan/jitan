@@ -325,9 +325,16 @@ void main() {
       expect((await open(tester, 'Almeco')).single.path, '/employees');
     });
 
-    testWidgets('not started, on time, late and left early open nothing: no page lists them', (tester) async {
-      expect(await open(tester, 'Not started'), isEmpty);
-      expect(await open(tester, 'Late'), isEmpty);
+    testWidgets('Today: not started opens today’s Time records, not started', (tester) async {
+      expect((await open(tester, 'Not started')).single.queryParameters, {'status': 'not_started', 'from': '2026-10-31', 'to': '2026-10-31'});
+    });
+
+    testWidgets('Attendance: late opens the period’s late days in Time records', (tester) async {
+      expect((await open(tester, 'Late')).single.queryParameters, {'status': 'late', 'from': '2026-10-25', 'to': '2026-10-31'});
+    });
+
+    testWidgets('Attendance: on time and left early too', (tester) async {
+      expect((await open(tester, 'On time')).single.queryParameters['status'], 'on_time');
     });
 
     testWidgets('not set up: Employees filtered on it', (tester) async {

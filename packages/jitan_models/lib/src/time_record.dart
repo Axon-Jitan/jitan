@@ -27,7 +27,11 @@ enum TimeRecordStatus {
 
   /// A past scheduled working day without any registration (GAP-16: why
   /// can not be recorded yet).
-  noRegistration('no_registration');
+  noRegistration('no_registration'),
+
+  /// Scheduled today and nothing registered yet. Only in HR's Time records
+  /// (the Dashboard's "Not started"); the employee's own days never have it.
+  notStarted('not_started');
 
   const TimeRecordStatus(this.wireName);
 
@@ -36,6 +40,23 @@ enum TimeRecordStatus {
   static TimeRecordStatus fromWire(String value) => values.firstWhere(
         (s) => s.wireName == value,
         orElse: () => throw FormatException('Unknown time record status "$value".'),
+      );
+}
+
+/// A finished day against its schedule (D11b): on time, late, or left early.
+/// A day both late and left early counts once, as late.
+enum DayAttendance {
+  onTime('on_time'),
+  late('late'),
+  leftEarly('left_early');
+
+  const DayAttendance(this.wireName);
+
+  final String wireName;
+
+  static DayAttendance fromWire(String value) => values.firstWhere(
+        (a) => a.wireName == value,
+        orElse: () => throw FormatException('Unknown attendance "$value".'),
       );
 }
 
@@ -269,6 +290,7 @@ class TimeRecordDay {
     this.awayMinutes = 0,
     this.transportMinutes = 0,
     this.travellingSince,
+    this.attendance,
     this.trips = 0,
     this.distanceMetres = 0,
     this.tripsWithoutDistance = 0,
@@ -290,6 +312,10 @@ class TimeRecordDay {
         awayMinutes: json.readOptionalInt('awayMinutes') ?? 0,
         transportMinutes: json.readOptionalInt('transportMinutes') ?? 0,
         travellingSince: json.readOptionalDateTime('travellingSince')?.toUtc(),
+        attendance: switch (json.readOptionalString('attendance')) {
+          final String a => DayAttendance.fromWire(a),
+          null => null,
+        },
         trips: json.readOptionalInt('trips') ?? 0,
         distanceMetres: json.readOptionalInt('distanceMetres') ?? 0,
         tripsWithoutDistance: json.readOptionalInt('tripsWithoutDistance') ?? 0,
@@ -329,6 +355,10 @@ class TimeRecordDay {
   /// still meanwhile (D46).
   final DateTime? travellingSince;
 
+  /// For a finished day in HR's Time records: on time, late or left early
+  /// against the schedule; `null` otherwise.
+  final DayAttendance? attendance;
+
   /// The day's trips and their normal route (D23), calculated when asked.
   /// [tripsWithoutDistance]: trips whose place or route isn't known, left out
   /// of [distanceMetres].
@@ -337,7 +367,13 @@ class TimeRecordDay {
   final int tripsWithoutDistance;
 
   /// This day with [pending] and the trips replaced; everything else kept.
-  TimeRecordDay copyWith({List<TimeRecordPending>? pending, int? trips, int? distanceMetres, int? tripsWithoutDistance}) =>
+  TimeRecordDay copyWith({
+    List<TimeRecordPending>? pending,
+    int? trips,
+    int? distanceMetres,
+    int? tripsWithoutDistance,
+    DayAttendance? attendance,
+  }) =>
       TimeRecordDay(
         employeeId: employeeId,
         employeeCode: employeeCode,
@@ -354,6 +390,7 @@ class TimeRecordDay {
         awayMinutes: awayMinutes,
         transportMinutes: transportMinutes,
         travellingSince: travellingSince,
+        attendance: attendance ?? this.attendance,
         trips: trips ?? this.trips,
         distanceMetres: distanceMetres ?? this.distanceMetres,
         tripsWithoutDistance: tripsWithoutDistance ?? this.tripsWithoutDistance,
@@ -375,6 +412,7 @@ class TimeRecordDay {
         if (awayMinutes > 0) 'awayMinutes': awayMinutes,
         if (transportMinutes > 0) 'transportMinutes': transportMinutes,
         if (travellingSince case final at?) 'travellingSince': at.toUtc().toIso8601String(),
+        if (attendance case final a?) 'attendance': a.wireName,
         if (trips > 0) 'trips': trips,
         if (distanceMetres > 0) 'distanceMetres': distanceMetres,
         if (tripsWithoutDistance > 0) 'tripsWithoutDistance': tripsWithoutDistance,

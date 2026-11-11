@@ -236,8 +236,11 @@ void main() {
     final response = await app.get('/time-records?from=2026-10-19&to=2026-10-25&company=7');
 
     final days = TimeRecordList.fromJson(await jsonBody(response)).days;
-    expect([for (final d in days) (TimeRecordDay.dateText(d.date), d.status)], [('2026-10-19', TimeRecordStatus.noRegistration)],
-        reason: 'Thursday 22 is today; other days have no schedule');
+    expect(
+      [for (final d in days) (TimeRecordDay.dateText(d.date), d.status)],
+      [('2026-10-22', TimeRecordStatus.notStarted), ('2026-10-19', TimeRecordStatus.noRegistration)],
+      reason: 'Thursday 22 is today, nothing registered yet; other days have no schedule',
+    );
   });
 
   test('rounding preview: what a time would count as, nothing stored', () async {
