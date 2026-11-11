@@ -100,18 +100,19 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   void _say(String text, {bool failed = false}) => showJitanToast(context, text, failed: failed);
 
   Future<void> _addEmployee() async {
-    final created = await showAddEmployeeDialog(
+    final added = await showAddEmployeeDialog(
       context,
       employeesApi: widget.api,
       groupsApi: widget.groupsApi,
       companiesApi: widget.companiesApi,
       schedulesApi: widget.schedulesApi,
     );
-    if (created == null || !mounted) return;
+    if (added == null || !mounted) return;
     await _controller?.load();
     if (!mounted) return;
-    final name = [created.firstName, created.lastName].whereType<String>().join(' ');
-    _say(context.t(AdminTextKeys.employeeAddSuccess, args: {'name': name}));
+    final (:employee, :setUp) = added;
+    final name = [employee.firstName, employee.lastName].whereType<String>().join(' ');
+    _say(context.t(setUp ? AdminTextKeys.employeeAddSetUp : AdminTextKeys.employeeAddSuccess, args: {'name': name}));
   }
 
   /// A row: the employee's pop-up, then what HR chose there.

@@ -437,11 +437,12 @@ void main() {
       await tester.tap(find.text('Add employee'));
       await _settle(tester);
       _fitsTheWindow(tester, width, 'Add employee, step 1');
-      await tester.enterText(find.widgetWithText(TextField, 'Enter first name'), 'Kevin');
-      await tester.enterText(find.widgetWithText(TextField, 'Enter last name'), 'De Vos');
-      await tester.enterText(find.widgetWithText(TextField, 'Enter employee code'), 'KDV');
-      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
-      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
+      Finder field(String label) => find.descendant(of: find.widgetWithText(JitanTextField, label), matching: find.byType(TextField));
+      await tester.enterText(field('First name'), 'Kevin');
+      await tester.enterText(field('Last name'), 'De Vos');
+      await tester.enterText(field('Employee code'), 'KDV');
+      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue'));
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue'));
       await tester.pump();
       companiesApi.succeed([company(7, 'Almeco'), company(8, 'PCA')]);
       await tester.pump();
@@ -453,8 +454,8 @@ void main() {
       tester.widget<JitanMultiSelectField<int>>(find.widgetWithText(JitanMultiSelectField<int>, 'Companies')).onChanged!([7]);
       await tester.pump();
 
-      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
-      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Continue →'));
+      await tester.ensureVisible(find.widgetWithText(JitanPrimaryButton, 'Add employee').last);
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Add employee').last);
       await tester.pump();
       employees.createSucceeds(employee(5, 'Kevin', 'De Vos', 'KDV'));
       await tester.pump();

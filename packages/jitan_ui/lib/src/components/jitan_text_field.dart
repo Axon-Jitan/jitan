@@ -22,6 +22,7 @@ class JitanTextField extends StatelessWidget {
     this.inputFormatters = const [],
     this.maxLines = 1,
     this.obscureText = false,
+    this.note,
   });
 
   final String label;
@@ -49,9 +50,13 @@ class JitanTextField extends StatelessWidget {
   /// Hides what is typed, for a password.
   final bool obscureText;
 
+  /// A quiet word after the label, e.g. "Optional".
+  final String? note;
+
   @override
   Widget build(BuildContext context) => JitanFieldLabel(
         label: label,
+        note: note,
         child: TextField(
           controller: controller,
           obscureText: obscureText,

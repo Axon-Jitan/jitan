@@ -337,49 +337,46 @@ abstract final class AdminTextKeys {
 
   static const employeeAddAction = 'employee.add.action';
   static const employeeAddTitle = 'employee.add.title';
-  static const employeeAddSubtitle = 'employee.add.subtitle';
   static const employeeColumnSchedule = 'employee.column.schedule';
   static const employeeFilterCompanyHint = 'employee.filter.company.hint';
   static const employeeFilterCompanyAll = 'employee.filter.company.all';
   static const employeeFilterCompanyFailed = 'employee.filter.company.failed';
   static const employeeNoCompany = 'employee.noCompany';
   static const employeeNoMatch = 'employee.noMatch';
-  static const employeeAddSubtitleAssignments = 'employee.add.subtitle.assignments';
-  static const employeeAddStepInformation = 'employee.add.step.information';
-  static const employeeAddStepAssignments = 'employee.add.step.assignments';
-  static const employeeAddStepActivation = 'employee.add.step.activation';
-  static const employeeAddStepOf = 'employee.add.stepOf';
+  // Add employee (Figma 1536:2, 1536:195, 1536:389, 1536:569).
+  /// Arguments: `{n}`, `{total}`, `{step}` ("Details").
+  static const employeeAddProgress = 'employee.add.progress';
+  static const employeeAddStepDetails = 'employee.add.step.details';
+  static const employeeAddStepWork = 'employee.add.step.work';
+  static const employeeAddStepSetUp = 'employee.add.step.setUp';
+
+  /// Argument: `{name}`.
+  static const employeeAddAdded = 'employee.add.added';
+  static const employeeFieldOptional = 'employee.field.optional';
+  static const employeeFieldMissingFirstName = 'employee.field.missing.firstName';
+  static const employeeFieldMissingLastName = 'employee.field.missing.lastName';
+  static const employeeFieldMissingCode = 'employee.field.missing.code';
+  static const employeeFieldMissingCompany = 'employee.field.missing.company';
+  static const employeeFieldEmailHint = 'employee.field.email.hint';
+  static const employeeAddHours = 'employee.add.hours';
+
+  /// Arguments: `{hours}`, `{group}`.
+  static const employeeAddHoursFrom = 'employee.add.hours.from';
+  static const employeeAddHoursNone = 'employee.add.hours.none';
+  static const employeeAddHoursChoose = 'employee.add.hours.choose';
+
+  /// Argument: `{name}`. Add employee closed because the QR was used.
+  static const employeeAddSetUp = 'employee.add.setUp';
   static const employeeAddContinue = 'employee.add.continue';
-  static const employeeAddSectionPersonal = 'employee.add.section.personal';
-  static const employeeAddSectionContact = 'employee.add.section.contact';
-  static const employeeAddSectionAssignments = 'employee.add.section.assignments';
-  static const employeeFieldFirstNameHint = 'employee.field.firstName.hint';
-  static const employeeFieldLastNameHint = 'employee.field.lastName.hint';
   static const employeeFieldCodeHint = 'employee.field.code.hint';
   static const employeeFieldEmail = 'employee.field.email';
   static const employeeFieldCompanies = 'employee.field.companies';
   static const employeeFieldCompaniesHint = 'employee.field.companies.hint';
   static const employeeFieldGroups = 'employee.field.groups';
   static const employeeFieldGroupsHint = 'employee.field.groups.hint';
-  static const employeeFieldSchedule = 'employee.field.schedule';
-  static const employeeFieldScheduleOption = 'employee.field.schedule.option';
-  static const employeeFieldScheduleNone = 'employee.field.schedule.none';
   static const employeeFieldScheduleChoose = 'employee.field.schedule.choose';
   static const employeeFieldErrorEmail = 'employee.field.error.email';
   static const employeeFieldErrorUnavailable = 'employee.field.error.unavailable';
-  static const employeeAddActivationTitle = 'employee.add.activation.title';
-  static const employeeAddActivationSubtitle = 'employee.add.activation.subtitle';
-  static const employeeAddActivationNotActivated = 'employee.add.activation.notActivated';
-  static const employeeAddActivationEmployee = 'employee.add.activation.employee';
-  static const employeeAddActivationStep1 = 'employee.add.activation.step1';
-  static const employeeAddActivationStep2 = 'employee.add.activation.step2';
-  static const employeeAddActivationStep3 = 'employee.add.activation.step3';
-  static const employeeAddActivationScan = 'employee.add.activation.scan';
-  static const employeeAddActivationScanHint = 'employee.add.activation.scanHint';
-  static const employeeAddActivationNote = 'employee.add.activation.note';
-  static const employeeAddActivationLoading = 'employee.add.activation.loading';
-  static const employeeAddActivationFailed = 'employee.add.activation.failed';
-  static const employeeAddFinish = 'employee.add.finish';
   static const employeeAddLoading = 'employee.add.loading';
 
   /// Argument: `{name}`.

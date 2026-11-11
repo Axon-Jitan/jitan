@@ -99,11 +99,9 @@ void main() {
 
     employees.createSucceeds(employee(20, 'Disan', 'Ssebowa', 'SBW'));
     await Future<void>.delayed(Duration.zero);
-    expect(controller.step, AddEmployeeStep.activation);
-    expect(employees.qrRequests, [(7, 20, TemporaryQrPurpose.onboarding)]);
-    employees.qrSucceeds('qr-value', expiresAt: DateTime.utc(2026, 10, 21, 12, 10));
     await creating;
-    expect(controller.qr!.qrCode, 'qr-value');
+    expect(controller.step, AddEmployeeStep.activation);
+    expect(controller.createdIn, 7, reason: 'step 3 asks the QR through the first company');
   });
 
   test('a taken code takes HR back to step 1, under the code', () async {
@@ -143,9 +141,7 @@ void main() {
     expect(through, 8);
     expect(request.companyIds, [8, 7]);
     employees.createSucceeds(employee(21, 'Disan', 'Ssebowa', 'SBW'));
-    await Future<void>.delayed(Duration.zero);
-    expect(employees.qrRequests, [(8, 21, TemporaryQrPurpose.onboarding)]);
-    employees.qrSucceeds('qr-value', expiresAt: DateTime.utc(2026, 10, 21, 12, 10));
     await creating;
+    expect(controller.createdIn, 8, reason: 'step 3 asks the QR there');
   });
 }

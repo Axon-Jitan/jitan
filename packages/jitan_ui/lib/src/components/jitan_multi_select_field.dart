@@ -198,7 +198,8 @@ class _Field<T> extends StatelessWidget {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             for (final chip in chips) _Chip(label: chip.label, onRemove: chip.onRemove),
-                            if (hintText case final hint?)
+                            // The hint only while nothing is chosen.
+                            if (hintText case final hint? when chips.isEmpty)
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 4),
                                 child: Text(hint, style: JitanTextStyles.inputHint),

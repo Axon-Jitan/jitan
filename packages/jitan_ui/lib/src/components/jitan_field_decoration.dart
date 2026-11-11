@@ -19,6 +19,8 @@ InputDecoration jitanFieldDecoration({
     hintStyle: JitanTextStyles.inputHint,
     errorText: errorText,
     errorStyle: JitanTextStyles.fieldError,
+    // A message wraps instead of being cut off.
+    errorMaxLines: 3,
     isDense: true,
     filled: true,
     fillColor: JitanColors.surface,
@@ -34,7 +36,7 @@ InputDecoration jitanFieldDecoration({
 /// A field label above its input, as in the Figma forms, with an optional
 /// ⓘ that explains the field ([info]).
 class JitanFieldLabel extends StatelessWidget {
-  const JitanFieldLabel({super.key, required this.label, required this.child, this.info});
+  const JitanFieldLabel({super.key, required this.label, required this.child, this.info, this.note});
 
   final String label;
   final Widget child;
@@ -42,12 +44,15 @@ class JitanFieldLabel extends StatelessWidget {
   /// What the field means, with an example; shown from the ⓘ.
   final String? info;
 
+  /// A quiet word after the label, e.g. "Optional" (Figma `1536:2`).
+  final String? note;
+
   @override
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          JitanLabelText(label: label, info: info),
+          JitanLabelText(label: label, info: info, note: note),
           const SizedBox(height: JitanDimensions.fieldLabelGap),
           child,
         ],
@@ -56,15 +61,27 @@ class JitanFieldLabel extends StatelessWidget {
 
 /// A label with an optional ⓘ after it (also for column headings).
 class JitanLabelText extends StatelessWidget {
-  const JitanLabelText({super.key, required this.label, this.info, this.style});
+  const JitanLabelText({super.key, required this.label, this.info, this.style, this.note});
 
   final String label;
   final String? info;
   final TextStyle? style;
+  final String? note;
 
   @override
   Widget build(BuildContext context) {
-    final text = Text(label, style: style ?? JitanTextStyles.fieldLabel);
+    final note = this.note;
+    final text = note == null
+        ? Text(label, style: style ?? JitanTextStyles.fieldLabel)
+        : Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: label),
+                TextSpan(text: '  $note', style: const TextStyle(color: JitanColors.disabledText, fontWeight: FontWeight.w400)),
+              ],
+            ),
+            style: style ?? JitanTextStyles.fieldLabel,
+          );
     final info = this.info;
     if (info == null) return text;
     return Row(

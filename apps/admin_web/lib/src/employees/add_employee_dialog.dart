@@ -9,21 +9,26 @@ import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
 import '../schedules/schedule_form_fields.dart';
 import '../schedules/schedule_summary_text.dart';
-import 'add_employee_activation.dart';
 import 'add_employee_controller.dart';
-import 'add_employee_stepper.dart';
+import 'add_employee_progress.dart';
 import 'phone_number_input_formatter.dart';
+import 'temporary_qr/temporary_qr_controller.dart';
+import 'temporary_qr/temporary_qr_panel.dart';
+
+/// What Add employee ended with: the employee, and whether they already
+/// finished setting up with the QR of step 3.
+typedef AddedEmployee = ({EmployeeSummary employee, bool setUp});
 
 /// Opens Add employee. HR chooses the employee's companies in step 2.
-/// Completes with the created employee once HR finished the setup, `null`
-/// when closed before the employee was created.
-Future<EmployeeSummary?> showAddEmployeeDialog(
+/// Completes with the created employee once HR is done, `null` when closed
+/// before the employee was created.
+Future<AddedEmployee?> showAddEmployeeDialog(
   BuildContext context, {
   required EmployeesApi employeesApi,
   required GroupsApi groupsApi,
   required CompaniesApi companiesApi,
   required SchedulesApi schedulesApi,
-}) => showJitanModal<EmployeeSummary>(
+}) => showJitanModal<AddedEmployee>(
   context,
   // A click beside the dialog must not throw away what HR entered.
   barrierDismissible: false,
@@ -35,16 +40,14 @@ Future<EmployeeSummary?> showAddEmployeeDialog(
   ),
 );
 
-/// Figma `HR / Employees — Add employee`: Step 1 information (`153:970`),
-/// Step 2 assignments (`985:2`, lists `993:292`, `993:596`, `992:2`) and
-/// Step 3 onboarding (`1233:2`), as the prototype links them.
+/// Figma Add employee: Details (`1536:2`, a missing field `1536:195`), Work
+/// (`1536:389`) and Set up (`1536:569`), with a slim progress bar.
 ///
-/// Decided with the product owner on 2026-10-21: "Employee type" is left
-/// out of step 1 (it is the employee's group, chosen in step 2; Figma to be
-/// updated); "Default company" is left out until IT adds it to the database
-/// (ERD_GAPS GAP-03); "Work schedule" offers the hours of the groups chosen
-/// for the employee. The employee is created when HR leaves step 2, so step
-/// 3 has no Back.
+/// Decided with the product owner: no "Employee type" in step 1 (it is the
+/// group, chosen in step 2); no default company until IT adds it (GAP-03);
+/// the hours come from the groups chosen. The employee is created when HR
+/// leaves step 2 ("Add employee"), so step 3 has no Back; its QR closes the
+/// dialog by itself once the employee is set up.
 class AddEmployeeDialog extends StatefulWidget {
   const AddEmployeeDialog({
     super.key,
@@ -77,8 +80,29 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
   final _phone = TextEditingController();
   final _email = TextEditingController();
 
+  /// Step 3's QR, made once the employee exists.
+  TemporaryQrController? _qr;
+
+  @override
+  void initState() {
+    super.initState();
+    // A message goes as soon as HR types in its field.
+    for (final (field, name) in [
+      (_firstName, CreateEmployeeRequest.fieldFirstName),
+      (_lastName, CreateEmployeeRequest.fieldLastName),
+      (_code, CreateEmployeeRequest.fieldCode),
+      (_phone, CreateEmployeeRequest.fieldPhone),
+      (_email, CreateEmployeeRequest.fieldEmail),
+    ]) {
+      field.addListener(() => _controller.clearError(name));
+    }
+  }
+
   @override
   void dispose() {
+    _qr
+      ?..removeListener(_closeWhenSetUp)
+      ..dispose();
     _controller.dispose();
     for (final field in [_firstName, _lastName, _code, _phone, _email]) {
       field.dispose();
@@ -94,219 +118,240 @@ class _AddEmployeeDialogState extends State<AddEmployeeDialog> {
     email: _email.text,
   ));
 
+  TemporaryQrController _qrFor(EmployeeSummary created) => _qr ??= TemporaryQrController(
+    api: widget.employeesApi,
+    companyId: _controller.createdIn!,
+    userId: created.id,
+    purpose: TemporaryQrPurpose.onboarding,
+  )..addListener(_closeWhenSetUp);
+
+  void _closeWhenSetUp() {
+    final created = _controller.created;
+    if (_qr?.used == true && created != null && mounted) Navigator.of(context).pop((employee: created, setUp: true));
+  }
+
+  void _done() => Navigator.of(context).pop((employee: _controller.created!, setUp: false));
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _controller,
     builder: (context, _) {
       final c = _controller;
-      final busy = c.submitting;
       final created = c.created;
       final failure = c.formFailure;
+      if (c.step == AddEmployeeStep.activation && created != null) return _setUp(context, created);
+      final details = c.step == AddEmployeeStep.information;
       return JitanModal(
-        width: 835,
+        width: 560,
         title: context.t(AdminTextKeys.employeeAddTitle),
-        subtitle: switch (c.step) {
-          AddEmployeeStep.information => context.t(AdminTextKeys.employeeAddSubtitle),
-          AddEmployeeStep.assignments => context.t(AdminTextKeys.employeeAddSubtitleAssignments),
-          // No subtitle in Figma, but the same space, so the dialog keeps its size.
-          AddEmployeeStep.activation => '',
-        },
-        // Once created, closing is "Finish setup".
-        onClose: busy ? null : () => Navigator.of(context).pop(created),
-        footerNote: context.t(AdminTextKeys.employeeAddStepOf, args: {'n': c.step.index + 1, 'total': 3}),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AddEmployeeStepper(
-              current: c.step.index,
-              labels: [
-                context.t(AdminTextKeys.employeeAddStepInformation),
-                context.t(AdminTextKeys.employeeAddStepAssignments),
-                context.t(AdminTextKeys.employeeAddStepActivation),
-              ],
+            AddEmployeeProgress(
+              step: details ? 1 : 2,
+              label: context.t(details ? AdminTextKeys.employeeAddStepDetails : AdminTextKeys.employeeAddStepWork),
             ),
-            const SizedBox(height: 24),
-            // The same size on every step, as in Figma (all three frames are
-            // one size): a long step scrolls inside it.
-            SizedBox(
-              height: _stepHeight(MediaQuery.sizeOf(context)),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ...switch (c.step) {
-                      AddEmployeeStep.information => _information(context),
-                      AddEmployeeStep.assignments => _assignments(context),
-                      AddEmployeeStep.activation => [
-                        AddEmployeeActivation(
-                          employee: created!,
-                          companyName: _companyName,
-                          qr: c.qr,
-                          failure: c.qrFailure,
-                          onRetry: c.requestQr,
-                        ),
-                      ],
-                    },
-                    if (failure != null) ...[
-                      const SizedBox(height: 16),
-                      Builder(
-                        builder: (context) {
-                          final keys = failureTextKeysFor(failure);
-                          return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
-                        },
-                      ),
-                    ],
-                  ],
-                ),
+            const SizedBox(height: 22),
+            ...details ? _details(context) : _work(context),
+            if (failure != null) ...[
+              const SizedBox(height: 16),
+              Builder(
+                builder: (context) {
+                  final keys = failureTextKeysFor(failure);
+                  return JitanInlineError(title: context.t(keys.title), message: context.t(keys.message));
+                },
               ),
-            ),
+            ],
           ],
         ),
-        actions: switch (c.step) {
-          AddEmployeeStep.information => [
-            JitanPrimaryButton(label: context.t(AdminTextKeys.employeeAddContinue), onPressed: _continue),
-          ],
-          AddEmployeeStep.assignments => [
-            JitanSecondaryButton(label: context.t(CommonTextKeys.back), onPressed: busy ? null : c.back),
+        leadingActions: [
+          TextButton(
+            onPressed: c.submitting ? null : (details ? () => Navigator.of(context).pop() : c.back),
+            style: TextButton.styleFrom(foregroundColor: JitanColors.ink, padding: const EdgeInsets.symmetric(horizontal: 4)),
+            child: Text(
+              context.t(details ? CommonTextKeys.cancel : CommonTextKeys.back),
+              style: JitanTextStyles.tableCellStrong,
+            ),
+          ),
+        ],
+        actions: [
+          if (details)
+            JitanPrimaryButton(label: context.t(AdminTextKeys.employeeAddContinue), onPressed: _continue)
+          else
             JitanPrimaryButton(
-              label: context.t(AdminTextKeys.employeeAddContinue),
-              busy: busy,
+              label: context.t(AdminTextKeys.employeeAddAction),
+              busy: c.submitting,
               onPressed: c.options is AssignmentOptionsLoaded ? c.create : null,
             ),
-          ],
-          AddEmployeeStep.activation => [
-            JitanPrimaryButton(
-              label: context.t(AdminTextKeys.employeeAddFinish),
-              onPressed: () => Navigator.of(context).pop(created),
-            ),
-          ],
-        },
+        ],
       );
     },
   );
 
-  /// 430 px on a wide screen; on a phone the fields stack, so it uses the
-  /// screen's extra height (up to 560 px); on a short window it shrinks.
-  static double _stepHeight(Size screen) =>
-      (screen.height - 350).clamp(280.0, screen.width < JitanDimensions.phoneBreakpoint ? 560.0 : 430.0);
-
-  String get _companyName => switch (_controller.options) {
-    AssignmentOptionsLoaded(:final companies) =>
-      [for (final company in companies) if (_controller.companyIds.contains(company.id)) company.name].join(' · '),
-    _ => '',
-  };
-
-  String? _error(String field) => _controller.fieldErrors[field] == null ? null : context.t(_controller.fieldErrors[field]!);
-
-  /// Step 1 (`153:970`): personal information and contact details.
-  List<Widget> _information(BuildContext context) => [
-    Text(context.t(AdminTextKeys.employeeAddSectionPersonal), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
-    const SizedBox(height: 20),
-    ScheduleFieldColumns(
-      children: [
-        JitanTextField(
-          label: context.t(AdminTextKeys.employeeFieldFirstName),
-          hintText: context.t(AdminTextKeys.employeeFieldFirstNameHint),
-          controller: _firstName,
-          autofocus: true,
-          errorText: _error(CreateEmployeeRequest.fieldFirstName),
-        ),
-        JitanTextField(
-          label: context.t(AdminTextKeys.employeeFieldLastName),
-          hintText: context.t(AdminTextKeys.employeeFieldLastNameHint),
-          controller: _lastName,
-          errorText: _error(CreateEmployeeRequest.fieldLastName),
-        ),
-        JitanTextField(
-          label: context.t(AdminTextKeys.employeeFieldCode),
-          hintText: context.t(AdminTextKeys.employeeFieldCodeHint),
-          controller: _code,
-          errorText: _error(CreateEmployeeRequest.fieldCode),
-        ),
-      ],
-    ),
-    const SizedBox(height: 28),
-    Text(context.t(AdminTextKeys.employeeAddSectionContact), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18)),
-    const SizedBox(height: 20),
-    ScheduleFieldColumns(
-      children: [
-        JitanTextField(
-          label: context.t(AdminTextKeys.employeeFieldPhone),
-          hintText: context.t(AdminTextKeys.employeeFieldPhoneHint),
-          controller: _phone,
-          keyboardType: TextInputType.phone,
-          inputFormatters: const [PhoneNumberInputFormatter()],
-          errorText: _error(CreateEmployeeRequest.fieldPhone),
-        ),
-        JitanTextField(
-          label: context.t(AdminTextKeys.employeeFieldEmail),
-          hintText: context.t(AdminTextKeys.employeeFieldPhoneHint),
-          controller: _email,
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _continue(),
-          errorText: _error(CreateEmployeeRequest.fieldEmail),
-        ),
-      ],
-    ),
-  ];
-
-  /// Step 2 (`985:2`): companies, employee groups and the work schedule.
-  List<Widget> _assignments(BuildContext context) {
-    final c = _controller;
-    final heading = Text(context.t(AdminTextKeys.employeeAddSectionAssignments), style: JitanTextStyles.stateTitle.copyWith(fontSize: 18));
-    return switch (c.options) {
-      AssignmentOptionsLoading() => [heading, const SizedBox(height: 20), GroupStateText(context.t(AdminTextKeys.employeeAddLoading))],
-      AssignmentOptionsFailed() => [
-        heading,
-        const SizedBox(height: 20),
-        GroupStateText(context.t(AdminTextKeys.groupsPickerLoadFailed), onRetry: c.loadOptions),
-      ],
-      AssignmentOptionsLoaded(:final companies, :final groups) => [
-        heading,
-        const SizedBox(height: 20),
-        ScheduleFieldColumns(
+  /// Step 3 (`1536:569`): added; the onboarding QR, as in the QR pop-up.
+  Widget _setUp(BuildContext context, EmployeeSummary created) {
+    final qr = _qrFor(created);
+    final fullName = [created.firstName, created.lastName].whereType<String>().join(' ');
+    return ListenableBuilder(
+      listenable: qr,
+      builder: (context, _) => JitanModal(
+        width: 560,
+        title: context.t(AdminTextKeys.employeeAddAdded, args: {'name': fullName.isEmpty ? created.code : fullName}),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            JitanMultiSelectField<int>(
-              label: context.t(AdminTextKeys.employeeFieldCompanies),
-              hintText: context.t(AdminTextKeys.employeeFieldCompaniesHint),
-              options: [for (final company in companies) JitanSelectOption(value: company.id, label: company.name)],
-              values: c.companyIds,
-              errorText: _error(CreateEmployeeRequest.fieldCompanyIds),
-              onChanged: c.submitting ? null : c.setCompanies,
-            ),
-            JitanMultiSelectField<int>(
-              label: context.t(AdminTextKeys.employeeFieldGroups),
-              hintText: context.t(AdminTextKeys.employeeFieldGroupsHint),
-              options: [for (final group in groups) JitanSelectOption(value: group.id, label: group.name)],
-              values: c.groupIds,
-              errorText: _error(CreateEmployeeRequest.fieldGroupIds),
-              onChanged: c.submitting ? null : c.setGroups,
-            ),
-            const SizedBox.shrink(),
-            // 1399:270 none available, 1399:429 one (filled in), 1399:588 several.
-            JitanSelectField<int>(
-              label: context.t(AdminTextKeys.employeeFieldSchedule),
-              hintText: context.t(
-                c.scheduleChoices.isEmpty ? AdminTextKeys.employeeFieldScheduleNone : AdminTextKeys.employeeFieldScheduleChoose,
-              ),
-              value: c.scheduleGroupId,
-              options: [
-                for (final schedule in c.scheduleChoices)
-                  JitanSelectOption(
-                    value: schedule.group.id,
-                    label: context.t(
-                      AdminTextKeys.employeeFieldScheduleOption,
-                      args: {'group': schedule.group.name, 'hours': workHoursDaysSummary(TranslationScope.of(context), schedule.variants.single)},
-                    ),
-                  ),
-              ],
-              errorText: _error(CreateEmployeeRequest.fieldScheduleGroupId),
-              onChanged: c.submitting || c.scheduleChoices.isEmpty ? null : c.setScheduleGroup,
+            AddEmployeeProgress(step: 3, label: context.t(AdminTextKeys.employeeAddStepSetUp)),
+            const SizedBox(height: 22),
+            TemporaryQrPanel(
+              controller: qr,
+              fullName: fullName,
+              callName: created.firstName ?? (fullName.isEmpty ? created.code : fullName),
+              size: 208,
             ),
           ],
         ),
+        leadingActions: TemporaryQrPanel.leadingActions(context, qr),
+        actions: TemporaryQrPanel.actions(context, qr, onDone: _done),
+      ),
+    );
+  }
+
+  String? _error(String field) {
+    final key = _controller.fieldErrors[field];
+    if (key == null) return null;
+    // A missing field says which one (Figma `1536:195`).
+    return context.t(switch ((key, field)) {
+      (AdminTextKeys.employeeFieldErrorRequired, CreateEmployeeRequest.fieldFirstName) => AdminTextKeys.employeeFieldMissingFirstName,
+      (AdminTextKeys.employeeFieldErrorRequired, CreateEmployeeRequest.fieldLastName) => AdminTextKeys.employeeFieldMissingLastName,
+      (AdminTextKeys.employeeFieldErrorRequired, CreateEmployeeRequest.fieldCode) => AdminTextKeys.employeeFieldMissingCode,
+      (AdminTextKeys.employeeFieldErrorRequired, CreateEmployeeRequest.fieldCompanyIds) => AdminTextKeys.employeeFieldMissingCompany,
+      _ => key,
+    });
+  }
+
+  /// Step 1 (`1536:2`): names and code, then phone and email (optional).
+  List<Widget> _details(BuildContext context) {
+    final optional = context.t(AdminTextKeys.employeeFieldOptional);
+    return [
+      ScheduleFieldColumns(
+        children: [
+          JitanTextField(
+            label: context.t(AdminTextKeys.employeeFieldFirstName),
+            controller: _firstName,
+            autofocus: true,
+            errorText: _error(CreateEmployeeRequest.fieldFirstName),
+          ),
+          JitanTextField(
+            label: context.t(AdminTextKeys.employeeFieldLastName),
+            controller: _lastName,
+            errorText: _error(CreateEmployeeRequest.fieldLastName),
+          ),
+          JitanTextField(
+            label: context.t(AdminTextKeys.employeeFieldCode),
+            hintText: context.t(AdminTextKeys.employeeFieldCodeHint),
+            controller: _code,
+            errorText: _error(CreateEmployeeRequest.fieldCode),
+          ),
+          const SizedBox.shrink(),
+          JitanTextField(
+            label: context.t(AdminTextKeys.employeeFieldPhone),
+            note: optional,
+            hintText: context.t(AdminTextKeys.employeeFieldPhoneHint),
+            controller: _phone,
+            keyboardType: TextInputType.phone,
+            inputFormatters: const [PhoneNumberInputFormatter()],
+            errorText: _error(CreateEmployeeRequest.fieldPhone),
+          ),
+          JitanTextField(
+            label: context.t(AdminTextKeys.employeeFieldEmail),
+            note: optional,
+            hintText: context.t(AdminTextKeys.employeeFieldEmailHint),
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _continue(),
+            errorText: _error(CreateEmployeeRequest.fieldEmail),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  /// Step 2 (`1536:389`): companies and groups; the hours follow the groups.
+  List<Widget> _work(BuildContext context) {
+    final c = _controller;
+    return switch (c.options) {
+      AssignmentOptionsLoading() => [GroupStateText(context.t(AdminTextKeys.employeeAddLoading))],
+      AssignmentOptionsFailed() => [GroupStateText(context.t(AdminTextKeys.groupsPickerLoadFailed), onRetry: c.loadOptions)],
+      AssignmentOptionsLoaded(:final companies, :final groups) => [
+        JitanMultiSelectField<int>(
+          label: context.t(AdminTextKeys.employeeFieldCompanies),
+          hintText: context.t(AdminTextKeys.employeeFieldCompaniesHint),
+          options: [for (final company in companies) JitanSelectOption(value: company.id, label: company.name)],
+          values: c.companyIds,
+          errorText: _error(CreateEmployeeRequest.fieldCompanyIds),
+          onChanged: c.submitting ? null : c.setCompanies,
+        ),
+        const SizedBox(height: 16),
+        JitanMultiSelectField<int>(
+          label: context.t(AdminTextKeys.employeeFieldGroups),
+          hintText: context.t(AdminTextKeys.employeeFieldGroupsHint),
+          options: [for (final group in groups) JitanSelectOption(value: group.id, label: group.name)],
+          values: c.groupIds,
+          errorText: _error(CreateEmployeeRequest.fieldGroupIds),
+          onChanged: c.submitting ? null : c.setGroups,
+        ),
+        ..._hours(context),
       ],
     };
+  }
+
+  /// Nothing before a group is chosen; then the hours they give, plainly
+  /// when there is one, a choice when several groups have hours.
+  List<Widget> _hours(BuildContext context) {
+    final c = _controller;
+    if (c.groupIds.isEmpty) return const [];
+    final choices = c.scheduleChoices;
+    String hoursOf(GroupSchedule s) => context.t(
+      AdminTextKeys.employeeAddHoursFrom,
+      args: {'hours': workHoursDaysSummary(TranslationScope.of(context), s.variants.single), 'group': s.group.name},
+    );
+    if (choices.length > 1) {
+      return [
+        const SizedBox(height: 16),
+        JitanSelectField<int>(
+          label: context.t(AdminTextKeys.employeeAddHoursChoose),
+          hintText: context.t(AdminTextKeys.employeeFieldScheduleChoose),
+          value: c.scheduleGroupId,
+          options: [for (final s in choices) JitanSelectOption(value: s.group.id, label: hoursOf(s))],
+          errorText: _error(CreateEmployeeRequest.fieldScheduleGroupId),
+          onChanged: c.submitting ? null : c.setScheduleGroup,
+        ),
+      ];
+    }
+    return [
+      const SizedBox(height: 16),
+      DecoratedBox(
+        decoration: BoxDecoration(color: JitanColors.tableHeader, borderRadius: BorderRadius.circular(14)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Text(context.t(AdminTextKeys.employeeAddHours), style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  choices.isEmpty ? context.t(AdminTextKeys.employeeAddHoursNone) : hoursOf(choices.single),
+                  textAlign: TextAlign.end,
+                  style: choices.isEmpty
+                      ? JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted)
+                      : JitanTextStyles.tableCellStrong,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ];
   }
 }

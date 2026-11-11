@@ -58,8 +58,9 @@ class AddEmployeeController extends ChangeNotifier {
   final SchedulesApi _schedulesApi;
 
   /// The company the employee was created through (the first chosen; they
-  /// are added to every chosen company alike).
+  /// are added to every chosen company alike); step 3's QR is asked there.
   int? _createdIn;
+  int? get createdIn => _createdIn;
 
   static final _emailShape = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
@@ -96,11 +97,6 @@ class AddEmployeeController extends ChangeNotifier {
 
   EmployeeSummary? _created;
   EmployeeSummary? get created => _created;
-
-  TemporaryQrResponse? _qr;
-  TemporaryQrResponse? get qr => _qr;
-  ApiClientException? _qrFailure;
-  ApiClientException? get qrFailure => _qrFailure;
 
   bool _disposed = false;
 
@@ -155,7 +151,8 @@ class AddEmployeeController extends ChangeNotifier {
       final groups = await _groupsApi.listGroups();
       final schedules = await _schedulesApi.groupSchedules();
       _options = AssignmentOptionsLoaded(
-        companies: companies,
+        // Only active companies can be chosen (a pick-list shows active rows).
+        companies: [for (final company in companies) if (company.isActive) company],
         groups: groups,
         schedules: {
           for (final s in schedules)
@@ -174,7 +171,7 @@ class AddEmployeeController extends ChangeNotifier {
 
   void setScheduleGroup(int? groupId) => _change(() => _scheduleGroupId = groupId);
 
-  /// Step 2: creates the employee, then asks for their onboarding QR.
+  /// Step 2: creates the employee; step 3 shows their onboarding QR.
   Future<void> create() async {
     final input = _input;
     if (input == null || _submitting || _step != AddEmployeeStep.assignments) return;
@@ -210,22 +207,15 @@ class AddEmployeeController extends ChangeNotifier {
       _submitting = false;
       _notify();
     }
-    if (_created != null) await requestQr();
   }
 
-  /// Step 3: the temporary onboarding QR of the new employee.
-  Future<void> requestQr() async {
-    final created = _created;
-    final company = _createdIn;
-    if (created == null || company == null) return;
-    _qr = null;
-    _qrFailure = null;
-    _notify();
-    try {
-      _qr = await _employeesApi.temporaryQr(company, created.id, TemporaryQrPurpose.onboarding);
-    } on ApiClientException catch (failure) {
-      _qrFailure = failure;
-    }
+  /// HR typed in [field]: its message goes, the others stay (Figma `1536:195`).
+  void clearError(String field) {
+    if (!_fieldErrors.containsKey(field)) return;
+    _fieldErrors = {
+      for (final MapEntry(:key, :value) in _fieldErrors.entries)
+        if (key != field) key: value,
+    };
     _notify();
   }
 
