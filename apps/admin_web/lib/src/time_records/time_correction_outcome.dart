@@ -1,7 +1,7 @@
 import '../l10n/admin_text_keys.dart';
 
-/// What a correction window did; the list reloads after any of them, and
-/// all but [partlySaved] are confirmed by "Correction saved" (272:547).
+/// What a correction pop-up did; the list reloads after any of them, and
+/// all but [partlySaved] are confirmed by a toast.
 enum TimeCorrectionOutcome {
   corrected(AdminTextKeys.timeSavedText),
   resolvedStart(AdminTextKeys.timeSavedStart),

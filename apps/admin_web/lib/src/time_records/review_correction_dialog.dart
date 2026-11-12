@@ -8,19 +8,16 @@ import '../l10n/admin_text_keys.dart';
 import 'time_correction_failure.dart';
 import 'time_correction_fields.dart';
 import 'time_correction_outcome.dart';
+import 'time_record_card.dart';
+import 'time_record_popup.dart';
 import 'time_record_text.dart';
 
-/// Figma `HR / Time records — Review correction` (160:338): the employee's
-/// correction next to what was detected, and what it would count as after
-/// rounding. It counts only once HR approves it (D31).
-///
-/// Different from Figma, on purpose:
-/// - **Reject** and **Approve** are added: the frame has no buttons, and D31
-///   needs HR's decision.
-/// - "Submitted 09:14 today" is left out: the server does not send when the
-///   correction was entered.
-/// - When the employee corrected both start and finish, both are reviewed
-///   together and approved or rejected together.
+/// Figma `HR / Time records V2 — review a correction` (`1566:1040`): what
+/// was registered, what the employee asked and what that counts as after
+/// rounding, with their reason. It counts only once HR approves it (D31).
+/// When the employee corrected both start and finish, both are approved or
+/// rejected together. When they were entered is not shown: the server does
+/// not send it.
 class ReviewCorrectionDialog extends StatefulWidget {
   const ReviewCorrectionDialog({super.key, required this.api, required this.day, required this.companyId});
 
@@ -46,13 +43,6 @@ class _ReviewCorrectionDialogState extends State<ReviewCorrectionDialog> {
       _day.pending.where((p) => p.boundary == boundary).firstOrNull;
 
   TimeRecordTime? _side(RegistrationBoundary boundary) => boundary == RegistrationBoundary.start ? _day.start : _day.finish;
-
-  /// "07:01 — 15:32" as in Figma; a time that is not there is "--:--".
-  String _range(String? Function(RegistrationBoundary) of) =>
-      '${of(RegistrationBoundary.start) ?? '--:--'} — ${of(RegistrationBoundary.finish) ?? '--:--'}';
-
-  /// Every requested time counts as what already counts after rounding.
-  bool get _noPayrollChange => _day.pending.every((p) => p.roundedLocal != null && p.roundedLocal == _side(p.boundary)?.roundedLocal);
 
   Future<void> _decide(TimeCorrectionOutcome outcome) async {
     setState(() {
@@ -86,82 +76,66 @@ class _ReviewCorrectionDialogState extends State<ReviewCorrectionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final muted = JitanTextStyles.stateMessage.copyWith(fontSize: 12);
-    final big = JitanTextStyles.pageTitle.copyWith(fontSize: 18);
-    final registered = _range((b) => _pending(b)?.roundedLocal ?? _side(b)?.roundedLocal);
-    final reasons = {for (final p in _day.pending) ?p.reason}.join('\n');
-
-    Widget value(String labelKey, String text, Color color) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(context.t(labelKey), style: muted),
-        const SizedBox(height: 8),
-        Text(text, style: big.copyWith(color: color)),
-      ],
-    );
-    Widget pair(Widget first, Widget second) => LayoutBuilder(
-      builder: (context, constraints) => constraints.maxWidth < 400
-          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [first, const SizedBox(height: 16), second])
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [Expanded(child: first), const SizedBox(width: 16), Expanded(child: second)],
-            ),
-    );
-
-    return JitanModal(
-      width: 760,
-      title: context.t(AdminTextKeys.timeReviewTitle),
-      subtitle: '${TimeRecordText.name(_day)} · ${TimeRecordText.longDate(context, _day.date)}',
-      onClose: _busy != null ? null : _close,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(color: JitanColors.noteSurface, borderRadius: BorderRadius.circular(14)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                pair(
-                  value(AdminTextKeys.timeReviewDetected, _range((b) => _side(b)?.actualLocal), JitanColors.ink),
-                  value(
-                    AdminTextKeys.timeReviewRequested,
-                    _range((b) => _pending(b)?.requestedLocal ?? _side(b)?.actualLocal),
-                    JitanColors.info,
-                  ),
-                ),
-                const SizedBox(height: 22),
-                pair(
-                  value(AdminTextKeys.timeReviewRegistered, registered, JitanColors.success),
-                  _noPayrollChange
-                      ? Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 22),
-                            child: JitanStatusPill(label: context.t(AdminTextKeys.timeReviewNoChange)),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                if (reasons.isNotEmpty) ...[
-                  const SizedBox(height: 22),
-                  Text(context.t(AdminTextKeys.timeReviewReason), style: muted),
-                  const SizedBox(height: 8),
-                  Text(reasons, style: JitanTextStyles.tableCell),
-                ],
-                const SizedBox(height: 18),
-                TimeCorrectionNote(text: context.t(AdminTextKeys.timeReviewRule, args: {'range': registered})),
-              ],
-            ),
+    final reasons = {for (final p in _day.pending) ?p.reason}.where((r) => r.isNotEmpty).join('\n');
+    TimeRecordCardRow row(RegistrationBoundary boundary) {
+      final side = _side(boundary);
+      final pending = _pending(boundary);
+      // What the employee asked is strong only where it changes something.
+      return TimeRecordCardRow(
+        label: TimeRecordText.boundary(context, boundary),
+        values: [
+          TimeRecordCard.value(side?.actualLocal ?? '—', muted: true),
+          TimeRecordCard.value(pending?.requestedLocal ?? side?.actualLocal ?? '—', strong: pending != null, muted: pending == null),
+          TimeRecordCard.value(
+            pending?.roundedLocal ?? side?.roundedLocal ?? '—',
+            strong: pending != null,
+            muted: pending == null,
           ),
-          if (_failure case final failure?) ...[const SizedBox(height: 16), TimeCorrectionMessage(failure: failure)],
         ],
+      );
+    }
+
+    return TimeRecordPopup(
+      title: context.t(AdminTextKeys.timeReviewTitle),
+      subtitle: context.t(
+        AdminTextKeys.timeReviewSubtitle,
+        args: {'name': TimeRecordText.name(_day), 'date': TimeRecordText.dayDate(context, _day.date)},
       ),
-      actions: [
-        JitanSecondaryButton(
-          label: context.t(AdminTextKeys.timeReviewReject),
-          onPressed: _busy != null ? null : () => _decide(TimeCorrectionOutcome.rejected),
+      body: [
+        TimeRecordCard(
+          widths: const [100, 100, 90],
+          headings: [
+            context.t(AdminTextKeys.timeRecordCardRegistered),
+            context.t(AdminTextKeys.timeRecordCardAsked),
+            context.t(AdminTextKeys.timeRecordCardRounded),
+          ],
+          rows: [row(RegistrationBoundary.start), row(RegistrationBoundary.finish)],
         ),
+        if (reasons.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(context.t(AdminTextKeys.timeReviewReason), style: JitanTextStyles.fieldLabel),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(color: JitanColors.tableHeader, borderRadius: BorderRadius.circular(12)),
+            child: Text('“$reasons”', style: JitanTextStyles.tableCell.copyWith(fontSize: 15, color: JitanColors.ink)),
+          ),
+        ],
+        if (_failure case final failure?) ...[const SizedBox(height: 16), TimeCorrectionMessage(failure: failure)],
+      ],
+      bottom: TimeRecordNote(context.t(AdminTextKeys.timeReviewRule)),
+      leadingActions: [
+        TextButton(
+          onPressed: _busy != null ? null : () => _decide(TimeCorrectionOutcome.rejected),
+          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8), minimumSize: Size.zero),
+          child: Text(
+            context.t(AdminTextKeys.timeReviewReject),
+            style: JitanTextStyles.tableCellStrong.copyWith(color: JitanColors.errorStrong),
+          ),
+        ),
+      ],
+      actions: [
+        JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: _busy != null ? null : _close),
         JitanPrimaryButton(
           label: context.t(AdminTextKeys.timeReviewApprove),
           busy: _busy == TimeCorrectionOutcome.approved,

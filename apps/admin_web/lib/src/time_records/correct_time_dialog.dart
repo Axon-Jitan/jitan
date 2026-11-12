@@ -9,12 +9,14 @@ import 'rounded_time_controller.dart';
 import 'time_correction_failure.dart';
 import 'time_correction_fields.dart';
 import 'time_correction_outcome.dart';
+import 'time_record_card.dart';
+import 'time_record_popup.dart';
 import 'time_record_text.dart';
 
-/// Figma `HR / Time records — Correct time record` (160:220), adapted to
+/// Figma `HR / Time records V2 — correct time` (`1566:788`), as
 /// TIME_ENGINE_ANALYSIS D7: HR types the **actual** start and finish; the
-/// **registered** times are what the server's rounding makes of them, shown
-/// but not editable. Only the times HR changed are saved, each as a
+/// **rounded** times are what the server's rounding makes of them, shown
+/// beside them. Only the times HR changed are saved, each as a
 /// "… – corrected" row with the reason (D4, D8: the original stays).
 class CorrectTimeDialog extends StatefulWidget {
   const CorrectTimeDialog({super.key, required this.api, required this.day, required this.companyId});
@@ -106,55 +108,40 @@ class _CorrectTimeDialogState extends State<CorrectTimeDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final start = _times[RegistrationBoundary.start]!;
-    final finish = _times[RegistrationBoundary.finish]!;
-    String? error(RegistrationBoundary b) => _timeErrors[b] == null ? null : context.t(_timeErrors[b]!);
-    return JitanModal(
-      width: 760,
-      title: context.t(AdminTextKeys.timeCorrectTitle),
-      subtitle: '${TimeRecordText.name(widget.day)} · ${TimeRecordText.longDate(context, widget.day.date)}',
-      onClose: _busy ? null : _close,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TimeFieldPair(
-            maxWidth: 470,
-            first: TimeInputField(
-              label: context.t(AdminTextKeys.timeCorrectActualStart),
-              time: start,
-              errorText: error(RegistrationBoundary.start),
-            ),
-            second: TimeInputField(
-              label: context.t(AdminTextKeys.timeCorrectActualFinish),
-              time: finish,
-              errorText: error(RegistrationBoundary.finish),
-            ),
-          ),
-          const SizedBox(height: 20),
-          TimeFieldPair(
-            maxWidth: 470,
-            first: RoundedTimeField(label: context.t(AdminTextKeys.timeCorrectRegisteredStart), time: start),
-            second: RoundedTimeField(label: context.t(AdminTextKeys.timeCorrectRegisteredFinish), time: finish),
-          ),
-          const SizedBox(height: 6),
-          RoundedTimeHint(times: [start, finish]),
-          const SizedBox(height: 28),
-          JitanTextField(
-            label: context.t(AdminTextKeys.timeCorrectReason),
-            controller: _reason,
-            hintText: context.t(AdminTextKeys.timeCorrectReasonHint),
-            errorText: _reasonError == null ? null : context.t(_reasonError!),
-            maxLines: 3,
-            maxLength: RegisterTimeRequest.maxReasonLength,
-          ),
-          const SizedBox(height: 20),
-          TimeCorrectionNote(
-            title: context.t(AdminTextKeys.timeCorrectAudit),
-            text: context.t(AdminTextKeys.timeCorrectAuditText),
-          ),
-          if (_failure case final failure?) ...[const SizedBox(height: 16), TimeCorrectionMessage(failure: failure)],
+    TimeRecordCardRow row(RegistrationBoundary boundary) {
+      final label = TimeRecordText.boundary(context, boundary);
+      return TimeRecordCardRow(
+        label: label,
+        values: [
+          TimeCardInput(time: _times[boundary]!, semanticLabel: label, failed: _timeErrors[boundary] != null, enabled: !_busy),
+          RoundedTimeValue(time: _times[boundary]!),
         ],
-      ),
+      );
+    }
+
+    final timeError = _timeErrors.values.firstOrNull;
+    return TimeRecordPopup(
+      title: context.t(AdminTextKeys.timeCorrectTitle),
+      subtitle: '${TimeRecordText.name(widget.day)} · ${TimeRecordText.dayDate(context, widget.day.date)}',
+      body: [
+        TimeRecordCard(
+          widths: const [120, 110],
+          headings: [context.t(AdminTextKeys.timeRecordCardActual), context.t(AdminTextKeys.timeRecordCardRounded)],
+          rows: [row(RegistrationBoundary.start), row(RegistrationBoundary.finish)],
+        ),
+        if (timeError != null) TimeCardError(context.t(timeError)),
+        NoRoundingHint(times: _times.values.toList()),
+        const SizedBox(height: 16),
+        JitanTextField(
+          label: context.t(AdminTextKeys.timeCorrectReason),
+          controller: _reason,
+          hintText: context.t(AdminTextKeys.timeCorrectReasonHint),
+          errorText: _reasonError == null ? null : context.t(_reasonError!),
+          maxLength: RegisterTimeRequest.maxReasonLength,
+        ),
+        if (_failure case final failure?) ...[const SizedBox(height: 16), TimeCorrectionMessage(failure: failure)],
+      ],
+      bottom: TimeRecordNote(context.t(AdminTextKeys.timeCorrectAuditText)),
       actions: [
         JitanSecondaryButton(label: context.t(CommonTextKeys.cancel), onPressed: _busy ? null : _close),
         JitanPrimaryButton(label: context.t(AdminTextKeys.timeCorrectSave), busy: _busy, onPressed: _save),

@@ -26,6 +26,7 @@ export 'src/components/jitan_qr_code.dart';
 export 'src/components/jitan_row_actions_button.dart';
 export 'src/components/jitan_search_field.dart';
 export 'src/components/jitan_secondary_button.dart';
+export 'src/components/jitan_segmented_switch.dart';
 export 'src/components/jitan_select_field.dart';
 export 'src/components/jitan_settings_card.dart';
 export 'src/components/jitan_sliver_table.dart';

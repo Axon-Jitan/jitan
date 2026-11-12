@@ -296,8 +296,12 @@ class _ProjectDialogState extends State<ProjectDialog> {
             if (_loading)
               JitanLoadingState(label: context.t(AdminTextKeys.projectsLoading))
             else ...[
-              _KindSwitch(
-                clientSite: _clientSite,
+              JitanSegmentedSwitch<bool>(
+                options: [
+                  (true, context.t(AdminTextKeys.projectKindClient)),
+                  (false, context.t(AdminTextKeys.projectKindWorkshop)),
+                ],
+                value: _clientSite,
                 // A project keeps its kind once added.
                 onChanged: _editing || !enabled ? null : (client) => setState(() => _clientSite = client),
               ),
@@ -463,50 +467,6 @@ class _ProjectDialogState extends State<ProjectDialog> {
       children: [?quiet, buttons],
     );
   }
-}
-
-/// Client site or Our workshop (Figma `1512:114`); fixed once added.
-class _KindSwitch extends StatelessWidget {
-  const _KindSwitch({required this.clientSite, required this.onChanged});
-
-  final bool clientSite;
-  final ValueChanged<bool>? onChanged;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(12)),
-    child: Row(
-      spacing: 3,
-      children: [
-        for (final (client, key) in [(true, AdminTextKeys.projectKindClient), (false, AdminTextKeys.projectKindWorkshop)])
-          Expanded(
-            child: Semantics(
-              button: true,
-              selected: client == clientSite,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(9),
-                onTap: onChanged == null ? null : () => onChanged!(client),
-                child: Container(
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: client == clientSite ? JitanColors.surface : null,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Text(
-                    context.t(key),
-                    style: client == clientSite
-                        ? JitanTextStyles.tableCellStrong
-                        : JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    ),
-  );
 }
 
 /// Figma "Deactivate?" (`1562:605`): one plain question; `true` to go ahead.

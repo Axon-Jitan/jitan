@@ -4,22 +4,22 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/admin_text_keys.dart';
 import 'time_correction_flow.dart';
+import 'time_record_card.dart';
+import 'time_record_popup.dart';
 import 'time_record_text.dart';
 import 'time_record_timeline.dart';
 
-/// Opens the day detail. Returns the correction HR chose from it ("Correct
-/// time" or "Review correction"), or `null` when HR only closed it.
+/// Opens a day. Returns the correction HR chose from it ("Correct time" or
+/// "Review correction"), or `null` when HR only closed it.
 Future<TimeCorrectionStep?> showTimeRecordDialog(BuildContext context, {required TimeRecordDay day, required bool mayCorrect}) =>
     showJitanModal<TimeCorrectionStep>(context, builder: (_) => TimeRecordDialog(day: day, mayCorrect: mayCorrect));
 
-/// Figma `HR / Time records — Day detail modal` (160:94): the day's start
-/// and finish, each with its actual registration and its rounded time, the
-/// detailed registration timeline, and "Correct time" (or "Review
-/// correction" while the employee's correction waits, D31).
-///
-/// A time entered afterwards or corrected shows its reason, which HR needs to
-/// judge it (D30). Time away (D34) is a note under the cards: Figma's frame
-/// has no place for it. The timeline holds registrations and corrections.
+/// Figma `HR / Time records V2 — a day` (`1566:2`): the employee and the
+/// day, the start and finish as registered (actual) and as they count
+/// (rounded), with how each was registered; time away and travel (D34,
+/// D46) when there is any; what happened, step by step; and "Correct time"
+/// (or "Review correction" while the employee's correction waits, D31). A
+/// time entered afterwards or corrected shows its reason (D30).
 class TimeRecordDialog extends StatefulWidget {
   const TimeRecordDialog({super.key, required this.day, required this.mayCorrect});
 
@@ -38,98 +38,71 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
   TimeRecordDay get day => widget.day;
 
   @override
-  Widget build(BuildContext context) => JitanModal(
-    width: 640,
-    title: context.t(AdminTextKeys.timeRecordDayTitle),
+  Widget build(BuildContext context) => TimeRecordPopup(
+    title: TimeRecordText.name(day),
     subtitle: context.t(
       AdminTextKeys.timeRecordDaySubtitle,
-      args: {'name': TimeRecordText.name(day), 'date': TimeRecordText.longDate(context, day.date)},
+      args: {'date': TimeRecordText.dayDate(context, day.date), 'status': TimeRecordText.statusLine(context, day)},
     ),
-    onClose: () => Navigator.of(context).pop(),
-    body: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 20),
-        Text(context.t(AdminTextKeys.timeRecordDayDetails), style: JitanTextStyles.stateTitle),
-        const SizedBox(height: 16),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final start = _card(context, Icons.subdirectory_arrow_right, AdminTextKeys.timeRecordDayStart, day.start);
-            final finish = _card(context, Icons.turn_right, AdminTextKeys.timeRecordDayFinish, day.finish);
-            return constraints.maxWidth < 480
-                ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [start, const SizedBox(height: 14), finish])
-                : IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [Expanded(child: start), const SizedBox(width: 20), Expanded(child: finish)],
-                    ),
-                  );
-          },
-        ),
-        if (day.pending.isNotEmpty || day.nonWorkReason != null) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: day.pending.isNotEmpty ? JitanColors.warningSurface : JitanColors.noteSurface,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              day.pending.isNotEmpty
-                  ? context.t(AdminTextKeys.timeRecordDayPending)
-                  : context.t(AdminTextKeys.timeRecordDayNonWork, args: {'reason': day.nonWorkReason!}),
-              style: JitanTextStyles.stateMessage.copyWith(
-                fontSize: 13,
-                color: day.pending.isNotEmpty ? JitanColors.warning : JitanColors.ink,
+    body: [
+      TimeRecordCard(
+        widths: const [110, 110],
+        headings: [context.t(AdminTextKeys.timeRecordCardActual), context.t(AdminTextKeys.timeRecordCardRounded)],
+        rows: [_time(context, RegistrationBoundary.start, day.start), _time(context, RegistrationBoundary.finish, day.finish)],
+      ),
+      if (day.awayMinutes > 0 || day.transportMinutes > 0) ...[
+        const SizedBox(height: 12),
+        TimeRecordCard(
+          widths: const [110],
+          rows: [
+            if (day.awayMinutes > 0)
+              TimeRecordCardRow(
+                label: context.t(AdminTextKeys.timeRecordDayAway),
+                detail: context.t(AdminTextKeys.timeRecordDayAwayText),
+                values: [TimeRecordCard.value(_minutes(context, day.awayMinutes), strong: true)],
               ),
-            ),
-          ),
-        ],
-        if (day.awayMinutes > 0) ...[
-          const SizedBox(height: 16),
-          _minutesNote(context, AdminTextKeys.timeRecordDayAway, context.t(AdminTextKeys.timeRecordDayAwayText), day.awayMinutes),
-        ],
-        if (day.transportMinutes > 0) ...[
-          const SizedBox(height: 16),
-          _minutesNote(context, AdminTextKeys.timeRecordDayTransport, _travelText(context, day), day.transportMinutes),
-        ],
-        if (day.events.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: () => setState(() => _timeline = !_timeline),
-              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 36)),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      context.t(_timeline ? AdminTextKeys.timeRecordDayTimelineHide : AdminTextKeys.timeRecordDayTimeline),
-                      style: JitanTextStyles.tableCell.copyWith(color: JitanColors.ink),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(_timeline ? Icons.arrow_drop_up : Icons.arrow_drop_down, size: 18, color: JitanColors.ink),
-                ],
+            if (day.transportMinutes > 0)
+              TimeRecordCardRow(
+                label: context.t(AdminTextKeys.timeRecordDayTransport),
+                detail: _travelText(context, day),
+                values: [TimeRecordCard.value(_minutes(context, day.transportMinutes), strong: true)],
               ),
-            ),
-          ),
-          if (_timeline) TimeRecordTimeline(events: day.events),
-        ],
-        const SizedBox(height: 20),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.info_outline, size: 14, color: JitanColors.inkMuted),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(context.t(AdminTextKeys.timeRecordDayNote), style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
-            ),
           ],
         ),
       ],
-    ),
+      if (day.pending.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        TimeRecordNotice(context.t(AdminTextKeys.timeRecordDayPending)),
+      ] else if (day.nonWorkReason case final reason?) ...[
+        const SizedBox(height: 12),
+        TimeRecordNotice(context.t(AdminTextKeys.timeRecordDayNonWork, args: {'reason': reason}), warning: false),
+      ],
+      if (day.events.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => setState(() => _timeline = !_timeline),
+            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), minimumSize: const Size(0, 36)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 4,
+              children: [
+                Flexible(
+                  child: Text(
+                    context.t(_timeline ? AdminTextKeys.timeRecordDayTimelineHide : AdminTextKeys.timeRecordDayTimeline),
+                    style: JitanTextStyles.tableCell.copyWith(color: JitanColors.ink, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                Icon(_timeline ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded, size: 18, color: JitanColors.inkMuted),
+              ],
+            ),
+          ),
+        ),
+        if (_timeline) TimeRecordTimeline(events: day.events),
+      ],
+    ],
+    bottom: TimeRecordNote(context.t(AdminTextKeys.timeRecordDayNote)),
     actions: [
       JitanSecondaryButton(label: context.t(AdminTextKeys.timeRecordDayClose), onPressed: () => Navigator.of(context).pop()),
       if (widget.mayCorrect)
@@ -145,95 +118,47 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
     ],
   );
 
-  Widget _card(BuildContext context, IconData icon, String titleKey, TimeRecordTime? time) {
-    final muted = JitanTextStyles.stateMessage.copyWith(fontSize: 12);
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(14)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: JitanColors.ink),
-              const SizedBox(width: 8),
-              Text(context.t(titleKey), style: JitanTextStyles.tableCellStrong),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(context.t(AdminTextKeys.timeRecordDayActual), style: muted),
-          const SizedBox(height: 4),
-          Text(
-            time?.actualLocal ?? context.t(AdminTextKeys.timeRecordDayNotRegistered),
-            style: time == null
-                ? JitanTextStyles.stateTitle.copyWith(color: JitanColors.warning)
-                : JitanTextStyles.pageTitle.copyWith(fontSize: 26),
-          ),
-          if (time != null) ...[
-            if (time.correctedBy != null) ...[
-              const SizedBox(height: 6),
-              Text(context.t(AdminTextKeys.timeRecordDayCorrectedBy, args: {'reason': time.reason ?? ''}), style: muted),
-              if (time.originalLocal case final original?) ...[
-                const SizedBox(height: 2),
-                Text(context.t(AdminTextKeys.timeRecordDayOriginal, args: {'time': original}), style: muted),
-              ],
-            ] else if (time.enteredByHand) ...[
-              const SizedBox(height: 6),
-              Text(
-                time.reason == null || time.reason!.isEmpty
-                    ? context.t(AdminTextKeys.timeRecordDayEnteredAfterwards)
-                    : context.t(AdminTextKeys.timeRecordDayCorrected, args: {'reason': time.reason!}),
-                style: muted,
-              ),
-            ],
-            const SizedBox(height: 14),
-            const Divider(height: 1, color: JitanColors.inputBorder),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(child: Text(context.t(AdminTextKeys.timeRecordDayRounded), style: muted)),
-                Text(time.roundedLocal ?? '—', style: JitanTextStyles.tableCellStrong),
-              ],
-            ),
-          ],
-        ],
-      ),
+  /// The start or finish: as registered and as it counts, with how it was
+  /// registered, or why it was entered afterwards or corrected.
+  TimeRecordCardRow _time(BuildContext context, RegistrationBoundary boundary, TimeRecordTime? time) {
+    final label = TimeRecordText.boundary(context, boundary);
+    if (time == null) {
+      return TimeRecordCardRow(
+        label: label,
+        detail: context.t(AdminTextKeys.timeRecordDayNotRegistered),
+        detailColor: JitanColors.warning,
+        values: [TimeRecordCard.value('—', muted: true), TimeRecordCard.value('—', muted: true)],
+      );
+    }
+    final reason = time.reason;
+    final detail = [
+      TimeRecordText.method(context, time.method),
+      if (time.correctedBy != null)
+        context.t(AdminTextKeys.timeRecordDayCorrectedBy, args: {'reason': reason ?? ''})
+      else if (time.enteredByHand)
+        reason == null || reason.isEmpty
+            ? context.t(AdminTextKeys.timeRecordDayEnteredAfterwards)
+            : context.t(AdminTextKeys.timeRecordDayCorrected, args: {'reason': reason}),
+      if (time.correctedBy != null && time.originalLocal != null)
+        context.t(AdminTextKeys.timeRecordDayOriginal, args: {'time': time.originalLocal!}),
+    ].join('\n');
+    return TimeRecordCardRow(
+      label: label,
+      detail: detail.isEmpty ? null : detail,
+      values: [TimeRecordCard.value(time.actualLocal), TimeRecordCard.value(time.roundedLocal ?? '—', strong: true)],
     );
   }
 
-  /// "2 trips · 36 km · Shown next to worked time, not part of it" (D46,
-  /// Figma `1508:586`); the distance leaves out trips without one.
+  static String _minutes(BuildContext context, int minutes) => context.t(
+    AdminTextKeys.timeRecordDayAwayValue,
+    args: {'hours': minutes ~/ 60, 'minutes': (minutes % 60).toString().padLeft(2, '0')},
+  );
+
+  /// "2 trips · 36 km · Shown next to worked time, not part of it" (D46);
+  /// the distance leaves out trips without one.
   static String _travelText(BuildContext context, TimeRecordDay day) => [
     if (day.trips > 0) context.tPlural(AdminTextKeys.timeRecordDayTrips, day.trips),
     if (day.distanceMetres > 0) context.t(AdminTextKeys.reportKilometres, args: {'km': (day.distanceMetres / 1000).round()}),
     context.t(AdminTextKeys.timeRecordDayTravelText),
   ].join(' · ');
-
-  /// Time away or travel: a title, what it means, and the time.
-  Widget _minutesNote(BuildContext context, String title, String text, int minutes) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-    decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(12)),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.t(title), style: JitanTextStyles.tableCellStrong),
-              const SizedBox(height: 2),
-              Text(text, style: JitanTextStyles.stateMessage.copyWith(fontSize: 13)),
-            ],
-          ),
-        ),
-        const SizedBox(width: 16),
-        Text(
-          context.t(
-            AdminTextKeys.timeRecordDayAwayValue,
-            args: {'hours': minutes ~/ 60, 'minutes': (minutes % 60).toString().padLeft(2, '0')},
-          ),
-          style: JitanTextStyles.tableCellStrong,
-        ),
-      ],
-    ),
-  );
 }

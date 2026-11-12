@@ -749,36 +749,33 @@ void main() {
       await tester.pump();
       _fitsTheWindow(tester, width, 'Time records');
 
-      await tester.ensureVisible(find.text('View').first);
-      await tester.tap(find.text('View').first);
+      final name = find.text('Alexandra-Marie Vandenbroucke-Verstraete');
+      await tester.ensureVisible(name);
+      await tester.tap(name);
       await _settle(tester);
       _fitsTheWindow(tester, width, 'Time record day');
 
-      await tester.ensureVisible(find.text('View detailed registration timeline'));
-      await tester.tap(find.text('View detailed registration timeline'));
+      await tester.ensureVisible(find.text('Show what happened'));
+      await tester.tap(find.text('Show what happened'));
       await tester.pump();
       expect(find.text('Start registered · QR'), findsOneWidget);
       _fitsTheWindow(tester, width, 'Time record timeline');
 
-      final correct = find.widgetWithText(JitanPrimaryButton, 'Correct time');
-      await tester.ensureVisible(correct);
-      await tester.tap(correct);
+      await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Correct time'));
       await _settle(tester);
-      expect(find.text('Correct time record'), findsOneWidget);
-      _fitsTheWindow(tester, width, 'Correct time record');
-      await tester.ensureVisible(find.text('Cancel'));
+      expect(find.widgetWithText(JitanPrimaryButton, 'Save'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'Correct time');
       await tester.tap(find.text('Cancel'));
       await _settle(tester);
 
       await tester.ensureVisible(find.text('Fix').first);
       await tester.tap(find.text('Fix').first);
       await _settle(tester);
-      expect(find.text('Resolve missing finish'), findsOneWidget);
-      _fitsTheWindow(tester, width, 'Resolve missing finish');
-      await tester.tap(find.text('Mark as non-work'));
+      expect(find.text('Missing finish'), findsNWidgets(2));
+      _fitsTheWindow(tester, width, 'Missing finish');
+      await tester.tap(find.text('Not a work day'));
       await tester.pump();
-      _fitsTheWindow(tester, width, 'Resolve: non-work');
-      await tester.ensureVisible(find.text('Cancel'));
+      _fitsTheWindow(tester, width, 'Missing finish: not a work day');
       await tester.tap(find.text('Cancel'));
       await _settle(tester);
 
@@ -787,13 +784,12 @@ void main() {
       await _settle(tester);
       expect(find.text('Review correction'), findsOneWidget);
       _fitsTheWindow(tester, width, 'Review correction');
-      await tester.ensureVisible(find.text('Approve'));
       await tester.tap(find.text('Approve'));
       await tester.pump();
       api.writeSucceeds();
       await _settle(tester);
-      expect(find.text('Correction saved'), findsOneWidget);
-      _fitsTheWindow(tester, width, 'Correction saved');
+      expect(find.text('Correction approved for Thomas Vermeulen.'), findsOneWidget);
+      _fitsTheWindow(tester, width, 'Correction approved');
     });
   }
 }

@@ -85,35 +85,44 @@ void main() {
     });
   });
 
-  testWidgets('loads this week for every company and shows each day as in Figma 160:2', (tester) async {
+  testWidgets('loads this week for every company and shows the days grouped, newest first (Figma 1565:2)', (tester) async {
     final (api, _) = await _pump(tester);
     expect(api.calls.single, (DateTime.utc(2026, 10, 19), DateTime.utc(2026, 10, 25), null, ''));
 
     api.succeed([_working, _complete, _missing]);
     await tester.pump();
+    await tester.pump();
 
-    for (final header in ['Date', 'Rounded time', 'Actual time', 'Method', 'Action']) {
+    expect(find.text('This week · 19 – 25 Oct 2026 · 1 day to review'), findsOneWidget);
+    for (final header in ['Employee', 'Rounded', 'Actual', 'How', 'Status']) {
       expect(find.text(header), findsOneWidget, reason: header);
     }
-    expect(find.text('Employee'), findsNWidgets(2), reason: 'the filter and the column');
-    expect(find.text('Wed 21 Oct'), findsOneWidget);
-    expect(find.text('08:00–16:30'), findsOneWidget);
-    expect(find.text('07:58–16:31'), findsOneWidget);
-    expect(find.text('08:15–—'), findsNWidgets(2), reason: 'no finish yet');
+    for (final heading in ['Today', 'Thursday 22 October', 'Yesterday', 'Wednesday 21 October', 'Tuesday', '20 October']) {
+      expect(find.text(heading), findsOneWidget, reason: heading);
+    }
+    expect(find.text('1 working'), findsOneWidget);
+    expect(find.text('1 finished'), findsOneWidget);
+    expect(find.text('1 to review'), findsOneWidget);
+    expect(find.text('08:00 – 16:30'), findsOneWidget);
+    expect(find.text('07:58 – 16:31'), findsOneWidget);
+    expect(find.text('08:15 – …'), findsOneWidget, reason: 'still working');
+    expect(find.text('08:15 – —'), findsOneWidget, reason: 'no finish');
     expect(find.text('Registered'), findsOneWidget);
     expect(find.text('Missing finish'), findsOneWidget);
     expect(find.text('Working'), findsOneWidget);
     expect(find.text('Automatic'), findsOneWidget);
-    expect(find.text('View'), findsNWidgets(2));
-    expect(find.text('Fix'), findsOneWidget, reason: 'the missing finish');
+    expect(find.text('Fix'), findsOneWidget, reason: 'only the missing finish asks HR to act');
+    expect(find.text('View'), findsNothing);
+    expect(find.text('Clear'), findsNothing, reason: 'nothing is filtered');
   });
 
-  testWidgets('the status filter narrows the loaded days; company and period reload; Reset all', (tester) async {
+  testWidgets('Show narrows the loaded days; company and period reload; Clear', (tester) async {
     final (api, _) = await _pump(tester);
     api.succeed([_working, _complete, _missing]);
     await tester.pump();
+    await tester.pump();
 
-    tester.widget<JitanSelectField<TimeRecordStatusFilter?>>(find.byType(JitanSelectField<TimeRecordStatusFilter?>)).onChanged!(
+    tester.widget<JitanFilterSelect<TimeRecordStatusFilter?>>(find.byType(JitanFilterSelect<TimeRecordStatusFilter?>)).onChanged(
       const TimeRecordStatusFilter.only(TimeRecordStatus.missingFinish),
     );
     await tester.pump();
@@ -121,48 +130,52 @@ void main() {
     expect(find.text('Disan Ssebowa'), findsNothing);
     expect(api.calls, hasLength(1), reason: 'the status needs no reload');
 
-    tester.widget<JitanSelectField<int?>>(find.byType(JitanSelectField<int?>)).onChanged!(7);
+    tester.widget<JitanFilterSelect<int?>>(find.byType(JitanFilterSelect<int?>)).onChanged(7);
     await tester.pump();
     expect(api.calls.last.$3, 7);
     api.succeed([]);
     await tester.pump();
+    await tester.pump();
 
-    tester.widget<JitanSelectField<TimeRecordPeriod?>>(find.byType(JitanSelectField<TimeRecordPeriod?>)).onChanged!(
+    tester.widget<JitanFilterSelect<TimeRecordPeriod?>>(find.byType(JitanFilterSelect<TimeRecordPeriod?>)).onChanged(
       TimeRecordPeriod.lastMonth,
     );
     await tester.pump();
     expect((api.calls.last.$1, api.calls.last.$2), (DateTime.utc(2026, 9, 1), DateTime.utc(2026, 9, 30)));
     api.succeed([]);
     await tester.pump();
+    await tester.pump();
     expect(find.text('No matching records'), findsOneWidget, reason: 'filters are set');
 
-    await tester.tap(find.text('Reset all'));
+    await tester.tap(find.text('Clear'));
     await tester.pump();
     expect(api.calls.last, (DateTime.utc(2026, 10, 19), DateTime.utc(2026, 10, 25), null, ''));
   });
 
-  testWidgets('View opens the day: actual and rounded start and finish, and why a time was entered afterwards', (tester) async {
+  testWidgets('a row opens its day: actual and rounded start and finish, and why a time was entered afterwards (Figma 1566:2)', (tester) async {
     final (api, _) = await _pump(tester);
-    // Without a company to correct in, a missing finish can only be viewed.
+    // Without a company to correct in, a missing finish can only be looked at.
     final missingNoCompany = recordDay(2, 'Kevin', 'De Vos', 'KDV', DateTime.utc(2026, 10, 20), TimeRecordStatus.missingFinish,
         start: recordTime('08:03', rounded: '08:15'), companyIds: const []);
     api.succeed([_complete, missingNoCompany]);
     await tester.pump();
+    await tester.pump();
+    expect(find.text('Fix'), findsNothing, reason: 'no company to correct it in');
 
-    await tester.tap(find.text('View').first);
+    await tester.tap(find.text('Disan Ssebowa'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Time record'), findsOneWidget);
-    expect(find.text('Disan Ssebowa · Wednesday, 21 October 2026'), findsOneWidget);
-    expect(find.text('Work start'), findsOneWidget);
+    expect(find.text('Disan Ssebowa'), findsNWidgets(2), reason: 'the row and the title');
+    expect(find.text('Wednesday 21 October · Registered'), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
     expect(find.text('07:58'), findsOneWidget);
     expect(find.text('16:30'), findsOneWidget);
-    expect(find.text('Entered afterwards: Forgot to tap'), findsOneWidget);
-    expect(find.text('Rounded times use applicable schedule rules. Original timestamps are preserved.'), findsOneWidget);
+    expect(find.text('Employee\nEntered afterwards: Forgot to tap'), findsOneWidget);
+    expect(find.text('Rounded with the schedule’s rules. What was registered is always kept.'), findsOneWidget);
 
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('View').last);
+    await tester.tap(find.text('Kevin De Vos'));
     await tester.pumpAndSettle();
     expect(find.text('Not registered'), findsOneWidget, reason: 'missing finish');
     expect(find.text('Correct time'), findsNothing, reason: 'no company to correct it in');
@@ -172,15 +185,18 @@ void main() {
     final (api, _) = await _pump(tester);
     api.succeed([]);
     await tester.pump();
+    await tester.pump();
     expect(find.text('No time records'), findsOneWidget);
 
-    tester.widget<JitanSelectField<TimeRecordPeriod?>>(find.byType(JitanSelectField<TimeRecordPeriod?>)).onChanged!(
+    tester.widget<JitanFilterSelect<TimeRecordPeriod?>>(find.byType(JitanFilterSelect<TimeRecordPeriod?>)).onChanged(
       TimeRecordPeriod.lastWeek,
     );
     await tester.pump();
+    expect(find.text('Loading time records…'), findsOneWidget);
     api.fail(const ApiClientException.network('offline'));
     await tester.pump();
-    await tester.tap(find.text('Try again'));
+    await tester.pump();
+    await tester.tap(find.text('Unable to load time records. Try again →'));
     await tester.pump();
     expect(api.calls, hasLength(3));
   });
@@ -193,14 +209,16 @@ void main() {
     );
     api.succeed([_working, _complete, _missing]);
     await tester.pump();
+    await tester.pump();
 
     expect((api.calls.single.$1, api.calls.single.$2), (DateTime.utc(2026, 10, 1), DateTime.utc(2026, 10, 23)));
-    expect(find.text('1 – 23 Oct 2026'), findsOneWidget);
+    expect(find.text('1 – 23 Oct 2026'), findsOneWidget, reason: 'the period button');
+    expect(find.text('1 – 23 Oct 2026 · 1 day to review'), findsOneWidget);
     expect(find.text('To review'), findsOneWidget);
     expect(find.text('Kevin De Vos'), findsOneWidget, reason: 'the missing finish');
     expect(find.text('Disan Ssebowa'), findsNothing);
 
-    tester.widget<JitanSelectField<TimeRecordPeriod?>>(find.byType(JitanSelectField<TimeRecordPeriod?>)).onChanged!(
+    tester.widget<JitanFilterSelect<TimeRecordPeriod?>>(find.byType(JitanFilterSelect<TimeRecordPeriod?>)).onChanged(
       TimeRecordPeriod.thisWeek,
     );
     await tester.pump();
@@ -238,15 +256,17 @@ void main() {
       _working,
     ]);
     await tester.pump();
+    await tester.pump();
 
     expect(find.text('Late'), findsOneWidget);
     expect(find.text('Left early'), findsNothing);
 
-    tester.widget<JitanSelectField<TimeRecordPeriod?>>(find.byType(JitanSelectField<TimeRecordPeriod?>)).onChanged!(
+    tester.widget<JitanFilterSelect<TimeRecordPeriod?>>(find.byType(JitanFilterSelect<TimeRecordPeriod?>)).onChanged(
       TimeRecordPeriod.lastWeek,
     );
     await tester.pump();
     api.succeed([_complete.copyWith(attendance: DayAttendance.onTime)]);
+    await tester.pump();
     await tester.pump();
     expect(find.text('On time'), findsNothing, reason: 'on time needs no mark');
   });

@@ -3,7 +3,6 @@ import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-import '../l10n/admin_text_keys.dart';
 import 'correct_time_dialog.dart';
 import 'resolve_missing_dialog.dart';
 import 'review_correction_dialog.dart';
@@ -12,16 +11,16 @@ import 'time_record_text.dart';
 
 /// Which correction window HR opens for a day.
 enum TimeCorrectionStep {
-  /// "Correct time record" (160:220): change or add the start and finish.
+  /// "Correct time" (`1566:788`): change or add the start and finish.
   correct,
 
-  /// "Resolve missing start/finish" (272:457): set it, or mark non-work.
+  /// "Missing start/finish" (`1566:272`): add it, or not a work day.
   resolve,
 
-  /// "Review correction" (160:338): the employee's correction (D31).
+  /// "Review correction" (`1566:1040`): the employee's correction (D31).
   review;
 
-  /// The table's action for [day]: Fix, Review, or `null` for View.
+  /// The list's action for [day]: Fix, Review, or `null` (it opens the day).
   static TimeCorrectionStep? forRow(TimeRecordDay day) => switch (day.status) {
     TimeRecordStatus.missingStart || TimeRecordStatus.missingFinish => resolve,
     TimeRecordStatus.noRegistration => correct,
@@ -31,7 +30,7 @@ enum TimeCorrectionStep {
 }
 
 /// Opens [step] for [day] in [companyId] and, once the server confirmed,
-/// "Correction saved" (272:547). Returns `true` when anything was saved, so
+/// says what was saved in a toast. Returns `true` when anything was saved, so
 /// the list reloads.
 Future<bool> showTimeCorrection(
   BuildContext context, {
@@ -52,16 +51,7 @@ Future<bool> showTimeCorrection(
   );
   if (outcome == null) return false;
   if (outcome.messageKey case final messageKey? when context.mounted) {
-    await showJitanModal<void>(
-      context,
-      builder: (context) => JitanSuccessModal(
-        title: context.t(AdminTextKeys.timeSavedTitle),
-        subtitle: '${TimeRecordText.name(day)} · ${TimeRecordText.longDate(context, day.date)}',
-        message: context.t(messageKey),
-        buttonLabel: context.t(AdminTextKeys.timeSavedBack),
-        onDone: () => Navigator.of(context).pop(),
-      ),
-    );
+    showJitanToast(context, context.t(messageKey, args: {'name': TimeRecordText.name(day)}));
   }
   return true;
 }

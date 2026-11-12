@@ -79,16 +79,28 @@ class TimeRecordsController extends ChangeNotifier {
     _ => 0,
   };
 
+  /// The days loaded with something for HR to fix or review, whatever the
+  /// status filter shows (the header's "24 days to review").
+  int get toReviewCount => switch (_state) {
+    TimeRecordsLoaded(:final days) => days.where(TimeRecordStatusFilter.toReview.lets).length,
+    _ => 0,
+  };
+
+  /// The first and last day shown.
+  (DateTime, DateTime) get dates => switch (_range) {
+    (:final from, :final to) => (from, to),
+    null => rangeOf(_period, _today()),
+  };
+
+  DateTime get today => _today();
+
   bool get isFiltered =>
       _companyId != null || _search.isNotEmpty || _period != TimeRecordPeriod.thisWeek || _range != null || _status != null;
 
   Future<void> load() async {
     final request = ++_request;
     _emit(const TimeRecordsLoading());
-    final (from, to) = switch (_range) {
-      (:final from, :final to) => (from, to),
-      null => rangeOf(_period, _today()),
-    };
+    final (from, to) = dates;
     try {
       final days = await _api.list(from: from, to: to, companyId: _companyId, search: _search);
       if (request == _request) _emit(TimeRecordsLoaded(days));
@@ -123,7 +135,7 @@ class TimeRecordsController extends ChangeNotifier {
     _searchTimer = Timer(searchDelay, load);
   }
 
-  /// "Reset all": every company, this week, all statuses, no search.
+  /// "Clear": every company, this week, all days, no search.
   void resetAll() {
     _searchTimer?.cancel();
     _companyId = null;
