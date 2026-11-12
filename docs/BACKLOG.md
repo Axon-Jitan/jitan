@@ -408,6 +408,10 @@ Left out of this version, because `tblAddress` has no place for it: a project's 
 start and end dates, description, and assigned employees. The local proposal tables are
 removed. Waiting: SAP's API (D43), which will add the projects instead of HR.
 
+Once SAP adds most projects, adding one by hand becomes rare. Then revisit how much room
+Add project takes on the list; for now it stays the red header button (product owner,
+2026-11-12).
+
 ## WEB-01: Employee Web
 Status: `DONE` on the approved redesign (Figma `1499:*`, `1501:*`, 2026-11-01)
 
