@@ -696,7 +696,6 @@ abstract final class AdminTextKeys {
 
   // Reports (Figma HR / Reports V1 1467:2 to 1467:631)
   static const navReports = 'nav.reports';
-  static const navLists = 'nav.lists';
   static const listsTitle = 'lists.title';
   static const listsSubtitle = 'lists.subtitle';
   static const listsMissingTitle = 'lists.missingTitle';
@@ -886,6 +885,8 @@ abstract final class AdminTextKeys {
   static const dashboardLeftEarly = 'dashboard.attendance.leftEarly';
   static const dashboardToReview = 'dashboard.attendance.toReview';
   static const dashboardAttention = 'dashboard.attention';
+  static const dashboardSetupNotFinished = 'dashboard.setupNotFinished';
+  static const dashboardSetupAskIt = 'dashboard.setupAskIt';
   static const dashboardCorrections = 'dashboard.attention.corrections';
   static const dashboardDaysToReview = 'dashboard.attention.daysToReview';
   static const dashboardNotSetUp = 'dashboard.attention.notSetUp';

@@ -12,7 +12,8 @@ import 'dashboard_text.dart';
 
 /// What HR can act on, each row opening the page to do it, already showing
 /// what was counted (Figma `1470:2`); one calm line when there is nothing
-/// (`1470:206`).
+/// (`1470:206`). When Jitan could not complete its own lists, one more row
+/// says so and opens them (`1577:2`).
 class DashboardAttention extends StatelessWidget {
   const DashboardAttention({super.key, required this.dashboard, required this.period, required this.today});
 
@@ -39,7 +40,7 @@ class DashboardAttention extends StatelessWidget {
     DateTime date(DateTime d) => DateTime(d.year, d.month, d.day);
     DateTime back(DateTime d, int days) => DateTime(d.year, d.month, d.day - days);
     final (from, to) = reviewDays(period);
-    final rows = [
+    final counted = [
       (
         AdminTextKeys.dashboardCorrections,
         dashboard.correctionsWaiting,
@@ -56,7 +57,18 @@ class DashboardAttention extends StatelessWidget {
         AdminRoutes.timeRecordsOf(status: TimeRecordStatusFilter.toReview.wireName, from: from, to: to),
       ),
       (AdminTextKeys.dashboardNotSetUp, dashboard.employeesNotSetUp, AdminRoutes.employeesNotSetUp),
-    ].where((row) => row.$2 > 0).toList();
+    ].where((row) => row.$2 > 0);
+    final warning = JitanTextStyles.tableCellStrong.copyWith(color: JitanColors.warning);
+    final rows = [
+      for (final (key, count, path) in counted) (key, DashboardText.number(count), warning, path),
+      if (!dashboard.setupFinished)
+        (
+          AdminTextKeys.dashboardSetupNotFinished,
+          context.t(AdminTextKeys.dashboardSetupAskIt),
+          JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
+          AdminRoutes.lists,
+        ),
+    ];
     if (rows.isEmpty) {
       return DashboardCard(
         title: context.t(AdminTextKeys.dashboardClearTitle),
@@ -77,7 +89,7 @@ class DashboardAttention extends StatelessWidget {
               child: Text(context.t(AdminTextKeys.dashboardAttention), style: DashboardCard.titleStyle),
             ),
           ),
-          for (final (i, (key, count, path)) in rows.indexed) ...[
+          for (final (i, (key, value, valueStyle, path)) in rows.indexed) ...[
             if (i > 0) const Divider(height: 1, color: JitanColors.inputBorder),
             InkWell(
               hoverColor: JitanColors.tableHover,
@@ -97,7 +109,7 @@ class DashboardAttention extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 14),
-                      Text(DashboardText.number(count), style: JitanTextStyles.tableCellStrong.copyWith(color: JitanColors.warning)),
+                      Text(value, style: valueStyle),
                       const SizedBox(width: 14),
                       const Icon(Icons.chevron_right, size: 18, color: JitanColors.inkMuted),
                     ],

@@ -240,7 +240,9 @@ IT's database**, items 2–3 before production
 - [x] **Content-Security-Policy** (2026-10-31): the header is in DEPLOYMENT_CONFIGURATION, tested
       with the real app. **IT adds it to Nginx.**
 - [ ] **Least privilege** for the API's database account (SELECT/INSERT/UPDATE; IT's
-      development account also has DELETE/CREATE/DROP/ALTER).
+      development account also has DELETE/CREATE/DROP/ALTER). It needs INSERT on the six
+      fixed-list tables (`tblTimeRegType`, `tblScheduleType`, `tblDays`, `tblLocationType`,
+      `tblDeviceType`, `tblEventType`): Jitan completes them itself (D48).
 - [ ] **Database not reachable from the internet** (ENGINEERING_RULES §28a.3): confirm
       with IT that MySQL listens only on the private network / VM and the firewall allows
       only the API host.

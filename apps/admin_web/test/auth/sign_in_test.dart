@@ -195,7 +195,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(JitanNavItem), findsNWidgets(11));
+      expect(find.byType(JitanNavItem), findsNWidgets(10));
       expect(find.text('Disan Ssebowa'), findsOneWidget);
       expect(find.text('HR'), findsOneWidget, reason: 'the role, as the server names it');
       expect(

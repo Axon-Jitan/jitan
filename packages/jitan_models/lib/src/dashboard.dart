@@ -80,6 +80,7 @@ class Dashboard {
     required this.toReview,
     required this.correctionsWaiting,
     this.travelMinutes = 0,
+    this.setupFinished = true,
   });
 
   factory Dashboard.fromJson(Map<String, Object?> json) => Dashboard(
@@ -100,6 +101,7 @@ class Dashboard {
     toReview: json.readInt('toReview'),
     correctionsWaiting: json.readInt('correctionsWaiting'),
     travelMinutes: json.readOptionalInt('travelMinutes') ?? 0,
+    setupFinished: json.readOptionalBool('setupFinished') ?? true,
   );
 
   /// The longest period the Dashboard takes.
@@ -133,6 +135,11 @@ class Dashboard {
   final int leftEarly;
   final int toReview;
 
+  /// Jitan completed its own fixed lists. `false` only when it could not
+  /// (e.g. IT's database account may not add rows): the Dashboard then says
+  /// so, once (product owner, 2026-11-12).
+  final bool setupFinished;
+
   int get employeesNotSetUp => employees - employeesSetUp;
 
   Map<String, Object?> toJson() => {
@@ -153,5 +160,6 @@ class Dashboard {
     'toReview': toReview,
     'correctionsWaiting': correctionsWaiting,
     'travelMinutes': travelMinutes,
+    'setupFinished': setupFinished,
   };
 }

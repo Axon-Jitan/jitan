@@ -258,9 +258,11 @@ Backend modules today (routes / service / repository where they have endpoints a
 `activities audit auth companies employees groups health languages lists locations onboarding projects recovery
 reports routing schedules temporary_qr terminals time_records time_registration users`. `projects` is a
 `tblAddress` row of the kind "Project location" (D44); `activities` stores what the day goes on as
-"Activity – …" `tblTimeReg` rows. `lists` is the Lists page: the fixed lists Jitan
-reads by name (registration and schedule types, days, kinds of place, terminal kinds, audit names), which
-HR completes in Jitan (`FixedListCatalog`); IT adds no rows (D45). `audit` is the event-log writer (there is no `events` module).
+"Activity – …" `tblTimeReg` rows. `lists` holds the fixed lists Jitan
+reads by name (registration and schedule types, days, kinds of place, terminal kinds, audit names,
+`FixedListCatalog`). Jitan completes them itself (`FixedListSetup`, D48): on the first request after a
+start by someone who may manage them, exactly the missing names, audited under that person; IT adds no
+rows. HR never sees them; the Lists page is off the menu and opened from the Dashboard only when that failed. `audit` is the event-log writer (there is no `events` module).
 `schedules`: a group's schedules are derived from its employees who are only in that group
 (type and day rows found by name, `schedules/schedule_names.dart`); saving gives fresh rows
 to those employees and to employees in several groups whose schedule follows the group,

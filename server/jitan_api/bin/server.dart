@@ -14,6 +14,7 @@ import 'package:jitan_api/src/auth/credential_repository.dart';
 import 'package:jitan_api/src/auth/password_hasher.dart';
 import 'package:jitan_api/src/auth/sign_in_routes.dart';
 import 'package:jitan_api/src/auth/sign_in_service.dart';
+import 'package:jitan_api/src/auth/permission.dart';
 import 'package:jitan_api/src/auth/permission_evaluator.dart';
 import 'package:jitan_api/src/auth/session_tokens.dart';
 import 'package:jitan_api/src/auth/token_authentication_middleware.dart';
@@ -53,6 +54,7 @@ import 'package:jitan_api/src/terminals/terminal_device_routes.dart';
 import 'package:jitan_api/src/lists/fixed_list_repository.dart';
 import 'package:jitan_api/src/lists/fixed_list_routes.dart';
 import 'package:jitan_api/src/lists/fixed_list_service.dart';
+import 'package:jitan_api/src/lists/fixed_list_setup.dart';
 import 'package:jitan_api/src/terminals/terminal_device_service.dart';
 import 'package:jitan_api/src/terminals/terminal_presence.dart';
 import 'package:jitan_api/src/terminals/terminal_repository.dart';
@@ -195,6 +197,15 @@ Future<void> main() async {
   _log.info('Password hashing: ${config.passwordHashing}');
   final hasher = PasswordHasher(parameters: config.passwordHashing);
 
+  // The fixed lists: shown on the Lists page, and completed by Jitan itself
+  // on the first request of someone who may manage them (FixedListSetup).
+  final fixedLists = FixedListService(
+    lists: const FixedListRepository(),
+    audit: const AuditLogRepository(),
+    transactions: db,
+    executor: db,
+  );
+
   final devUserId = config.devUserId;
   final authentication = [
     TokenAuthenticationMiddleware(tokens: sessions, users: users).middleware,
@@ -204,6 +215,10 @@ Future<void> main() async {
         devUserId: devUserId,
         users: users,
       ).middleware,
+    FixedListSetup(
+      addAllMissing: (actor) async => (await fixedLists.addAllMissing(actor)).lists.every((list) => list.isReady),
+      mayManage: (request) => authorizer.may(request, Permission.manageLists),
+    ).middleware,
   ];
 
   final languageChanges = UserLanguageService(
@@ -384,15 +399,7 @@ Future<void> main() async {
         executor: db,
       ),
     ),
-    lists: FixedListRoutes(
-      authorizer,
-      FixedListService(
-        lists: const FixedListRepository(),
-        audit: const AuditLogRepository(),
-        transactions: db,
-        executor: db,
-      ),
-    ),
+    lists: FixedListRoutes(authorizer, fixedLists),
     terminalDevices: TerminalDeviceRoutes(
       TerminalDeviceService(
         terminals: const TerminalRepository(),
@@ -448,6 +455,7 @@ Future<void> main() async {
         companies: companyRepository,
         locations: locationService,
         clock: workplaceClock,
+        setupFinished: () async => (await fixedLists.overview()).lists.every((list) => list.isReady),
       ),
       ProjectReportService(
         days: timeRecordService,

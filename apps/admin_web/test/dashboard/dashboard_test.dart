@@ -131,6 +131,19 @@ void main() {
     expect(find.text('Days to review'), findsNothing);
   });
 
+  testWidgets('Jitan’s setup not finished: one more row (Figma 1577:2), and only then', (tester) async {
+    final clear = dashboardWith(toReview: 0, corrections: 0, employeesSetUp: 124);
+    final api = FakeDashboardApi()..answer = Dashboard.fromJson(clear.toJson()..['setupFinished'] = false);
+
+    await _pump(tester, api);
+
+    expect(find.text('Needs attention'), findsOneWidget);
+    expect(find.text('Jitan’s setup isn’t finished'), findsOneWidget);
+    expect(find.text('Ask IT'), findsOneWidget);
+    expect(find.text('Nothing needs attention'), findsNothing);
+    expect(clear.setupFinished, isTrue, reason: 'finished unless the server says otherwise');
+  });
+
   testWidgets('a period with nothing in it shows no percentage', (tester) async {
     final api = FakeDashboardApi()..answer = Dashboard.fromJson(dashboardWith(bars: 0).toJson()..addAll({'onTime': 0, 'late': 0, 'leftEarly': 0, 'toReview': 0}));
 

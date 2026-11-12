@@ -22,6 +22,7 @@ class DashboardService {
     required this._companies,
     required this._locations,
     required this._clock,
+    this._setupFinished,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -31,6 +32,9 @@ class DashboardService {
   final CompanyRepository _companies;
   final LocationService _locations;
   final WorkplaceClock _clock;
+
+  /// Whether Jitan's fixed lists are complete; finished when not given.
+  final Future<bool> Function()? _setupFinished;
   final DateTime Function() _now;
 
   static final _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
@@ -146,6 +150,7 @@ class DashboardService {
 
     int sum(List<int> values) => values.fold(0, (total, v) => total + v);
     return Dashboard(
+      setupFinished: await _setupFinished?.call() ?? true,
       working: working,
       finished: finished,
       notStarted: notStarted,

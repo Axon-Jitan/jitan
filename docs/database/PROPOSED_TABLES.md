@@ -34,7 +34,7 @@ questions wait. Nothing below blocks that work.
 
 ## Lookup rows
 
-IT adds no rows: HR adds the fixed lists in Jitan's Lists page (D45). For the record,
+IT adds no rows: Jitan completes the fixed lists itself (D48; before, HR did on the Lists page, D45). For the record,
 the activity types are `Activity – Work`, `Activity – Client on site`,
 `Activity – Client in-house`, `Activity – Internal` and `Activity – Transport` in
 `tblTimeRegType` (D37), and projects need `Project location` in `tblLocationType`.
