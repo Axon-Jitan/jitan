@@ -39,15 +39,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('the list: SAP number and name, the place, the status and when last used (Figma 1512:2)', (tester) async {
+  testWidgets('the list (1562:2): SAP number and name, the place, when last used and the status; a count and the pills', (tester) async {
     await pump(tester);
 
     expect(find.text('P-1042 Office refurbishment'), findsOneWidget);
     expect(find.text('Client site · Mouscron'), findsWidgets);
     expect(find.text('Our workshop · Almeco workshop'), findsOneWidget);
-    expect(find.text('Inactive'), findsOneWidget);
+    expect(find.text('Inactive'), findsNWidgets(2), reason: 'the pill and the inactive project');
     expect(find.text('09:00'), findsOneWidget);
-    expect(find.text('3 projects'), findsOneWidget);
+    expect(find.text('3 projects'), findsOneWidget, reason: 'the count under the title');
+
+    await tester.tap(find.text('Inactive').first);
+    await tester.pumpAndSettle();
+    expect(find.text('P-0871 Customer installation'), findsOneWidget);
+    expect(find.text('P-1042 Office refurbishment'), findsNothing);
   });
 
   testWidgets('search narrows by SAP number or name, and says when nothing matches', (tester) async {
@@ -60,19 +65,21 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'nothing like this');
     await tester.pumpAndSettle();
-    expect(find.text('No projects match your search.'), findsOneWidget);
+    expect(find.text('No matching projects'), findsOneWidget);
+    expect(find.text('Try another name or SAP number.'), findsOneWidget);
   });
 
   testWidgets('nothing yet', (tester) async {
     api.projects = [];
     await pump(tester);
-    expect(find.text('No projects yet. Add the first one.'), findsOneWidget);
+    expect(find.text('No projects yet'), findsOneWidget);
+    expect(find.widgetWithText(JitanPrimaryButton, 'Add project'), findsOneWidget, reason: 'one button, not two');
   });
 
   testWidgets('a failure, with a retry', (tester) async {
     api.fail = const ApiClientException.network('down');
     await pump(tester);
-    expect(find.text('Projects could not be loaded.'), findsOneWidget);
+    expect(find.text('Unable to load projects. Try again →'), findsOneWidget);
   });
 
   testWidgets('Add project at our workshop: SAP number, name and workshop, then it is saved (Figma 1512:305)', (tester) async {
@@ -92,7 +99,20 @@ void main() {
 
     expect(api.calls, ['create']);
     expect((api.saved.single.sapNumber, api.saved.single.name, api.saved.single.workshopId), ('P-1100', 'Painting', 1));
-    expect(find.text('P-1100 Painting'), findsOneWidget);
+    expect(find.text('P-1100 Painting'), findsWidgets, reason: 'in the list, and in the toast');
+    expect(find.text('P-1100 Painting added.'), findsOneWidget);
+  });
+
+  testWidgets('switching to our workshop keeps the pop-up one size (1562:350)', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Add project'));
+    await tester.pumpAndSettle();
+    final popup = find.descendant(of: find.byType(Dialog), matching: find.byType(LayoutBuilder)).first;
+    final first = tester.getSize(popup);
+    await tester.tap(find.text('Our workshop'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(popup), first);
+    expect(find.text('Almeco workshop · its own area'), findsOneWidget, reason: 'the only workshop, already chosen, on the map');
   });
 
   testWidgets('a client site can’t be saved before it has a street and a pin', (tester) async {
@@ -108,19 +128,37 @@ void main() {
     expect(add.onPressed, isNull);
   });
 
-  testWidgets('a row opens its project; it keeps its kind, and Deactivate is saved at once', (tester) async {
+  testWidgets('a row opens its project by name (1562:101); it keeps its kind; Save waits for a change; Deactivate asks first', (tester) async {
     await pump(tester);
 
     await tester.tap(find.text('P-0990 Cleaning the workshop'));
     await tester.pumpAndSettle();
-    expect(find.text('Edit project'), findsOneWidget);
+    expect(find.text('P-0990 Cleaning the workshop'), findsWidgets, reason: 'the title');
+    expect(find.text('Active · Our workshop · Changes apply right away.'), findsOneWidget);
+    expect(find.text('Almeco workshop · its own area'), findsOneWidget, reason: 'the workshop on the map');
+    expect(tester.widget<JitanPrimaryButton>(find.widgetWithText(JitanPrimaryButton, 'Save')).onPressed, isNull, reason: 'nothing changed');
     await tester.tap(find.text('Client site'));
     await tester.pumpAndSettle();
     expect(find.text('Workshop'), findsOneWidget, reason: 'the kind is fixed once added');
 
     await tester.tap(find.text('Deactivate'));
     await tester.pumpAndSettle();
+    expect(find.text('Deactivate P-0990 Cleaning the workshop?'), findsOneWidget, reason: '1562:605');
+    expect(api.calls, isEmpty, reason: 'nothing before HR agrees');
+    await tester.tap(find.widgetWithText(JitanPrimaryButton, 'Deactivate'));
+    await tester.pumpAndSettle();
     expect(api.calls, ['deactivate 4']);
-    expect(find.text('Reactivate'), findsOneWidget);
+    expect(find.text('P-0990 Cleaning the workshop deactivated.'), findsOneWidget);
+  });
+
+  testWidgets('an inactive project (1562:789) offers Reactivate, without asking', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('P-0871 Customer installation'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Inactive · Client site'), findsOneWidget);
+    await tester.tap(find.text('Reactivate'));
+    await tester.pumpAndSettle();
+    expect(api.calls, ['reactivate 5']);
+    expect(find.text('P-0871 Customer installation reactivated.'), findsOneWidget);
   });
 }

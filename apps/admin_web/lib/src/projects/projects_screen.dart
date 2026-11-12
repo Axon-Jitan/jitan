@@ -11,8 +11,10 @@ import 'project_dialog.dart';
 import 'projects_controller.dart';
 import 'projects_table.dart';
 
-/// HR/Admin "Projects" (Figma `1512:2`, D43, D44): what employees can choose
-/// to work on, added by HR until SAP is connected. A row opens its form.
+/// HR/Admin "Projects" (Figma `HR / Projects V2 — page` `1562:2`, D43, D44):
+/// what employees can choose to work on, added by HR until SAP is
+/// connected. A row opens the project; nothing yet, no match, loading and
+/// error as on the other lists.
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key, required this.api, required this.locationsApi, required this.maps, this.clock});
 
@@ -38,6 +40,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     super.dispose();
   }
 
+  /// The pop-up says what was saved itself; the list reloads after.
   Future<void> _open([ProjectSummary? project]) async {
     final changed = await showProjectDialog(
       context,
@@ -49,48 +52,91 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     if (changed) await _controller.load();
   }
 
+  bool get _isEmpty => switch (_controller.state) {
+    ProjectsLoaded(projects: []) => true,
+    _ => false,
+  };
+
   @override
   Widget build(BuildContext context) => JitanListPage(
-    top: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        JitanPageHeader(
-          title: context.t(AdminTextKeys.projectsTitle),
-          subtitle: context.t(AdminTextKeys.projectsSubtitle),
-          action: JitanPrimaryButton(
-            label: context.t(AdminTextKeys.projectAdd),
-            height: JitanDimensions.controlHeight,
-            onPressed: _open,
+    top: ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          JitanPageHeader(
+            title: context.t(AdminTextKeys.projectsTitle),
+            subtitle: switch (_controller.state) {
+              ProjectsLoaded(:final projects) when projects.isNotEmpty => context.tPlural(AdminTextKeys.projectsCount, projects.length),
+              _ => context.t(AdminTextKeys.projectsSubtitle),
+            },
+            action: _isEmpty
+                ? null
+                : JitanPrimaryButton(
+                    label: context.t(AdminTextKeys.projectAdd),
+                    icon: Icons.add,
+                    height: JitanDimensions.controlHeight,
+                    onPressed: _open,
+                  ),
           ),
-        ),
-        const SizedBox(height: JitanDimensions.headerToToolbar),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 300),
-            child: JitanSearchField(
-              clearTooltip: context.t(CommonTextKeys.searchClear),
-              outlined: true,
-              hintText: context.t(AdminTextKeys.projectsSearch),
-              onChanged: _controller.updateSearch,
-            ),
-          ),
-        ),
-        const SizedBox(height: JitanDimensions.toolbarToTable),
-      ],
+          const SizedBox(height: JitanDimensions.headerToToolbar),
+          if (!_isEmpty) ...[_toolbar(context), const SizedBox(height: JitanDimensions.toolbarToTable)],
+        ],
+      ),
     ),
     list: [ListenableBuilder(listenable: _controller, builder: (context, _) => _content(context))],
   );
 
+  /// A search box and All · Active · Inactive, as on Locations.
+  Widget _toolbar(BuildContext context) {
+    final search = JitanSearchField(
+      clearTooltip: context.t(CommonTextKeys.searchClear),
+      outlined: true,
+      hintText: context.t(AdminTextKeys.projectsSearch),
+      onChanged: _controller.updateSearch,
+    );
+    final status = JitanPillSwitch<ProjectStatusFilter?>(
+      options: [
+        (null, context.t(AdminTextKeys.projectsFilterAll)),
+        (ProjectStatusFilter.active, context.t(CommonTextKeys.statusActive)),
+        (ProjectStatusFilter.inactive, context.t(CommonTextKeys.statusInactive)),
+      ],
+      value: _controller.status,
+      onChanged: _controller.updateStatus,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) => constraints.maxWidth < JitanDimensions.phoneBreakpoint
+          ? Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: [search, status])
+          : Row(spacing: 12, children: [SizedBox(width: 320, child: search), status]),
+    );
+  }
+
   Widget _content(BuildContext context) => switch (_controller.state) {
-    ProjectsLoading() => _state(GroupStateText(context.t(AdminTextKeys.projectsLoading))),
-    ProjectsFailed() => _state(GroupStateText(context.t(AdminTextKeys.projectsLoadFailed), onRetry: _controller.load)),
-    ProjectsLoaded(projects: []) => _state(GroupStateText(context.t(AdminTextKeys.projectsEmpty))),
+    ProjectsLoading() => _line(GroupStateText(context.t(AdminTextKeys.projectsLoading))),
+    ProjectsFailed() => _line(GroupStateText(context.t(AdminTextKeys.projectsLoadFailed), onRetry: _controller.load)),
+    ProjectsLoaded(projects: []) => SliverToBoxAdapter(
+      child: JitanEmptyPage(
+        title: context.t(AdminTextKeys.projectsEmptyTitle),
+        message: context.t(AdminTextKeys.projectsEmpty),
+        actionLabel: context.t(AdminTextKeys.projectAdd),
+        onAction: _open,
+      ),
+    ),
     ProjectsLoaded() => switch (_controller.visible) {
-      [] => _state(GroupStateText(context.t(AdminTextKeys.projectsNoMatch))),
+      [] => SliverToBoxAdapter(child: _nothingShown(context)),
       final projects => ProjectsTable(projects: projects, now: _now, onOpen: _open),
     },
   };
 
-  static Widget _state(Widget child) => SliverToBoxAdapter(child: child);
+  /// Nothing to show, said for what HR did: a search or a status.
+  Widget _nothingShown(BuildContext context) {
+    final (title, message) = switch ((_controller.search, _controller.status)) {
+      ('', ProjectStatusFilter.inactive) => (AdminTextKeys.projectsNoInactiveTitle, AdminTextKeys.projectsNoInactiveText),
+      ('', ProjectStatusFilter.active) => (AdminTextKeys.projectsNoActiveTitle, AdminTextKeys.projectsNoActiveText),
+      _ => (AdminTextKeys.projectsNoMatchTitle, AdminTextKeys.projectsNoMatch),
+    };
+    return JitanNoResults(title: context.t(title), message: context.t(message));
+  }
+
+  static Widget _line(Widget child) => SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 4), child: child));
 }

@@ -23,6 +23,9 @@ class ProjectsFailed extends ProjectsState {
   final ApiClientException failure;
 }
 
+/// The status filter of the list; `null` = all.
+enum ProjectStatusFilter { active, inactive }
+
 /// Loads the projects and filters them for display. Holds no project rules:
 /// the server validates every change.
 class ProjectsController extends ChangeNotifier {
@@ -34,6 +37,11 @@ class ProjectsController extends ChangeNotifier {
   ProjectsState get state => _state;
 
   String _search = '';
+  String get search => _search;
+
+  ProjectStatusFilter? _status;
+  ProjectStatusFilter? get status => _status;
+
   bool _disposed = false;
 
   List<ProjectSummary> get all => switch (_state) {
@@ -41,10 +49,15 @@ class ProjectsController extends ChangeNotifier {
     _ => const [],
   };
 
-  /// Searched by SAP number, name and place.
+  /// Searched by SAP number, name and place, and by status.
   List<ProjectSummary> get visible => [
     for (final project in all)
-      if (_search.isEmpty || '${project.fullName} ${project.placeName ?? ''}'.toLowerCase().contains(_search.toLowerCase()))
+      if ((_search.isEmpty || '${project.fullName} ${project.placeName ?? ''}'.toLowerCase().contains(_search.toLowerCase())) &&
+          switch (_status) {
+            null => true,
+            ProjectStatusFilter.active => project.isActive,
+            ProjectStatusFilter.inactive => !project.isActive,
+          })
         project,
   ];
 
@@ -59,6 +72,11 @@ class ProjectsController extends ChangeNotifier {
 
   void updateSearch(String text) {
     _search = text.trim();
+    _notify();
+  }
+
+  void updateStatus(ProjectStatusFilter? status) {
+    _status = status;
     _notify();
   }
 

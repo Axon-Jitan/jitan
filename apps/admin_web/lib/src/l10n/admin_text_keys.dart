@@ -812,6 +812,23 @@ abstract final class AdminTextKeys {
 
   // Projects (Figma 647:1192)
   static const projectsTitle = 'project.list.title';
+  static const projectsFilterAll = 'project.list.filterAll';
+  static const projectsEmptyTitle = 'project.list.emptyTitle';
+  static const projectsNoMatchTitle = 'project.list.noMatchTitle';
+  static const projectsNoInactiveTitle = 'project.list.noInactiveTitle';
+  static const projectsNoInactiveText = 'project.list.noInactiveText';
+  static const projectsNoActiveTitle = 'project.list.noActiveTitle';
+  static const projectsNoActiveText = 'project.list.noActiveText';
+  static const projectStatusActiveLine = 'project.form.statusActive';
+  static const projectStatusInactiveLine = 'project.form.statusInactive';
+  static const projectAdded = 'project.added';
+  static const projectSaved = 'project.saved';
+  static const projectDeactivated = 'project.deactivated';
+  static const projectReactivated = 'project.reactivated';
+  static const projectDeactivateTitle = 'project.deactivate.title';
+  static const projectDeactivateText = 'project.deactivate.text';
+  static const projectWorkshopMapChoose = 'project.workshopMap.choose';
+  static const projectWorkshopMapArea = 'project.workshopMap.area';
   static const projectsSubtitle = 'project.list.subtitle';
   static const projectsSearch = 'project.list.search';
   static const projectsLoading = 'project.list.loading';

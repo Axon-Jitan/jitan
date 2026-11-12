@@ -39,7 +39,7 @@ class LocationMapPanel extends StatelessWidget {
         Positioned(
           top: 20,
           left: 20,
-          child: _Hint(context.t(form.point == null ? AdminTextKeys.locationMapPlace : AdminTextKeys.locationMapDrag)),
+          child: LocationMapHint(context.t(form.point == null ? AdminTextKeys.locationMapPlace : AdminTextKeys.locationMapDrag)),
         ),
         if (showClose)
           Positioned(
@@ -70,8 +70,9 @@ class LocationMapPanel extends StatelessWidget {
   }
 }
 
-class _Hint extends StatelessWidget {
-  const _Hint(this.text);
+/// A small white chip over the map ("Drag the pin to the entrance").
+class LocationMapHint extends StatelessWidget {
+  const LocationMapHint(this.text, {super.key});
 
   final String text;
 
