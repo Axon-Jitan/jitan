@@ -5,33 +5,23 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 import '../period/chosen_period.dart';
 import '../period/period_text.dart';
+import '../time_records/time_record_card.dart';
+import '../time_records/time_record_popup.dart';
+import 'report_employee_dialog.dart';
+import 'report_popup_numbers.dart';
 import 'report_text.dart';
 
 Future<void> showProjectReportDialog(BuildContext context, {required ProjectReportProject project, required ChosenPeriod period}) =>
     showJitanModal<void>(context, builder: (_) => ProjectReportDialog(project: project, period: period));
 
-/// One project's period (Figma `1515:190`): its numbers, and each employee who
-/// worked on it or travelled for it.
+/// One project's period (Figma `HR / Reports V2 — a project` `1572:593`):
+/// its numbers, then each employee who worked on it or travelled for it, in
+/// one card. The same size as an employee's pop-up.
 class ProjectReportDialog extends StatelessWidget {
   const ProjectReportDialog({super.key, required this.project, required this.period});
 
   final ProjectReportProject project;
   final ChosenPeriod period;
-
-  static const _flexEmployee = 210;
-  static const _flexDays = 110;
-  static const _flexHours = 110;
-  static const _flexTravel = 130;
-  static const _flexTrips = 150;
-
-  Widget _total(BuildContext context, String labelKey, String value) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(context.t(labelKey), style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
-      const SizedBox(height: 2),
-      Text(value, style: JitanTextStyles.pageTitle.copyWith(fontSize: 20)),
-    ],
-  );
 
   String _subtitle(BuildContext context) {
     final summary = project.project;
@@ -46,55 +36,61 @@ class ProjectReportDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final muted = JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted);
-    return JitanModal(
-      width: 760,
+    return TimeRecordPopup(
+      width: ReportEmployeeDialog.width,
+      height: ReportEmployeeDialog.height,
       title: project.project.fullName,
       subtitle: _subtitle(context),
-      onClose: () => Navigator.of(context).pop(),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 40,
-            runSpacing: 12,
-            children: [
-              _total(context, AdminTextKeys.reportRegistered, ReportText.hours(context, project.workedMinutes)),
-              _total(context, AdminTextKeys.reportTravel, ReportText.hours(context, project.travelMinutes)),
-              _total(context, AdminTextKeys.reportColumnKilometres, ReportText.distance(context, project.trips, project.distanceMetres)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          JitanDataTable(
-            minWidth: 620,
-            columns: [
-              JitanTableColumn(label: context.t(AdminTextKeys.reportColumnEmployee), flex: _flexEmployee),
-              JitanTableColumn(label: context.t(AdminTextKeys.reportColumnDays), flex: _flexDays),
-              JitanTableColumn(label: context.t(AdminTextKeys.reportRegistered), flex: _flexHours),
-              JitanTableColumn(label: context.t(AdminTextKeys.reportTravel), flex: _flexTravel),
-              JitanTableColumn(label: context.t(AdminTextKeys.reportColumnTrips), flex: _flexTrips),
-            ],
-            rows: [
-              for (final e in project.employees)
-                [
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(text: ReportText.person(e.firstName, e.lastName, e.code), style: JitanTextStyles.tableCellStrong),
-                        TextSpan(text: '  ${e.code}', style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
-                      ],
-                    ),
-                    overflow: TextOverflow.ellipsis,
+      body: [
+        ReportPopupNumbers(
+          numbers: [
+            (context.t(AdminTextKeys.reportRegistered), ReportText.hours(context, project.workedMinutes), null),
+            (context.t(AdminTextKeys.reportTravel), ReportText.hours(context, project.travelMinutes), null),
+            (
+              context.t(AdminTextKeys.reportColumnKilometres),
+              ReportText.distance(context, project.trips, project.distanceMetres),
+              project.tripsWithoutDistance > 0 ? JitanColors.warning : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        TimeRecordCard(
+          compact: true,
+          widths: const [60, 100, 90, 50],
+          labelHeading: context.t(AdminTextKeys.reportColumnEmployee),
+          headings: [
+            context.t(AdminTextKeys.reportColumnDays),
+            context.t(AdminTextKeys.reportRegistered),
+            context.t(AdminTextKeys.reportTravel),
+            context.t(AdminTextKeys.reportColumnTrips),
+          ],
+          rows: [
+            for (final e in project.employees)
+              TimeRecordCardRow(
+                label: ReportText.person(e.firstName, e.lastName, e.code),
+                leading: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: ReportText.person(e.firstName, e.lastName, e.code),
+                        style: JitanTextStyles.tableCell.copyWith(color: JitanColors.ink, fontWeight: FontWeight.w500),
+                      ),
+                      TextSpan(text: '  ${e.code}', style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
+                    ],
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                values: [
                   Text('${e.days}', style: JitanTextStyles.tableCell),
                   Text(ReportText.hours(context, e.workedMinutes), style: JitanTextStyles.tableCell),
                   Text(ReportText.hoursOrNone(context, e.travelMinutes), style: e.travelMinutes == 0 ? muted : JitanTextStyles.tableCell),
                   Text(e.trips == 0 ? '—' : '${e.trips}', style: e.trips == 0 ? muted : JitanTextStyles.tableCell),
                 ],
-            ],
-          ),
-        ],
-      ),
+              ),
+          ],
+        ),
+      ],
       actions: [
         JitanSecondaryButton(label: context.t(AdminTextKeys.reportClose), onPressed: () => Navigator.of(context).pop()),
       ],

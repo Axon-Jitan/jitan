@@ -6,8 +6,9 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 import 'report_text.dart';
 
-/// One row per employee (Figma `1467:2`): a row opens their month. On a phone
-/// (`1482:2`) only the name, the worked hours and a dot for days to review.
+/// One row per employee (Figma `HR / Reports V2 — employees` `1571:2`): a
+/// row opens their period, with a › while hovered. On a phone only the name,
+/// the worked hours and a dot for days to review.
 class ReportsTable extends StatelessWidget {
   const ReportsTable({super.key, required this.employees, required this.onOpen});
 
@@ -19,8 +20,7 @@ class ReportsTable extends StatelessWidget {
   static const _flexHours = 130;
   static const _flexTravel = 110;
   static const _flexKilometres = 130;
-  static const _flexReview = 140;
-  static const _flexOpen = 40;
+  static const _flexReview = 180;
   static const _flexPhoneEmployee = 200;
   static const _flexPhoneHours = 90;
   static const _flexPhoneOpen = 44;
@@ -31,6 +31,7 @@ class ReportsTable extends StatelessWidget {
     if (MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint) return _phone(context, t);
     return JitanSliverTable(
       onRowTap: (i) => onOpen(employees[i]),
+      hoverChevron: true,
       columns: [
         JitanTableColumn(label: t.t(AdminTextKeys.reportColumnEmployee), flex: _flexEmployee),
         JitanTableColumn(label: t.t(AdminTextKeys.reportPlanned), flex: _flexHours),
@@ -39,7 +40,6 @@ class ReportsTable extends StatelessWidget {
         JitanTableColumn(label: t.t(AdminTextKeys.reportTravel), flex: _flexTravel),
         JitanTableColumn(label: t.t(AdminTextKeys.reportColumnKilometres), flex: _flexKilometres),
         JitanTableColumn(label: t.t(AdminTextKeys.reportColumnToReview), flex: _flexReview),
-        const JitanTableColumn(label: '', flex: _flexOpen, align: JitanColumnAlign.end),
       ],
       rowCount: employees.length,
       cells: (i) {
@@ -78,10 +78,8 @@ class ReportsTable extends StatelessWidget {
                     ),
                   ],
                 ),
-          const Icon(Icons.chevron_right, size: 18, color: JitanColors.inkMuted),
         ];
       },
-      footer: _footer(context),
     );
   }
 
@@ -93,17 +91,6 @@ class ReportsTable extends StatelessWidget {
       ],
     ),
     overflow: TextOverflow.ellipsis,
-  );
-
-  Widget _footer(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Text(
-      [
-        context.tPlural(AdminTextKeys.reportEmployees, employees.length),
-        if (employees.any((e) => e.tripsWithoutDistance > 0)) context.t(AdminTextKeys.reportUnknownDistance),
-      ].join(' '),
-      style: JitanTextStyles.stateMessage.copyWith(fontSize: 12),
-    ),
   );
 
   Widget _phone(BuildContext context, Translations t) => JitanSliverTable(
@@ -134,6 +121,5 @@ class ReportsTable extends StatelessWidget {
         ),
       ];
     },
-    footer: _footer(context),
   );
 }

@@ -14,6 +14,7 @@ class JitanPrimaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.icon,
+    this.trailingIcon,
     this.busy = false,
     this.height = JitanDimensions.fieldHeight,
     this.color = JitanColors.vermilion,
@@ -22,6 +23,9 @@ class JitanPrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
+
+  /// After the label, e.g. a chevron for a button that opens a menu.
+  final IconData? trailingIcon;
   final bool busy;
   final double height;
 
@@ -59,6 +63,7 @@ class JitanPrimaryButton extends StatelessWidget {
                     if (icon != null) ...[Icon(icon, size: 14), const SizedBox(width: 6)],
                     // On a narrow screen a long label ends in "…" instead of overflowing.
                     Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    if (trailingIcon != null) ...[const SizedBox(width: 6), Icon(trailingIcon, size: 18)],
                   ],
                 ),
         ),

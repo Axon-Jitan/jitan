@@ -907,11 +907,11 @@ abstract final class AdminTextKeys {
   static const periodTo = 'dashboard.period.to';
   static const periodDismiss = 'dashboard.period.dismiss';
   static const reportTitle = 'report.title';
+  static const reportColumnHours = 'report.column.hours';
   static const reportSubtitle = 'report.subtitle';
   static const reportExport = 'report.export';
   static const reportExportExcel = 'report.export.excel';
   static const reportExportCsv = 'report.export.csv';
-  static const reportPeriod = 'report.period';
   static const reportCompany = 'report.company';
   static const reportCompanyAll = 'report.company.all';
   static const reportSearch = 'report.search';
@@ -929,8 +929,6 @@ abstract final class AdminTextKeys {
   static const reportFileKilometres = 'report.file.kilometres';
   static const reportFileUnknownTrips = 'report.file.unknownTrips';
   static const reportColumnDay = 'report.column.day';
-  static const reportColumnStart = 'report.column.start';
-  static const reportColumnFinish = 'report.column.finish';
   static const reportColumnStatus = 'report.column.status';
   static const reportHours = 'report.hours';
   static const reportHoursMinutes = 'report.hoursMinutes';

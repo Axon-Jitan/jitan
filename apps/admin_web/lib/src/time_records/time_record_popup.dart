@@ -18,6 +18,8 @@ class TimeRecordPopup extends StatelessWidget {
     required this.actions,
     this.bottom,
     this.leadingActions = const [],
+    this.width = size,
+    this.height = size,
   });
 
   final String title;
@@ -30,20 +32,24 @@ class TimeRecordPopup extends StatelessWidget {
   final List<Widget> leadingActions;
 
   static const size = 560.0;
+
+  /// 560 × 560 unless a page needs more (a report: 640 × 600).
+  final double width;
+  final double height;
   static const _inset = 16.0;
 
   @override
   Widget build(BuildContext context) {
     final screen = MediaQuery.sizeOf(context);
     final padding = MediaQuery.paddingOf(context);
-    final height = math.min(size, screen.height - padding.vertical - _inset * 2);
+    final height = math.min(this.height, screen.height - padding.vertical - _inset * 2);
     return Dialog(
       backgroundColor: JitanColors.surface,
       surfaceTintColor: JitanColors.surface,
       insetPadding: const EdgeInsets.all(_inset),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(JitanDimensions.modalRadius)),
       child: SizedBox(
-        width: size,
+        width: width,
         height: height,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(32, 32, 32, 28),

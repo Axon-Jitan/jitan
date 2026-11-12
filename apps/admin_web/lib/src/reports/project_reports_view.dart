@@ -12,12 +12,14 @@ import 'project_report_dialog.dart';
 import 'project_reports_controller.dart';
 import 'project_reports_table.dart';
 import 'report_export.dart';
+import 'report_export_button.dart';
+import 'reports_layout.dart';
 import 'report_numbers_card.dart';
 import 'report_text.dart';
 
-/// Reports, Projects (Figma `1515:2`, a project `1515:190`, D24): one period,
-/// per project, with only what Jitan records. A project has no company (D44),
-/// so there is no company filter.
+/// Reports, Projects (Figma `HR / Reports V2 — projects` `1571:390`, a
+/// project `1572:593`, D24): one period, per project, with only what Jitan
+/// records. A project has no company (D44), so there is no company filter.
 class ProjectReportsView extends StatefulWidget {
   const ProjectReportsView({
     super.key,
@@ -42,7 +44,6 @@ class ProjectReportsView extends StatefulWidget {
 }
 
 class _ProjectReportsViewState extends State<ProjectReportsView> {
-  final _menu = MenuController();
 
   ProjectReportsController get _controller => widget.controller;
 
@@ -88,23 +89,12 @@ class _ProjectReportsViewState extends State<ProjectReportsView> {
             JitanPageHeader(
               title: context.t(AdminTextKeys.reportTitle),
               subtitle: context.t(AdminTextKeys.reportProjectsSubtitle),
-              action: MenuAnchor(
-                controller: _menu,
-                alignmentOffset: const Offset(0, 6),
-                menuChildren: [
-                  MenuItemButton(onPressed: () => _export('xlsx'), child: Text(context.t(AdminTextKeys.reportExportExcel))),
-                  MenuItemButton(onPressed: () => _export('csv'), child: Text(context.t(AdminTextKeys.reportExportCsv))),
-                ],
-                child: JitanPrimaryButton(
-                  label: context.t(AdminTextKeys.reportExport),
-                  height: JitanDimensions.controlHeight,
-                  onPressed: loaded ? () => _menu.isOpen ? _menu.close() : _menu.open() : null,
-                ),
+              action: reportHeaderActions(
+                PeriodButton(period: _controller.period, today: widget.today, onChanged: widget.onPeriodChanged),
+                ReportExportButton(onExcel: () => _export('xlsx'), onCsv: () => _export('csv'), enabled: loaded),
               ),
             ),
-            const SizedBox(height: 16),
-            widget.viewSwitch,
-            const SizedBox(height: 24),
+            const SizedBox(height: JitanDimensions.headerToToolbar),
             _toolbar(context),
             const SizedBox(height: JitanDimensions.toolbarToTable),
             if (loaded) ...[_totals(context), const SizedBox(height: 16)],
@@ -121,43 +111,32 @@ class _ProjectReportsViewState extends State<ProjectReportsView> {
     final trips = sum((p) => p.trips), metres = sum((p) => p.distanceMetres), unknown = sum((p) => p.tripsWithoutDistance);
     return ReportNumbersCard(
       numbers: [
-        (context.t(AdminTextKeys.reportTotalProjects), '${projects.length}', JitanColors.ink),
-        (context.t(AdminTextKeys.reportRegistered), ReportText.hours(context, sum((p) => p.workedMinutes)), JitanColors.ink),
-        (context.t(AdminTextKeys.reportTravel), ReportText.hours(context, sum((p) => p.travelMinutes)), JitanColors.ink),
+        (context.t(AdminTextKeys.reportTotalProjects), '${projects.length}', JitanColors.ink, null),
+        (context.t(AdminTextKeys.reportRegistered), ReportText.hours(context, sum((p) => p.workedMinutes)), JitanColors.ink, null),
+        (context.t(AdminTextKeys.reportTravel), ReportText.hours(context, sum((p) => p.travelMinutes)), JitanColors.ink, null),
         (
           context.t(AdminTextKeys.reportColumnKilometres),
           ReportText.distance(context, trips, metres),
           unknown > 0 ? JitanColors.warning : JitanColors.ink,
+          null,
         ),
       ],
     );
   }
 
-  Widget _toolbar(BuildContext context) {
-    final phone = MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint;
-    final period = JitanFieldLabel(
-      label: context.t(AdminTextKeys.reportPeriod),
-      child: PeriodButton(period: _controller.period, today: widget.today, onChanged: widget.onPeriodChanged, expanded: phone),
-    );
-    final search = JitanFieldLabel(
-      label: context.t(CommonTextKeys.searchLabel),
-      child: JitanSearchField(
+  /// Employees | Projects and the search (Figma `1571:390`).
+  Widget _toolbar(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => reportToolbar(
+      phone: constraints.maxWidth < JitanDimensions.phoneBreakpoint,
+      viewSwitch: widget.viewSwitch,
+      search: JitanSearchField(
         clearTooltip: context.t(CommonTextKeys.searchClear),
         outlined: true,
         hintText: context.t(AdminTextKeys.reportProjectsSearch),
         onChanged: _controller.updateSearch,
       ),
-    );
-    return LayoutBuilder(
-      builder: (context, constraints) => constraints.maxWidth < JitanDimensions.phoneBreakpoint
-          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 14, children: [period, search])
-          : Wrap(
-              spacing: 16,
-              runSpacing: 14,
-              children: [period, SizedBox(width: 300, child: search)],
-            ),
-    );
-  }
+    ),
+  );
 
   Widget _content(BuildContext context) => switch (_controller.state) {
     ProjectReportsLoading() => _state(GroupStateText(context.t(AdminTextKeys.reportLoading))),
@@ -165,9 +144,17 @@ class _ProjectReportsViewState extends State<ProjectReportsView> {
     ProjectReportsLoaded() when _empty => SliverToBoxAdapter(child: _emptyMonth(context)),
     ProjectReportsLoaded() => switch (_controller.visible) {
       [] => _state(GroupStateText(context.t(AdminTextKeys.reportProjectsNoMatch))),
-      final projects => ProjectReportsTable(
-        projects: projects,
-        onOpen: (project) => showProjectReportDialog(context, project: project, period: _controller.period),
+      final projects => SliverMainAxisGroup(
+        slivers: [
+          ProjectReportsTable(
+            projects: projects,
+            onOpen: (project) => showProjectReportDialog(context, project: project, period: _controller.period),
+          ),
+          reportNote([
+            context.tPlural(AdminTextKeys.reportProjects, projects.length),
+            if (projects.any((p) => p.tripsWithoutDistance > 0)) context.t(AdminTextKeys.reportUnknownDistance),
+          ]),
+        ],
       ),
     },
   };

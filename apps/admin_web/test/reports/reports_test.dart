@@ -20,9 +20,11 @@ void main() {
   late FakeReportsApi api;
   late MemorySessionStore store;
   late List<(String, List<int>, String)> downloads;
+  late List<String> navigated;
 
   setUp(() {
     downloads = [];
+    navigated = [];
     store = MemorySessionStore();
     api = FakeReportsApi()
       ..employees = [
@@ -64,6 +66,7 @@ void main() {
             store: store,
             today: () => DateTime(2026, 10, 23),
             download: (name, bytes, type) => downloads.add((name, bytes, type)),
+            navigate: navigated.add,
           ),
         ),
       ),
@@ -85,27 +88,27 @@ void main() {
     await pump(tester);
     expect(find.text('Kilometres'), findsOneWidget);
     expect(find.text('—'), findsWidgets);
-    expect(find.textContaining('A distance in amber'), findsNothing);
+    expect(find.textContaining('An amber distance'), findsNothing);
 
     api.employees = [reportEmployee(1, 'Kevin', 'De Vos', 'KDV', trips: 40, metres: 1267600, unknownTrips: 1)];
     await pickLastMonth(tester);
 
     expect(find.text('1 268 km'), findsOneWidget);
-    expect(find.textContaining('A distance in amber'), findsOneWidget);
+    expect(find.textContaining('An amber distance'), findsOneWidget);
   });
 
   testWidgets('the period: this month up to today at first, totals, one row per employee, and what to review', (tester) async {
     await pump(tester);
 
     expect(api.calls.single, (DateTime(2026, 10), DateTime(2026, 10, 23), null));
-    expect(find.text('Period'), findsOneWidget);
+    expect(find.byType(PeriodButton), findsOneWidget);
     expect(find.text('This month'), findsOneWidget);
     expect(find.text('1 – 23 Oct 2026'), findsOneWidget);
     expect(find.text('320h'), findsOneWidget, reason: 'planned');
     expect(find.text('+6h'), findsOneWidget);
     expect(find.text('−19h'), findsOneWidget);
     expect(find.text('3 days'), findsOneWidget);
-    expect(find.textContaining('2 employees.'), findsOneWidget);
+    expect(find.textContaining('2 employees ·'), findsOneWidget);
   });
 
   testWidgets('a row opens the employee\'s days, with the time away', (tester) async {
@@ -147,6 +150,14 @@ void main() {
     expect(tester.widget<JitanPrimaryButton>(find.byType(JitanPrimaryButton)).onPressed, isNull);
   });
 
+  testWidgets('the days to review open in Time records, for the same period', (tester) async {
+    await pump(tester);
+
+    await tester.tap(find.byIcon(Icons.chevron_right_rounded));
+    await tester.pump();
+    expect(navigated, ['/time-records?status=to_review&from=2026-10-01&to=2026-10-23']);
+  });
+
   testWidgets('a failed load says so and retries', (tester) async {
     api.fail = const ApiClientException.server(500, ApiError(code: 'internal_error', message: 'x'));
     await pump(tester);
@@ -155,7 +166,7 @@ void main() {
     api.fail = null;
     await tester.tap(find.text('Unable to load the report. Try again →'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('2 employees.'), findsOneWidget);
+    expect(find.textContaining('2 employees ·'), findsOneWidget);
   });
 
   testWidgets('export: Excel and CSV of what is on screen, named by period', (tester) async {

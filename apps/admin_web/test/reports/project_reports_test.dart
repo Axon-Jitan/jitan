@@ -80,14 +80,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.projectCalls, [(DateTime(2026, 10), DateTime(2026, 10, 23))]);
-    expect(find.text('Period'), findsOneWidget);
+    expect(find.byType(PeriodButton), findsOneWidget);
     expect(find.text('Worked hours and travel per project, for invoicing.'), findsOneWidget);
     expect(find.text('Company'), findsNothing, reason: 'a project has no company');
     expect(find.textContaining('P-1042 Office refurbishment'), findsOneWidget);
     expect(find.text('412 km'), findsWidgets);
     expect(find.text('9'), findsOneWidget);
     expect(find.text('2'), findsOneWidget, reason: 'two projects in the totals');
-    expect(find.textContaining('2 projects.'), findsOneWidget);
+    expect(find.textContaining('2 projects ·'), findsOneWidget);
   });
 
   testWidgets('without trips: dashes for travel, trips and kilometres', (tester) async {

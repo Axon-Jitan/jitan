@@ -4,9 +4,13 @@ import 'package:jitan_ui/jitan_ui.dart';
 /// One line of a [TimeRecordCard]: what it is ("Start"), an optional small
 /// line under it ("Automatic", "Not registered"), and its values.
 class TimeRecordCardRow {
-  const TimeRecordCardRow({required this.label, required this.values, this.detail, this.detailColor});
+  const TimeRecordCardRow({required this.label, required this.values, this.detail, this.detailColor, this.leading});
 
   final String label;
+
+  /// Shown in place of [label] (a name with its code), which then only
+  /// names the row.
+  final Widget? leading;
   final String? detail;
   final Color? detailColor;
   final List<Widget> values;
@@ -16,12 +20,25 @@ class TimeRecordCardRow {
 /// `1566:272`, `1566:788`, `1566:1040`): small column headings, then a row
 /// per time with its values in fixed columns, thin lines between them.
 class TimeRecordCard extends StatelessWidget {
-  const TimeRecordCard({super.key, required this.widths, required this.rows, this.headings});
+  const TimeRecordCard({
+    super.key,
+    required this.widths,
+    required this.rows,
+    this.headings,
+    this.labelHeading,
+    this.compact = false,
+  });
 
   /// The width of each value column; the label takes the rest.
   final List<double> widths;
   final List<String>? headings;
+
+  /// Over the label column ("Day"); none when `null`.
+  final String? labelHeading;
   final List<TimeRecordCardRow> rows;
+
+  /// Lower rows, for a long list (a report's days).
+  final bool compact;
 
   /// A time or duration as the card shows it: [strong] for what counts,
   /// [muted] for what does not (yet).
@@ -61,22 +78,27 @@ class TimeRecordCard extends StatelessWidget {
           if (headings != null)
             Padding(
               padding: const EdgeInsets.only(top: 10, bottom: 4),
-              child: _columns(widths, const SizedBox.shrink(), [
-                for (final heading in headings)
-                  Text(heading, maxLines: 1, style: JitanTextStyles.tableCell.copyWith(fontSize: 12, color: JitanColors.inkMuted)),
+              child: _columns(widths, labelHeading == null ? const SizedBox.shrink() : _headingText(labelHeading!), [
+                for (final heading in headings) _headingText(heading),
               ]),
             ),
           for (final (i, row) in rows.indexed) ...[
             if (i > 0 || headings != null) _line,
             ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 52),
-              child: Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: _columns(widths, _label(row), row.values)),
+              constraints: BoxConstraints(minHeight: compact ? 44 : 52),
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: compact ? 6 : 8),
+                child: _columns(widths, row.leading ?? _label(row), row.values),
+              ),
             ),
           ],
         ],
       ),
     );
   }
+
+  static Widget _headingText(String text) =>
+      Text(text, maxLines: 1, style: JitanTextStyles.tableCell.copyWith(fontSize: 12, color: JitanColors.inkMuted));
 
   Widget _label(TimeRecordCardRow row) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,

@@ -5,96 +5,92 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/admin_text_keys.dart';
 import '../period/chosen_period.dart';
 import '../period/period_text.dart';
+import '../time_records/time_record_card.dart';
+import '../time_records/time_record_popup.dart';
 import '../time_records/time_record_text.dart';
+import 'report_popup_numbers.dart';
 import 'report_text.dart';
 
 Future<void> showReportEmployeeDialog(BuildContext context, {required HoursReportEmployee employee, required ChosenPeriod period}) =>
     showJitanModal<void>(context, builder: (_) => ReportEmployeeDialog(employee: employee, period: period));
 
-/// One employee's period (Figma `1467:391`): their numbers and their days.
+/// One employee's period (Figma `HR / Reports V2 — an employee` `1572:240`):
+/// their numbers, then their days in one card. 640 × 600 for every
+/// employee; a long period scrolls inside.
 class ReportEmployeeDialog extends StatelessWidget {
   const ReportEmployeeDialog({super.key, required this.employee, required this.period});
 
   final HoursReportEmployee employee;
   final ChosenPeriod period;
 
-  static const _flexDay = 210;
-  static const _flexTime = 110;
-  static const _flexRegistered = 130;
-  static const _flexStatus = 150;
-
-  Widget _total(BuildContext context, String labelKey, String value) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(context.t(labelKey), style: JitanTextStyles.stateMessage.copyWith(fontSize: 12)),
-      const SizedBox(height: 2),
-      Text(value, style: JitanTextStyles.pageTitle.copyWith(fontSize: 20)),
-    ],
-  );
+  static const width = 640.0;
+  static const height = 600.0;
 
   Widget _status(BuildContext context, HoursReportDay day) {
     final away = day.awayMinutes > 0 && day.status == TimeRecordStatus.complete;
-    return Text(
-      away
-          ? context.t(AdminTextKeys.reportDayAway, args: {'time': ReportText.hours(context, day.awayMinutes)})
-          : TimeRecordText.status(context, day.status),
-      style: JitanTextStyles.tableCell.copyWith(
-        fontWeight: FontWeight.w500,
-        color: away ? JitanColors.inkMuted : TimeRecordText.statusColor(day.status),
-      ),
+    if (away) {
+      return Text(
+        context.t(AdminTextKeys.reportDayAway, args: {'time': ReportText.hours(context, day.awayMinutes)}),
+        style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
+      );
+    }
+    return JitanStatusLabel(
+      label: TimeRecordText.status(context, day.status),
+      isPositive: day.status == TimeRecordStatus.complete,
+      color: TimeRecordText.statusColor(day.status),
     );
   }
 
   @override
-  Widget build(BuildContext context) => JitanModal(
-    width: 760,
-    title: ReportText.name(employee),
-    subtitle: '${PeriodText.range(context, period.from, period.to)} · ${employee.code}',
-    onClose: () => Navigator.of(context).pop(),
-    body: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 40,
-          runSpacing: 12,
-          children: [
-            _total(context, AdminTextKeys.reportPlanned, ReportText.hours(context, employee.plannedMinutes)),
-            _total(context, AdminTextKeys.reportRegistered, ReportText.hours(context, employee.registeredMinutes)),
-            _total(context, AdminTextKeys.reportDifference, ReportText.difference(context, employee.differenceMinutes)),
+  Widget build(BuildContext context) {
+    final muted = JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted);
+    return TimeRecordPopup(
+      width: width,
+      height: height,
+      title: ReportText.name(employee),
+      subtitle: '${PeriodText.range(context, period.from, period.to)} · ${employee.code}',
+      body: [
+        ReportPopupNumbers(
+          numbers: [
+            (context.t(AdminTextKeys.reportPlanned), ReportText.hours(context, employee.plannedMinutes), null),
+            (context.t(AdminTextKeys.reportRegistered), ReportText.hours(context, employee.registeredMinutes), null),
+            (context.t(AdminTextKeys.reportDifference), ReportText.difference(context, employee.differenceMinutes), null),
+            if (employee.travelMinutes > 0)
+              (context.t(AdminTextKeys.reportTravel), ReportText.hours(context, employee.travelMinutes), null),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
         if (employee.days.isEmpty)
           Text(context.t(AdminTextKeys.reportDaysNone), style: JitanTextStyles.stateMessage)
         else
-          JitanDataTable(
-            minWidth: 620,
-            columns: [
-              JitanTableColumn(label: context.t(AdminTextKeys.reportColumnDay), flex: _flexDay),
-              JitanTableColumn(label: context.t(AdminTextKeys.reportColumnStart), flex: _flexTime),
-              JitanTableColumn(label: context.t(AdminTextKeys.reportColumnFinish), flex: _flexTime),
-              JitanTableColumn(label: context.t(AdminTextKeys.reportRegistered), flex: _flexRegistered),
-              JitanTableColumn(label: context.t(AdminTextKeys.reportColumnStatus), flex: _flexStatus),
+          TimeRecordCard(
+            compact: true,
+            widths: const [130, 100, 140],
+            labelHeading: context.t(AdminTextKeys.reportColumnDay),
+            headings: [
+              context.t(AdminTextKeys.reportColumnHours),
+              context.t(AdminTextKeys.reportRegistered),
+              context.t(AdminTextKeys.reportColumnStatus),
             ],
             rows: [
               for (final day in employee.days)
-                [
-                  Text(ReportText.day(context, day.date), style: JitanTextStyles.tableCellStrong),
-                  Text(day.start ?? '—', style: JitanTextStyles.tableCell),
-                  Text(day.finish ?? '—', style: JitanTextStyles.tableCell),
-                  Text(
-                    day.registeredMinutes == null ? '—' : ReportText.hours(context, day.registeredMinutes!),
-                    style: JitanTextStyles.tableCell,
-                  ),
-                  _status(context, day),
-                ],
+                TimeRecordCardRow(
+                  label: ReportText.day(context, day.date),
+                  values: [
+                    Text(TimeRecordText.range(day.start, day.finish), style: day.start == null && day.finish == null ? muted : JitanTextStyles.tableCell),
+                    Text(
+                      day.registeredMinutes == null ? '—' : ReportText.hours(context, day.registeredMinutes!),
+                      style: day.registeredMinutes == null ? muted : JitanTextStyles.tableCell,
+                    ),
+                    _status(context, day),
+                  ],
+                ),
             ],
           ),
       ],
-    ),
-    actions: [
-      JitanSecondaryButton(label: context.t(AdminTextKeys.reportClose), onPressed: () => Navigator.of(context).pop()),
-    ],
-  );
+      actions: [
+        JitanSecondaryButton(label: context.t(AdminTextKeys.reportClose), onPressed: () => Navigator.of(context).pop()),
+      ],
+    );
+  }
 }

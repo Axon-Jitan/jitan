@@ -6,12 +6,14 @@ import '../l10n/admin_text_keys.dart';
 import 'report_numbers_card.dart';
 import 'report_text.dart';
 
-/// The employees' month in numbers (Figma `1467:2`, D46 `1508:234`, phone
-/// `1482:2`). Travel sits next to Worked and is never part of it.
+/// The employees' month in numbers (Figma `1571:2`). Travel sits next to
+/// Worked and is never part of it. Days to review, when there are any, open
+/// them in Time records ([onReview]).
 class ReportTotalsCard extends StatelessWidget {
-  const ReportTotalsCard({super.key, required this.employees});
+  const ReportTotalsCard({super.key, required this.employees, required this.onReview});
 
   final List<HoursReportEmployee> employees;
+  final VoidCallback onReview;
 
   @override
   Widget build(BuildContext context) {
@@ -22,11 +24,16 @@ class ReportTotalsCard extends StatelessWidget {
     final toReview = sum((e) => e.daysToReview);
     return ReportNumbersCard(
       numbers: [
-        (context.t(AdminTextKeys.reportPlanned), ReportText.hours(context, planned), JitanColors.ink),
-        (context.t(AdminTextKeys.reportRegistered), ReportText.hours(context, registered), JitanColors.ink),
-        (context.t(AdminTextKeys.reportDifference), ReportText.difference(context, registered - planned), JitanColors.ink),
-        (context.t(AdminTextKeys.reportTravel), ReportText.hours(context, travel), JitanColors.ink),
-        (context.t(AdminTextKeys.reportToReview), '$toReview', toReview > 0 ? JitanColors.warning : JitanColors.ink),
+        (context.t(AdminTextKeys.reportPlanned), ReportText.hours(context, planned), JitanColors.ink, null),
+        (context.t(AdminTextKeys.reportRegistered), ReportText.hours(context, registered), JitanColors.ink, null),
+        (context.t(AdminTextKeys.reportDifference), ReportText.difference(context, registered - planned), JitanColors.ink, null),
+        (context.t(AdminTextKeys.reportTravel), ReportText.hours(context, travel), JitanColors.ink, null),
+        (
+          context.t(AdminTextKeys.reportToReview),
+          '$toReview',
+          toReview > 0 ? JitanColors.warning : JitanColors.ink,
+          toReview > 0 ? onReview : null,
+        ),
       ],
     );
   }

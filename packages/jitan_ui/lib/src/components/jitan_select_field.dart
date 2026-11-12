@@ -87,7 +87,7 @@ class _JitanSelectFieldState<T> extends State<JitanSelectField<T>> {
           ),
           menuChildren: [
             for (final option in widget.options)
-              _MenuItem(
+              JitanMenuItem(
                 label: option.label,
                 selected: option.value == widget.value,
                 width: itemWidth,
@@ -117,14 +117,16 @@ class _JitanSelectFieldState<T> extends State<JitanSelectField<T>> {
 
 /// One choice in the open menu: a rounded row with a soft hover; the
 /// current choice is bold with a check mark.
-class _MenuItem extends StatelessWidget {
-  const _MenuItem({
+/// One choice in a [jitanMenuStyle] menu; [selected] shows a check.
+class JitanMenuItem extends StatelessWidget {
+  const JitanMenuItem({
+    super.key,
     required this.label,
-    required this.selected,
     required this.width,
-    required this.height,
-    required this.radius,
     required this.onPressed,
+    this.selected = false,
+    this.height = 40,
+    this.radius = 10,
   });
 
   final String label;
@@ -304,10 +306,10 @@ class _JitanInlineSelectState<T> extends State<JitanInlineSelect<T>> {
     return MenuAnchor(
       controller: _menu,
       alignmentOffset: _offset,
-      style: _menuStyle(widget.menuWidth),
+      style: jitanMenuStyle(widget.menuWidth),
       menuChildren: [
         for (final option in widget.options)
-          _MenuItem(
+          JitanMenuItem(
             label: option.label,
             selected: option.value == widget.value,
             width: widget.menuWidth - inset * 2,
@@ -339,8 +341,9 @@ class _JitanInlineSelectState<T> extends State<JitanInlineSelect<T>> {
   }
 }
 
-/// The menu of [JitanInlineSelect] and [JitanFilterSelect], [width] wide.
-MenuStyle _menuStyle(double width) => MenuStyle(
+/// The white menu of [JitanInlineSelect], [JitanFilterSelect] and other
+/// menus (Export), [width] wide.
+MenuStyle jitanMenuStyle(double width) => MenuStyle(
   backgroundColor: const WidgetStatePropertyAll(JitanColors.surface),
   surfaceTintColor: const WidgetStatePropertyAll(JitanColors.surface),
   shadowColor: WidgetStatePropertyAll(JitanColors.ink.withValues(alpha: 0.35)),
@@ -415,10 +418,10 @@ class _JitanFilterSelectState<T> extends State<JitanFilterSelect<T>> {
     return MenuAnchor(
       controller: _menu,
       alignmentOffset: _offset,
-      style: _menuStyle(widget.menuWidth),
+      style: jitanMenuStyle(widget.menuWidth),
       menuChildren: [
         for (final option in widget.options)
-          _MenuItem(
+          JitanMenuItem(
             label: option.label,
             selected: option.value == widget.value,
             width: widget.menuWidth - inset * 2,
