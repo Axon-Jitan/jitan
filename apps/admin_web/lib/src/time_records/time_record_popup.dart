@@ -52,7 +52,10 @@ class TimeRecordPopup extends StatelessWidget {
         width: width,
         height: height,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(32, 32, 32, 28),
+          // Less room around the content on a phone.
+          padding: screen.width < JitanDimensions.phoneBreakpoint
+              ? const EdgeInsets.fromLTRB(20, 24, 20, 20)
+              : const EdgeInsets.fromLTRB(32, 32, 32, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

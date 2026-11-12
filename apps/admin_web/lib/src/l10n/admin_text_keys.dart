@@ -907,6 +907,8 @@ abstract final class AdminTextKeys {
   static const periodTo = 'dashboard.period.to';
   static const periodDismiss = 'dashboard.period.dismiss';
   static const reportTitle = 'report.title';
+  static const reportNoMatchText = 'report.noMatch.text';
+  static const reportProjectsNoMatchText = 'report.projects.noMatch.text';
   static const reportColumnHours = 'report.column.hours';
   static const reportSubtitle = 'report.subtitle';
   static const reportExport = 'report.export';

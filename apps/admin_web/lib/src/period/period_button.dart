@@ -61,7 +61,15 @@ class _PeriodButtonState extends State<PeriodButton> {
               child: Row(
                 mainAxisSize: widget.expanded ? MainAxisSize.max : MainAxisSize.min,
                 children: [
-                  Text(context.t(period.preset.labelKey), maxLines: 1, style: JitanTextStyles.inputText),
+                  // Both give way on a narrow line (a phone, beside Export).
+                  Flexible(
+                    child: Text(
+                      context.t(period.preset.labelKey),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: JitanTextStyles.inputText,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   Flexible(
                     fit: widget.expanded ? FlexFit.tight : FlexFit.loose,

@@ -48,5 +48,10 @@ abstract final class ReportText {
       '${context.t(CommonTextKeys.weekdayShort[date.weekday - 1])} ${date.day} '
       '${context.t(CommonTextKeys.monthLong[date.month - 1])}';
 
+  /// "Wed 11 Nov" (an employee's days on a phone).
+  static String shortDay(BuildContext context, DateTime date) =>
+      '${context.t(CommonTextKeys.weekdayShort[date.weekday - 1])} ${date.day} '
+      '${context.t(CommonTextKeys.monthShort[date.month - 1])}';
+
   static String name(HoursReportEmployee e) => person(e.firstName, e.lastName, e.code);
 }

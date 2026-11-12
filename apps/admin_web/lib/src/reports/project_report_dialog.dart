@@ -36,6 +36,8 @@ class ProjectReportDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final muted = JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted);
+    // A phone keeps the employee, their days and what they worked.
+    final phone = MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint;
     return TimeRecordPopup(
       width: ReportEmployeeDialog.width,
       height: ReportEmployeeDialog.height,
@@ -56,13 +58,12 @@ class ProjectReportDialog extends StatelessWidget {
         const SizedBox(height: 18),
         TimeRecordCard(
           compact: true,
-          widths: const [60, 100, 90, 50],
+          widths: phone ? const [48, 84] : const [60, 100, 90, 50],
           labelHeading: context.t(AdminTextKeys.reportColumnEmployee),
           headings: [
             context.t(AdminTextKeys.reportColumnDays),
             context.t(AdminTextKeys.reportRegistered),
-            context.t(AdminTextKeys.reportTravel),
-            context.t(AdminTextKeys.reportColumnTrips),
+            if (!phone) ...[context.t(AdminTextKeys.reportTravel), context.t(AdminTextKeys.reportColumnTrips)],
           ],
           rows: [
             for (final e in project.employees)
@@ -84,8 +85,10 @@ class ProjectReportDialog extends StatelessWidget {
                 values: [
                   Text('${e.days}', style: JitanTextStyles.tableCell),
                   Text(ReportText.hours(context, e.workedMinutes), style: JitanTextStyles.tableCell),
-                  Text(ReportText.hoursOrNone(context, e.travelMinutes), style: e.travelMinutes == 0 ? muted : JitanTextStyles.tableCell),
-                  Text(e.trips == 0 ? '—' : '${e.trips}', style: e.trips == 0 ? muted : JitanTextStyles.tableCell),
+                  if (!phone) ...[
+                    Text(ReportText.hoursOrNone(context, e.travelMinutes), style: e.travelMinutes == 0 ? muted : JitanTextStyles.tableCell),
+                    Text(e.trips == 0 ? '—' : '${e.trips}', style: e.trips == 0 ? muted : JitanTextStyles.tableCell),
+                  ],
                 ],
               ),
           ],

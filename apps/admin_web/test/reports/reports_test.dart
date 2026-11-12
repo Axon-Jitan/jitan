@@ -135,7 +135,8 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'nobody');
     await tester.pumpAndSettle();
-    expect(find.text('No employees match your search.'), findsOneWidget);
+    expect(find.text('No matching employees'), findsOneWidget);
+    expect(find.text('Try another name or code.'), findsOneWidget);
   });
 
   testWidgets('another period loads from the server and is remembered; an empty one says so and offers no export', (tester) async {

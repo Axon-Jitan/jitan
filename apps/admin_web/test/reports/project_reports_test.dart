@@ -105,7 +105,8 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'nothing like it');
     await tester.pumpAndSettle();
-    expect(find.text('No projects match your search.'), findsOneWidget);
+    expect(find.text('No matching projects'), findsOneWidget);
+    expect(find.text('Try another name or SAP number.'), findsOneWidget);
   });
 
   testWidgets('a row opens the project’s month: its numbers and each employee (Figma 1515:190)', (tester) async {

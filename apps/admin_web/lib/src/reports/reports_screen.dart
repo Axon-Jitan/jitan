@@ -167,8 +167,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               title: context.t(AdminTextKeys.reportTitle),
               subtitle: context.t(AdminTextKeys.reportSubtitle),
               action: reportHeaderActions(
-                PeriodButton(period: _controller.period, today: _now, onChanged: _changePeriod),
+                PeriodButton(period: _controller.period, today: _now, expanded: _phone(context), onChanged: _changePeriod),
                 ReportExportButton(onExcel: _exportExcel, onCsv: _exportCsv, enabled: loaded),
+                phone: _phone(context),
               ),
             ),
             const SizedBox(height: JitanDimensions.headerToToolbar),
@@ -212,9 +213,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _content(BuildContext context) => switch (_controller.state) {
     ReportsLoading() => _state(GroupStateText(context.t(AdminTextKeys.reportLoading))),
     ReportsFailed() => _state(GroupStateText(context.t(AdminTextKeys.reportLoadFailed), onRetry: _controller.load)),
-    ReportsLoaded() when _empty => SliverToBoxAdapter(child: _emptyMonth(context)),
+    ReportsLoaded() when _empty => SliverToBoxAdapter(
+      child: JitanNoResults(title: context.t(AdminTextKeys.reportEmptyTitle), message: context.t(AdminTextKeys.reportEmptyText)),
+    ),
     ReportsLoaded() => switch (_controller.visible) {
-      [] => _state(GroupStateText(context.t(AdminTextKeys.reportNoMatch))),
+      [] => SliverToBoxAdapter(
+        child: JitanNoResults(title: context.t(AdminTextKeys.reportNoMatch), message: context.t(AdminTextKeys.reportNoMatchText)),
+      ),
       final employees => SliverMainAxisGroup(
         slivers: [
           ReportsTable(
@@ -230,32 +235,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     },
   };
 
-  Widget _emptyMonth(BuildContext context) => JitanSurfaceCard(
-    radius: JitanDimensions.tableCardRadius,
-    child: SizedBox(
-      height: 420,
-      width: double.infinity,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              context.t(AdminTextKeys.reportEmptyTitle),
-              textAlign: TextAlign.center,
-              style: JitanTextStyles.modalTitle.copyWith(fontSize: 20),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              context.t(AdminTextKeys.reportEmptyText),
-              textAlign: TextAlign.center,
-              style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
+  static bool _phone(BuildContext context) => MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint;
 
   static Widget _state(Widget child) => SliverToBoxAdapter(
     child: Padding(padding: const EdgeInsets.only(top: 20), child: child),

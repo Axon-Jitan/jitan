@@ -44,6 +44,8 @@ class ReportEmployeeDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final muted = JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted);
+    // A phone keeps the day, what it counts and its status.
+    final phone = MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint;
     return TimeRecordPopup(
       width: width,
       height: height,
@@ -65,19 +67,20 @@ class ReportEmployeeDialog extends StatelessWidget {
         else
           TimeRecordCard(
             compact: true,
-            widths: const [130, 100, 140],
+            widths: phone ? const [64, 108] : const [130, 100, 140],
             labelHeading: context.t(AdminTextKeys.reportColumnDay),
             headings: [
-              context.t(AdminTextKeys.reportColumnHours),
+              if (!phone) context.t(AdminTextKeys.reportColumnHours),
               context.t(AdminTextKeys.reportRegistered),
               context.t(AdminTextKeys.reportColumnStatus),
             ],
             rows: [
               for (final day in employee.days)
                 TimeRecordCardRow(
-                  label: ReportText.day(context, day.date),
+                  label: phone ? ReportText.shortDay(context, day.date) : ReportText.day(context, day.date),
                   values: [
-                    Text(TimeRecordText.range(day.start, day.finish), style: day.start == null && day.finish == null ? muted : JitanTextStyles.tableCell),
+                    if (!phone)
+                      Text(TimeRecordText.range(day.start, day.finish), style: day.start == null && day.finish == null ? muted : JitanTextStyles.tableCell),
                     Text(
                       day.registeredMinutes == null ? '—' : ReportText.hours(context, day.registeredMinutes!),
                       style: day.registeredMinutes == null ? muted : JitanTextStyles.tableCell,

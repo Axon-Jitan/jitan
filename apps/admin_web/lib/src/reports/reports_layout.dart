@@ -4,14 +4,11 @@ import '../time_records/time_record_card.dart';
 
 // The layout both Reports views share (Figma `1571:2`, `1571:390`).
 
-/// The period and Export, at the top right; under each other's line on a
-/// phone.
-Widget reportHeaderActions(Widget period, Widget export) => Wrap(
-  spacing: 12,
-  runSpacing: 10,
-  crossAxisAlignment: WrapCrossAlignment.center,
-  children: [period, export],
-);
+/// The period and Export, at the top right; on a phone one line under the
+/// title, the period taking the room.
+Widget reportHeaderActions(Widget period, Widget export, {required bool phone}) => phone
+    ? Row(spacing: 10, children: [Expanded(child: period), export])
+    : Row(mainAxisSize: MainAxisSize.min, spacing: 12, children: [period, export]);
 
 /// Employees | Projects, then the search and any [filters]; one under the
 /// other on a phone.

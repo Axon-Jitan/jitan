@@ -15,10 +15,12 @@ class ReportNumbersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Smaller on a phone, two to a row, so a long number still fits.
+    final size = MediaQuery.sizeOf(context).width < JitanDimensions.phoneBreakpoint ? 22.0 : 26.0;
     Widget item(ReportNumber value) {
       final (label, text, color, onTap) = value;
       final content = Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: EdgeInsets.symmetric(horizontal: size == 26 ? 24 : 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -28,7 +30,7 @@ class ReportNumbersCard extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: JitanTextStyles.pageTitle.copyWith(fontSize: 26, color: color))),
+                Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: JitanTextStyles.pageTitle.copyWith(fontSize: size, color: color))),
                 if (onTap != null) Icon(Icons.chevron_right_rounded, size: 24, color: color),
               ],
             ),
