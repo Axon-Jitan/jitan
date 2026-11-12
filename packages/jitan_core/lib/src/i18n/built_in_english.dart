@@ -82,6 +82,7 @@ const builtInEnglish = <String, String>{
   'company.list.subtitle': 'View and manage companies in Jitan.',
   'company.search': 'Search companies',
   'company.list.loading': 'Loading companies…',
+  'company.list.loadFailed': '{reason} · Try again →',
   'company.column.name': 'Company',
   'company.column.employees': 'Employees',
   'company.column.status': 'Status',

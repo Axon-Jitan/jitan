@@ -91,14 +91,17 @@ class _CompanyDialogState extends State<CompanyDialog> {
     if (_ready) _run(CompanyChange.renamed, () => widget.api.rename(widget.company.id, CompanyRequest(name: _name.text.trim())));
   }
 
-  Widget _fact(String label, Widget value) => SizedBox(
-    height: 46,
+  /// A label and its value at the right; on a phone a long value wraps
+  /// under itself, never the label.
+  Widget _fact(String label, Widget value) => ConstrainedBox(
+    constraints: const BoxConstraints(minHeight: 46),
     child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
+        spacing: 16,
         children: [
-          Expanded(child: Text(label, style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted))),
-          value,
+          Text(label, maxLines: 1, style: JitanTextStyles.tableCell.copyWith(color: JitanColors.inkMuted)),
+          Expanded(child: Align(alignment: Alignment.centerRight, child: value)),
         ],
       ),
     ),
@@ -136,16 +139,25 @@ class _CompanyDialogState extends State<CompanyDialog> {
                     spacing: 14,
                     children: [
                       Text('${company.employeeCount}', style: JitanTextStyles.tableCellStrong),
-                      TextButton(
-                        onPressed: _busy ? null : () => Navigator.of(context).pop((CompanyChange.openEmployees, company)),
-                        style: TextButton.styleFrom(foregroundColor: JitanColors.ink, padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          spacing: 4,
-                          children: [
-                            Text(context.t(AdminTextKeys.companyViewEmployees), style: JitanTextStyles.tableCellStrong),
-                            const Icon(Icons.arrow_forward, size: 16),
-                          ],
+                      Flexible(
+                        child: TextButton(
+                          onPressed: _busy ? null : () => Navigator.of(context).pop((CompanyChange.openEmployees, company)),
+                          style: TextButton.styleFrom(foregroundColor: JitanColors.ink, padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 4,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  context.t(AdminTextKeys.companyViewEmployees),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: JitanTextStyles.tableCellStrong,
+                                ),
+                              ),
+                              const Icon(Icons.arrow_forward, size: 16),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -155,6 +167,7 @@ class _CompanyDialogState extends State<CompanyDialog> {
                   context.t(AdminTextKeys.companyLastUpdated),
                   Text(
                     updated == null ? context.t(CommonTextKeys.valueUnavailable) : CompanyText.updatedExactly(context, updated),
+                    textAlign: TextAlign.end,
                     style: JitanTextStyles.tableCellStrong,
                   ),
                 ),

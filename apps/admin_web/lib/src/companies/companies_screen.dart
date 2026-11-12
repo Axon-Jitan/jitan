@@ -8,8 +8,9 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../app/admin_routes.dart';
-import '../common/api_failure_text.dart';
 import '../company_context/current_company.dart';
+import '../common/api_failure_text.dart';
+import '../groups/group_state_text.dart';
 import '../l10n/admin_text_keys.dart';
 import 'add_company_dialog.dart';
 import 'companies_controller.dart';
@@ -151,8 +152,15 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
   }
 
   Widget _content(BuildContext context, CompaniesState state) => switch (state) {
-    CompaniesLoading() => _centered(JitanLoadingState(label: context.t(AdminTextKeys.companyListLoading))),
-    CompaniesFailed(:final failure) => _centered(_error(context, failure)),
+    // Loading and a failure: one calm line, as on the other lists.
+    CompaniesLoading() => _line(GroupStateText(context.t(AdminTextKeys.companyListLoading))),
+    // Why it failed ("Can’t reach Jitan"), then Try again.
+    CompaniesFailed(:final failure) => _line(
+      GroupStateText(
+        context.t(AdminTextKeys.companyLoadFailed, args: {'reason': context.t(failureTextKeysFor(failure).title)}),
+        onRetry: _controller.load,
+      ),
+    ),
     // Nothing yet: calm, on the page itself, with the one thing to do.
     CompaniesLoaded(companies: [], search: '') => SliverToBoxAdapter(
       child: JitanEmptyPage(
@@ -162,15 +170,15 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
         onAction: _add,
       ),
     ),
-    CompaniesLoaded(companies: [], :final search) => _centered(
-      JitanEmptyState(
+    CompaniesLoaded(companies: [], :final search) => SliverToBoxAdapter(
+      child: JitanNoResults(
         title: context.t(AdminTextKeys.companyNoMatchTitle),
         message: context.t(AdminTextKeys.companyNoMatchMessage, args: {'search': search}),
       ),
     ),
     CompaniesLoaded() => switch (_controller.visible) {
-      [] => _centered(
-        JitanEmptyState(
+      [] => SliverToBoxAdapter(
+        child: JitanNoResults(
           title: context.t(AdminTextKeys.companyNoMatchTitle),
           message: context.t(AdminTextKeys.companyNoneWithStatus),
         ),
@@ -185,15 +193,6 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
     },
   };
 
-  Widget _error(BuildContext context, ApiClientException failure) {
-    final keys = failureTextKeysFor(failure);
-    return JitanErrorState(
-      title: context.t(keys.title),
-      message: context.t(keys.message),
-      retryLabel: context.t(CommonTextKeys.retry),
-      onRetry: _controller.load,
-    );
-  }
-
-  static Widget _centered(Widget child) => JitanTableStateSliver(child: child);
+  static Widget _line(Widget child) => SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.only(top: 4), child: child));
 }
+

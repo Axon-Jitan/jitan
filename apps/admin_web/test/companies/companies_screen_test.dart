@@ -97,14 +97,15 @@ void main() {
     api.fail(serverError(503, ApiErrorCode.databaseUnavailable));
     await tester.pump();
 
-    expect(find.text('Jitan is temporarily unavailable'), findsOneWidget);
+    expect(find.text('Jitan is temporarily unavailable · Try again →'), findsOneWidget);
     expect(find.text('server detail'), findsNothing, reason: 'server diagnostics are not shown');
 
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Jitan is temporarily unavailable · Try again →'));
     await tester.pump();
     expect(api.calls, hasLength(2));
 
     api.succeed([company(1, 'Almeco')]);
+    await tester.pump();
     await tester.pump();
     expect(find.text('Almeco'), findsOneWidget);
   });
@@ -121,7 +122,7 @@ void main() {
       final api = await _pumpScreen(tester);
       api.fail(failure);
       await tester.pump();
-      expect(find.text(title), findsOneWidget, reason: '$failure');
+      expect(find.text('$title · Try again →'), findsOneWidget, reason: '$failure');
       await tester.pumpWidget(const SizedBox());
     }
   });

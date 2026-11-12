@@ -41,6 +41,7 @@ abstract final class AdminTextKeys {
   static const companyListSubtitle = 'company.list.subtitle';
   static const companySearch = 'company.search';
   static const companyListLoading = 'company.list.loading';
+  static const companyLoadFailed = 'company.list.loadFailed';
   static const companyColumnName = 'company.column.name';
   static const companyColumnEmployees = 'company.column.employees';
   static const companyColumnStatus = 'company.column.status';
