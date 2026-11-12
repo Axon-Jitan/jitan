@@ -24,15 +24,6 @@ abstract final class TodayText {
     EmployeeTextKeys.todayDuration,
     args: {'hours': minutes ~/ 60, 'minutes': (minutes % 60).toString().padLeft(2, '0')},
   );
-
-  static String method(BuildContext context, TimeRecordMethod method) => context.t(switch (method) {
-    TimeRecordMethod.manual => EmployeeTextKeys.todayMethodManual,
-    TimeRecordMethod.qr => EmployeeTextKeys.todayMethodQr,
-    TimeRecordMethod.geofence => EmployeeTextKeys.todayMethodGeofence,
-  });
-
-  /// "08:00 — 16:30"; a time that is not there is "--:--".
-  static String range(String? start, String? finish) => '${start ?? '--:--'} — ${finish ?? '--:--'}';
 }
 
 /// The start or finish of [day] as the employee sees it: what counts, or the

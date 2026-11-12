@@ -3,10 +3,10 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
-import '../today/today_widgets.dart';
+import '../widgets/phone_widgets.dart';
 import 'activity_text.dart';
 
-/// Choose a project (Figma `1512:502`): every active project (D44), searched
+/// Choose a project (Figma `1588:2`): every active project (D44), searched
 /// by SAP number or name, the recently used ones first. Pops the chosen one.
 class ChooseProjectScreen extends StatefulWidget {
   const ChooseProjectScreen({super.key, required this.projects, this.currentId});
@@ -42,23 +42,25 @@ class _ChooseProjectScreenState extends State<ChooseProjectScreen> {
   Widget _section(String title, List<MyProject> rows) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const SizedBox(height: 26),
-      TodayEyebrow(title),
-      const SizedBox(height: 10),
-      TodayCard(
+      const SizedBox(height: 24),
+      Text(title, style: JitanMobileTextStyles.label),
+      const SizedBox(height: 8),
+      PhoneListCard(
         padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            for (final (i, project) in rows.indexed) ...[
-              if (i > 0) const Divider(height: 1, color: JitanColors.inputBorder),
-              _ProjectRow(
-                project: project,
-                isCurrent: project.id == widget.currentId,
-                onTap: () => Navigator.of(context).pop(project),
-              ),
-            ],
-          ],
-        ),
+        children: [
+          for (final project in rows)
+            PhoneListRow(
+              title: project.name,
+              detail: ActivityText.project(context, project),
+              trailing: project.id == widget.currentId
+                  ? Text(
+                      context.t(EmployeeTextKeys.activityNow),
+                      style: JitanMobileTextStyles.rowTitle.copyWith(fontSize: 13, color: JitanColors.success),
+                    )
+                  : const PhoneChevron(),
+              onTap: () => Navigator.of(context).pop(project),
+            ),
+        ],
       ),
     ],
   );
@@ -78,30 +80,31 @@ class _ChooseProjectScreenState extends State<ChooseProjectScreen> {
         OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: color));
     return Scaffold(
       backgroundColor: JitanColors.warmWhite,
-      appBar: AppBar(backgroundColor: JitanColors.warmWhite, elevation: 0, scrolledUnderElevation: 0),
+      appBar: phoneAppBar(context),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           children: [
             Semantics(
               header: true,
-              child: Text(context.t(EmployeeTextKeys.activityChooseProject), style: JitanMobileTextStyles.title),
+              child: Text(context.t(EmployeeTextKeys.activityChooseProject), style: JitanMobileTextStyles.pageTitle),
             ),
             const SizedBox(height: 6),
-            Text(context.t(EmployeeTextKeys.activityChooseProjectText), style: JitanMobileTextStyles.body),
-            const SizedBox(height: 22),
+            Text(context.t(EmployeeTextKeys.activityChooseProjectText), style: JitanMobileTextStyles.pageSubtitle),
+            const SizedBox(height: 24),
             if (widget.projects.isEmpty)
-              Text(context.t(EmployeeTextKeys.activityNoProjects), style: JitanMobileTextStyles.body)
+              Text(context.t(EmployeeTextKeys.activityNoProjects), style: JitanMobileTextStyles.pageSubtitle)
             else ...[
               TextField(
                 controller: _search,
                 onChanged: (_) => setState(() {}),
                 textInputAction: TextInputAction.search,
-                style: JitanMobileTextStyles.body.copyWith(color: JitanColors.ink),
+                style: JitanMobileTextStyles.rowText,
+                cursorColor: JitanColors.ink,
                 decoration: InputDecoration(
                   hintText: context.t(EmployeeTextKeys.activitySearchProjects),
-                  hintStyle: JitanMobileTextStyles.body,
-                  prefixIcon: const Icon(Icons.search, size: 18, color: JitanColors.inkMuted),
+                  hintStyle: JitanMobileTextStyles.rowText.copyWith(color: JitanColors.inkMuted),
+                  prefixIcon: const Icon(Icons.search, size: 20, color: JitanColors.inkMuted),
                   filled: true,
                   fillColor: JitanColors.surface,
                   contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -110,8 +113,11 @@ class _ChooseProjectScreenState extends State<ChooseProjectScreen> {
                 ),
               ),
               if (matching.isEmpty) ...[
-                const SizedBox(height: 26),
-                Text(context.t(EmployeeTextKeys.activityNoMatch), style: JitanMobileTextStyles.body),
+                const SizedBox(height: 28),
+                Text(
+                  context.t(EmployeeTextKeys.activityNoMatch, args: {'search': _search.text.trim()}),
+                  style: JitanMobileTextStyles.pageSubtitle,
+                ),
               ],
               if (recent.isNotEmpty) _section(context.t(EmployeeTextKeys.activityRecent), recent),
               if (others.isNotEmpty) _section(context.t(EmployeeTextKeys.activityAllProjects), others),
@@ -121,42 +127,4 @@ class _ChooseProjectScreenState extends State<ChooseProjectScreen> {
       ),
     );
   }
-}
-
-class _ProjectRow extends StatelessWidget {
-  const _ProjectRow({required this.project, required this.isCurrent, required this.onTap});
-
-  final MyProject project;
-  final bool isCurrent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Row(
-        spacing: 12,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(project.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: JitanMobileTextStyles.cardTitle),
-                const SizedBox(height: 3),
-                Text(ActivityText.project(context, project), style: JitanMobileTextStyles.cardText),
-              ],
-            ),
-          ),
-          if (isCurrent)
-            Text(
-              context.t(EmployeeTextKeys.activityNow),
-              style: JitanMobileTextStyles.cardText.copyWith(color: JitanColors.success, fontWeight: FontWeight.w600),
-            )
-          else
-            const Icon(Icons.chevron_right, size: 18, color: JitanColors.inkMuted),
-        ],
-      ),
-    ),
-  );
 }

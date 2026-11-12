@@ -84,4 +84,45 @@ abstract final class JitanMobileTextStyles {
 
   /// "SETUP COMPLETE" badge.
   static final badge = _base.copyWith(fontSize: 10, fontWeight: _bold, color: JitanColors.success);
+
+  // The calm phone pages (Figma `1585:2`, 2026-11-12): sentence-case labels,
+  // numbers in columns, tighter large text (Apple, Notion and Stripe).
+
+  /// A page's title ("You’re working").
+  static final pageTitle = _base.copyWith(fontSize: 28, fontWeight: _semiBold, letterSpacing: -0.5, height: 1.2);
+
+  /// The line under a page's title.
+  static final pageSubtitle = _base.copyWith(fontSize: 15, fontWeight: _regular, color: JitanColors.inkMuted, height: 1.4);
+
+  /// A quiet label above a card, list or field ("Registered today").
+  static final label = _base.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: JitanColors.inkMuted);
+
+  /// The big number of a card ("4h 18m"), its digits of equal width.
+  static final hero = _base.copyWith(
+    fontSize: 46,
+    fontWeight: _semiBold,
+    letterSpacing: -1.2,
+    height: 1.15,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
+
+  /// A row's title in a list ("Client · On site").
+  static final rowTitle = _base.copyWith(fontSize: 15, fontWeight: _semiBold);
+
+  /// A plain choice in a list ("Transport").
+  static final rowText = _base.copyWith(fontSize: 15, fontWeight: _regular);
+
+  /// A time in a list ("08:00"), its digits of equal width.
+  static final rowTime = _base.copyWith(
+    fontSize: 13,
+    fontWeight: _regular,
+    color: JitanColors.inkMuted,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
+
+  /// Quiet detail in a row or card ("Cooling towers", "Planned finish 16:30").
+  static final detail = _base.copyWith(fontSize: 13, fontWeight: _regular, color: JitanColors.inkMuted, height: 1.35);
+
+  /// The quiet link under a page's main button ("Finished earlier? Enter the time").
+  static final quietLink = _base.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: JitanColors.inkMuted);
 }

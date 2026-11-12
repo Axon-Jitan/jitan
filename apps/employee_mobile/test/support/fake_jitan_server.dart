@@ -95,7 +95,7 @@ class FakeJitanServer {
       '/me/password' => _changePassword(request),
       '/me/language' => _json({'languageCode': null}),
       '/me/today' => _today(request),
-      '/me/activity' => _json(MyActivity.disabled.toJson()),
+      '/me/activity' => _json(activity.toJson()),
       '/me/activity/trip' => _trip(request),
       '/me/period' => _period(request),
       '/me/locations' => !_authorized(request)
@@ -261,6 +261,9 @@ class FakeJitanServer {
 
   /// The registration bodies received, in order.
   final registrations = <Map<String, Object?>>[];
+
+  /// `GET /me/activity`: switched off unless a test sets it.
+  MyActivity activity = MyActivity.disabled;
 
   /// `POST /me/activity/trip` bodies received, in order.
   final trips = <Map<String, Object?>>[];

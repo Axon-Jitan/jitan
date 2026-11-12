@@ -27,7 +27,10 @@ enum JitanMobileButtonSize {
   medium(54, 16, 14),
 
   /// 52 px, radius 16, 13 px label (error screens).
-  compact(52, 16, 13);
+  compact(52, 16, 13),
+
+  /// 48 px, radius 14, 15 px label: the calm phone pages (Figma `1585:2`).
+  phone(48, 14, 15);
 
   const JitanMobileButtonSize(this.height, this.radius, this.fontSize);
 
@@ -72,8 +75,13 @@ class JitanMobileButton extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: background,
           foregroundColor: foreground,
-          disabledBackgroundColor: background.withValues(alpha: busy ? 1 : 0.4),
-          disabledForegroundColor: foreground,
+          // The calm pages show "not yet" as warm grey (Figma `1588:2`).
+          disabledBackgroundColor: busy
+              ? background
+              : size == JitanMobileButtonSize.phone
+              ? JitanColors.inputFill
+              : background.withValues(alpha: 0.4),
+          disabledForegroundColor: !busy && size == JitanMobileButtonSize.phone ? JitanColors.inkMuted : foreground,
           textStyle: TextStyle(
             fontFamily: JitanTextStyles.fontFamily,
             package: JitanTextStyles.fontPackage,

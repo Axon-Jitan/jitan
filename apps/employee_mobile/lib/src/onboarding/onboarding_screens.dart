@@ -298,6 +298,13 @@ class MethodScreen extends StatelessWidget {
       ),
       const SizedBox(height: 16),
       ChoiceCard(
+        title: context.t(EmployeeTextKeys.methodQrTitle),
+        text: context.t(EmployeeTextKeys.methodQrText),
+        selected: controller.method == RegistrationMethod.qr,
+        onTap: () => controller.chooseMethod(RegistrationMethod.qr),
+      ),
+      const SizedBox(height: 16),
+      ChoiceCard(
         title: context.t(EmployeeTextKeys.methodManualTitle),
         text: context.t(EmployeeTextKeys.methodManualText),
         selected: controller.method == RegistrationMethod.manual,

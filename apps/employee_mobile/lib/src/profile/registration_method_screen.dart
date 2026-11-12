@@ -146,6 +146,13 @@ class _RegistrationMethodScreenState extends State<RegistrationMethodScreen> {
                           const Divider(height: 1, indent: 54, endIndent: 16, color: JitanColors.inputBorder),
                           _option(
                             context,
+                            RegistrationMethod.qr,
+                            title: context.t(EmployeeTextKeys.methodQrTitle),
+                            text: context.t(EmployeeTextKeys.methodQrText),
+                          ),
+                          const Divider(height: 1, indent: 54, endIndent: 16, color: JitanColors.inputBorder),
+                          _option(
+                            context,
                             RegistrationMethod.manual,
                             title: context.t(EmployeeTextKeys.methodManualTitle),
                             text: context.t(EmployeeTextKeys.methodManualText),

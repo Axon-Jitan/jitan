@@ -4,8 +4,8 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
+import '../widgets/phone_widgets.dart';
 import 'time_picker_card.dart';
-import 'today_widgets.dart';
 
 /// "When did you arrive?" / "When did you finish?" (Figma 1436:2, 1436:43,
 /// 1436:84, 1436:172) and the first day's "When did you arrive?" (22:2).
@@ -130,6 +130,7 @@ class _TimeEntryScreenState extends State<TimeEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final failure = _failure;
+    final firstDay = widget.entry == RegistrationEntry.firstDay;
     final title = _isStart ? EmployeeTextKeys.entryArriveTitle : EmployeeTextKeys.entryFinishTitle;
     final text = switch (widget.entry) {
       RegistrationEntry.firstDay => EmployeeTextKeys.entryFirstDayText,
@@ -138,69 +139,80 @@ class _TimeEntryScreenState extends State<TimeEntryScreen> {
     final confirm = _isStart ? EmployeeTextKeys.entryConfirmStart : EmployeeTextKeys.entryConfirmFinish;
     return Scaffold(
       backgroundColor: JitanColors.warmWhite,
+      // In place of Home on the first day: the logo, no way back.
+      appBar: widget.bottomBar == null ? phoneAppBar(context) : null,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
+          padding: EdgeInsets.fromLTRB(24, widget.bottomBar == null ? 0 : 10, 24, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const JitanWordmark(),
-                      const SizedBox(height: 40),
-                      Semantics(header: true, child: Text(context.t(title), style: JitanMobileTextStyles.title)),
-                      const SizedBox(height: 10),
-                      Text(context.t(text), style: JitanMobileTextStyles.body),
-                      const SizedBox(height: 32),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12, bottom: 10),
-                        child: TodayEyebrow(context.t(_isStart ? EmployeeTextKeys.entryStartTime : EmployeeTextKeys.entryFinishTime)),
+                      if (widget.bottomBar != null) ...[
+                        const Align(alignment: Alignment.centerLeft, child: JitanWordmark()),
+                        const SizedBox(height: 26),
+                      ],
+                      Semantics(header: true, child: Text(context.t(title), style: JitanMobileTextStyles.pageTitle)),
+                      const SizedBox(height: 6),
+                      Text(context.t(text), style: JitanMobileTextStyles.pageSubtitle),
+                      const SizedBox(height: 24),
+                      Text(
+                        context.t(_isStart ? EmployeeTextKeys.entryStartTime : EmployeeTextKeys.entryFinishTime),
+                        style: JitanMobileTextStyles.label,
                       ),
-                      TimePickerCard(hours: _hours, minutes: _minutes),
+                      const SizedBox(height: 8),
+                      TimePickerCard(hours: _hours, minutes: _minutes, error: _future),
                       if (_future) ...[
                         const SizedBox(height: 8),
-                        Text(context.t(EmployeeTextKeys.entryTimeFuture), style: JitanMobileTextStyles.fieldError.copyWith(fontSize: 12)),
+                        Text(
+                          context.t(EmployeeTextKeys.entryTimeFuture),
+                          style: JitanMobileTextStyles.detail.copyWith(color: JitanColors.errorStrong, fontWeight: FontWeight.w500),
+                        ),
                       ],
                       if (widget.scheduled case final scheduled?) ...[
-                        const SizedBox(height: 18),
-                        _scheduledRow(context, scheduled),
+                        const SizedBox(height: 4),
+                        firstDay
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
+                                child: Text(
+                                  context.t(EmployeeTextKeys.entryScheduleStartsAt, args: {'time': scheduled}),
+                                  style: JitanMobileTextStyles.detail.copyWith(fontSize: 14),
+                                ),
+                              )
+                            : _scheduledRow(context, scheduled),
                       ],
                       if (_needsReason) ...[
-                        const SizedBox(height: 24),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12, bottom: 10),
-                          child: TodayEyebrow(context.t(EmployeeTextKeys.entryReason)),
-                        ),
+                        const SizedBox(height: 16),
+                        Text(context.t(EmployeeTextKeys.entryReason), style: JitanMobileTextStyles.label),
+                        const SizedBox(height: 8),
                         _reasonField(context),
-                        const SizedBox(height: 10),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 3),
-                          child: Text(context.t(EmployeeTextKeys.entryReasonHelp), style: JitanMobileTextStyles.caption.copyWith(fontSize: 11)),
-                        ),
+                        const SizedBox(height: 8),
+                        Text(context.t(EmployeeTextKeys.entryReasonHelp), style: JitanMobileTextStyles.detail),
                       ],
                     ],
                   ),
                 ),
               ),
               if (failure != null) ...[
-                TodayErrorBox(
+                PhoneErrorNote(
                   title: context.t(_isStart ? EmployeeTextKeys.todaySaveStartFailed : EmployeeTextKeys.todaySaveFinishFailed),
                   message: context.t(
                     failure.kind == ApiFailureKind.network ? EmployeeTextKeys.todayCheckConnection : EmployeeTextKeys.todaySaveRefused,
                   ),
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 12),
               ],
-              const SizedBox(height: 12),
               JitanMobileButton(
-                label: context.t(failure != null ? EmployeeTextKeys.todayTryAgain : confirm),
+                label: context.t(confirm),
+                size: JitanMobileButtonSize.phone,
                 busy: _busy,
                 onPressed: _ready ? _confirm : null,
               ),
-              if (widget.bottomBar case final bar?) ...[const SizedBox(height: 32), bar],
+              if (widget.bottomBar case final bar?) ...[const SizedBox(height: 16), bar],
             ],
           ),
         ),
@@ -208,51 +220,46 @@ class _TimeEntryScreenState extends State<TimeEntryScreen> {
     );
   }
 
-  Widget _scheduledRow(BuildContext context, String scheduled) => Padding(
-    padding: const EdgeInsets.only(left: 3),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.t(_isStart ? EmployeeTextKeys.entryScheduledStart : EmployeeTextKeys.entryScheduledFinish),
-                style: JitanMobileTextStyles.caption,
-              ),
-              const SizedBox(height: 2),
-              Text(scheduled, style: JitanMobileTextStyles.cardTitleSmall),
-            ],
-          ),
+  /// "Scheduled start 08:00 · Use it".
+  Widget _scheduledRow(BuildContext context, String scheduled) => Row(
+    children: [
+      const SizedBox(width: 2),
+      Expanded(
+        child: Text(
+          '${context.t(_isStart ? EmployeeTextKeys.entryScheduledStart : EmployeeTextKeys.entryScheduledFinish)} $scheduled',
+          style: JitanMobileTextStyles.detail.copyWith(fontSize: 14),
         ),
-        TodayLink(
-          label: context.t(EmployeeTextKeys.entryUseScheduled),
-          fontSize: 12,
-          onPressed: _busy
-              ? null
-              : () {
-                  final time = _parse(scheduled);
-                  if (time != null) _set(time.$1, time.$2);
-                },
+      ),
+      TextButton(
+        onPressed: _busy
+            ? null
+            : () {
+                final time = _parse(scheduled);
+                if (time != null) _set(time.$1, time.$2);
+              },
+        style: TextButton.styleFrom(foregroundColor: JitanColors.ink, minimumSize: const Size(44, 44)),
+        child: Text(
+          context.t(EmployeeTextKeys.entryUseScheduled),
+          style: JitanMobileTextStyles.rowTitle.copyWith(fontSize: 14),
         ),
-      ],
-    ),
+      ),
+    ],
   );
 
   Widget _reasonField(BuildContext context) {
     OutlineInputBorder border(Color color) =>
-        OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: color));
+        OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: color));
     return TextField(
       controller: _reason,
       minLines: 3,
       maxLines: 3,
       maxLength: RegisterTimeRequest.maxReasonLength,
       buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
-      style: JitanMobileTextStyles.summary.copyWith(fontSize: 14),
+      style: JitanMobileTextStyles.rowText.copyWith(height: 1.4),
       cursorColor: JitanColors.ink,
       decoration: InputDecoration(
         hintText: context.t(EmployeeTextKeys.entryReasonHint),
-        hintStyle: JitanMobileTextStyles.fieldHint.copyWith(fontSize: 14),
+        hintStyle: JitanMobileTextStyles.rowText.copyWith(color: JitanColors.inkMuted, height: 1.4),
         filled: true,
         fillColor: JitanColors.surface,
         contentPadding: const EdgeInsets.all(16),

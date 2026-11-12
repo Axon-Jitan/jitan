@@ -327,6 +327,21 @@ void main() {
       expect(changes, 1);
     });
 
+    testWidgets('QR is its own choice (D49): no location asked, Home will offer Show my QR', (tester) async {
+      changes = 0;
+      await open(tester);
+      expect(find.text('In the app'), findsOneWidget);
+
+      await tester.tap(find.text('QR at a Jitan Terminal'));
+      await tester.pump();
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+
+      expect(await h.services.settings.registrationMethod(), RegistrationMethod.qr);
+      expect(h.permissions.asked, isEmpty);
+      expect(changes, 1);
+    });
+
     testWidgets('location refused: the method stays and the screen says why', (tester) async {
       changes = 0;
       await open(tester);
@@ -375,14 +390,14 @@ void main() {
       await tester.pumpWidget(EmployeeApp(services: h.services));
       await settle(tester);
 
-      expect(find.text('We need one answer.'), findsNothing);
-      expect(find.text('You’re temporarily away.'), findsOneWidget);
+      expect(find.text('What happened?'), findsNothing);
+      expect(find.text('You’re away'), findsOneWidget);
     });
 
     testWidgets('an hour away: the four answers, where and when they left', (tester) async {
       await leftAnHourAgo(tester);
 
-      expect(find.text('We need one answer.'), findsOneWidget);
+      expect(find.text('What happened?'), findsOneWidget);
       expect(find.text('You left Almeco office at 12:03 and haven’t reached another work location.'), findsOneWidget);
       for (final answer in ['Finished work', 'Break / personal', 'Travelling for work', 'Other']) {
         expect(find.text(answer), findsOneWidget);
@@ -397,7 +412,7 @@ void main() {
 
       expect((sent(1)['boundary'], sent(1)['method'], sent(1)['at'], sent(1)['addressId']), ('finish', 'geofence', leftUtc, 7));
       expect(await presence.away(), isNull);
-      expect(find.text('Your day is complete.'), findsOneWidget);
+      expect(find.text('Your day is done'), findsOneWidget);
     });
 
     testWidgets('Break / personal: the finish is stored and they stay away, unasked', (tester) async {
@@ -407,7 +422,7 @@ void main() {
       await settle(tester);
 
       expect((sent(1)['boundary'], sent(1)['at']), ('finish', leftUtc));
-      expect(find.text('You’re temporarily away.'), findsOneWidget);
+      expect(find.text('You’re away'), findsOneWidget);
       expect((await presence.away())?.onBreak, true);
     });
 
@@ -491,11 +506,11 @@ void main() {
 
       await startApp(tester);
 
-      expect(find.text('You’re temporarily away.'), findsOneWidget);
-      expect(find.text('You left Almeco office recently. Your workday is still open.'), findsOneWidget);
-      expect(find.text('AWAY'), findsOneWidget);
+      expect(find.text('You’re away'), findsOneWidget);
+      expect(find.text('You left Almeco office at 12:03. Your workday is still open.'), findsOneWidget);
+      expect(find.text('Away for'), findsOneWidget);
       expect(find.text('18 min'), findsOneWidget);
-      expect(find.text('Left at 12:03'), findsOneWidget);
+      expect(find.text('No action needed yet'), findsOneWidget);
       expect(find.text('Finish work'), findsNothing);
     });
 
@@ -504,7 +519,7 @@ void main() {
 
       await startApp(tester);
 
-      expect(find.text('You’re temporarily away.'), findsNothing);
+      expect(find.text('You’re away'), findsNothing);
       expect(await presence.away(), isNull, reason: 'cleared');
     });
   });

@@ -1,8 +1,7 @@
 import 'package:employee_mobile/src/activity/activity_controller.dart';
-import 'package:employee_mobile/src/activity/current_project_card.dart';
 import 'package:employee_mobile/src/activity/choose_project_screen.dart';
 import 'package:employee_mobile/src/activity/switch_activity_screen.dart';
-import 'package:employee_mobile/src/activity/today_breakdown_card.dart';
+import 'package:employee_mobile/src/home/home_project_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
@@ -90,28 +89,29 @@ void main() {
     expect(controller.showsCard, isFalse);
   });
 
-  testWidgets('the card shows the project and what they do on it', (tester) async {
+  testWidgets('the Home project row shows the project and what they do on it (Figma 1585:2)', (tester) async {
+    var switched = 0;
     await _show(
       tester,
       Scaffold(
-        body: CurrentProjectCard(
+        body: HomeProjectRow(
           activity: CurrentActivity(kind: ActivityKind.clientOnSite, since: _since, project: _towers),
-          onSwitch: () {},
-          onProjects: () {},
+          onSwitch: () => switched++,
         ),
       ),
     );
 
     expect(find.text('P-1057 Cooling towers'), findsOneWidget);
-    expect(find.text('Client site · Engis'), findsOneWidget);
     expect(find.text('Client · On site'), findsOneWidget);
+    await tester.tap(find.text('Switch'));
+    expect(switched, 1);
   });
 
-  testWidgets('no project: says so, and they can still choose one', (tester) async {
-    await _show(tester, Scaffold(body: CurrentProjectCard(activity: null, onSwitch: () {}, onProjects: () {})));
+  testWidgets('no project: says so, and they can still switch', (tester) async {
+    await _show(tester, Scaffold(body: HomeProjectRow(activity: null, onSwitch: () {})));
 
     expect(find.text('No project'), findsOneWidget);
-    expect(find.text('Switch activity'), findsOneWidget);
+    expect(find.text('Switch'), findsOneWidget);
   });
 
   group('switch', () {
@@ -123,11 +123,17 @@ void main() {
       return (api, controller);
     }
 
-    testWidgets('nothing changed: the button waits', (tester) async {
+    testWidgets('nothing changed: the button waits; a change says what it will do (Figma 1588:2)', (tester) async {
       await open(tester, _on(_towers));
 
       final button = tester.widget<JitanMobileButton>(find.byType(JitanMobileButton));
       expect(button.onPressed, isNull);
+      expect(button.label, 'Switch');
+      expect(find.text('What are you working on?'), findsOneWidget);
+
+      await tester.tap(find.text('Transport'));
+      await tester.pump();
+      expect(tester.widget<JitanMobileButton>(find.byType(JitanMobileButton)).label, 'Switch to Transport');
     });
 
     testWidgets('a client project offers its activities and transport', (tester) async {
@@ -162,6 +168,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Our workshop · Almeco'), findsOneWidget);
+      expect(find.text('Change'), findsOneWidget);
       expect(find.text('Client · In-house'), findsNothing, reason: 'internal work has no client activities');
       await tester.tap(find.text('Internal work'));
       await tester.pump();
@@ -169,6 +176,7 @@ void main() {
       await tester.pump();
 
       expect((api.switches.single.kind, api.switches.single.projectId), (ActivityKind.internal, _workshop.id));
+      expect(find.text('Switch to P-0990 Clean the workshop'), findsNothing, reason: 'the switch closed the page');
     });
 
     testWidgets('a refused switch says so and stays', (tester) async {
@@ -181,49 +189,8 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.text('The switch could not be saved.'), findsOneWidget);
+      expect(find.text('The switch wasn’t saved'), findsOneWidget);
     });
-  });
-
-  testWidgets('the breakdown shows only parts with time in them, and the trips', (tester) async {
-    await _show(
-      tester,
-      const Scaffold(
-        body: TodayBreakdownCard(breakdown: ActivityBreakdown(clientMinutes: 255, transportMinutes: 105, trips: 2)),
-      ),
-    );
-
-    expect(find.text('Client work'), findsOneWidget);
-    expect(find.text('Internal work'), findsNothing);
-    expect(find.textContaining('2 trips'), findsOneWidget);
-  });
-
-  testWidgets('transport says its kilometres; with a trip unknown, its time', (tester) async {
-    await _show(
-      tester,
-      const Scaffold(
-        body: TodayBreakdownCard(
-          breakdown: ActivityBreakdown(clientMinutes: 255, transportMinutes: 105, trips: 2, distanceMetres: 36400),
-        ),
-      ),
-    );
-    expect(find.text('2 trips · 36 km'), findsOneWidget);
-
-    await _show(
-      tester,
-      const Scaffold(
-        body: TodayBreakdownCard(
-          breakdown: ActivityBreakdown(
-            clientMinutes: 255,
-            transportMinutes: 105,
-            trips: 2,
-            distanceMetres: 18000,
-            tripsWithoutDistance: 1,
-          ),
-        ),
-      ),
-    );
-    expect(find.textContaining('km'), findsNothing);
   });
 
   test('one kind of work alone is no breakdown', () {
@@ -231,12 +198,12 @@ void main() {
     expect(const ActivityBreakdown(clientMinutes: 60, transportMinutes: 5).isMixed, isTrue);
   });
 
-  group('Choose a project (Figma 1512:502)', () {
+  group('Choose a project (Figma 1588:2)', () {
     testWidgets('Recent first, "Now" on the current one, then all projects', (tester) async {
       await _show(tester, ChooseProjectScreen(projects: [_towers, _workshop, _roof], currentId: _towers.id));
 
-      expect(find.text('RECENT'), findsOneWidget);
-      expect(find.text('ALL PROJECTS'), findsOneWidget);
+      expect(find.text('Recent'), findsOneWidget);
+      expect(find.text('All projects'), findsOneWidget);
       expect(find.text('Now'), findsOneWidget);
       expect(find.text('Client site · Tournai'), findsOneWidget);
       expect(
@@ -255,12 +222,12 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'nothing like it');
       await tester.pump();
-      expect(find.text('No projects match your search.'), findsOneWidget);
+      expect(find.text('No projects match “nothing like it”.'), findsOneWidget);
     });
 
     testWidgets('no projects yet says so', (tester) async {
       await _show(tester, const ChooseProjectScreen(projects: []));
-      expect(find.text('No projects yet.'), findsOneWidget);
+      expect(find.text('No projects yet. HR adds them, and they appear here.'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
     });
   });

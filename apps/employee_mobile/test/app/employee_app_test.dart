@@ -74,15 +74,15 @@ void main() {
     // with no reason (D30 first day).
     expect(find.text('When did you arrive?'), findsOneWidget);
     expect(find.text('Set your start time for today.'), findsOneWidget);
-    expect(find.text('REASON'), findsNothing);
-    expect(find.text('Scheduled start'), findsOneWidget);
+    expect(find.text('Reason'), findsNothing);
+    expect(find.text('Your schedule starts at 08:00'), findsOneWidget);
     final fields = tester.widgetList<TextField>(find.byType(TextField)).map((f) => f.controller!.text);
     expect(fields, ['08', '00'], reason: 'set from the schedule');
     await tapText(tester, 'Confirm start time');
 
     expect(h.server.registrations.single, containsPair('entry', 'first_day'));
     expect(h.server.registrations.single['at'], DateTime(2026, 10, 22, 8).toUtc().toIso8601String());
-    expect(find.text('You’re working.'), findsOneWidget);
+    expect(find.text('You’re working'), findsOneWidget);
   });
 
   testWidgets('a mismatched confirmation shows the Figma message and sends nothing', (tester) async {

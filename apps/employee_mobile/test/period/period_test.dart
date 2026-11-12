@@ -86,7 +86,7 @@ void main() {
     expect(find.text('Work started'), findsOneWidget);
 
     await tap(tester, 'Home');
-    expect(find.text('You’re working.'), findsOneWidget);
+    expect(find.text('You’re working'), findsOneWidget);
   });
 
   testWidgets('a correction waiting for HR says so in the timeline; once approved it does not', (tester) async {

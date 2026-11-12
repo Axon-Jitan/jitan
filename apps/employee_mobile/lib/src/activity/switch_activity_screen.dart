@@ -4,15 +4,14 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
-import '../today/today_widgets.dart';
-import '../widgets/mobile_widgets.dart';
+import '../widgets/phone_widgets.dart';
 import 'activity_controller.dart';
 import 'activity_text.dart';
 import 'choose_project_screen.dart';
 
-/// Home / Switch activity (Figma `1088:2`, chosen `1109:269`): a project and
-/// what they're doing on it, travelling included. The workday goes on. The
-/// project is picked on Choose a project (Figma `1512:502`).
+/// Switch activity (Figma `1588:2`): a project and what they're doing on
+/// it, travelling included. The workday goes on. The project is picked on
+/// Choose a project.
 class SwitchActivityScreen extends StatefulWidget {
   const SwitchActivityScreen({super.key, required this.controller, this.project});
 
@@ -79,13 +78,22 @@ class _SwitchActivityScreenState extends State<SwitchActivityScreen> {
     }
   }
 
+  /// "Switch to Transport", or to the project when that changes; plain
+  /// "Switch" while nothing has changed.
+  String _buttonLabel(BuildContext context) {
+    if (!_changed) return context.t(EmployeeTextKeys.activitySwitchShort);
+    final what = _project != null && _project!.id != _current?.project?.id
+        ? _project!.name
+        : ActivityText.kind(context, _kind!);
+    return context.t(EmployeeTextKeys.activitySwitchTo, args: {'what': what});
+  }
+
   @override
   Widget build(BuildContext context) {
-    final current = _current;
-    final currentProject = current?.project;
+    final project = _project;
     return Scaffold(
       backgroundColor: JitanColors.warmWhite,
-      appBar: AppBar(backgroundColor: JitanColors.warmWhite, elevation: 0, scrolledUnderElevation: 0),
+      appBar: phoneAppBar(context),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
@@ -99,122 +107,69 @@ class _SwitchActivityScreenState extends State<SwitchActivityScreen> {
                     children: [
                       Semantics(
                         header: true,
-                        child: Text(context.t(EmployeeTextKeys.activitySwitch), style: JitanMobileTextStyles.title),
+                        child: Text(context.t(EmployeeTextKeys.activitySwitchTitle), style: JitanMobileTextStyles.pageTitle),
                       ),
                       const SizedBox(height: 6),
-                      Text(context.t(EmployeeTextKeys.activitySwitchText), style: JitanMobileTextStyles.body),
-                      const SizedBox(height: 28),
-                      if (currentProject != null && current != null) ...[
-                        TodayEyebrow(context.t(EmployeeTextKeys.activityWorkingOn)),
-                        const SizedBox(height: 8),
-                        Text(currentProject.name, style: JitanMobileTextStyles.cardTitle),
-                        const SizedBox(height: 2),
-                        Text(ActivityText.kind(context, current.kind), style: JitanMobileTextStyles.cardText),
-                        const SizedBox(height: 18),
-                        const Divider(height: 1, color: JitanColors.inputBorder),
-                        const SizedBox(height: 18),
-                      ],
-                      Text(context.t(EmployeeTextKeys.activityProject), style: JitanMobileTextStyles.fieldLabel),
+                      Text(context.t(EmployeeTextKeys.activitySwitchText), style: JitanMobileTextStyles.pageSubtitle),
+                      const SizedBox(height: 24),
+                      Text(context.t(EmployeeTextKeys.activityProject), style: JitanMobileTextStyles.label),
                       const SizedBox(height: 8),
-                      _ProjectField(project: _project, onTap: _choose),
-                      const SizedBox(height: 20),
-                      Text(context.t(EmployeeTextKeys.activityKind), style: JitanMobileTextStyles.fieldLabel),
-                      const SizedBox(height: 8),
-                      TodayCard(
+                      PhoneListCard(
                         padding: EdgeInsets.zero,
-                        child: Column(
-                          children: [
-                            for (final (i, kind) in _kinds.indexed) ...[
-                              if (i > 0) const Divider(height: 1, color: JitanColors.inputBorder),
-                              InkWell(
-                                onTap: () => setState(() => _kind = kind),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Row(
-                                    spacing: 14,
-                                    children: [
-                                      RadioDot(selected: kind == _kind),
-                                      Expanded(
-                                        child: Text(
-                                          ActivityText.kind(context, kind),
-                                          style: kind == _kind ? JitanMobileTextStyles.cardTitle : JitanMobileTextStyles.body,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                        children: [
+                          if (project == null)
+                            PhoneListRow(
+                              title: context.t(EmployeeTextKeys.activityChooseProject),
+                              titleStyle: JitanMobileTextStyles.rowText.copyWith(color: JitanColors.inkMuted),
+                              trailing: const PhoneChevron(),
+                              onTap: _busy ? null : _choose,
+                            )
+                          else
+                            PhoneListRow(
+                              title: project.name,
+                              detail: ActivityText.project(context, project),
+                              trailing: Text(
+                                context.t(EmployeeTextKeys.activityChange),
+                                style: JitanMobileTextStyles.rowTitle.copyWith(fontSize: 13),
                               ),
-                            ],
-                          ],
-                        ),
+                              onTap: _busy ? null : _choose,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 22),
+                      Text(context.t(EmployeeTextKeys.activityKind), style: JitanMobileTextStyles.label),
+                      const SizedBox(height: 8),
+                      PhoneListCard(
+                        padding: EdgeInsets.zero,
+                        children: [
+                          for (final kind in _kinds)
+                            PhoneListRow(
+                              title: ActivityText.kind(context, kind),
+                              titleStyle: JitanMobileTextStyles.rowText,
+                              selected: kind == _kind,
+                              trailing: kind == _kind ? const PhoneCheck() : null,
+                              onTap: _busy ? null : () => setState(() => _kind = kind),
+                            ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ),
               if (_failed) ...[
-                TodayErrorBox(
+                PhoneErrorNote(
                   title: context.t(EmployeeTextKeys.activitySwitchFailed),
                   message: context.t(EmployeeTextKeys.todayCheckConnection),
                 ),
                 const SizedBox(height: 12),
               ],
-              Text(context.t(EmployeeTextKeys.activityDayGoesOn), style: JitanMobileTextStyles.cardText),
-              const SizedBox(height: 14),
               JitanMobileButton(
-                label: context.t(EmployeeTextKeys.activitySwitch),
+                label: _buttonLabel(context),
+                size: JitanMobileButtonSize.phone,
                 busy: _busy,
                 onPressed: _changed ? _save : null,
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The chosen project, or "Choose a project"; tapping opens the list.
-class _ProjectField extends StatelessWidget {
-  const _ProjectField({required this.project, required this.onTap});
-
-  final MyProject? project;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final chosen = project;
-    return Semantics(
-      button: true,
-      child: TodayCard(
-        padding: EdgeInsets.zero,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: Row(
-              spacing: 12,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        chosen?.name ?? context.t(EmployeeTextKeys.activityChooseProject),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: chosen == null ? JitanMobileTextStyles.body : JitanMobileTextStyles.cardTitle,
-                      ),
-                      if (chosen != null) ...[
-                        const SizedBox(height: 3),
-                        Text(ActivityText.project(context, chosen), style: JitanMobileTextStyles.cardText),
-                      ],
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, size: 18, color: JitanColors.inkMuted),
-              ],
-            ),
           ),
         ),
       ),

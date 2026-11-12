@@ -5,7 +5,12 @@ enum RegistrationMethod {
   /// Geofence-based: needs location permission.
   automatic,
 
-  /// QR at a Jitan Terminal, or manual entry.
+  /// QR at a Jitan Terminal (user, 2026-11-12: its own choice, so Home
+  /// offers "Show my QR").
+  qr,
+
+  /// Start work and Finish work in the app. Also what was saved as
+  /// "QR / manual" before QR became its own choice.
   manual,
 }
 

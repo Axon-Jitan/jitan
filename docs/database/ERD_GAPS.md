@@ -227,6 +227,8 @@ phone. Nothing to ask IT now; a device table comes back only if a later version 
 employee's choice stays on the device, and the three method switches are **removed** from
 Figma `Admin / Add company` (`153:87`). A terminal's own `terminalQrEnabled` still turns QR
 scanning off there. Nothing to ask IT.
+Since 2026-11-12 (D49) the phone offers the three methods separately (Automatic, QR, In the
+app) and Home follows the choice; it still stays on the device.
 
 1. **Requirement** (§13, §11): HR/Admin controls which methods (Automatic / QR / Manual)
    are available. The employee **chooses** one of the available methods. Figma

@@ -1,6 +1,9 @@
 import 'package:employee_mobile/src/app/employee_app.dart';
+import 'package:employee_mobile/src/device/device_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jitan_models/jitan_models.dart';
+import 'package:jitan_ui/jitan_ui.dart';
 
 import '../support/fake_jitan_server.dart';
 
@@ -65,8 +68,8 @@ void main() {
   testWidgets('not started: the schedule; Start work → working; Finish work → complete with the registered time', (tester) async {
     await startApp(tester);
     expect(find.text('Tap Start work when you begin.'), findsOneWidget);
-    expect(find.text('YOUR SCHEDULE TODAY'), findsOneWidget);
-    expect(find.text('08:00 — 16:30'), findsOneWidget);
+    expect(find.text('Planned today'), findsOneWidget);
+    expect(find.text('08:00 – 16:30'), findsOneWidget);
     expect(find.text('30 min break'), findsOneWidget);
     expect(find.text('Home'), findsOneWidget);
 
@@ -78,11 +81,12 @@ void main() {
       'at': DateTime(2026, 10, 22, 9).toUtc().toIso8601String(),
       'reason': null,
     });
-    expect(find.text('You’re working.'), findsOneWidget);
-    expect(find.text('WORKING NOW'), findsOneWidget);
-    expect(find.text('Started 09:00'), findsOneWidget);
-    expect(find.text('Started in the app'), findsOneWidget);
-    expect(find.text('Scheduled finish'), findsOneWidget);
+    expect(find.text('You’re working'), findsOneWidget);
+    expect(find.text('Since 09:00 · Started in the app'), findsOneWidget);
+    expect(find.text('Registered today'), findsOneWidget);
+    expect(find.text('Planned finish 16:30'), findsOneWidget);
+    expect(find.text('Started'), findsOneWidget, reason: 'the timeline');
+    expect(find.text('In the app'), findsOneWidget);
 
     now = DateTime(2026, 10, 22, 11, 14);
     await tester.pump(const Duration(seconds: 31));
@@ -91,10 +95,12 @@ void main() {
     now = DateTime(2026, 10, 22, 17, 7);
     await tap(tester, 'Finish work');
     expect(h.server.registrations.last['boundary'], 'finish');
-    expect(find.text('Your day is complete.'), findsOneWidget);
-    expect(find.text('COMPLETE'), findsOneWidget);
+    expect(find.text('Your day is done'), findsOneWidget);
     expect(find.text('7h 37m'), findsOneWidget, reason: '09:00–17:07 minus the 30 min break, from the server');
-    expect(find.text('09:00 — 17:07'), findsOneWidget);
+    expect(find.text('09:00 – 17:07'), findsOneWidget);
+    expect(find.text('Planned 8h 00m · 30 min break'), findsOneWidget);
+    expect(find.text('Finished'), findsOneWidget);
+    expect(find.text('Finish work'), findsNothing);
   });
 
   testWidgets('registered today deducts the break once it has passed, as the finished day does', (tester) async {
@@ -132,7 +138,7 @@ void main() {
     final confirm = find.widgetWithText(FilledButton, 'Confirm start time');
     expect(tester.widget<FilledButton>(confirm).onPressed, isNull, reason: 'no reason yet');
 
-    await tap(tester, 'Use scheduled time');
+    await tap(tester, 'Use it');
     expect([for (final f in tester.widgetList<TextField>(find.byType(TextField)).take(2)) f.controller!.text], ['08', '00']);
     await tester.enterText(find.byType(TextField).at(2), 'Forgot to register when I came in.');
     await tester.pump();
@@ -141,9 +147,9 @@ void main() {
     expect(h.server.registrations.single, containsPair('entry', 'corrected'));
     expect(h.server.registrations.single['reason'], 'Forgot to register when I came in.');
     expect(h.server.registrations.single['at'], DateTime(2026, 10, 22, 8).toUtc().toIso8601String());
-    expect(find.text('You’re working.'), findsOneWidget);
-    expect(find.text('Waiting for HR approval'), findsOneWidget);
-    expect(find.text('Started 08:00'), findsOneWidget);
+    expect(find.text('You’re working'), findsOneWidget);
+    expect(find.text('Since 08:00 · Your start time waits for HR'), findsOneWidget);
+    expect(find.text('Waiting for HR'), findsOneWidget, reason: 'on the start in the timeline');
   });
 
   testWidgets('finished earlier: the finish correction waits for HR; the day shows WAITING FOR HR and no total', (tester) async {
@@ -160,10 +166,10 @@ void main() {
     await tap(tester, 'Confirm finish time');
 
     expect(h.server.registrations.last, containsPair('boundary', 'finish'));
-    expect(find.text('Your day is complete.'), findsOneWidget);
-    expect(find.text('WAITING FOR HR'), findsOneWidget);
-    expect(find.text('09:00 — 16:41'), findsOneWidget);
-    expect(find.text('registered today'), findsNothing, reason: 'it counts once HR approves');
+    expect(find.text('Your day is done'), findsOneWidget);
+    expect(find.text('Waiting for HR'), findsNWidgets(2), reason: 'instead of the total, and on the finish');
+    expect(find.text('Your total shows once HR approves the correction.'), findsOneWidget);
+    expect(find.text('09:00 – 16:41'), findsOneWidget);
   });
 
   testWidgets('a time still to come is refused before sending', (tester) async {
@@ -178,7 +184,7 @@ void main() {
     expect(h.server.registrations, isEmpty);
   });
 
-  testWidgets('a correction the server refuses: the red note and Try again', (tester) async {
+  testWidgets('a correction the server refuses: the red note, and confirming again', (tester) async {
     await startApp(tester);
     await tap(tester, 'Forgot to start? Enter when you arrived');
     await tester.enterText(find.byType(TextField).at(2), 'Forgot');
@@ -188,8 +194,8 @@ void main() {
 
     expect(find.text('Your start time wasn’t saved'), findsOneWidget);
     expect(find.text('This time isn’t possible. Check it and try again.'), findsOneWidget);
-    await tap(tester, 'Try again');
-    expect(find.text('You’re working.'), findsOneWidget);
+    await tap(tester, 'Confirm start time');
+    expect(find.text('You’re working'), findsOneWidget);
   });
 
   testWidgets('Start work without a connection: not saved, nothing shown as started', (tester) async {
@@ -199,7 +205,7 @@ void main() {
 
     expect(find.text('Your start time wasn’t saved'), findsOneWidget);
     expect(find.text('Check your connection and try again.'), findsOneWidget);
-    expect(find.text('You’re working.'), findsNothing);
+    expect(find.text('You’re working'), findsNothing);
   });
 
   testWidgets('the day can not be loaded: Try again', (tester) async {
@@ -221,5 +227,113 @@ void main() {
 
     await tap(tester, 'Profile');
     expect(find.text('Employee code'), findsOneWidget);
+  });
+
+  testWidgets('working: the project with Switch, and the day as one timeline (Figma 1585:2)', (tester) async {
+    final since = DateTime(2026, 10, 22, 9).toUtc();
+    const project = MyProject(id: 4, name: 'P-1042 Office refurbishment', isClient: true, placeName: 'Antwerp');
+    h.server.activity = MyActivity(
+      enabled: true,
+      current: CurrentActivity(kind: ActivityKind.clientOnSite, since: since, project: project),
+      projects: const [project],
+      companies: const [MyCompany(id: 7, name: 'Almeco', isDefault: true)],
+      breakdown: const ActivityBreakdown(clientMinutes: 120, transportMinutes: 42, trips: 1, distanceMetres: 36000),
+      today: const [
+        ActivityEntry(timeLocal: '09:00', kind: ActivityKind.clientOnSite, projectName: 'P-1042 Office refurbishment'),
+        ActivityEntry(timeLocal: '10:12', kind: ActivityKind.transport, metres: 36000),
+        ActivityEntry(timeLocal: '11:02', kind: ActivityKind.clientOnSite, placeName: 'Cooling towers'),
+      ],
+    );
+    await startApp(tester);
+    await tap(tester, 'Start work');
+
+    expect(find.text('P-1042 Office refurbishment'), findsOneWidget);
+    expect(find.text('Switch'), findsOneWidget);
+    expect(find.text('Planned finish 16:30 · + 0h 42m travel · 36 km'), findsOneWidget, reason: 'travel beside the total, never in it (D46)');
+    expect(find.text('09:00'), findsOneWidget, reason: 'the start once, not again as its first switch');
+    expect(find.text('Transport'), findsOneWidget);
+    expect(find.text('36 km'), findsOneWidget);
+    expect(find.text('Cooling towers'), findsOneWidget);
+
+    await tap(tester, 'Switch');
+    expect(find.text('What are you working on?'), findsOneWidget);
+  });
+
+  testWidgets('every Home state fits a small phone (320 × 568) without overflowing', (tester) async {
+    tester.view.physicalSize = const Size(640, 1136);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(EmployeeApp(services: h.services));
+    await settle(tester);
+    expect(find.text('Planned today'), findsOneWidget);
+
+    await tap(tester, 'Start work');
+    expect(find.text('Registered today'), findsOneWidget);
+    await tap(tester, 'Finished earlier? Enter the time');
+    expect(find.text('When did you finish?'), findsOneWidget);
+    await tester.pageBack();
+    await settle(tester);
+
+    now = DateTime(2026, 10, 22, 17);
+    await tap(tester, 'Finish work');
+    expect(find.text('Your day is done'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  group('what Home offers follows the registration method (product owner, 2026-11-12)', () {
+    testWidgets('Automatic: no button, Jitan starts the day; "Start work now" still can', (tester) async {
+      await h.services.settings.setRegistrationMethod(RegistrationMethod.automatic);
+      await startApp(tester);
+
+      expect(find.text('Jitan starts your day when you arrive at work.'), findsOneWidget);
+      expect(find.byType(JitanMobileButton), findsNothing);
+      await tap(tester, 'Start work now');
+      expect(h.server.registrations.single, containsPair('entry', 'now'));
+
+      expect(find.text('You’re working'), findsOneWidget);
+      expect(find.byType(JitanMobileButton), findsNothing);
+      expect(find.text('Finish work now'), findsOneWidget);
+    });
+
+    testWidgets('Automatic without location access cannot register: the buttons are back', (tester) async {
+      await h.services.settings.setRegistrationMethod(RegistrationMethod.automatic);
+      h.permissions.backgroundLocationGranted = false;
+      await startApp(tester);
+
+      expect(find.text('Tap Start work when you begin.'), findsOneWidget);
+      expect(find.widgetWithText(JitanMobileButton, 'Start work'), findsOneWidget);
+    });
+
+    testWidgets('QR: "Show my QR" opens the QR tab; the app is the quiet way', (tester) async {
+      await h.services.settings.setRegistrationMethod(RegistrationMethod.qr);
+      await startApp(tester);
+
+      expect(find.text('Scan your QR at a Jitan Terminal when you arrive.'), findsOneWidget);
+      expect(find.text('Start in the app instead'), findsOneWidget);
+      await tap(tester, 'Show my QR');
+      expect(find.text('My QR'), findsOneWidget);
+    });
+
+    testWidgets('QR, started in the app: still "Show my QR" to finish, or finish in the app', (tester) async {
+      await h.services.settings.setRegistrationMethod(RegistrationMethod.qr);
+      await startApp(tester);
+      await tap(tester, 'Start in the app instead');
+
+      expect(find.widgetWithText(JitanMobileButton, 'Show my QR'), findsOneWidget);
+      await tap(tester, 'Finish in the app instead');
+      expect(h.server.registrations.last, containsPair('boundary', 'finish'));
+      expect(find.text('Your day is done'), findsOneWidget);
+    });
+
+    testWidgets('a method changed in Profile shows on Home when coming back', (tester) async {
+      await startApp(tester);
+      expect(find.widgetWithText(JitanMobileButton, 'Start work'), findsOneWidget);
+
+      await h.services.settings.setRegistrationMethod(RegistrationMethod.qr);
+      await tap(tester, 'Profile');
+      await tester.pageBack();
+      await settle(tester);
+      expect(find.widgetWithText(JitanMobileButton, 'Show my QR'), findsOneWidget);
+    });
   });
 }
