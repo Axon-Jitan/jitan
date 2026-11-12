@@ -5,15 +5,15 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
-TimeRecordDay _day(int away) => TimeRecordDay(
+TimeRecordDay _day(int away, {TimeRecordStatus status = TimeRecordStatus.complete}) => TimeRecordDay(
   employeeId: 1,
   employeeCode: 'EMU1',
   date: DateTime.utc(2026, 10, 22),
-  status: TimeRecordStatus.complete,
+  status: status,
   awayMinutes: away,
 );
 
-Future<void> _show(WidgetTester tester, int away) async {
+Future<void> _show(WidgetTester tester, int away, {TimeRecordStatus status = TimeRecordStatus.complete}) async {
   tester.view.physicalSize = const Size(1440, 1000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -21,7 +21,7 @@ Future<void> _show(WidgetTester tester, int away) async {
     translations: Translations.english(),
     child: MaterialApp(
       theme: JitanTheme.web(),
-      home: Scaffold(body: TimeRecordDialog(day: _day(away), mayCorrect: false)),
+      home: Scaffold(body: TimeRecordDialog(day: _day(away, status: status), mayCorrect: false)),
     ),
   ));
 }
@@ -39,5 +39,15 @@ void main() {
     await _show(tester, 0);
 
     expect(find.text('Time away'), findsNothing);
+  });
+
+  testWidgets('"Not registered" is amber when a time is missing, grey on a day not started yet', (tester) async {
+    Color? color() => tester.widget<Text>(find.text('Not registered').first).style?.color;
+
+    await _show(tester, 0, status: TimeRecordStatus.noRegistration);
+    expect(color(), JitanColors.warning);
+
+    await _show(tester, 0, status: TimeRecordStatus.notStarted);
+    expect(color(), JitanColors.inkMuted);
   });
 }

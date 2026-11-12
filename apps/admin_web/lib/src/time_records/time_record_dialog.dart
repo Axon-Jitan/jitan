@@ -126,7 +126,9 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
       return TimeRecordCardRow(
         label: label,
         detail: context.t(AdminTextKeys.timeRecordDayNotRegistered),
-        detailColor: JitanColors.warning,
+        // Amber only when it is missing; a day not started or still going
+        // simply has none yet.
+        detailColor: _notYet ? JitanColors.inkMuted : JitanColors.warning,
         values: [TimeRecordCard.value('—', muted: true), TimeRecordCard.value('—', muted: true)],
       );
     }
@@ -148,6 +150,8 @@ class _TimeRecordDialogState extends State<TimeRecordDialog> {
       values: [TimeRecordCard.value(time.actualLocal), TimeRecordCard.value(time.roundedLocal ?? '—', strong: true)],
     );
   }
+
+  bool get _notYet => day.status == TimeRecordStatus.notStarted || day.status == TimeRecordStatus.working;
 
   static String _minutes(BuildContext context, int minutes) => context.t(
     AdminTextKeys.timeRecordDayAwayValue,
