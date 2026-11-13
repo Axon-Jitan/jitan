@@ -62,6 +62,14 @@ abstract final class PeriodStamps {
       for (final (a, b) in gaps) ...[a, b],
     };
     final firstStart = registered.where((e) => e.boundary == RegistrationBoundary.start).firstOrNull;
+    // The day's start as shown, also when it waits for HR: the first switch
+    // at that minute is the start itself, shown once (as on Home).
+    final startTime =
+        firstStart?.atLocal ??
+        events
+            .where((e) => e.active && e.kind == TimeRecordEventKind.correctionRequested && e.boundary == RegistrationBoundary.start)
+            .firstOrNull
+            ?.atLocal;
 
     final ranked = <(int, PeriodStamp)>[];
     for (final e in events) {
@@ -82,7 +90,7 @@ abstract final class PeriodStamps {
     }
     for (final entry in activities) {
       // The first switch is usually the start itself: shown once, as on Home.
-      if (entry.timeLocal == firstStart?.atLocal) continue;
+      if (entry.timeLocal == startTime) continue;
       ranked.add((
         1,
         PeriodStamp(

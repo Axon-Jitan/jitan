@@ -8,6 +8,7 @@ import '../home/home_hero.dart';
 import '../home/home_page.dart';
 import '../home/home_text.dart';
 import '../l10n/employee_text_keys.dart';
+import '../today/today_controller.dart';
 import '../today/today_text.dart';
 import 'day_details_screen.dart';
 import 'period_controller.dart';
@@ -130,14 +131,16 @@ class _PeriodScreenState extends State<PeriodScreen> {
           final p? => p.rounded ?? p.requested,
           null => null,
         };
-    final working = day?.status == TimeRecordStatus.working;
+    // Running exactly when Home says so, a start waiting for HR included
+    // (D39: the total here is the one on Home).
+    final working = TodayController.phaseOf(today) == TodayPhase.working;
     final now = _controller.now();
     final minutes =
         today.registeredMinutes ??
         (day == null ? 0 : null) ??
         (working && start != null ? RunningTotal.ofToday(today, start, widget.current, now) : null);
     final line = working
-        ? context.t(EmployeeTextKeys.periodWorkingSince, args: {'time': day?.start?.roundedLocal ?? day?.start?.actualLocal ?? '--:--'})
+        ? context.t(EmployeeTextKeys.periodWorkingSince, args: {'time': shownTime(day, RegistrationBoundary.start).local ?? '--:--'})
         : today.registeredMinutes != null
         ? HomeText.plannedLine(context, today)
         : day == null

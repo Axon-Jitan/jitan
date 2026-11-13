@@ -133,6 +133,10 @@ void main() {
     await tap(tester, 'Period');
     expect(find.text('Start corrected'), findsOneWidget);
     expect(find.text('Waiting for HR'), findsOneWidget);
+    // Running, as on Home: the same total, not "Not counted yet" (D39).
+    expect(find.text('Working since 08:00'), findsOneWidget);
+    expect(find.text('Not counted yet'), findsNothing);
+    expect(find.text('1h 00m'), findsOneWidget, reason: '08:00 to 09:00');
     expect(find.text('“Forgot”'), findsOneWidget, reason: 'the employee’s reason');
 
     // Approved: the request stays in the timeline as history, no longer waiting.
