@@ -13,6 +13,7 @@ class HomePage extends StatelessWidget {
     this.subtitle,
     this.notice,
     this.children = const [],
+    this.fill,
     this.note,
     this.action,
     this.link,
@@ -26,6 +27,12 @@ class HomePage extends StatelessWidget {
   /// Under the subtitle: "Couldn't refresh · Try again".
   final Widget? notice;
   final List<Widget> children;
+
+  /// After the children, taking exactly the rest of the page down to the
+  /// button or the tab bar (the QR, centred between the employee code and
+  /// the tab bar). The page then doesn't scroll past its height, so [fill]
+  /// fits itself into the room it gets (a `LayoutBuilder`).
+  final Widget? fill;
 
   /// Above the main button: something wasn't saved.
   final Widget? note;
@@ -45,26 +52,8 @@ class HomePage extends StatelessWidget {
               child: RefreshIndicator(
                 color: JitanColors.ink,
                 onRefresh: onRefresh,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Align(alignment: Alignment.centerLeft, child: JitanWordmark()),
-                      const SizedBox(height: 26),
-                      if (title case final title?) Semantics(header: true, child: Text(title, style: JitanMobileTextStyles.pageTitle)),
-                      if (subtitle case final subtitle?) ...[
-                        const SizedBox(height: 6),
-                        Text(subtitle, style: JitanMobileTextStyles.pageSubtitle),
-                      ],
-                      if (notice case final notice?) ...[const SizedBox(height: 4), notice],
-                      if (title != null || subtitle != null) const SizedBox(height: 20),
-                      ...children,
-                      // Room at the end, so the last card scrolls clear of
-                      // the button below it.
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, viewport) => SingleChildScrollView(physics: const AlwaysScrollableScrollPhysics(), child: _content(viewport.maxHeight)),
                 ),
               ),
             ),
@@ -78,6 +67,29 @@ class HomePage extends StatelessWidget {
       ),
     ),
   );
+
+  Widget _content(double viewportHeight) {
+    final column = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Align(alignment: Alignment.centerLeft, child: JitanWordmark()),
+        const SizedBox(height: 26),
+        if (title case final title?) Semantics(header: true, child: Text(title, style: JitanMobileTextStyles.pageTitle)),
+        if (subtitle case final subtitle?) ...[const SizedBox(height: 6), Text(subtitle, style: JitanMobileTextStyles.pageSubtitle)],
+        if (notice case final notice?) ...[const SizedBox(height: 4), notice],
+        if (title != null || subtitle != null) const SizedBox(height: 20),
+        ...children,
+        if (fill case final fill?)
+          Expanded(child: fill)
+        else
+          // Room at the end, so the last card scrolls clear
+          // of the button below it.
+          const SizedBox(height: 20),
+      ],
+    );
+    if (fill == null) return column;
+    return SizedBox(height: viewportHeight, child: column);
+  }
 }
 
 /// The grey shapes shown while the day loads.

@@ -9,7 +9,7 @@ import '../theme/jitan_colors.dart';
 /// Medium error correction (~15%) and a quiet zone of four modules, as the
 /// QR specification requires for reliable scanning.
 class JitanQrCode extends StatelessWidget {
-  const JitanQrCode({super.key, required this.data, required this.semanticLabel, this.size = 320, this.framed = true});
+  const JitanQrCode({super.key, required this.data, required this.semanticLabel, this.size = 320, this.framed = true, this.filled = true});
 
   final String data;
 
@@ -20,6 +20,10 @@ class JitanQrCode extends StatelessWidget {
   /// `false` when it already sits in a card of its own (Figma `1532:181`):
   /// no outline, the quiet zone stays.
   final bool framed;
+
+  /// A white square behind the code; without it the code sits on the page
+  /// (light enough for its quiet zone), as on the employee's QR tab.
+  final bool filled;
 
   static const _frameRadius = 14.0;
   static const _quietZoneModules = 4;
@@ -34,7 +38,7 @@ class JitanQrCode extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: JitanColors.surface,
+          color: filled ? JitanColors.surface : null,
           borderRadius: BorderRadius.circular(_frameRadius),
           border: framed ? Border.all(color: JitanColors.inputBorder) : null,
         ),
