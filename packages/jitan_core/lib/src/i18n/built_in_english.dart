@@ -1381,6 +1381,8 @@ const builtInEnglish = <String, String>{
   'activity.kind.onSite': 'Client · On site',
   'activity.kind.inHouse': 'Client · In-house',
   'activity.kind.internal': 'Internal work',
+  'activity.clientWork': 'Client work',
+  'activity.otherWork': 'Other work',
   'activity.kind.transport': 'Transport',
   'activity.clientProject': 'Client site · {place}',
   'activity.internalProject': 'Our workshop · {place}',

@@ -2,6 +2,7 @@ import 'package:employee_mobile/src/activity/activity_controller.dart';
 import 'package:employee_mobile/src/activity/choose_project_screen.dart';
 import 'package:employee_mobile/src/activity/switch_activity_screen.dart';
 import 'package:employee_mobile/src/home/home_project_row.dart';
+import 'package:employee_mobile/src/home/home_work_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_api_client/jitan_api_client.dart';
@@ -65,7 +66,13 @@ void main() {
     expect(off.showsCard, isFalse);
 
     final nothing = ActivityController(
-      _FakeActivityApi(const MyActivity(enabled: true, projects: [], companies: [MyCompany(id: 7, name: 'Almeco', isDefault: true)])),
+      _FakeActivityApi(
+        const MyActivity(
+          enabled: true,
+          projects: [],
+          companies: [MyCompany(id: 7, name: 'Almeco', isDefault: true)],
+        ),
+      ),
     );
     await nothing.load();
     expect(nothing.showsCard, isFalse);
@@ -105,6 +112,41 @@ void main() {
     expect(find.text('Client · On site'), findsOneWidget);
     await tester.tap(find.text('Switch'));
     expect(switched, 1);
+  });
+
+  group('the day’s work (Figma 1604:2)', () {
+    testWidgets('two kinds of work: one slim bar and the numbers, largest first; travel is not part of it', (tester) async {
+      const breakdown = ActivityBreakdown(clientMinutes: 185, internalMinutes: 73, transportMinutes: 42, trips: 1);
+      expect(HomeWorkCard.shows(breakdown), isTrue);
+      await _show(tester, const Scaffold(body: HomeWorkCard(breakdown: breakdown)));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Client work'), findsOneWidget);
+      expect(find.text('3h 05m'), findsOneWidget);
+      expect(find.text('Internal work'), findsOneWidget);
+      expect(find.text('1h 13m'), findsOneWidget);
+      expect(find.text('Other work'), findsNothing, reason: 'no time in it');
+      expect(find.textContaining('42'), findsNothing, reason: 'travel stays in the line under the total and the timeline');
+      expect(tester.getTopLeft(find.text('Client work')).dx, lessThan(tester.getTopLeft(find.text('Internal work')).dx));
+    });
+
+    testWidgets('other work is the one part in amber', (tester) async {
+      const breakdown = ActivityBreakdown(clientMinutes: 300, internalMinutes: 118, otherMinutes: 50);
+      await _show(tester, const Scaffold(body: HomeWorkCard(breakdown: breakdown)));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final colors = [
+        for (final box in tester.widgetList<Container>(find.byType(Container)))
+          if (box.decoration case BoxDecoration(:final color?) when box.constraints?.maxHeight == 8) color,
+      ];
+      expect(colors, [JitanColors.ink, JitanColors.radioBorder, JitanColors.warning]);
+      expect(find.text('0h 50m'), findsOneWidget, reason: 'Home’s usual format');
+    });
+
+    test('one kind of work says nothing new: no card', () {
+      expect(HomeWorkCard.shows(const ActivityBreakdown(clientMinutes: 200, transportMinutes: 40, trips: 1)), isFalse);
+      expect(HomeWorkCard.shows(const ActivityBreakdown()), isFalse);
+    });
   });
 
   testWidgets('no project: says so, and they can still switch', (tester) async {
@@ -206,10 +248,7 @@ void main() {
       expect(find.text('All projects'), findsOneWidget);
       expect(find.text('Now'), findsOneWidget);
       expect(find.text('Client site · Tournai'), findsOneWidget);
-      expect(
-        tester.getTopLeft(find.text('P-1057 Cooling towers')).dy,
-        lessThan(tester.getTopLeft(find.text('P-1071 Roof repairs')).dy),
-      );
+      expect(tester.getTopLeft(find.text('P-1057 Cooling towers')).dy, lessThan(tester.getTopLeft(find.text('P-1071 Roof repairs')).dy));
     });
 
     testWidgets('search finds the SAP number or the name, and says when nothing matches', (tester) async {

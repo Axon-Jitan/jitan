@@ -17,6 +17,7 @@ import 'home_page.dart';
 import 'home_project_row.dart';
 import 'home_text.dart';
 import 'home_timeline.dart';
+import 'home_work_card.dart';
 
 /// Every state of Home (Figma `1585:2`): loading, couldn't load, the first
 /// day, not started, working, away, "What happened?" and the day done. The
@@ -110,6 +111,13 @@ class HomeTodayView extends StatelessWidget {
         children: children,
       );
 
+  /// The day's work under the total, when there are two or more kinds.
+  List<Widget> _workCard() {
+    final breakdown = activity.activity.breakdown;
+    if (!activity.activity.enabled || !HomeWorkCard.shows(breakdown)) return const [];
+    return [const SizedBox(height: 12), HomeWorkCard(breakdown: breakdown)];
+  }
+
   Widget? _saveFailure(BuildContext context) {
     final failure = today.registerFailure;
     final state = today.state;
@@ -181,6 +189,7 @@ class HomeTodayView extends StatelessWidget {
           value: elapsed == null ? '--' : TodayText.duration(context, elapsed),
           lines: [?line],
         ),
+        ..._workCard(),
         if (activity.showsCard) ...[const SizedBox(height: 12), HomeProjectRow(activity: activity.activity.current, onSwitch: onSwitch)],
         if (moments.isNotEmpty) ...[const SizedBox(height: 12), HomeTimeline(moments: moments)],
       ],
@@ -285,6 +294,7 @@ class HomeTodayView extends StatelessWidget {
             value: TodayText.duration(context, minutes),
             lines: [?planned],
           ),
+        ..._workCard(),
         if (moments.isNotEmpty) ...[const SizedBox(height: 12), HomeTimeline(moments: moments)],
       ],
     );

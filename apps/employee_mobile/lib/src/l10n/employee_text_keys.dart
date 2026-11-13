@@ -160,6 +160,8 @@ abstract final class EmployeeTextKeys {
   static const activityOnSite = 'activity.kind.onSite';
   static const activityInHouse = 'activity.kind.inHouse';
   static const activityInternal = 'activity.kind.internal';
+  static const activityClientWork = 'activity.clientWork';
+  static const activityOtherWork = 'activity.otherWork';
   static const activityTransport = 'activity.kind.transport';
   static const activityClientProject = 'activity.clientProject';
   static const activityInternalProject = 'activity.internalProject';
