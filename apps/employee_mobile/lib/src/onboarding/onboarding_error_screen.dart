@@ -3,13 +3,13 @@ import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
-import '../widgets/mobile_widgets.dart';
+import '../widgets/phone_widgets.dart';
 import 'onboarding_controller.dart';
+import 'onboarding_step_page.dart';
 
-/// The Figma "Onboarding Error / 01 … 07" screens.
-///
-/// "Sign in" (02, 04) opens the sign-in flow. "Contact HR/Admin" (02) is an
-/// instruction, not an action.
+/// When onboarding can't go on (Figma `1591:294`, `1591:316`, `1591:335`):
+/// a small icon, the title, one sentence and a quiet line of help, then what
+/// to do. "Sign in" opens sign-in.
 class OnboardingErrorScreen extends StatelessWidget {
   const OnboardingErrorScreen({
     super.key,
@@ -23,104 +23,107 @@ class OnboardingErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final problem = controller.problem ?? OnboardingProblem.serverUnavailable;
-    StatusAction primary(String key) =>
-        StatusAction(label: context.t(key), primary: true, busy: controller.busy, onPressed: controller.retry);
-    final back = StatusAction(label: context.t(CommonTextKeys.back), onPressed: controller.busy ? null : controller.back);
-    final signIn = StatusAction(label: context.t(EmployeeTextKeys.errorSignIn), primary: true, onPressed: onSignIn);
-
-    final (tone, title, text, helpTitle, help, actions) = switch (problem) {
+    void retry() => controller.retry();
+    void back() => controller.back();
+    final (tone, title, text, help, actionKey, onAction, withBack) = switch (problem) {
       OnboardingProblem.invalidQr => (
-        StatusTone.error,
+        OnboardingTone.error,
         EmployeeTextKeys.errorInvalidQrTitle,
         EmployeeTextKeys.errorInvalidQrText,
-        EmployeeTextKeys.errorInvalidQrHelpTitle,
         EmployeeTextKeys.errorInvalidQrHelp,
-        [primary(CommonTextKeys.retry), back],
-      ),
-      OnboardingProblem.alreadyActivated => (
-        StatusTone.warning,
-        EmployeeTextKeys.errorAlreadyActivatedTitle,
-        EmployeeTextKeys.errorAlreadyActivatedText,
-        EmployeeTextKeys.errorAlreadyActivatedHelpTitle,
-        EmployeeTextKeys.errorAlreadyActivatedHelp,
-        [signIn],
-      ),
-      OnboardingProblem.accountUnavailable => (
-        StatusTone.error,
-        EmployeeTextKeys.errorUnavailableTitle,
-        EmployeeTextKeys.errorUnavailableText,
-        EmployeeTextKeys.errorUnavailableHelpTitle,
-        EmployeeTextKeys.errorUnavailableHelp,
-        [back],
-      ),
-      OnboardingProblem.activatedElsewhere => (
-        StatusTone.warning,
-        EmployeeTextKeys.errorActivatedElsewhereTitle,
-        EmployeeTextKeys.errorActivatedElsewhereText,
-        EmployeeTextKeys.errorActivatedElsewhereHelpTitle,
-        EmployeeTextKeys.errorActivatedElsewhereHelp,
-        [signIn, back],
-      ),
-      OnboardingProblem.networkFailure => (
-        StatusTone.info,
-        EmployeeTextKeys.errorNetworkTitle,
-        EmployeeTextKeys.errorNetworkText,
-        EmployeeTextKeys.errorNetworkHelpTitle,
-        EmployeeTextKeys.errorNetworkHelp,
-        [primary(CommonTextKeys.retry), back],
-      ),
-      OnboardingProblem.serverUnavailable => (
-        StatusTone.error,
-        EmployeeTextKeys.errorServerTitle,
-        EmployeeTextKeys.errorServerText,
-        EmployeeTextKeys.errorServerHelpTitle,
-        EmployeeTextKeys.errorServerHelp,
-        [primary(CommonTextKeys.retry), back],
+        EmployeeTextKeys.errorScanAgain,
+        retry,
+        true,
       ),
       OnboardingProblem.qrExpired => (
-        StatusTone.error,
+        OnboardingTone.error,
         EmployeeTextKeys.errorQrExpiredTitle,
         EmployeeTextKeys.errorQrExpiredText,
-        EmployeeTextKeys.errorQrExpiredHelpTitle,
         EmployeeTextKeys.errorQrExpiredHelp,
-        [primary(CommonTextKeys.retry), back],
+        EmployeeTextKeys.errorScanAgain,
+        retry,
+        true,
       ),
       OnboardingProblem.wrongQr => (
-        StatusTone.warning,
+        OnboardingTone.warning,
         EmployeeTextKeys.errorWrongQrTitle,
         EmployeeTextKeys.errorWrongQrText,
-        EmployeeTextKeys.errorWrongQrHelpTitle,
         EmployeeTextKeys.errorWrongQrHelp,
-        [primary(CommonTextKeys.retry), back],
+        EmployeeTextKeys.errorScanAgain,
+        retry,
+        true,
+      ),
+      OnboardingProblem.alreadyActivated => (
+        OnboardingTone.warning,
+        EmployeeTextKeys.errorAlreadyActivatedTitle,
+        EmployeeTextKeys.errorAlreadyActivatedText,
+        EmployeeTextKeys.errorAlreadyActivatedHelp,
+        EmployeeTextKeys.errorSignIn,
+        onSignIn,
+        false,
+      ),
+      OnboardingProblem.accountUnavailable => (
+        OnboardingTone.error,
+        EmployeeTextKeys.errorUnavailableTitle,
+        EmployeeTextKeys.errorUnavailableText,
+        EmployeeTextKeys.errorUnavailableHelp,
+        CommonTextKeys.back,
+        back,
+        false,
+      ),
+      OnboardingProblem.activatedElsewhere => (
+        OnboardingTone.warning,
+        EmployeeTextKeys.errorActivatedElsewhereTitle,
+        EmployeeTextKeys.errorActivatedElsewhereText,
+        EmployeeTextKeys.errorActivatedElsewhereHelp,
+        EmployeeTextKeys.errorSignIn,
+        onSignIn,
+        true,
+      ),
+      OnboardingProblem.networkFailure => (
+        OnboardingTone.retry,
+        EmployeeTextKeys.errorNetworkTitle,
+        EmployeeTextKeys.errorNetworkText,
+        EmployeeTextKeys.errorNetworkHelp,
+        CommonTextKeys.retry,
+        retry,
+        true,
+      ),
+      OnboardingProblem.serverUnavailable => (
+        OnboardingTone.retry,
+        EmployeeTextKeys.errorServerTitle,
+        EmployeeTextKeys.errorServerText,
+        EmployeeTextKeys.errorServerHelp,
+        CommonTextKeys.retry,
+        retry,
+        true,
       ),
       OnboardingProblem.sessionRecovery => (
-        StatusTone.info,
+        OnboardingTone.retry,
         EmployeeTextKeys.errorSessionRecoveryTitle,
         EmployeeTextKeys.errorSessionRecoveryText,
-        EmployeeTextKeys.errorSessionRecoveryHelpTitle,
         EmployeeTextKeys.errorSessionRecoveryHelp,
-        [primary(EmployeeTextKeys.errorSessionRecoveryAction), back],
+        EmployeeTextKeys.errorSessionRecoveryAction,
+        retry,
+        true,
       ),
     };
-    return StatusPage(
-      footer: [
-        if (problem == OnboardingProblem.alreadyActivated)
-          NoteBox(
-            title: context.t(EmployeeTextKeys.errorContactHr),
-            text: context.t(EmployeeTextKeys.errorContactHrText),
-            textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 9),
-            radius: 14,
-            minHeight: 72,
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          ),
-      ],
-      tone: tone,
+    final busy = controller.busy;
+    return OnboardingStepPage(
+      showBack: true,
+      onBack: busy ? null : back,
+      above: Padding(padding: const EdgeInsets.only(top: 14, bottom: 10), child: OnboardingStatusIcon(tone: tone)),
       title: context.t(title),
-      text: context.t(text),
-      helpTitle: context.t(helpTitle),
-      help: context.t(help),
-      actions: actions,
-      inkHelpTitle: problem == OnboardingProblem.accountUnavailable,
+      subtitle: context.t(text),
+      contentGap: 12,
+      action: JitanMobileButton(
+        label: context.t(actionKey),
+        busy: busy,
+        onPressed: onAction,
+        size: JitanMobileButtonSize.phone,
+      ),
+      link: withBack ? PhoneQuietLink(label: context.t(CommonTextKeys.back), onPressed: busy ? null : back) : null,
+      children: [Text(context.t(help), style: JitanMobileTextStyles.detail)],
     );
   }
 }

@@ -108,7 +108,7 @@ void main() {
       await tapText(tester, 'Set up with my QR');
 
       expect(find.text('Get started'), findsOneWidget);
-      await tapText(tester, 'Already activated? Sign in');
+      await tapText(tester, 'Already set up? Sign in');
       expect(find.text('Sign in to Jitan'), findsOneWidget);
     });
   });

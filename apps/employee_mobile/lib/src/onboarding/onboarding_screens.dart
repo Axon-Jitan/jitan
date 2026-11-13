@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:jitan_core/jitan_core.dart';
+import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../device/device_settings.dart';
 import '../l10n/employee_text_keys.dart';
-import 'onboarding_controller.dart';
 import '../widgets/mobile_widgets.dart';
+import '../widgets/phone_widgets.dart';
+import 'onboarding_controller.dart';
+import 'onboarding_step_page.dart';
 
-// Vertical spacing below is measured from the 390 × 844 Figma frames
-// ("Onboarding / 01 … 08").
+// The onboarding screens, drawn in Figma `1591:356` (2026-11-13).
 
-/// 01 Welcome. "Already activated? Sign in" (Figma 199:3) is for an
-/// activated employee on a new device or after a reinstall.
+JitanMobileButton _button(String label, VoidCallback? onPressed, {bool busy = false}) =>
+    JitanMobileButton(label: label, onPressed: onPressed, busy: busy, size: JitanMobileButtonSize.phone);
+
+/// Welcome. "Already set up? Sign in" is for an employee who finished setup
+/// before, on a new phone or after a reinstall.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key, required this.controller, required this.onSignIn});
 
@@ -19,31 +24,14 @@ class WelcomeScreen extends StatelessWidget {
   final VoidCallback onSignIn;
 
   @override
-  Widget build(BuildContext context) => OnboardingPage(
-    logoStyle: JitanMobileTextStyles.logo.copyWith(fontSize: 24),
-    actions: [
-      JitanMobileButton(label: context.t(EmployeeTextKeys.welcomeAction), onPressed: controller.getStarted),
-      const SizedBox(height: 4),
-      Center(
-        child: TextButton(
-          onPressed: onSignIn,
-          style: TextButton.styleFrom(foregroundColor: JitanColors.inkMuted),
-          child: Text(
-            context.t(EmployeeTextKeys.welcomeSignIn),
-            style: JitanMobileTextStyles.link.copyWith(fontSize: 11, color: JitanColors.vermilion),
-          ),
-        ),
-      ),
-    ],
-    children: [
-      const SizedBox(height: 105),
-      Text(context.t(EmployeeTextKeys.welcomeEyebrow), style: JitanMobileTextStyles.eyebrow),
-      const SizedBox(height: 20),
-      Semantics(header: true, child: Text(context.t(EmployeeTextKeys.welcomeTitle), style: JitanMobileTextStyles.display)),
-      const SizedBox(height: 47),
-      Text(context.t(EmployeeTextKeys.welcomeText), style: JitanMobileTextStyles.body),
-      const SizedBox(height: 50),
-      const OnboardingIllustration(
+  Widget build(BuildContext context) => OnboardingStepPage(
+    large: true,
+    title: context.t(EmployeeTextKeys.welcomeTitle),
+    subtitle: context.t(EmployeeTextKeys.welcomeText),
+    action: _button(context.t(EmployeeTextKeys.welcomeAction), controller.getStarted),
+    link: PhoneQuietLink(label: context.t(EmployeeTextKeys.welcomeSignIn), onPressed: onSignIn),
+    children: const [
+      OnboardingIllustration(
         asset: 'assets/illustrations/welcome.png',
         widthFactor: 1.0633,
         heightFactor: 1.1061,
@@ -54,7 +42,7 @@ class WelcomeScreen extends StatelessWidget {
   );
 }
 
-/// 02 Join workplace: opens the scanner.
+/// Join your workplace: opens the scanner.
 class JoinScreen extends StatelessWidget {
   const JoinScreen({super.key, required this.controller, required this.onScan});
 
@@ -64,41 +52,25 @@ class JoinScreen extends StatelessWidget {
   final VoidCallback onScan;
 
   @override
-  Widget build(BuildContext context) => OnboardingPage(
-    actions: [
-      JitanMobileButton(
-        label: context.t(EmployeeTextKeys.joinAction),
-        busy: controller.busy,
-        onPressed: onScan,
-      ),
-    ],
-    children: [
-      const SizedBox(height: 65),
-      Semantics(header: true, child: Text(context.t(EmployeeTextKeys.joinTitle), style: JitanMobileTextStyles.display)),
-      const SizedBox(height: 17),
-      Text(context.t(EmployeeTextKeys.joinText), style: JitanMobileTextStyles.body),
-      const SizedBox(height: 44),
-      const OnboardingIllustration(
+  Widget build(BuildContext context) => OnboardingStepPage(
+    showBack: true,
+    onBack: controller.back,
+    title: context.t(EmployeeTextKeys.joinTitle),
+    subtitle: context.t(EmployeeTextKeys.joinText),
+    action: _button(context.t(EmployeeTextKeys.joinAction), onScan, busy: controller.busy),
+    children: const [
+      OnboardingIllustration(
         asset: 'assets/illustrations/join_workplace.png',
         widthFactor: 1.0469,
         heightFactor: 1.0837,
         left: -0.0266,
         top: -0.0359,
       ),
-      const SizedBox(height: 24),
-      SizedBox(
-        width: double.infinity,
-        child: Text(
-          context.t(EmployeeTextKeys.joinHint),
-          style: JitanMobileTextStyles.caption,
-          textAlign: TextAlign.center,
-        ),
-      ),
     ],
   );
 }
 
-/// 04 Account found: "Is this you?"
+/// Step 1, "Is this you?": the account the setup QR belongs to.
 class ConfirmScreen extends StatelessWidget {
   const ConfirmScreen({super.key, required this.controller});
 
@@ -109,299 +81,215 @@ class ConfirmScreen extends StatelessWidget {
     final account = controller.account;
     final name = [account?.firstName, account?.lastName].whereType<String>().where((n) => n.isNotEmpty).join(' ');
     final displayName = name.isEmpty ? (account?.code ?? '') : name;
-    final details = [...?account?.companies, ?account?.code].join('  ·  ');
-    return OnboardingPage(
-      actions: [
-        JitanMobileButton(label: context.t(EmployeeTextKeys.confirmAction), onPressed: controller.confirmAccount),
-        const SizedBox(height: 4),
-        Center(
-          child: TextButton(
-            onPressed: controller.rejectAccount,
-            style: TextButton.styleFrom(foregroundColor: JitanColors.inkMuted),
-            child: Text(
-              '${context.t(EmployeeTextKeys.confirmNotYou)}  ${context.t(EmployeeTextKeys.confirmGoBack)}',
-              style: JitanMobileTextStyles.link,
-            ),
+    final details = [...?account?.companies, ?account?.code].join(' · ');
+    return OnboardingStepPage(
+      showBack: true,
+      onBack: controller.back,
+      step: 1,
+      above: Row(
+        spacing: 6,
+        children: [
+          const Icon(Icons.check, size: 16, color: JitanColors.success),
+          Text(
+            context.t(EmployeeTextKeys.confirmVerified),
+            style: JitanMobileTextStyles.label.copyWith(color: JitanColors.success),
           ),
-        ),
-      ],
+        ],
+      ),
+      title: context.t(EmployeeTextKeys.confirmTitle),
+      subtitle: context.t(EmployeeTextKeys.confirmText),
+      action: _button(context.t(EmployeeTextKeys.confirmAction), controller.confirmAccount),
+      link: PhoneQuietLink(
+        label: '${context.t(EmployeeTextKeys.confirmNotYou)} ${context.t(EmployeeTextKeys.confirmGoBack)}',
+        onPressed: controller.rejectAccount,
+      ),
       children: [
-        const SizedBox(height: 45),
-        Semantics(header: true, child: Text(context.t(EmployeeTextKeys.confirmTitle), style: JitanMobileTextStyles.title)),
-        const SizedBox(height: 43),
-        Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 174),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-          decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(22)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        PhoneListCard(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Row(
+                spacing: 12,
                 children: [
                   CircleAvatar(
-                    radius: 32,
+                    radius: 22,
                     backgroundColor: JitanColors.ink,
                     child: Text(
                       displayName.isEmpty ? '' : displayName.characters.first.toUpperCase(),
-                      style: JitanMobileTextStyles.identityName.copyWith(fontSize: 24, color: JitanColors.warmWhite),
+                      style: JitanMobileTextStyles.rowTitle.copyWith(fontSize: 17, color: JitanColors.surface),
                     ),
                   ),
-                  const SizedBox(width: 18),
-                  Expanded(child: Text(displayName, style: JitanMobileTextStyles.identityName)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 2,
+                      children: [
+                        Text(displayName, style: JitanMobileTextStyles.rowTitle.copyWith(fontSize: 17)),
+                        if (details.isNotEmpty) Text(details, style: JitanMobileTextStyles.detail),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 32),
-              Text(details, style: JitanMobileTextStyles.identityDetail),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-/// Onboarding / 06B Language, after Permissions. Languages come from
-/// `tblLanguage` (any number); English is built in and always first. Each
-/// card shows the language's own name and, when a translation exists, its
-/// name in the current UI language.
-class LanguageScreen extends StatelessWidget {
-  const LanguageScreen({super.key, required this.controller});
-
-  final OnboardingController controller;
-
-  @override
-  Widget build(BuildContext context) => OnboardingPage(
-    showLogo: false,
-    actions: [
-      JitanMobileButton(
-        label: context.t(CommonTextKeys.continueAction),
-        style: JitanMobileButtonStyle.brand,
-        size: JitanMobileButtonSize.compact,
-        onPressed: controller.confirmLanguage,
-      ),
-    ],
-    children: [
-      const SizedBox(height: 4),
-      Semantics(header: true, child: Text(context.t(EmployeeTextKeys.languageTitle), style: JitanMobileTextStyles.formTitle)),
-      const SizedBox(height: 10),
-      Text(context.t(EmployeeTextKeys.languageText), style: JitanMobileTextStyles.caption),
-      const SizedBox(height: 60),
-      for (final language in controller.languages) ...[
-        _LanguageCard(
-          name: language.code == englishLanguageCode ? context.t(EmployeeTextKeys.languageEnglish) : language.name,
-          translatedName: context.tOrNull(CommonTextKeys.languageName(language.code)),
-          selected: controller.languageCode == language.code,
-          onTap: () => controller.chooseLanguage(language.code),
-        ),
-        const SizedBox(height: 12),
-      ],
-      if (controller.languagesFailed || controller.languageInvalid) ...[
-        const SizedBox(height: 12),
-        NoteBox(
-          text: context.t(
-            controller.languageInvalid ? EmployeeTextKeys.languageInvalid : EmployeeTextKeys.languageLoadFailed,
-          ),
-          background: JitanColors.brandTint,
-          textStyle: JitanMobileTextStyles.cardText,
-          padding: const EdgeInsets.all(16),
-        ),
-      ],
-    ],
-  );
-}
-
-class _LanguageCard extends StatelessWidget {
-  const _LanguageCard({required this.name, required this.translatedName, required this.selected, required this.onTap});
-
-  final String name;
-  final String? translatedName;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    inMutuallyExclusiveGroup: true,
-    checked: selected,
-    button: true,
-    child: Material(
-      color: selected ? JitanColors.infoSurface : JitanColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: selected ? JitanColors.info : JitanColors.inputBorder),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: 64,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(13, 0, 18, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: JitanMobileTextStyles.noteTitle.copyWith(
-                          fontSize: 12,
-                          color: selected ? JitanColors.info : JitanColors.ink,
-                        ),
-                      ),
-                      if (translatedName != null) ...[
-                        const SizedBox(height: 8),
-                        Text(translatedName!, style: JitanMobileTextStyles.noteText.copyWith(fontSize: 9)),
-                      ],
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected ? JitanColors.info : JitanColors.radioIdle,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// 05 Registration method.
+/// Step 2, the registration method (stays on the phone, GAP-07).
 class MethodScreen extends StatelessWidget {
   const MethodScreen({super.key, required this.controller});
 
   final OnboardingController controller;
 
   @override
-  Widget build(BuildContext context) => OnboardingPage(
-    actions: [JitanMobileButton(label: context.t(CommonTextKeys.continueAction), onPressed: controller.confirmMethod)],
-    children: [
-      const SizedBox(height: 45),
-      Semantics(header: true, child: Text(context.t(EmployeeTextKeys.methodTitle), style: JitanMobileTextStyles.title)),
-      const SizedBox(height: 11),
-      Text(context.t(EmployeeTextKeys.methodText), style: JitanMobileTextStyles.body),
-      const SizedBox(height: 38),
-      ChoiceCard(
-        title: context.t(EmployeeTextKeys.methodAutomaticTitle),
-        text: context.t(EmployeeTextKeys.methodAutomaticText),
-        selected: controller.method == RegistrationMethod.automatic,
-        onTap: () => controller.chooseMethod(RegistrationMethod.automatic),
-      ),
-      const SizedBox(height: 16),
-      ChoiceCard(
-        title: context.t(EmployeeTextKeys.methodQrTitle),
-        text: context.t(EmployeeTextKeys.methodQrText),
-        selected: controller.method == RegistrationMethod.qr,
-        onTap: () => controller.chooseMethod(RegistrationMethod.qr),
-      ),
-      const SizedBox(height: 16),
-      ChoiceCard(
-        title: context.t(EmployeeTextKeys.methodManualTitle),
-        text: context.t(EmployeeTextKeys.methodManualText),
-        selected: controller.method == RegistrationMethod.manual,
-        onTap: () => controller.chooseMethod(RegistrationMethod.manual),
-      ),
-      const SizedBox(height: 24),
-      NoteBox(
-        text: context.t(EmployeeTextKeys.methodNote),
-        background: JitanColors.brandTint,
-        textStyle: JitanMobileTextStyles.cardText,
-        minHeight: 70,
-        padding: const EdgeInsets.fromLTRB(16, 17, 26, 17),
-      ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    Widget option(RegistrationMethod method, String title, String text) {
+      final selected = controller.method == method;
+      return PhoneListRow(
+        title: title,
+        detail: text,
+        selected: selected,
+        trailing: selected ? const PhoneCheck() : null,
+        onTap: () => controller.chooseMethod(method),
+      );
+    }
+
+    return OnboardingStepPage(
+      showBack: true,
+      onBack: controller.back,
+      step: 2,
+      title: context.t(EmployeeTextKeys.methodTitle),
+      subtitle: context.t(EmployeeTextKeys.methodText),
+      action: _button(context.t(CommonTextKeys.continueAction), controller.confirmMethod),
+      children: [
+        PhoneListCard(
+          padding: EdgeInsets.zero,
+          children: [
+            option(
+              RegistrationMethod.automatic,
+              context.t(EmployeeTextKeys.methodAutomaticTitle),
+              context.t(EmployeeTextKeys.methodAutomaticText),
+            ),
+            option(
+              RegistrationMethod.qr,
+              context.t(EmployeeTextKeys.methodQrTitle),
+              context.t(EmployeeTextKeys.methodQrText),
+            ),
+            option(
+              RegistrationMethod.manual,
+              context.t(EmployeeTextKeys.methodManualTitle),
+              context.t(EmployeeTextKeys.methodManualText),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
-/// 06 Permissions: "Continue" shows the system prompts.
+/// Step 3: what the phone will ask for. "Continue" shows the system prompts;
+/// location only for Automatic.
 class PermissionsScreen extends StatelessWidget {
   const PermissionsScreen({super.key, required this.controller});
 
   final OnboardingController controller;
 
   @override
-  Widget build(BuildContext context) => OnboardingPage(
-    actions: [
-      JitanMobileButton(
-        label: context.t(CommonTextKeys.continueAction),
-        busy: controller.busy,
-        onPressed: controller.requestPermissions,
-      ),
-    ],
+  Widget build(BuildContext context) => OnboardingStepPage(
+    showBack: true,
+    onBack: controller.busy ? null : controller.back,
+    step: 3,
+    title: context.t(EmployeeTextKeys.permissionsTitle),
+    subtitle: context.t(EmployeeTextKeys.permissionsText),
+    action: _button(context.t(CommonTextKeys.continueAction), controller.requestPermissions, busy: controller.busy),
     children: [
-      const SizedBox(height: 45),
-      Semantics(header: true, child: Text(context.t(EmployeeTextKeys.permissionsTitle), style: JitanMobileTextStyles.title)),
+      PhoneListCard(
+        padding: EdgeInsets.zero,
+        children: [
+          if (controller.method == RegistrationMethod.automatic)
+            PhoneListRow(
+              title: context.t(EmployeeTextKeys.permissionsLocationTitle),
+              detail: context.t(EmployeeTextKeys.permissionsLocationText),
+            ),
+          PhoneListRow(
+            title: context.t(EmployeeTextKeys.permissionsNotificationsTitle),
+            detail: context.t(EmployeeTextKeys.permissionsNotificationsText),
+          ),
+        ],
+      ),
       const SizedBox(height: 12),
-      Text(context.t(EmployeeTextKeys.permissionsText), style: JitanMobileTextStyles.bodyLarge),
-      const SizedBox(height: 29),
-      if (controller.method == RegistrationMethod.automatic) ...[
-        _PermissionCard(
-          title: context.t(EmployeeTextKeys.permissionsLocationTitle),
-          text: context.t(EmployeeTextKeys.permissionsLocationText),
-        ),
-        const SizedBox(height: 16),
-      ],
-      _PermissionCard(
-        title: context.t(EmployeeTextKeys.permissionsNotificationsTitle),
-        text: context.t(EmployeeTextKeys.permissionsNotificationsText),
-      ),
-      const SizedBox(height: 32),
-      NoteBox(
-        title: context.t(EmployeeTextKeys.permissionsPrivacyTitle),
-        text: context.t(EmployeeTextKeys.permissionsPrivacyText),
-        background: JitanColors.noteSurface,
-        titleStyle: JitanMobileTextStyles.noteTitleLarge,
-        textStyle: JitanMobileTextStyles.cardText,
-        radius: 18,
-        minHeight: 104,
-        padding: const EdgeInsets.fromLTRB(16, 16, 21, 16),
-      ),
+      Text(context.t(EmployeeTextKeys.permissionsNote), style: JitanMobileTextStyles.detail),
     ],
   );
 }
 
-class _PermissionCard extends StatelessWidget {
-  const _PermissionCard({required this.title, required this.text});
+/// Step 4, the language. Languages come from `tblLanguage` (any number);
+/// English is built in and always first. Each row shows the language's own
+/// name and, when a translation exists, its name in the current language.
+class LanguageScreen extends StatelessWidget {
+  const LanguageScreen({super.key, required this.controller});
 
-  final String title;
-  final String text;
+  final OnboardingController controller;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    constraints: const BoxConstraints(minHeight: 100),
-    padding: const EdgeInsets.fromLTRB(18, 17, 54, 17),
-    decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(18)),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: JitanMobileTextStyles.cardTitleSmall),
-        const SizedBox(height: 11),
-        Text(text, style: JitanMobileTextStyles.cardText),
+  Widget build(BuildContext context) => OnboardingStepPage(
+    showBack: true,
+    onBack: controller.back,
+    step: 4,
+    title: context.t(EmployeeTextKeys.languageTitle),
+    subtitle: context.t(EmployeeTextKeys.languageText),
+    action: _button(context.t(CommonTextKeys.continueAction), controller.confirmLanguage),
+    children: [
+      PhoneListCard(
+        padding: EdgeInsets.zero,
+        children: [
+          for (final language in controller.languages)
+            PhoneListRow(
+              title: _ownName(context, language),
+              titleStyle: JitanMobileTextStyles.rowTitle.copyWith(fontWeight: FontWeight.w500),
+              detail: _translatedName(context, language),
+              selected: controller.languageCode == language.code,
+              trailing: controller.languageCode == language.code ? const PhoneCheck() : null,
+              onTap: () => controller.chooseLanguage(language.code),
+            ),
+        ],
+      ),
+      if (controller.languageInvalid || controller.languagesFailed) ...[
+        const SizedBox(height: 12),
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            context.t(controller.languageInvalid ? EmployeeTextKeys.languageInvalid : EmployeeTextKeys.languageLoadFailed),
+            style: JitanMobileTextStyles.detail.copyWith(
+              color: controller.languageInvalid ? JitanColors.errorStrong : JitanColors.inkMuted,
+            ),
+          ),
+        ),
       ],
-    ),
+    ],
   );
 }
 
-/// 07 Set password. Mandatory: there is no "Set this later" (decision
-/// 2026-10-07, ONB-01). Continue completes onboarding and signs in.
+String _ownName(BuildContext context, Language language) =>
+    language.code == englishLanguageCode ? context.t(EmployeeTextKeys.languageEnglish) : language.name;
+
+/// The language's name in the current language, unless it reads the same
+/// ("English" under "English").
+String? _translatedName(BuildContext context, Language language) {
+  final translated = context.tOrNull(CommonTextKeys.languageName(language.code));
+  return translated == _ownName(context, language) ? null : translated;
+}
+
+/// Step 5, the password. Mandatory: there is no "Set this later" (decision
+/// 2026-10-07, ONB-01). "Finish setup" completes onboarding and signs in.
 class PasswordScreen extends StatefulWidget {
   const PasswordScreen({super.key, required this.controller});
 
   final OnboardingController controller;
-
-  /// Position of this screen in the flow, for the "n of total" counter.
-  static const stepNumber = 7;
-  static const stepCount = 8;
 
   @override
   State<PasswordScreen> createState() => _PasswordScreenState();
@@ -422,7 +310,8 @@ class _PasswordScreenState extends State<PasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final problem = widget.controller.passwordProblem;
+    final controller = widget.controller;
+    final problem = controller.passwordProblem;
     final passwordError = switch (problem) {
       PasswordProblem.tooShort => context.t(EmployeeTextKeys.passwordErrorTooShort),
       PasswordProblem.tooLong => context.t(EmployeeTextKeys.passwordErrorTooLong),
@@ -431,34 +320,19 @@ class _PasswordScreenState extends State<PasswordScreen> {
     };
     final showLabel = context.t(EmployeeTextKeys.passwordShow);
     final hideLabel = context.t(EmployeeTextKeys.passwordHide);
-    return OnboardingPage(
-      showLogo: false,
-      actions: [
-        JitanMobileButton(
-          label: context.t(CommonTextKeys.continueAction),
-          style: JitanMobileButtonStyle.brand,
-          size: JitanMobileButtonSize.medium,
-          busy: widget.controller.busy,
-          onPressed: _submit,
-        ),
-        const SizedBox(height: 22),
-        Text(
-          context.t(
-            EmployeeTextKeys.step,
-            args: {'n': PasswordScreen.stepNumber, 'total': PasswordScreen.stepCount},
-          ),
-          style: JitanMobileTextStyles.step,
-        ),
-      ],
+    return OnboardingStepPage(
+      showBack: true,
+      onBack: controller.busy ? null : controller.back,
+      step: 5,
+      title: context.t(EmployeeTextKeys.passwordTitle),
+      subtitle: context.t(EmployeeTextKeys.passwordText),
+      action: _button(context.t(EmployeeTextKeys.passwordAction), _submit, busy: controller.busy),
       children: [
-        Semantics(header: true, child: Text(context.t(EmployeeTextKeys.passwordTitle), style: JitanMobileTextStyles.formTitle)),
-        const SizedBox(height: 10),
-        Text(context.t(EmployeeTextKeys.passwordText), style: JitanMobileTextStyles.caption),
-        const SizedBox(height: 44),
         AutofillGroup(
           child: Column(
             children: [
               PasswordField(
+                phone: true,
                 controller: _password,
                 label: context.t(EmployeeTextKeys.passwordLabel),
                 hint: context.t(EmployeeTextKeys.passwordHint),
@@ -468,8 +342,9 @@ class _PasswordScreenState extends State<PasswordScreen> {
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.newPassword],
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
               PasswordField(
+                phone: true,
                 controller: _confirmation,
                 label: context.t(EmployeeTextKeys.passwordConfirmLabel),
                 hint: context.t(EmployeeTextKeys.passwordConfirmHint),
@@ -483,18 +358,15 @@ class _PasswordScreenState extends State<PasswordScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 28),
-        NoteBox(
-          title: context.t(EmployeeTextKeys.passwordNoteTitle),
-          text: context.t(EmployeeTextKeys.passwordNoteText),
-          minHeight: 86,
-        ),
+        const SizedBox(height: 14),
+        Text(context.t(EmployeeTextKeys.passwordNote), style: JitanMobileTextStyles.detail),
       ],
     );
   }
 }
 
-/// 08 Ready: the device is signed in; "Start Jitan" opens the app.
+/// Ready: the phone is signed in. Shows what was set up; "Start Jitan" opens
+/// the app.
 class ReadyScreen extends StatelessWidget {
   const ReadyScreen({super.key, required this.controller, required this.onStart});
 
@@ -502,84 +374,73 @@ class ReadyScreen extends StatelessWidget {
   final VoidCallback onStart;
 
   @override
-  Widget build(BuildContext context) => OnboardingPage(
-    actions: [
-      JitanMobileButton(
-        label: context.t(EmployeeTextKeys.readyAction),
-        style: JitanMobileButtonStyle.brand,
-        onPressed: onStart,
-      ),
-    ],
-    children: [
-      const SizedBox(height: 45),
-      Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
-        decoration: BoxDecoration(color: JitanColors.successSurface, borderRadius: BorderRadius.circular(16)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) {
+    final companies = controller.account?.companies ?? const <String>[];
+    final language = controller.languageCode == englishLanguageCode
+        ? context.t(EmployeeTextKeys.languageEnglish)
+        : controller.languages.where((l) => l.code == controller.languageCode).firstOrNull?.name;
+    final method = context.t(switch (controller.method) {
+      RegistrationMethod.automatic => EmployeeTextKeys.methodAutomaticTitle,
+      RegistrationMethod.qr => EmployeeTextKeys.methodQrTitle,
+      RegistrationMethod.manual => EmployeeTextKeys.methodManualTitle,
+    });
+    return OnboardingStepPage(
+      large: true,
+      title: context.t(EmployeeTextKeys.readyTitle),
+      subtitle: context.t(EmployeeTextKeys.readyText),
+      action: _button(context.t(EmployeeTextKeys.readyAction), onStart),
+      children: [
+        const OnboardingIllustration(
+          asset: 'assets/illustrations/ready.png',
+          widthFactor: 1.0659,
+          heightFactor: 1.1022,
+          left: -0.0336,
+          top: -0.0489,
+        ),
+        const SizedBox(height: 16),
+        PhoneListCard(
           children: [
-            const Icon(Icons.check, size: 13, color: JitanColors.success),
-            const SizedBox(width: 8),
-            Text(context.t(EmployeeTextKeys.readyBadge), style: JitanMobileTextStyles.badge),
+            if (companies.isNotEmpty) _SummaryRow(label: context.t(EmployeeTextKeys.readyWorkplace), value: companies.join(', ')),
+            _SummaryRow(label: context.t(EmployeeTextKeys.readyMethod), value: method),
+            if (language != null) _SummaryRow(label: context.t(EmployeeTextKeys.readyLanguage), value: language),
           ],
         ),
-      ),
-      const SizedBox(height: 23),
-      Semantics(header: true, child: Text(context.t(EmployeeTextKeys.readyTitle), style: JitanMobileTextStyles.displayLarge)),
-      const SizedBox(height: 8),
-      Text(context.t(EmployeeTextKeys.readyText), style: JitanMobileTextStyles.bodyLarge),
-      const SizedBox(height: 42),
-      const OnboardingIllustration(
-        asset: 'assets/illustrations/ready.png',
-        widthFactor: 1.0659,
-        heightFactor: 1.1022,
-        left: -0.0336,
-        top: -0.0489,
-      ),
-      const SizedBox(height: 24),
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-        decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(20)),
-        child: Column(
-          children: [
-            _SummaryRow(text: context.t(EmployeeTextKeys.readyWorkplace)),
-            const SizedBox(height: 18),
-            _SummaryRow(text: context.t(EmployeeTextKeys.readyMethod)),
-            const SizedBox(height: 18),
-            controller.locationMissing
-                ? _SummaryRow(text: context.t(EmployeeTextKeys.readyLocationMissing), done: false)
-                : _SummaryRow(text: context.t(EmployeeTextKeys.readyPermissions)),
-          ],
-        ),
-      ),
-    ],
-  );
+        if (controller.locationMissing) ...[
+          const SizedBox(height: 12),
+          Text(
+            context.t(EmployeeTextKeys.readyLocationMissing),
+            style: JitanMobileTextStyles.detail.copyWith(color: JitanColors.warning),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
+/// "Registration    Automatic".
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.text, this.done = true});
+  const _SummaryRow({required this.label, required this.value});
 
-  final String text;
-  final bool done;
+  final String label;
+  final String value;
 
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Icon(
-        done ? Icons.check : Icons.error_outline,
-        size: 15,
-        color: done ? JitanColors.success : JitanColors.warning,
-      ),
-      const SizedBox(width: 14),
-      Expanded(
-        child: Text(
-          text,
-          style: JitanMobileTextStyles.summary.copyWith(color: done ? null : JitanColors.warning),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    child: Row(
+      spacing: 12,
+      children: [
+        Text(label, style: JitanMobileTextStyles.rowText.copyWith(color: JitanColors.inkMuted)),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: JitanMobileTextStyles.rowText,
+          ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 }

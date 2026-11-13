@@ -8,38 +8,33 @@ abstract final class EmployeeTextKeys {
   static const configErrorTitle = 'app.employee.config.error.title';
   static const configErrorMessage = 'app.employee.config.error.message';
 
-  static const welcomeEyebrow = 'onboarding.welcome.eyebrow';
   static const welcomeTitle = 'onboarding.welcome.title';
   static const welcomeText = 'onboarding.welcome.text';
   static const welcomeAction = 'onboarding.welcome.action';
 
   static const joinTitle = 'onboarding.join.title';
   static const joinText = 'onboarding.join.text';
-  static const joinHint = 'onboarding.join.hint';
   static const joinAction = 'onboarding.join.action';
 
   static const scanTitle = 'onboarding.scan.title';
   static const scanCameraUnavailable = 'onboarding.scan.cameraUnavailable';
   static const scanText = 'onboarding.scan.text';
   static const scanFrameHint = 'onboarding.scan.frameHint';
-  static const scanGuidanceTitle = 'onboarding.scan.guidance.title';
-  static const scanGuidanceText = 'onboarding.scan.guidance.text';
 
   // 03B QR verified and connected
-  static const verifiedEyebrow = 'onboarding.verified.eyebrow';
-  static const verifiedTitle = 'onboarding.verified.title';
-  static const verifiedText = 'onboarding.verified.text';
-  static const verifiedPanelTitle = 'onboarding.verified.panel.title';
-  static const verifiedPanelText = 'onboarding.verified.panel.text';
-  static const verifiedPanelNext = 'onboarding.verified.panel.next';
-  static const verifiedNoteTitle = 'onboarding.verified.note.title';
-  static const verifiedNoteText = 'onboarding.verified.note.text';
-  static const verifiedAction = 'onboarding.verified.action';
 
   static const confirmTitle = 'onboarding.confirm.title';
   static const confirmAction = 'onboarding.confirm.action';
   static const confirmNotYou = 'onboarding.confirm.notYou';
   static const confirmGoBack = 'onboarding.confirm.goBack';
+  static const confirmVerified = 'onboarding.confirm.verified';
+  static const confirmText = 'onboarding.confirm.text';
+  static const scanCameraNote = 'onboarding.scan.cameraNote';
+  static const permissionsNote = 'onboarding.permissions.note';
+  static const passwordNote = 'onboarding.password.note';
+  static const passwordAction = 'onboarding.password.action';
+  static const readyLanguage = 'onboarding.ready.language';
+  static const errorScanAgain = 'onboarding.error.scanAgain';
 
   static const languageTitle = 'onboarding.language.title';
   static const languageText = 'onboarding.language.text';
@@ -63,8 +58,6 @@ abstract final class EmployeeTextKeys {
   static const permissionsLocationText = 'onboarding.permissions.location.text';
   static const permissionsNotificationsTitle = 'onboarding.permissions.notifications.title';
   static const permissionsNotificationsText = 'onboarding.permissions.notifications.text';
-  static const permissionsPrivacyTitle = 'onboarding.permissions.privacy.title';
-  static const permissionsPrivacyText = 'onboarding.permissions.privacy.text';
 
   static const passwordTitle = 'onboarding.password.title';
   static const passwordText = 'onboarding.password.text';
@@ -78,57 +71,44 @@ abstract final class EmployeeTextKeys {
   static const passwordErrorTooLong = 'onboarding.password.error.tooLong';
   static const passwordErrorMismatch = 'onboarding.password.error.mismatch';
   static const passwordErrorRejected = 'onboarding.password.error.rejected';
-  static const passwordNoteTitle = 'onboarding.password.note.title';
-  static const passwordNoteText = 'onboarding.password.note.text';
 
   /// Arguments: `{n}`, `{total}`.
   static const step = 'onboarding.step';
 
-  static const readyBadge = 'onboarding.ready.badge';
   static const readyTitle = 'onboarding.ready.title';
   static const readyText = 'onboarding.ready.text';
   static const readyWorkplace = 'onboarding.ready.workplace';
   static const readyMethod = 'onboarding.ready.method';
-  static const readyPermissions = 'onboarding.ready.permissions';
   static const readyLocationMissing = 'onboarding.ready.locationMissing';
   static const readyAction = 'onboarding.ready.action';
 
   static const errorInvalidQrTitle = 'onboarding.error.invalidQr.title';
   static const errorInvalidQrText = 'onboarding.error.invalidQr.text';
-  static const errorInvalidQrHelpTitle = 'onboarding.error.invalidQr.helpTitle';
   static const errorInvalidQrHelp = 'onboarding.error.invalidQr.help';
   static const errorAlreadyActivatedTitle = 'onboarding.error.alreadyActivated.title';
   static const errorAlreadyActivatedText = 'onboarding.error.alreadyActivated.text';
-  static const errorAlreadyActivatedHelpTitle = 'onboarding.error.alreadyActivated.helpTitle';
   static const errorAlreadyActivatedHelp = 'onboarding.error.alreadyActivated.help';
   static const errorUnavailableTitle = 'onboarding.error.unavailable.title';
   static const errorUnavailableText = 'onboarding.error.unavailable.text';
-  static const errorUnavailableHelpTitle = 'onboarding.error.unavailable.helpTitle';
   static const errorUnavailableHelp = 'onboarding.error.unavailable.help';
   static const errorActivatedElsewhereTitle = 'onboarding.error.activatedElsewhere.title';
   static const errorActivatedElsewhereText = 'onboarding.error.activatedElsewhere.text';
-  static const errorActivatedElsewhereHelpTitle = 'onboarding.error.activatedElsewhere.helpTitle';
   static const errorActivatedElsewhereHelp = 'onboarding.error.activatedElsewhere.help';
   static const errorNetworkTitle = 'onboarding.error.network.title';
   static const errorNetworkText = 'onboarding.error.network.text';
-  static const errorNetworkHelpTitle = 'onboarding.error.network.helpTitle';
   static const errorNetworkHelp = 'onboarding.error.network.help';
   static const errorServerTitle = 'onboarding.error.server.title';
   static const errorServerText = 'onboarding.error.server.text';
-  static const errorServerHelpTitle = 'onboarding.error.server.helpTitle';
   static const errorServerHelp = 'onboarding.error.server.help';
   static const errorSessionRecoveryTitle = 'onboarding.error.sessionRecovery.title';
   static const errorSessionRecoveryText = 'onboarding.error.sessionRecovery.text';
-  static const errorSessionRecoveryHelpTitle = 'onboarding.error.sessionRecovery.helpTitle';
   static const errorSessionRecoveryHelp = 'onboarding.error.sessionRecovery.help';
   static const errorSessionRecoveryAction = 'onboarding.error.sessionRecovery.action';
   static const errorQrExpiredTitle = 'onboarding.error.qrExpired.title';
   static const errorQrExpiredText = 'onboarding.error.qrExpired.text';
-  static const errorQrExpiredHelpTitle = 'onboarding.error.qrExpired.helpTitle';
   static const errorQrExpiredHelp = 'onboarding.error.qrExpired.help';
   static const errorWrongQrTitle = 'onboarding.error.wrongQr.title';
   static const errorWrongQrText = 'onboarding.error.wrongQr.text';
-  static const errorWrongQrHelpTitle = 'onboarding.error.wrongQr.helpTitle';
   static const errorWrongQrHelp = 'onboarding.error.wrongQr.help';
 
   // Today (Figma 1444:3, 1436:128, 1436:2/43/84, 1436:172, 1436:213, 22:2)
@@ -328,7 +308,6 @@ abstract final class EmployeeTextKeys {
   // Sign-in, recovery, profile (Figma "Auth / …", "Profile / …")
   static const welcomeSignIn = 'onboarding.welcome.signIn';
   static const errorSignIn = 'onboarding.error.signIn';
-  static const errorContactHr = 'onboarding.error.contactHr';
   static const signInTitle = 'auth.signIn.title';
   static const signInText = 'auth.signIn.text';
   static const codeLabel = 'auth.code.label';
@@ -408,7 +387,6 @@ abstract final class EmployeeTextKeys {
   static const signOutTitle = 'profile.signOut.title';
   static const signOutQuestion = 'profile.signOut.question';
   static const signOutText = 'profile.signOut.text';
-  static const errorContactHrText = 'onboarding.error.contactHr.text';
   static const signInOr = 'auth.signIn.or';
   static const signInRecoverQr = 'auth.signIn.recoverQr';
   static const recoverTitle = 'auth.recover.title';

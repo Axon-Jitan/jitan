@@ -45,7 +45,6 @@ class OnboardingFlow extends StatelessWidget {
               OnboardingStep.welcome => WelcomeScreen(controller: controller, onSignIn: onSignIn),
               OnboardingStep.join => JoinScreen(controller: controller, onScan: controller.openScanner),
               OnboardingStep.scan => ScanScreen(controller: controller, scannerView: qrScannerView),
-              OnboardingStep.verified => QrVerifiedScreen(controller: controller),
               OnboardingStep.confirm => ConfirmScreen(controller: controller),
               OnboardingStep.language => LanguageScreen(controller: controller),
               OnboardingStep.method => MethodScreen(controller: controller),

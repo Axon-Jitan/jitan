@@ -25,8 +25,8 @@ void main() {
 
   /// Join → 02B scanner → the camera reads [TestHarness.scannedValue].
   Future<void> scanFromJoin(WidgetTester tester) async {
-    await tapText(tester, 'Scan onboarding QR');
-    expect(find.text('Scan your onboarding QR'), findsOneWidget);
+    await tapText(tester, 'Scan setup QR');
+    expect(find.text('Scan your setup QR'), findsOneWidget);
     await tester.tap(find.byKey(fakeCameraKey));
     await settle(tester);
   }
@@ -35,25 +35,27 @@ void main() {
     await startApp(tester);
     await tapText(tester, 'Get started');
     await scanFromJoin(tester);
-    expect(find.text('QR verified!'), findsOneWidget);
-    await tapText(tester, 'Continue to account');
+    expect(find.text('Setup QR verified'), findsOneWidget, reason: 'straight to the account, no separate screen');
     expect(find.text('Is this you?'), findsOneWidget);
     expect(find.text('Disan Ssebowa'), findsOneWidget);
+    expect(find.text('1 of 5'), findsOneWidget);
     await tapText(tester, 'Yes, this is me');
-    expect(find.text('Automatic registration'), findsOneWidget);
+    expect(find.text('How do you register your time?'), findsOneWidget);
+    expect(find.text('2 of 5'), findsOneWidget);
     await tapText(tester, 'Continue');
-    expect(find.text('Finish your setup.'), findsOneWidget);
+    expect(find.text('Allow what Jitan needs'), findsOneWidget);
+    expect(find.text('Location, always'), findsOneWidget, reason: 'Automatic is the default');
     await tapText(tester, 'Continue');
     expect(find.text('Choose your language'), findsOneWidget);
     await tapText(tester, 'Continue');
-    expect(find.text('Set your password'), findsOneWidget);
-    expect(find.text('7 of 8'), findsOneWidget);
+    expect(find.text('Set a password'), findsOneWidget);
+    expect(find.text('5 of 5'), findsOneWidget);
   }
 
   Future<void> enterPasswords(WidgetTester tester, String password, String confirmation) async {
     await tester.enterText(find.byType(TextField).at(0), password);
     await tester.enterText(find.byType(TextField).at(1), confirmation);
-    await tapText(tester, 'Continue');
+    await tapText(tester, 'Finish setup');
   }
 
   testWidgets('scan → confirm → method → permissions → language → password → Ready → first day, no sign-in', (
@@ -64,8 +66,12 @@ void main() {
     expect(find.text('Set this later'), findsNothing, reason: 'the password is mandatory');
 
     await enterPasswords(tester, 'correct horse battery', 'correct horse battery');
-    expect(find.text('You’re ready.'), findsOneWidget);
+    expect(find.text('You’re ready'), findsOneWidget);
     expect(h.store.values['session.token'], h.server.issuedTokens.single);
+    // What was set up, instead of generic checkmarks.
+    expect(find.text('Almeco'), findsOneWidget);
+    expect(find.text('Automatic'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
 
     await tapText(tester, 'Start Jitan');
     expect(h.server.requestsTo('/auth/sign-in'), isEmpty, reason: 'no second sign-in');
@@ -85,6 +91,32 @@ void main() {
     expect(find.text('You’re working'), findsOneWidget);
   });
 
+  testWidgets('every onboarding screen fits a small phone (320 × 568) without overflowing', (tester) async {
+    h.permissions.grantLocation = false;
+    tester.view.physicalSize = const Size(640, 1136);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(EmployeeApp(services: h.services));
+    await settle(tester);
+
+    await tapText(tester, 'Get started');
+    await tapText(tester, 'Scan setup QR');
+    await tester.tap(find.byKey(fakeCameraKey));
+    await settle(tester);
+    for (final next in ['Yes, this is me', 'Continue', 'Continue', 'Continue']) {
+      await tapText(tester, next);
+    }
+    await enterPasswords(tester, 'short', 'other');
+    expect(find.text('Use at least 8 characters.'), findsOneWidget);
+    await enterPasswords(tester, 'correct horse battery', 'correct horse battery');
+    expect(find.text('You’re ready'), findsOneWidget);
+    expect(
+      find.text('Location access is off, so Jitan can’t start your day by itself yet. Allow it in Settings.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a mismatched confirmation shows the Figma message and sends nothing', (tester) async {
     await onboardUpToPassword(tester);
 
@@ -96,8 +128,8 @@ void main() {
     expect(first.controller!.text, 'correct horse battery', reason: 'only the confirmation needs fixing');
 
     await tester.enterText(find.byType(TextField).at(1), 'correct horse battery');
-    await tapText(tester, 'Continue');
-    expect(find.text('You’re ready.'), findsOneWidget);
+    await tapText(tester, 'Finish setup');
+    expect(find.text('You’re ready'), findsOneWidget);
   });
 
   testWidgets('a password the server refuses is an inline field error, not a full-screen error', (tester) async {
@@ -107,7 +139,7 @@ void main() {
     await enterPasswords(tester, 'correct horse battery', 'correct horse battery');
 
     expect(find.text('This password can’t be used. Choose another one.'), findsOneWidget);
-    expect(find.text('Set your password'), findsOneWidget);
+    expect(find.text('Set a password'), findsOneWidget);
   });
 
   testWidgets('06B Language: every database language, own name + translated name; the choice applies at once', (
@@ -116,7 +148,6 @@ void main() {
     await startApp(tester);
     await tapText(tester, 'Get started');
     await scanFromJoin(tester);
-    await tapText(tester, 'Continue to account');
     await tapText(tester, 'Yes, this is me');
     await tapText(tester, 'Continue');
     await tapText(tester, 'Continue');
@@ -145,64 +176,59 @@ void main() {
     await tapText(tester, 'Get started');
     await scanFromJoin(tester);
 
-    expect(find.text('Account already activated'), findsOneWidget);
-    expect(find.text('Onboarding cannot restart'), findsOneWidget);
+    expect(find.text('Account already set up'), findsOneWidget);
+    expect(find.text('Can’t sign in? Ask HR to reset your access.'), findsOneWidget);
 
     await tapText(tester, 'Sign in');
     expect(find.text('Sign in to Jitan'), findsOneWidget);
     expect(h.server.requestsTo('/onboarding/complete'), isEmpty, reason: 'onboarding never restarted');
   });
 
-  testWidgets('"Contact HR/Admin" is an instruction, not a button', (tester) async {
+  testWidgets('asking HR is an instruction, not a button: Sign in is the only action', (tester) async {
     h.server.password = 'set earlier';
     await startApp(tester);
     await tapText(tester, 'Get started');
     await scanFromJoin(tester);
 
-    expect(find.text('Contact HR/Admin'), findsOneWidget);
-    expect(find.text('Ask HR/Admin to reset your Jitan account access.'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Contact HR/Admin'), findsNothing);
     expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
+    expect(find.byType(FilledButton), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Back'), findsNothing);
   });
 
   testWidgets('another device finished first: "Sign in" opens sign-in', (tester) async {
     await onboardUpToPassword(tester);
     h.server.anotherDeviceWins = true;
     await enterPasswords(tester, 'correct horse battery', 'correct horse battery');
-    expect(find.text('Account was just activated'), findsOneWidget);
+    expect(find.text('Set up on another phone'), findsOneWidget);
 
     await tapText(tester, 'Sign in');
 
     expect(find.text('Sign in to Jitan'), findsOneWidget);
   });
 
-  testWidgets('02B scanner matches Figma; Back returns to Join without sending anything', (tester) async {
+  testWidgets('the scanner matches Figma; the back chevron returns to Join without sending anything', (tester) async {
     await startApp(tester);
     await tapText(tester, 'Get started');
-    await tapText(tester, 'Scan onboarding QR');
-
-    expect(find.text('Scan your onboarding QR'), findsOneWidget);
-    expect(find.text('Point your camera at the temporary onboarding QR shown by HR/Admin.'), findsOneWidget);
-    expect(find.text('Place the temporary QR inside the frame'), findsOneWidget);
-    expect(find.text('Camera access required'), findsOneWidget);
-    await tapText(tester, 'Back');
+    await tapText(tester, 'Scan setup QR');
 
     expect(find.text('Scan your setup QR'), findsOneWidget);
+    expect(find.text('Point your camera at the QR HR shows you.'), findsOneWidget);
+    expect(find.text('Place the QR inside the frame'), findsOneWidget);
+    expect(find.text('Your phone asks for camera access first.'), findsOneWidget);
+    await tester.tap(find.byTooltip('Back'));
+    await settle(tester);
+
+    expect(find.text('Join your workplace'), findsOneWidget);
     expect(h.server.requestsTo('/onboarding/start'), isEmpty);
   });
 
-  testWidgets('03B QR verified and connected matches Figma', (tester) async {
+  testWidgets('a verified QR shows the account at once; scanning uses nothing up', (tester) async {
     await startApp(tester);
     await tapText(tester, 'Get started');
     await scanFromJoin(tester);
 
-    expect(find.text('QR CONNECTION'), findsOneWidget);
-    expect(find.text('QR verified!'), findsOneWidget);
-    expect(find.text('Your temporary QR was scanned and securely verified by Jitan.'), findsOneWidget);
-    expect(find.text('Connected to Jitan'), findsOneWidget);
-    expect(find.text('Your QR is valid for onboarding.'), findsOneWidget);
-    expect(find.text('Next: confirm your employee account.'), findsOneWidget);
-    expect(find.text('Secure connection confirmed'), findsOneWidget);
+    expect(find.text('Setup QR verified'), findsOneWidget);
+    expect(find.text('Almeco · SBW'), findsOneWidget);
     expect(h.server.requestsTo('/onboarding/complete'), isEmpty, reason: 'nothing is used up by scanning');
   });
 
@@ -214,7 +240,7 @@ void main() {
     expect(find.text('Couldn’t finish setup'), findsOneWidget);
 
     await tapText(tester, 'Try again');
-    expect(find.text('You’re ready.'), findsOneWidget);
+    expect(find.text('You’re ready'), findsOneWidget);
   });
 
   group('app start', () {
@@ -278,10 +304,10 @@ void main() {
       await scan(tester, testQr);
 
       expect(find.text('QR expired or used'), findsOneWidget);
-      expect(find.text('This temporary onboarding QR is no longer valid. Ask HR/Admin to generate a new one.'), findsOneWidget);
+      expect(find.text('This setup QR no longer works. Ask HR for a new one.'), findsOneWidget);
       h.server.expiredQrs.clear();
-      await tapText(tester, 'Try again');
-      expect(find.text('Scan your onboarding QR'), findsOneWidget, reason: 'back to the scanner');
+      await tapText(tester, 'Scan again');
+      expect(find.text('Scan your setup QR'), findsOneWidget, reason: 'back to the scanner');
     });
 
     testWidgets('an already used QR is refused the same way', (tester) async {
@@ -291,10 +317,10 @@ void main() {
       expect(find.text('QR expired or used'), findsOneWidget);
     });
 
-    testWidgets('a recovery QR during onboarding: "Not an onboarding QR"', (tester) async {
+    testWidgets('a recovery QR during onboarding: "Not a setup QR"', (tester) async {
       await scan(tester, recoveryQr);
 
-      expect(find.text('Not an onboarding QR'), findsOneWidget);
+      expect(find.text('Not a setup QR'), findsOneWidget);
       expect(h.server.requestsTo('/onboarding/complete'), isEmpty);
     });
   });

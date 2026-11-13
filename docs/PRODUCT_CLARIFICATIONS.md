@@ -216,7 +216,9 @@ QR (`207:111`), Temporary QR expired (`207:215`, shown when the countdown ends),
 next-step line (`207:225`), Onboarding / 02B Scan temporary QR (`211:2`, with the
 verification progress in the camera frame), 03B QR verified and connected (`212:2`),
 Onboarding Error / 01 Invalid QR ("This isn't a valid Jitan temporary QR."), Auth / 06,
-06B, 06C, 07.
+06B, 06C, 07. Onboarding was redrawn in the phone style on 2026-11-13 (Figma `1591:356`):
+03B is no longer a screen of its own; "Is this you?" says "Setup QR verified" instead
+(product owner, 2026-11-13).
 
 Still open:
 

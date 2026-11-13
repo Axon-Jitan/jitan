@@ -23,8 +23,8 @@ enum OnboardingStep {
   /// 02B: the camera scanner for the temporary onboarding QR.
   scan,
 
-  /// 03B: "QR verified!" once the server accepted the QR.
-  verified,
+  /// "Is this you?", with "Setup QR verified" once the server accepted the
+  /// QR (the separate "QR verified" screen was dropped, 2026-11-13).
   confirm,
   method,
   permissions,
@@ -65,7 +65,7 @@ enum OnboardingProblem {
   wrongQr,
 }
 
-/// Drives onboarding: join → scan (02B) → QR verified (03B) → confirm →
+/// Drives onboarding: join → scan (02B) → confirm ("Is this you?") →
 /// registration method → permissions →
 /// language (Figma 06B) → password → ready (the session is created with the
 /// password, so no sign-in follows).
@@ -139,9 +139,6 @@ class OnboardingController extends ChangeNotifier {
   /// "Scan onboarding QR" on Join: the camera scanner (02B).
   void openScanner() => _go(OnboardingStep.scan);
 
-  /// "Continue to account" on 03B.
-  void continueToAccount() => _go(OnboardingStep.confirm);
-
   /// The previous screen, or `false` when there is none (leave the app).
   bool back() {
     if (_busy) return true;
@@ -149,7 +146,7 @@ class OnboardingController extends ChangeNotifier {
       OnboardingStep.welcome => null,
       OnboardingStep.join => OnboardingStep.welcome,
       OnboardingStep.scan => OnboardingStep.join,
-      OnboardingStep.verified || OnboardingStep.confirm => OnboardingStep.join,
+      OnboardingStep.confirm => OnboardingStep.join,
       OnboardingStep.method => OnboardingStep.confirm,
       OnboardingStep.permissions => OnboardingStep.method,
       OnboardingStep.language => OnboardingStep.permissions,
@@ -167,12 +164,12 @@ class OnboardingController extends ChangeNotifier {
   // ── 02 Join: scan ──────────────────────────────────────────────────────
 
   /// Checks a scanned QR with the server (the scanner shows the progress) and
-  /// confirms it was verified (03B); the account follows on "Continue".
+  /// shows the account it belongs to.
   Future<void> submitQr(String qrCode) async {
     _qrCode = qrCode;
     await _run(() async {
       _account = await _onboardingApi.start(qrCode);
-      _go(OnboardingStep.verified);
+      _go(OnboardingStep.confirm);
     }, onError: (e) => _show(_problemForStart(e)));
   }
 

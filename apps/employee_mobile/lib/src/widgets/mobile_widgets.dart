@@ -286,6 +286,7 @@ class PasswordField extends StatefulWidget {
     this.onSubmitted,
     this.onChanged,
     this.autofillHints,
+    this.phone = false,
   });
 
   final TextEditingController controller;
@@ -298,6 +299,10 @@ class PasswordField extends StatefulWidget {
   final ValueChanged<String>? onSubmitted;
   final ValueChanged<String>? onChanged;
   final Iterable<String>? autofillHints;
+
+  /// The calm phone look (Figma `1591:170`): 13 px label, 52 px field,
+  /// 15 px text. Onboarding uses it; sign-in follows when it is redrawn.
+  final bool phone;
 
   @override
   State<PasswordField> createState() => _PasswordFieldState();
@@ -313,13 +318,15 @@ class _PasswordFieldState extends State<PasswordField> {
       borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide(color: color, width: width),
     );
+    final phone = widget.phone;
+    final textStyle = phone ? JitanMobileTextStyles.rowText : JitanMobileTextStyles.fieldText;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.label, style: JitanMobileTextStyles.fieldLabel),
-        const SizedBox(height: 6),
+        Text(widget.label, style: phone ? JitanMobileTextStyles.label : JitanMobileTextStyles.fieldLabel),
+        SizedBox(height: phone ? 8 : 6),
         SizedBox(
-          height: 50,
+          height: phone ? 52 : 50,
           child: TextField(
             controller: widget.controller,
             obscureText: _obscured,
@@ -330,13 +337,13 @@ class _PasswordFieldState extends State<PasswordField> {
             onSubmitted: widget.onSubmitted,
             onChanged: widget.onChanged,
             autofillHints: widget.autofillHints,
-            style: JitanMobileTextStyles.fieldText,
+            style: textStyle,
             decoration: InputDecoration(
               hintText: widget.hint,
-              hintStyle: JitanMobileTextStyles.fieldHint,
+              hintStyle: phone ? textStyle.copyWith(color: JitanColors.inkMuted) : JitanMobileTextStyles.fieldHint,
               filled: true,
               fillColor: JitanColors.surface,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 15),
+              contentPadding: EdgeInsets.symmetric(horizontal: phone ? 16 : 13, vertical: 15),
               enabledBorder: hasError
                   ? border(JitanColors.errorStrong, 1.5)
                   : border(JitanColors.inputBorder, 1),
@@ -345,7 +352,7 @@ class _PasswordFieldState extends State<PasswordField> {
                 tooltip: _obscured ? widget.showLabel : widget.hideLabel,
                 icon: Icon(
                   _obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  size: 18,
+                  size: phone ? 20 : 18,
                   color: JitanColors.inkMuted,
                 ),
                 onPressed: () => setState(() => _obscured = !_obscured),
@@ -354,8 +361,16 @@ class _PasswordFieldState extends State<PasswordField> {
           ),
         ),
         if (hasError) ...[
-          const SizedBox(height: 6),
-          Semantics(liveRegion: true, child: Text(widget.error!, style: JitanMobileTextStyles.fieldError)),
+          SizedBox(height: phone ? 8 : 6),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              widget.error!,
+              style: phone
+                  ? JitanMobileTextStyles.detail.copyWith(color: JitanColors.errorStrong)
+                  : JitanMobileTextStyles.fieldError,
+            ),
+          ),
         ],
       ],
     );

@@ -32,9 +32,7 @@ void main() {
       ..getStarted()
       ..openScanner();
     await c.submitQr(testQr);
-    c
-      ..continueToAccount()
-      ..confirmAccount();
+    c.confirmAccount();
     c.chooseMethod(method);
     c.confirmMethod();
     await c.requestPermissions();
@@ -54,10 +52,8 @@ void main() {
         ..openScanner();
       expect(c.step, OnboardingStep.scan, reason: '02B: the camera scanner');
       await c.submitQr(testQr);
-      expect(c.step, OnboardingStep.verified, reason: '03B: QR verified');
+      expect(c.step, OnboardingStep.confirm, reason: '"Is this you?", marked "Setup QR verified"');
       expect(c.account?.firstName, 'Disan');
-      c.continueToAccount();
-      expect(c.step, OnboardingStep.confirm);
 
       c.confirmAccount();
       expect(c.step, OnboardingStep.method);
@@ -111,9 +107,7 @@ void main() {
     test('languages that fail to load leave English available', () async {
       h.server.dropNext.add('/languages');
       await c.submitQr(testQr);
-      c
-        ..continueToAccount()
-        ..confirmAccount();
+      c.confirmAccount();
       c.confirmMethod();
       await c.requestPermissions();
       await pumpEventQueue();
@@ -182,7 +176,7 @@ void main() {
       expect(c.problem, OnboardingProblem.serverUnavailable);
 
       await c.retry();
-      expect(c.step, OnboardingStep.verified);
+      expect(c.step, OnboardingStep.confirm);
     });
   });
 

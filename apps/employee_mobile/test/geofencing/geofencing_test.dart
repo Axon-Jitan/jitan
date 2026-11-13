@@ -317,7 +317,7 @@ void main() {
       expect(find.text('Current'), findsOneWidget);
       expect(save(tester).onPressed, isNull);
 
-      await tester.tap(find.text('Automatic registration'));
+      await tester.tap(find.text('Automatic'));
       await tester.pump();
       await tester.tap(find.text('Save changes'));
       await tester.pumpAndSettle();
@@ -347,7 +347,7 @@ void main() {
       await open(tester);
       h.permissions.backgroundLocationGranted = false;
 
-      await tester.tap(find.text('Automatic registration'));
+      await tester.tap(find.text('Automatic'));
       await tester.pump();
       await tester.tap(find.text('Save changes'));
       await tester.pumpAndSettle();
