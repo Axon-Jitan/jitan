@@ -76,8 +76,13 @@ proxy is not yet confirmed to forward to Jitan.
       added as aliases of `/health` and `/health/database`.
 - [ ] Preserve IT's executable-only update procedure: same `jitan-server` path/service,
       external config and certificates; stop, back up, replace, start and verify.
-- [ ] Embed compiled web assets for executable-only replacement; agree any alternative
-      asset update procedure with IT. Verify client HTTPS/API configuration without secrets.
+- [x] Embed compiled web assets for executable-only replacement (2026-11-13,
+      `web/web_routes.dart`): `dart run tool/build_release.dart --api-url <https URL>`
+      builds the HR website into `jitan-server` (same address as the API, CSP header
+      from the server), cross-compiles it and `set_first_password` for Linux x64, and
+      builds the employee APK. Verified in an Ubuntu 26.04 container in production mode
+      (HTTPS, both database fingerprints pinned, website in Chrome). Handed to IT with
+      [IT_INSTALL_GUIDE.md](IT_INSTALL_GUIDE.md).
 - [ ] Verify on the target Linux environment, including systemd restart, certificate
       permissions, staging database connectivity, and client integration.
 

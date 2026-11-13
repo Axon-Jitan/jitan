@@ -78,6 +78,8 @@ import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
 import 'package:jitan_api/src/recovery/recovery_routes.dart';
 import 'package:jitan_api/src/recovery/recovery_service.dart';
 import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
+import 'package:jitan_api/src/web/embedded_web_assets.dart';
+import 'package:jitan_api/src/web/web_routes.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_api/src/time_registration/time_registration_repository.dart';
@@ -296,6 +298,8 @@ Future<void> main() async {
 
   final handler = buildApp(
     corsOrigins: config.corsOrigins,
+    // The HR website, when this executable was built with it.
+    web: embeddedWebAssets.isEmpty ? null : WebRoutes(embeddedWebAssets).call,
     health: HealthRoutes(DatabaseHealthRepository(db)),
     companies: CompanyRoutes(authorizer, CompanyService(companyRepository, transactions: db)),
     employees: EmployeeRoutes(

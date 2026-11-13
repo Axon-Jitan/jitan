@@ -31,7 +31,8 @@ final _log = Logger('http.requests');
 /// Assembles the request pipeline:
 ///
 /// ```text
-/// request log → CORS → error mapping → /health*, /languages, /translations, /onboarding/*, /recovery/*, /auth/sign-in (public)
+/// request log → CORS → error mapping → the HR website's files, when built in (public)
+///                                    → /health*, /languages, /translations, /onboarding/*, /recovery/*, /auth/sign-in (public)
 ///                                    → identity → API routes             (authenticated)
 /// ```
 ///
@@ -61,6 +62,7 @@ Handler buildApp({
   required ScheduleRoutes schedules,
   required TimeRecordRoutes timeRecords,
   List<Middleware> authentication = const [],
+  Handler? web,
 }) {
   final apiRoutes = Router(notFoundHandler: _notFound)
     ..mount('/', companies.router.call)
@@ -85,7 +87,9 @@ Handler buildApp({
     api = api.addMiddleware(middleware);
   }
 
-  final routes = Cascade()
+  var cascade = Cascade();
+  if (web != null) cascade = cascade.add(web);
+  final routes = cascade
       .add(health.router.call)
       .add(languages.publicRouter.call)
       .add(onboarding.router.call)

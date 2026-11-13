@@ -177,6 +177,13 @@ unknown.
 
 ## Serving the HR web
 
+Since 2026-11-13 the HR web is built into `jitan-server` and served on the API's own
+address, with the header below sent by the server: no Nginx step, and an update stays
+one file. `dart run tool/build_release.dart --api-url https://10.1.101.65:8080` (in
+`server/jitan_api`) builds it with `JITAN_API_BASE_URL=/`. Installing:
+[IT_INSTALL_GUIDE.md](IT_INSTALL_GUIDE.md). The notes below still apply when it is
+served by Nginx instead.
+
 Build it so that nothing loads from Google's servers:
 
 ```sh
