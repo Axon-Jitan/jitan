@@ -13,10 +13,8 @@ enum ActivityKind {
 
   final String wireName;
 
-  static ActivityKind fromWire(String value) => values.firstWhere(
-    (k) => k.wireName == value,
-    orElse: () => throw FormatException('Unknown activity "$value".'),
-  );
+  static ActivityKind fromWire(String value) =>
+      values.firstWhere((k) => k.wireName == value, orElse: () => throw FormatException('Unknown activity "$value".'));
 }
 
 /// A project an employee can choose (D43, D44): every active project, the
@@ -96,6 +94,19 @@ class CurrentActivity {
   };
 }
 
+/// Work time on one project today (Figma `1606:128`).
+class ProjectMinutes {
+  const ProjectMinutes({required this.name, required this.minutes});
+
+  factory ProjectMinutes.fromJson(Map<String, Object?> json) =>
+      ProjectMinutes(name: json.readString('name'), minutes: json.readInt('minutes'));
+
+  final String name;
+  final int minutes;
+
+  Map<String, Object?> toJson() => {'name': name, 'minutes': minutes};
+}
+
 /// How today has gone so far (Figma "Today's breakdown"), in minutes.
 class ActivityBreakdown {
   const ActivityBreakdown({
@@ -106,6 +117,7 @@ class ActivityBreakdown {
     this.trips = 0,
     this.distanceMetres = 0,
     this.tripsWithoutDistance = 0,
+    this.projects = const [],
   });
 
   factory ActivityBreakdown.fromJson(Map<String, Object?> json) => ActivityBreakdown(
@@ -116,6 +128,7 @@ class ActivityBreakdown {
     trips: json.readInt('trips'),
     distanceMetres: json.readOptionalInt('distanceMetres') ?? 0,
     tripsWithoutDistance: json.readOptionalInt('tripsWithoutDistance') ?? 0,
+    projects: json['projects'] == null ? const [] : json.readObjectList('projects').map(ProjectMinutes.fromJson).toList(),
   );
 
   final int clientMinutes;
@@ -130,9 +143,12 @@ class ActivityBreakdown {
   /// Trips whose place or route isn't known: [distanceMetres] leaves them out.
   final int tripsWithoutDistance;
 
+  /// Work time per project today (transport left out), most first; the
+  /// split of a day spent on one kind of work across several projects.
+  final List<ProjectMinutes> projects;
+
   /// More than one kind of work: worth showing.
-  bool get isMixed =>
-      [clientMinutes, internalMinutes, otherMinutes, transportMinutes].where((minutes) => minutes > 0).length > 1;
+  bool get isMixed => [clientMinutes, internalMinutes, otherMinutes, transportMinutes].where((minutes) => minutes > 0).length > 1;
 
   Map<String, Object?> toJson() => {
     'clientMinutes': clientMinutes,
@@ -142,6 +158,7 @@ class ActivityBreakdown {
     'trips': trips,
     'distanceMetres': distanceMetres,
     'tripsWithoutDistance': tripsWithoutDistance,
+    if (projects.isNotEmpty) 'projects': [for (final p in projects) p.toJson()],
   };
 }
 
@@ -252,12 +269,7 @@ class SwitchActivityRequest {
 /// Body of `POST /me/activity/trip` (D40): on Automatic, the employee left one
 /// location and stayed at another. The server decides whether that is a trip.
 class TripRequest {
-  const TripRequest({
-    required this.fromAddressId,
-    required this.toAddressId,
-    required this.leftAt,
-    required this.arrivedAt,
-  });
+  const TripRequest({required this.fromAddressId, required this.toAddressId, required this.leftAt, required this.arrivedAt});
 
   factory TripRequest.fromJson(Map<String, Object?> json) => TripRequest(
     fromAddressId: json.readInt(fieldFrom),

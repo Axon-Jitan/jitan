@@ -69,10 +69,11 @@ void main() {
 
   Future<int> newUser({bool isDefault = false}) async {
     final code = 'DT$stamp${++counter}';
-    final id = (await db.execute(
-      'INSERT INTO tblUser (userName, userSurname, userCode, userActive, userMFD) VALUES (:n, :s, :c, 1, 0)',
-      {'n': 'Test', 's': code, 'c': code},
-    )).lastInsertId;
+    final id = (await db.execute('INSERT INTO tblUser (userName, userSurname, userCode, userActive, userMFD) VALUES (:n, :s, :c, 1, 0)', {
+      'n': 'Test',
+      's': code,
+      'c': code,
+    })).lastInsertId;
     await db.execute(
       'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD, userCompanyDefault) '
       'VALUES (:u, :c, 1, 0, :d)',
@@ -210,10 +211,9 @@ void main() {
 
   tearDownAll(() async {
     for (final user in users) {
-      await db.execute(
-        'DELETE t FROM tblEventLogEventType t JOIN tblEventLog e ON e.eventLogID = t.eventLogID WHERE e.userIDInit = :u',
-        {'u': user},
-      );
+      await db.execute('DELETE t FROM tblEventLogEventType t JOIN tblEventLog e ON e.eventLogID = t.eventLogID WHERE e.userIDInit = :u', {
+        'u': user,
+      });
       await db.execute('DELETE FROM tblEventLog WHERE userIDInit = :u', {'u': user});
       await db.execute('DELETE FROM tblTimeReg WHERE userID = :u', {'u': user});
       await db.execute('DELETE FROM tblUserCompany WHERE userID = :u', {'u': user});
@@ -294,7 +294,10 @@ void main() {
     )).single.readInt('n');
     final before = await startRows();
 
-    final switched = await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.clientOnSite, at: moment(20), projectId: client));
+    final switched = await activities.switchTo(
+      user,
+      SwitchActivityRequest(kind: ActivityKind.clientOnSite, at: moment(20), projectId: client),
+    );
 
     expect(switched.current?.project?.id, client);
     expect(await startRows(), before);
@@ -340,10 +343,7 @@ void main() {
       SwitchActivityRequest(kind: ActivityKind.work, at: at, projectId: internal),
       SwitchActivityRequest(kind: ActivityKind.internal, at: moment(-10), projectId: internal),
     ]) {
-      await expectLater(
-        activities.switchTo(user, request),
-        throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)),
-      );
+      await expectLater(activities.switchTo(user, request), throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)));
     }
   });
 
@@ -360,6 +360,10 @@ void main() {
     expect(mine.breakdown.transportMinutes, inInclusiveRange(29, 31));
     expect(mine.breakdown.trips, 1);
     expect(mine.breakdown.isMixed, isTrue);
+    // Per project too (Figma 1606:128), transport left out.
+    final project = mine.breakdown.projects.single;
+    expect(project.name, contains('internal'));
+    expect(project.minutes, inInclusiveRange(88, 90));
   });
 
   test('Period: a day carries what it went on, the same lines as today (2026-11-13)', () async {
@@ -490,10 +494,7 @@ void main() {
         trip(almeco, client, 15, 60),
         trip(almeco, client, 60, -10),
       ]) {
-        await expectLater(
-          activities.registerTrip(user, request),
-          throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)),
-        );
+        await expectLater(activities.registerTrip(user, request), throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)));
       }
     });
   });
@@ -514,13 +515,16 @@ void main() {
   test('the day counts for the default company, of several (D44)', () async {
     final user = await newUser(isDefault: true);
     final internal = await internalProject();
-    await db.execute(
-      'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)',
-      {'u': user, 'c': otherCompany},
-    );
+    await db.execute('INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)', {
+      'u': user,
+      'c': otherCompany,
+    });
     await start(user, moment(30));
 
-    final switched = await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(10), projectId: internal));
+    final switched = await activities.switchTo(
+      user,
+      SwitchActivityRequest(kind: ActivityKind.internal, at: moment(10), projectId: internal),
+    );
 
     expect(switched.current?.company?.id, company);
     expect(switched.companies, hasLength(2));

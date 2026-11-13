@@ -203,15 +203,27 @@ class ActivityService {
   Future<ActivityBreakdown> _breakdown(int userId) async {
     final (from, to) = _todayBounds();
     final rows = await _activities.between(_executor, userId, from, to);
-    final day = (await _myDay.today(userId)).day;
+    final today = await _myDay.today(userId);
+    final day = today.day;
     final finish = day?.finish?.actual;
     final now = _now().toUtc();
     final last = finish != null && finish.isBefore(now) ? finish : now;
-    final away = ActivityMinutes.timeAway(day);
+    // Time away replaces the break (D34); either is left out of every part,
+    // so the parts add up to the day's total.
+    final breakStart = today.breakStart, breakFinish = today.breakFinish;
+    final away = (day?.awayMinutes ?? 0) > 0
+        ? ActivityMinutes.timeAway(day)
+        : [if (breakStart != null && breakFinish != null) (ActivityMinutes.minuteOf(breakStart), ActivityMinutes.minuteOf(breakFinish))];
+    final projectNames = {for (final p in await _projects.list(_executor)) p.id: p.fullName};
+    final perProject = <String, int>{};
     var client = 0, internal = 0, other = 0, transport = 0, trips = 0;
     for (final (i, row) in rows.indexed) {
       final end = i + 1 < rows.length ? rows[i + 1].at : last;
       final minutes = end.isAfter(row.at) ? ActivityMinutes.between(_clock, row.at, end, away) : 0;
+      final project = projectNames[row.addressId];
+      if (project != null && _kindOf(row.typeName) != ActivityKind.transport) {
+        perProject[project] = (perProject[project] ?? 0) + minutes;
+      }
       switch (_kindOf(row.typeName)) {
         case ActivityKind.clientOnSite || ActivityKind.clientInHouse:
           client += minutes;
@@ -233,6 +245,10 @@ class ActivityService {
       trips: trips,
       distanceMetres: distance.metres,
       tripsWithoutDistance: distance.unknown,
+      projects: [
+        for (final MapEntry(:key, :value) in perProject.entries.toList()..sort((a, b) => b.value.compareTo(a.value)))
+          if (value > 0) ProjectMinutes(name: key, minutes: value),
+      ],
     );
   }
 
@@ -300,8 +316,7 @@ class ActivityService {
   static MyCompany? _defaultCompany(List<MyCompany> companies) =>
       companies.where((c) => c.isDefault).firstOrNull ?? (companies.length == 1 ? companies.single : null);
 
-  static DateTime _toSecond(DateTime at) =>
-      DateTime.fromMillisecondsSinceEpoch(at.millisecondsSinceEpoch ~/ 1000 * 1000, isUtc: true);
+  static DateTime _toSecond(DateTime at) => DateTime.fromMillisecondsSinceEpoch(at.millisecondsSinceEpoch ~/ 1000 * 1000, isUtc: true);
 
   static MyProject _active(List<MyProject> projects, int projectId) =>
       projects.where((p) => p.id == projectId).firstOrNull ??
@@ -328,9 +343,6 @@ class ActivityService {
   /// The workplace's today, in UTC.
   (DateTime, DateTime) _todayBounds() {
     final local = _clock.wallClockOf(_now().toUtc());
-    return (
-      _clock.utcOf(DateTime(local.year, local.month, local.day)),
-      _clock.utcOf(DateTime(local.year, local.month, local.day + 1)),
-    );
+    return (_clock.utcOf(DateTime(local.year, local.month, local.day)), _clock.utcOf(DateTime(local.year, local.month, local.day + 1)));
   }
 }
