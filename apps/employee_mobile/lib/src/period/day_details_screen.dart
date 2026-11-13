@@ -139,6 +139,10 @@ class _DayDetailsScreenState extends State<DayDetailsScreen> {
                     child: SingleChildScrollView(child: _content(context)),
                   ),
                 ),
+                if (!_loading && _failure != null) ...[
+                  JitanMobileButton(label: context.t(EmployeeTextKeys.todayTryAgain), size: JitanMobileButtonSize.phone, onPressed: _load),
+                  const SizedBox(height: 12),
+                ],
                 if (fix) ...[
                   JitanMobileButton(label: missingTimeAction(context, day), size: JitanMobileButtonSize.phone, onPressed: () => _fix(day)),
                   const SizedBox(height: 12),
@@ -170,11 +174,7 @@ class _DayDetailsScreenState extends State<DayDetailsScreen> {
             header: true,
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(
-                PeriodText.dayMonth(context, _date),
-                maxLines: 1,
-                style: JitanMobileTextStyles.pageTitle.copyWith(fontSize: 22, letterSpacing: -0.4),
-              ),
+              child: Text(PeriodText.dayMonth(context, _date), maxLines: 1, style: JitanMobileTextStyles.pageTitle.copyWith(fontSize: 22, letterSpacing: -0.4)),
             ),
           ),
         ),
@@ -187,13 +187,13 @@ class _DayDetailsScreenState extends State<DayDetailsScreen> {
     if (_loading) return const Padding(padding: EdgeInsets.only(top: 26), child: PeriodSkeleton());
     if (_failure != null) {
       return Padding(
-        padding: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.only(top: 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(context.t(EmployeeTextKeys.periodFailedTitle), textAlign: TextAlign.center, style: JitanMobileTextStyles.pageSubtitle),
-            const SizedBox(height: 16),
-            JitanMobileButton(label: context.t(EmployeeTextKeys.todayTryAgain), size: JitanMobileButtonSize.phone, onPressed: _load),
+            // The date stays, so another day is one swipe away; Try again
+            // sits at the bottom, as on Home and Period (Figma `1608:2`).
+            Text(context.t(EmployeeTextKeys.periodDayFailed), textAlign: TextAlign.center, style: JitanMobileTextStyles.pageSubtitle),
           ],
         ),
       );
@@ -226,9 +226,7 @@ class _DayDetailsScreenState extends State<DayDetailsScreen> {
           const SizedBox(height: 20),
           HomeHero(
             label: context.t(EmployeeTextKeys.periodMonthRegistered),
-            value: day.registeredMinutes == null
-                ? context.t(EmployeeTextKeys.periodNotCounted)
-                : PeriodText.duration(context, day.registeredMinutes!),
+            value: day.registeredMinutes == null ? context.t(EmployeeTextKeys.periodNotCounted) : PeriodText.duration(context, day.registeredMinutes!),
             smallValue: day.registeredMinutes == null,
             lines: [?PeriodText.totalLine(context, day)],
           ),

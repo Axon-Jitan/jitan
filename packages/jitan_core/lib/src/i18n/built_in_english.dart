@@ -55,7 +55,6 @@ const builtInEnglish = <String, String>{
   'nav.companies': 'Companies',
   'nav.employees': 'Employees',
 
-
   // ── Companies ─────────────────────────────────────────────────────────
   'company.title': 'Companies',
   'company.filter.all': 'All',
@@ -641,6 +640,7 @@ const builtInEnglish = <String, String>{
   'period.sub.nonWork': 'Marked as non-work.',
   'period.sub.working': 'You’re working.',
   'period.failed.title': 'Your period couldn’t be loaded',
+  'period.day.failed': 'This day couldn’t be loaded. Check your connection.',
   'period.view.day': 'Day',
   'period.view.week': 'Week',
   'period.view.month': 'Month',
@@ -728,7 +728,8 @@ const builtInEnglish = <String, String>{
   'profile.password.status.text': 'Use your employee code with this password to sign in to Jitan on a new device.',
   'profile.password.change': 'Change password',
   'profile.password.help.title': 'Forgot your password?',
-  'profile.password.help.text': 'While you’re signed in here, set a new one with Change password. If you’re signed out everywhere, contact HR/Admin to reset your Jitan access.',
+  'profile.password.help.text':
+      'While you’re signed in here, set a new one with Change password. If you’re signed out everywhere, contact HR/Admin to reset your Jitan access.',
   'profile.changePassword.title': 'Change password',
   'profile.changePassword.text': 'Choose a new password for your Jitan account.',
   'profile.changePassword.label': 'New password',
@@ -886,11 +887,16 @@ const builtInEnglish = <String, String>{
   'schedule.error.breakIncomplete': 'Choose the length of the break.',
   'schedule.info.group': 'The schedule applies to every employee whose only group is this one. Example: Blue collar.',
   'schedule.info.days': 'The days this group works. Days not chosen have no working hours. Example: Mon–Fri.',
-  'schedule.info.break': 'Deducted automatically from every work day; employees don’t register it. Jitan places it in the middle of the day. Example: 30 min on 08:00–16:30 is 12:00–12:30.',
-  'schedule.info.arrival': 'How many minutes after the start an arrival still counts as on time. It never changes the time. Example: 5 min with a start at 08:00: 08:04 is on time, 08:06 is late.',
-  'schedule.info.leaving': 'How many minutes before the finish a departure is within tolerance instead of early. It never changes the time. Example: 5 min with a finish at 16:30: 16:26 is within tolerance, 16:20 is early.',
-  'schedule.info.startRounding': 'How the registered start time is rounded; the actual time is always kept as well. Example: Up · 15 min: 07:53 becomes 08:00, 08:04 becomes 08:15.',
-  'schedule.info.finishRounding': 'How the registered finish time is rounded; the actual time is always kept as well. Example: Down · 15 min: 16:38 becomes 16:30.',
+  'schedule.info.break':
+      'Deducted automatically from every work day; employees don’t register it. Jitan places it in the middle of the day. Example: 30 min on 08:00–16:30 is 12:00–12:30.',
+  'schedule.info.arrival':
+      'How many minutes after the start an arrival still counts as on time. It never changes the time. Example: 5 min with a start at 08:00: 08:04 is on time, 08:06 is late.',
+  'schedule.info.leaving':
+      'How many minutes before the finish a departure is within tolerance instead of early. It never changes the time. Example: 5 min with a finish at 16:30: 16:26 is within tolerance, 16:20 is early.',
+  'schedule.info.startRounding':
+      'How the registered start time is rounded; the actual time is always kept as well. Example: Up · 15 min: 07:53 becomes 08:00, 08:04 becomes 08:15.',
+  'schedule.info.finishRounding':
+      'How the registered finish time is rounded; the actual time is always kept as well. Example: Down · 15 min: 16:38 becomes 16:30.',
   'nav.groups': 'Groups',
   'groups.title': 'Groups',
   'groups.newGroup': 'New group',
@@ -1578,7 +1584,8 @@ const builtInEnglish = <String, String>{
   'report.file.place': 'Place',
   'report.file.employees': 'Employees',
   'report.projects.one': '{n} project · Travel is time on the way to the project or back, next to Worked and not part of it · Days to review count once fixed',
-  'report.projects.other': '{n} projects · Travel is time on the way to the project or back, next to Worked and not part of it · Days to review count once fixed',
+  'report.projects.other':
+      '{n} projects · Travel is time on the way to the project or back, next to Worked and not part of it · Days to review count once fixed',
   'locations.title': 'Locations',
   'locations.subtitle': 'The places where Jitan recognises your employees.',
   'locations.search': 'Search locations',

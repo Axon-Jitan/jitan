@@ -253,6 +253,7 @@ abstract final class EmployeeTextKeys {
   static const periodSubNonWork = 'period.sub.nonWork';
   static const periodSubWorking = 'period.sub.working';
   static const periodFailedTitle = 'period.failed.title';
+  static const periodDayFailed = 'period.day.failed';
   static const periodViewDay = 'period.view.day';
   static const periodViewWeek = 'period.view.week';
   static const periodViewMonth = 'period.view.month';

@@ -122,12 +122,7 @@ void main() {
   });
 
   testWidgets('a correction waiting for HR says so in the timeline; once approved it does not', (tester) async {
-    h.server.registrations.add({
-      'boundary': 'start',
-      'entry': 'corrected',
-      'at': DateTime(2026, 10, 22, 8).toUtc().toIso8601String(),
-      'reason': 'Forgot',
-    });
+    h.server.registrations.add({'boundary': 'start', 'entry': 'corrected', 'at': DateTime(2026, 10, 22, 8).toUtc().toIso8601String(), 'reason': 'Forgot'});
     h.server.firstDay = false;
     await startApp(tester);
     await tap(tester, 'Period');
@@ -275,6 +270,25 @@ void main() {
     }
     expect(find.text('Thursday 22 October'), findsOneWidget);
     expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_right)).onPressed, isNull, reason: 'no future days');
+  });
+
+  testWidgets('a day that couldn’t load keeps its date and offers Try again at the bottom (Figma 1608:2)', (tester) async {
+    completeTuesday();
+    await startApp(tester);
+    await tap(tester, 'Period');
+    await view(tester, 'Week');
+    h.server.dropNext.add('/me/period');
+    await tap(tester, 'Tue 20');
+
+    expect(find.text('Tuesday 20 October'), findsOneWidget, reason: 'the date stays');
+    expect(find.text('This day couldn’t be loaded. Check your connection.'), findsOneWidget);
+    expect(find.text('Timeline'), findsNothing);
+    expect(find.byTooltip('Previous day'), findsOneWidget);
+
+    await tap(tester, 'Try again');
+    expect(find.text('This day couldn’t be loaded. Check your connection.'), findsNothing);
+    expect(find.text('Try again'), findsNothing);
+    expect(find.text('Timeline'), findsOneWidget);
   });
 
   testWidgets('a swipe changes the day too, and also stops at today', (tester) async {
