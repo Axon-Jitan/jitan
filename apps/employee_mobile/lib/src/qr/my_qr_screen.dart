@@ -3,18 +3,20 @@ import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
+import '../home/home_page.dart';
 import '../l10n/employee_text_keys.dart';
 
-/// "My QR" (Figma 50:67): the employee's permanent Terminal QR
-/// (`tblUser.userQRcode`) to present at a Jitan Terminal. A credential: it
-/// is fetched each time, shown only as a QR, and never logged or stored on
-/// the phone. It never onboards or recovers an account.
+/// "My QR" (Figma `1600:428`, 2026-11-13): the employee's permanent Terminal
+/// QR (`tblUser.userQRcode`) on one white pass, to show at a Jitan
+/// Terminal. A credential: it is fetched each time, shown only as a QR, and
+/// never logged or stored on the phone. It never onboards or recovers an
+/// account.
 class MyQrScreen extends StatefulWidget {
   const MyQrScreen({super.key, required this.meApi, required this.account, required this.onSessionEnded, this.bottomBar});
 
   final MeApi meApi;
 
-  /// The name on the card; `null` while unknown.
+  /// The name and code on the pass; `null` while unknown.
   final EmployeeAccount? account;
   final VoidCallback onSessionEnded;
   final Widget? bottomBar;
@@ -60,100 +62,67 @@ class _MyQrScreenState extends State<MyQrScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final account = widget.account;
-    final name = [account?.firstName, account?.lastName].whereType<String>().where((n) => n.isNotEmpty).join(' ');
-    return Scaffold(
-      backgroundColor: JitanColors.warmWhite,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Align(alignment: Alignment.centerLeft, child: JitanWordmark()),
-                      const SizedBox(height: 40),
-                      Semantics(header: true, child: Text(context.t(EmployeeTextKeys.qrTitle), style: JitanMobileTextStyles.title)),
-                      const SizedBox(height: 8),
-                      Text(context.t(EmployeeTextKeys.qrText), style: JitanMobileTextStyles.body),
-                      const SizedBox(height: 32),
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(22, 22, 22, 26),
-                        decoration: BoxDecoration(
-                          color: JitanColors.surface,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: JitanColors.inputBorder),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (name.isNotEmpty || account != null) ...[
-                              Text(name.isEmpty ? account!.code : name, style: JitanMobileTextStyles.identityName),
-                              const SizedBox(height: 6),
-                            ],
-                            Text(context.t(EmployeeTextKeys.qrCaption), style: JitanMobileTextStyles.identityDetail),
-                            const SizedBox(height: 28),
-                            Center(child: _code(context)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (widget.bottomBar case final bar?) ...[const SizedBox(height: 16), bar],
-            ],
-          ),
-        ),
-      ),
+    final navBar = widget.bottomBar ?? const SizedBox.shrink();
+    final failure = _failure;
+    if (failure != null && failure.statusCode == 404) {
+      return HomePage(
+        navBar: navBar,
+        onRefresh: _load,
+        title: context.t(EmployeeTextKeys.qrNoneTitle),
+        subtitle: context.t(EmployeeTextKeys.qrNoneText),
+      );
+    }
+    if (failure != null) {
+      return HomePage(
+        navBar: navBar,
+        onRefresh: _load,
+        title: context.t(EmployeeTextKeys.qrFailedTitle),
+        subtitle: context.t(EmployeeTextKeys.todayCheckConnection),
+        action: JitanMobileButton(label: context.t(EmployeeTextKeys.todayTryAgain), size: JitanMobileButtonSize.phone, onPressed: _load),
+      );
+    }
+    return HomePage(
+      navBar: navBar,
+      onRefresh: _load,
+      title: context.t(EmployeeTextKeys.qrTitle),
+      subtitle: context.t(EmployeeTextKeys.qrText),
+      children: [_pass(context)],
     );
   }
 
-  Widget _code(BuildContext context) {
-    if (_loading) {
-      return const SizedBox(height: 240, child: Center(child: CircularProgressIndicator(color: JitanColors.ink, strokeWidth: 2)));
-    }
-    final failure = _failure;
-    if (failure != null) {
-      return Column(
+  /// The white pass: name, employee code and the QR (a grey square while it
+  /// loads).
+  Widget _pass(BuildContext context) {
+    final account = widget.account;
+    final name = [account?.firstName, account?.lastName].whereType<String>().where((n) => n.isNotEmpty).join(' ');
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(24)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 30),
-          Text(
-            context.t(failure.statusCode == 404 ? EmployeeTextKeys.qrNone : EmployeeTextKeys.qrLoadFailed),
-            textAlign: TextAlign.center,
-            style: JitanMobileTextStyles.cardTitleSmall,
-          ),
-          if (failure.statusCode != 404) ...[
-            const SizedBox(height: 16),
-            JitanMobileButton(label: context.t(EmployeeTextKeys.todayTryAgain), onPressed: _load),
+          if (account != null) ...[
+            Text(name.isEmpty ? account.code : name, style: JitanMobileTextStyles.rowTitle.copyWith(fontSize: 17)),
+            const SizedBox(height: 3),
+            Text(context.t(EmployeeTextKeys.qrCode, args: {'code': account.code}), style: JitanMobileTextStyles.detail),
+            const SizedBox(height: 24),
           ],
-          const SizedBox(height: 30),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final size = constraints.maxWidth.clamp(160.0, 280.0);
+              return Center(
+                child: _loading || _qr == null
+                    ? Container(
+                        width: size,
+                        height: size,
+                        decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(12)),
+                      )
+                    : JitanQrCode(data: _qr!, semanticLabel: context.t(EmployeeTextKeys.qrSemantics), size: size, framed: false),
+              );
+            },
+          ),
         ],
-      );
-    }
-    return Column(
-      children: [
-        LayoutBuilder(
-          builder: (context, constraints) => JitanQrCode(
-            data: _qr!,
-            semanticLabel: context.t(EmployeeTextKeys.qrSemantics),
-            size: constraints.maxWidth.clamp(160.0, 240.0),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.qr_code_scanner, size: 16, color: JitanColors.inkMuted),
-            const SizedBox(width: 8),
-            Text(context.t(EmployeeTextKeys.qrReady), style: JitanMobileTextStyles.identityDetail),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }

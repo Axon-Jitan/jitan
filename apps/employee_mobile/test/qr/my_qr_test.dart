@@ -37,10 +37,10 @@ void main() {
     await open(tester);
 
     expect(find.text('My QR'), findsOneWidget);
-    expect(find.text('Present this code at a Jitan Terminal.'), findsOneWidget);
+    expect(find.text('Show it at a Jitan Terminal when you arrive and when you leave.'), findsOneWidget);
     expect(find.text('Disan Ssebowa'), findsOneWidget);
+    expect(find.text('Employee code SBW'), findsOneWidget);
     expect(tester.widget<JitanQrCode>(find.byType(JitanQrCode)).data, terminalQr);
-    expect(find.text('Ready to scan'), findsOneWidget);
     expect(find.text(terminalQr), findsNothing, reason: 'shown only as a QR');
     expect(h.server.requestsTo('/me/terminal-qr').single.headers['authorization'], 'Bearer stored-token');
     expect(h.store.values.values, isNot(contains(terminalQr)), reason: 'never kept on the phone');
@@ -49,6 +49,29 @@ void main() {
   testWidgets('an account without a QR says to ask HR', (tester) async {
     h.server.myTerminalQr = null;
     await open(tester);
-    expect(find.text('Your account has no QR yet. Ask HR.'), findsOneWidget);
+    expect(find.text('You don’t have a QR yet'), findsOneWidget);
+    expect(find.text('Ask HR to create one for you. Until then, register your time in the app.'), findsOneWidget);
+  });
+
+  testWidgets('a QR that can’t be loaded: Try again fetches it once more', (tester) async {
+    h.server.dropNext.add('/me/terminal-qr');
+    await open(tester);
+    expect(find.text('Your QR couldn’t be loaded'), findsOneWidget);
+
+    await tester.tap(find.text('Try again'));
+    await settle(tester);
+    expect(tester.widget<JitanQrCode>(find.byType(JitanQrCode)).data, terminalQr);
+  });
+
+  testWidgets('My QR fits a small phone (320 × 568) without overflowing', (tester) async {
+    tester.view.physicalSize = const Size(640, 1136);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(EmployeeApp(services: h.services));
+    await settle(tester);
+    await tester.tap(find.text('QR'));
+    await settle(tester);
+    expect(find.byType(JitanQrCode), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

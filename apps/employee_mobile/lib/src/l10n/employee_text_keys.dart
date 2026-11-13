@@ -292,12 +292,12 @@ abstract final class EmployeeTextKeys {
   // My QR (Figma 50:67)
   static const navQr = 'nav.qr';
   static const qrTitle = 'qr.title';
+  static const qrCode = 'qr.code';
+  static const qrNoneTitle = 'qr.none.title';
+  static const qrNoneText = 'qr.none.text';
+  static const qrFailedTitle = 'qr.failed.title';
   static const qrText = 'qr.text';
-  static const qrCaption = 'qr.caption';
-  static const qrReady = 'qr.ready';
   static const qrSemantics = 'qr.semantics';
-  static const qrLoadFailed = 'qr.loadFailed';
-  static const qrNone = 'qr.none';
   static const navHome = 'nav.home';
   static const navProfile = 'nav.profile';
 
