@@ -11,7 +11,8 @@ import 'period_text.dart';
 import 'period_widgets.dart';
 
 /// One day (Figma `1595:362`, `1595:419`, `1595:504`, 2026-11-13): the
-/// date between the arrows to the previous and next day, the line under it,
+/// date between plain arrows to the previous and next day (a swipe on the
+/// day does the same, as in Apple Health), the line under it,
 /// the total and the timeline with its stamps. A day with a missing start
 /// or finish offers to add it.
 class DayDetailsScreen extends StatefulWidget {
@@ -77,6 +78,9 @@ class _DayDetailsScreenState extends State<DayDetailsScreen> {
     }
   }
 
+  /// Never past today.
+  bool get _canGoForward => !_loading && _date.isBefore(widget.today);
+
   void _step(int days) {
     _date = DateTime.utc(_date.year, _date.month, _date.day + days);
     _load();
@@ -122,7 +126,19 @@ class _DayDetailsScreenState extends State<DayDetailsScreen> {
                 ),
                 const SizedBox(height: 18),
                 _dateRow(context),
-                Expanded(child: SingleChildScrollView(child: _content(context))),
+                Expanded(
+                  // Swipe left for the next day, right for the previous one.
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onHorizontalDragEnd: (details) {
+                      final speed = details.primaryVelocity ?? 0;
+                      if (speed.abs() < 300) return;
+                      if (speed < 0 && _canGoForward) _step(1);
+                      if (speed > 0 && !_loading) _step(-1);
+                    },
+                    child: SingleChildScrollView(child: _content(context)),
+                  ),
+                ),
                 if (fix) ...[
                   JitanMobileButton(label: missingTimeAction(context, day), size: JitanMobileButtonSize.phone, onPressed: () => _fix(day)),
                   const SizedBox(height: 12),
@@ -138,15 +154,12 @@ class _DayDetailsScreenState extends State<DayDetailsScreen> {
 
   /// ‹ Tuesday 20 October ›
   Widget _dateRow(BuildContext context) {
-    Widget arrow(IconData icon, String tooltip, VoidCallback? onPressed) => Material(
-      color: JitanColors.surface,
-      shape: const CircleBorder(),
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onPressed,
-        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-        icon: Icon(icon, size: 20, color: onPressed == null ? JitanColors.radioBorder : JitanColors.ink),
-      ),
+    // Plain chevrons, as Apple Health; a swipe on the day does the same.
+    Widget arrow(IconData icon, String tooltip, VoidCallback? onPressed) => IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+      icon: Icon(icon, size: 26, color: onPressed == null ? JitanColors.radioBorder : JitanColors.ink),
     );
     return Row(
       spacing: 4,
@@ -165,11 +178,7 @@ class _DayDetailsScreenState extends State<DayDetailsScreen> {
             ),
           ),
         ),
-        arrow(
-          Icons.chevron_right,
-          context.t(EmployeeTextKeys.periodDayNext),
-          _loading || !_date.isBefore(widget.today) ? null : () => _step(1),
-        ),
+        arrow(Icons.chevron_right, context.t(EmployeeTextKeys.periodDayNext), _canGoForward ? () => _step(1) : null),
       ],
     );
   }

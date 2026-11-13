@@ -268,6 +268,24 @@ void main() {
     expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_right)).onPressed, isNull, reason: 'no future days');
   });
 
+  testWidgets('a swipe changes the day too, and also stops at today', (tester) async {
+    await startApp(tester);
+    await tap(tester, 'Period');
+    await view(tester, 'Week');
+    await tap(tester, 'Wed 21');
+    expect(find.text('Wednesday 21 October'), findsOneWidget);
+
+    await tester.fling(find.byType(SingleChildScrollView).last, const Offset(300, 0), 1000);
+    await settle(tester);
+    expect(find.text('Tuesday 20 October'), findsOneWidget, reason: 'swiping right: the day before');
+
+    for (var i = 0; i < 3; i++) {
+      await tester.fling(find.byType(SingleChildScrollView).last, const Offset(-300, 0), 1000);
+      await settle(tester);
+    }
+    expect(find.text('Thursday 22 October'), findsOneWidget, reason: 'no swiping past today');
+  });
+
   testWidgets('Period fits a small phone (320 × 568) without overflowing', (tester) async {
     completeTuesday();
     missingFinishYesterday();
