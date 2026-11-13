@@ -91,23 +91,24 @@ class HomeTodayView extends StatelessWidget {
     },
   };
 
-  Widget _page(
-    BuildContext context, {
-    String? title,
-    String? subtitle,
-    List<Widget> children = const [],
-    Widget? action,
-    Widget? link,
-  }) => HomePage(
-    navBar: navBar,
-    onRefresh: today.load,
-    title: title,
-    subtitle: subtitle,
-    note: _saveFailure(context),
-    action: action,
-    link: link,
-    children: children,
-  );
+  Widget _page(BuildContext context, {String? title, String? subtitle, List<Widget> children = const [], Widget? action, Widget? link}) =>
+      HomePage(
+        navBar: navBar,
+        onRefresh: today.load,
+        title: title,
+        subtitle: subtitle,
+        notice: today.refreshFailed && today.state is TodayLoaded
+            ? PhoneRetryLine(
+                message: context.t(EmployeeTextKeys.todayRefreshFailed),
+                action: context.t(EmployeeTextKeys.todayTryAgain),
+                onPressed: today.load,
+              )
+            : null,
+        note: _saveFailure(context),
+        action: action,
+        link: link,
+        children: children,
+      );
 
   Widget? _saveFailure(BuildContext context) {
     final failure = today.registerFailure;
@@ -122,12 +123,8 @@ class HomeTodayView extends StatelessWidget {
     );
   }
 
-  Widget _button(BuildContext context, String key, VoidCallback onPressed) => JitanMobileButton(
-    label: context.t(key),
-    size: JitanMobileButtonSize.phone,
-    busy: today.busy,
-    onPressed: onPressed,
-  );
+  Widget _button(BuildContext context, String key, VoidCallback onPressed) =>
+      JitanMobileButton(label: context.t(key), size: JitanMobileButtonSize.phone, busy: today.busy, onPressed: onPressed);
 
   Widget _link(BuildContext context, String key, VoidCallback onPressed) =>
       PhoneQuietLink(label: context.t(key), onPressed: today.busy ? null : onPressed);
@@ -149,7 +146,9 @@ class HomeTodayView extends StatelessWidget {
           label: context.t(EmployeeTextKeys.todayPlanned),
           value: noSchedule ? context.t(EmployeeTextKeys.todayScheduleNone) : HomeText.span(day.scheduledStart, day.scheduledFinish),
           plainValue: noSchedule,
-          lines: [if (!noSchedule && breakMinutes > 0) context.t(EmployeeTextKeys.todayBreak, args: {'minutes': breakMinutes})],
+          lines: [
+            if (!noSchedule && breakMinutes > 0) context.t(EmployeeTextKeys.todayBreak, args: {'minutes': breakMinutes}),
+          ],
         ),
       ],
       action: switch (mode) {
@@ -182,10 +181,7 @@ class HomeTodayView extends StatelessWidget {
           value: elapsed == null ? '--' : TodayText.duration(context, elapsed),
           lines: [?line],
         ),
-        if (activity.showsCard) ...[
-          const SizedBox(height: 12),
-          HomeProjectRow(activity: activity.activity.current, onSwitch: onSwitch),
-        ],
+        if (activity.showsCard) ...[const SizedBox(height: 12), HomeProjectRow(activity: activity.activity.current, onSwitch: onSwitch)],
         if (moments.isNotEmpty) ...[const SizedBox(height: 12), HomeTimeline(moments: moments)],
       ],
       action: switch (mode) {

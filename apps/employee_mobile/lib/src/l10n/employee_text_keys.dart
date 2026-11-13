@@ -203,6 +203,7 @@ abstract final class EmployeeTextKeys {
   static const todayCheckConnection = 'today.checkConnection';
   static const todaySaveRefused = 'today.saveRefused';
   static const todayTryAgain = 'today.tryAgain';
+  static const todayRefreshFailed = 'today.refreshFailed';
   static const entryArriveTitle = 'entry.arrive.title';
   static const entryArriveText = 'entry.arrive.text';
   static const entryFinishTitle = 'entry.finish.title';

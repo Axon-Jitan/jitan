@@ -594,6 +594,7 @@ const builtInEnglish = <String, String>{
   'today.checkConnection': 'Check your connection and try again.',
   'today.saveRefused': 'This time isn’t possible. Check it and try again.',
   'today.tryAgain': 'Try again',
+  'today.refreshFailed': 'Couldn’t refresh',
   'entry.arrive.title': 'When did you arrive?',
   'entry.arrive.text': 'You forgot to start. Enter when you arrived.',
   'entry.finish.title': 'When did you finish?',

@@ -152,6 +152,22 @@ void main() {
     expect(find.text('Waiting for HR'), findsOneWidget, reason: 'on the start in the timeline');
   });
 
+  testWidgets('a refresh that fails keeps the day and says so; Try again loads it again (Figma 1602:2)', (tester) async {
+    await startApp(tester);
+    await tap(tester, 'Start work');
+    expect(find.text('You’re working'), findsOneWidget);
+
+    h.server.dropNext.add('/me/today');
+    await tester.fling(find.byType(SingleChildScrollView).first, const Offset(0, 400), 1000);
+    await settle(tester);
+    expect(find.text('You’re working'), findsOneWidget, reason: 'the day already loaded stays');
+    expect(find.text('Couldn’t refresh ·'), findsOneWidget);
+
+    await tap(tester, 'Try again');
+    expect(find.text('Couldn’t refresh ·'), findsNothing);
+    expect(find.text('You’re working'), findsOneWidget);
+  });
+
   testWidgets('a start waiting for HR counts from its rounded time, as a normal start does', (tester) async {
     // Entered 06:04; rounded up to the next quarter it counts from 06:15 once
     // approved (the server's preview).

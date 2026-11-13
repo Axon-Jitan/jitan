@@ -37,15 +37,7 @@ class PhoneListCard extends StatelessWidget {
 /// A row of a [PhoneListCard] that reacts to a tap: a title, an optional
 /// detail under it, and a trailing widget (a checkmark, a chevron, "Now").
 class PhoneListRow extends StatelessWidget {
-  const PhoneListRow({
-    super.key,
-    required this.title,
-    this.detail,
-    this.trailing,
-    this.onTap,
-    this.titleStyle,
-    this.selected = false,
-  });
+  const PhoneListRow({super.key, required this.title, this.detail, this.trailing, this.onTap, this.titleStyle, this.selected = false});
 
   final String title;
   final String? detail;
@@ -74,16 +66,8 @@ class PhoneListRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: titleStyle ?? JitanMobileTextStyles.rowTitle,
-                    ),
-                    if (detail case final detail?) ...[
-                      const SizedBox(height: 2),
-                      Text(detail, style: JitanMobileTextStyles.detail),
-                    ],
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle ?? JitanMobileTextStyles.rowTitle),
+                    if (detail case final detail?) ...[const SizedBox(height: 2), Text(detail, style: JitanMobileTextStyles.detail)],
                   ],
                 ),
               ),
@@ -129,6 +113,40 @@ class PhoneQuietLink extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
     ),
     child: Text(label, textAlign: TextAlign.center, style: JitanMobileTextStyles.quietLink),
+  );
+}
+
+/// One quiet line for a milder problem: "Couldn't refresh · Try again"
+/// (Figma `1602:2`). What is shown stays; the action tries again.
+class PhoneRetryLine extends StatelessWidget {
+  const PhoneRetryLine({super.key, required this.message, required this.action, required this.onPressed});
+
+  final String message;
+  final String action;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    child: Row(
+      children: [
+        Flexible(
+          child: Text('$message ·', maxLines: 1, overflow: TextOverflow.ellipsis, style: JitanMobileTextStyles.detail),
+        ),
+        TextButton(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+            foregroundColor: JitanColors.ink,
+            minimumSize: const Size(44, 36),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+          ),
+          child: Text(
+            action,
+            style: JitanMobileTextStyles.detail.copyWith(color: JitanColors.ink, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
   );
 }
 

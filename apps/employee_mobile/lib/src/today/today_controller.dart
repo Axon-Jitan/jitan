@@ -49,8 +49,14 @@ class TodayFailed extends TodayState {
 /// Offline queueing is not built yet (PRODUCT_CLARIFICATIONS, offline): a
 /// registration that can't reach the server fails visibly and is not kept.
 class TodayController extends ChangeNotifier {
-  TodayController(this._api, {required this._presence, required this._reminder, required this.onSessionEnded, this.onDayLoaded, DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  TodayController(
+    this._api, {
+    required this._presence,
+    required this._reminder,
+    required this.onSessionEnded,
+    this.onDayLoaded,
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
 
   final TimeRegistrationsApi _api;
   final WorkplacePresence _presence;
@@ -74,6 +80,10 @@ class TodayController extends ChangeNotifier {
   /// Why the last Start work / Finish work failed; `null` otherwise.
   ApiClientException? registerFailure;
 
+  /// The last refresh failed: the day shown is the one loaded before
+  /// (Figma `1602:2`, "Couldn't refresh · Try again").
+  bool refreshFailed = false;
+
   bool _disposed = false;
 
   DateTime now() => _clock();
@@ -85,7 +95,10 @@ class TodayController extends ChangeNotifier {
     }
     bool pending(RegistrationBoundary b) => day.pending.any((p) => p.boundary == b);
     // Came back after a finish, with a finish time still waiting for HR.
-    final registered = [for (final e in day.events) if (e.active && e.kind == TimeRecordEventKind.registered) e];
+    final registered = [
+      for (final e in day.events)
+        if (e.active && e.kind == TimeRecordEventKind.registered) e,
+    ];
     final finishedBefore = registered.any((e) => e.boundary == RegistrationBoundary.finish);
     if (day.finish == null && finishedBefore && registered.lastOrNull?.boundary == RegistrationBoundary.start) {
       return TodayPhase.working;
@@ -99,12 +112,19 @@ class TodayController extends ChangeNotifier {
     try {
       final day = await _api.today();
       away = await _awayOn(day);
+      refreshFailed = false;
       _set(TodayLoaded(day));
       onDayLoaded?.call();
     } on ApiClientException catch (e) {
       if (e.statusCode == 401) return onSessionEnded();
-      // Keep showing the day already loaded; only a first load fails.
-      if (state is! TodayLoaded) _set(TodayFailed(e));
+      // Keep showing the day already loaded, and say the refresh failed;
+      // only a first load fails as a page.
+      if (state is TodayLoaded) {
+        refreshFailed = true;
+        if (!_disposed) notifyListeners();
+      } else {
+        _set(TodayFailed(e));
+      }
     }
   }
 
@@ -194,12 +214,7 @@ class TodayController extends ChangeNotifier {
     _notify();
     try {
       await _api.register(
-        RegisterTimeRequest(
-          boundary: boundary,
-          method: TimeRegistrationMethod.manual,
-          entry: RegistrationEntry.now,
-          at: _clock().toUtc(),
-        ),
+        RegisterTimeRequest(boundary: boundary, method: TimeRegistrationMethod.manual, entry: RegistrationEntry.now, at: _clock().toUtc()),
       );
       await load();
     } on ApiClientException catch (e) {

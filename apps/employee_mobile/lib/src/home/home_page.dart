@@ -11,6 +11,7 @@ class HomePage extends StatelessWidget {
     required this.onRefresh,
     this.title,
     this.subtitle,
+    this.notice,
     this.children = const [],
     this.note,
     this.action,
@@ -21,6 +22,9 @@ class HomePage extends StatelessWidget {
   final Future<void> Function() onRefresh;
   final String? title;
   final String? subtitle;
+
+  /// Under the subtitle: "Couldn't refresh · Try again".
+  final Widget? notice;
   final List<Widget> children;
 
   /// Above the main button: something wasn't saved.
@@ -48,12 +52,12 @@ class HomePage extends StatelessWidget {
                     children: [
                       const Align(alignment: Alignment.centerLeft, child: JitanWordmark()),
                       const SizedBox(height: 26),
-                      if (title case final title?)
-                        Semantics(header: true, child: Text(title, style: JitanMobileTextStyles.pageTitle)),
+                      if (title case final title?) Semantics(header: true, child: Text(title, style: JitanMobileTextStyles.pageTitle)),
                       if (subtitle case final subtitle?) ...[
                         const SizedBox(height: 6),
                         Text(subtitle, style: JitanMobileTextStyles.pageSubtitle),
                       ],
+                      if (notice case final notice?) ...[const SizedBox(height: 4), notice],
                       if (title != null || subtitle != null) const SizedBox(height: 20),
                       ...children,
                     ],
