@@ -2,7 +2,7 @@
 //
 // - jitan-server: the Linux x64 API with the HR website built in, so the
 //   website and the API share one address and an update stays one file.
-// - set_first_password: the tool for the very first HR person (Linux x64).
+// - jitan-first-hr: sets up the very first HR person in one step (Linux x64).
 // - jitan-employee.apk: the employee app, talking to --api-url.
 // - SHA256SUMS: to check the files arrived whole.
 //
@@ -62,7 +62,7 @@ Future<void> _build(List<String> args) async {
     File(_assetsFile).writeAsStringSync(_embedded(Directory('${adminWeb.path}/build/web'), stub));
 
     stdout.writeln('3/4 Linux x64 executables');
-    for (final (source, name) in [('bin/server.dart', 'jitan-server'), ('bin/set_first_password.dart', 'set_first_password')]) {
+    for (final (source, name) in [('bin/server.dart', 'jitan-server'), ('bin/first_hr.dart', 'jitan-first-hr')]) {
       await _run('dart', ['compile', 'exe', '--target-os', 'linux', '--target-arch', 'x64', source, '-o', '${out.path}/$name'], server);
     }
   } finally {
@@ -74,7 +74,7 @@ Future<void> _build(List<String> args) async {
   File('${mobile.path}/build/app/outputs/flutter-apk/app-release.apk').copySync('${out.path}/jitan-employee.apk');
 
   final sums = [
-    for (final name in ['jitan-server', 'set_first_password', 'jitan-employee.apk'])
+    for (final name in ['jitan-server', 'jitan-first-hr', 'jitan-employee.apk'])
       '${sha256.convert(File('${out.path}/$name').readAsBytesSync())}  $name',
   ];
   File('${out.path}/SHA256SUMS').writeAsStringSync('${sums.join('\n')}\n');

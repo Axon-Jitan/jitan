@@ -10,7 +10,7 @@ agreed on 2026-10-16 ([DEPLOYMENT_CONFIGURATION.md](DEPLOYMENT_CONFIGURATION.md)
 | File | What it is |
 |---|---|
 | `jitan-server` | The API, Linux x64. The HR website is built into it: same address, one file to update. |
-| `set_first_password` | One-time tool for the first HR person, Linux x64. |
+| `jitan-first-hr` | Sets up the first HR person in one step, Linux x64. |
 | `jitan-employee.apk` | The employee app for the tablet. It talks to `https://10.1.101.65:8080`. |
 | `SHA256SUMS` | Check that the files arrived intact: `sha256sum -c SHA256SUMS`. |
 
@@ -61,13 +61,30 @@ its value).
 
 ## 4. The first HR person
 
-Nobody can sign in yet. For the first HR person (see "Giving HR access" in
-DEPLOYMENT_CONFIGURATION.md):
+Nobody can sign in yet. On the server, with the HR person beside you, run:
 
-1. Their `tblUser` row with their employee code, `userPassword` empty.
-2. HR access: `tblAppModulesCredGroup` (once per group) and their `tblUserCredGroup` row.
-3. On the server, with the same `/etc/jitan/app.env`:
-   `./set_first_password <employee code>`, then type a password when asked.
+```text
+$ ./jitan-first-hr
+Employee code: SBW
+New employee.
+First name: Disan
+Last name: Ssebowa
+Access group:
+  1) Admin
+  2) HR
+Choose 1-2: 2
+Now the HR person types their password (it is not shown).
+Password (at least 8 characters): ********
+Again: ********
+Done. SBW can now sign in on the HR website.
+```
+
+It uses the same `/etc/jitan/app.env` as the server. In one step it adds the employee
+(or uses their row if the code is already in `tblUser`), puts them in the access group,
+links that group to a module if it opens none yet (it then asks which one), and sets the
+password. Everything happens together or not at all, and each step is in the audit log.
+The groups and modules it lists are your rows in `tblCredGroup` and `tblAppModules`.
+It refuses an account that already has a password.
 
 They then sign in on the HR website, and everyone else is set up from there.
 
@@ -100,4 +117,5 @@ never changes the database structure and never deletes rows. Test records are na
 2. Does `agapp05.crt` name `10.1.101.65`, and who issued it (step 5)?
 3. Can phones reach `10.1.101.65:8080` from the office Wi-Fi? And later from outside
    the office, for employees on mobile data?
-4. Who is the first HR person (step 4)?
+4. Who is the first HR person (step 4), and do `tblCredGroup` and `tblAppModules` already
+   have an HR group and module?

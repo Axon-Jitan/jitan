@@ -75,6 +75,10 @@ enum AuditEventType {
   /// HR/Admin assigned a credential group (`tblUserCredGroup`).
   credentialGroupAssigned('employee.credential_group.assigned'),
 
+  /// IT, setting up the first HR person, let an access group open a module
+  /// (`tblAppModulesCredGroup`).
+  credentialGroupModuleLinked('credential_group.module.linked'),
+
   /// The preferred language changed (by the employee or HR/Admin). Generic:
   /// `tblEventLog` cannot say which language (GAP-12, accepted for V1).
   languageChanged('employee.language.changed'),

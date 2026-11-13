@@ -153,19 +153,18 @@ To take access away, set `userCredGroupActive = 0`. It applies on their next cli
 
 On a fresh database nobody can generate an onboarding QR yet.
 
-1. Add the person to `tblUser` with their employee code. `userPassword` stays empty.
-2. Give them access as above.
-3. On the server, with the same configuration as the API, run the tool and type a password when
-   asked. It is never taken from the command line:
+IT runs `./jitan-first-hr` on the server (built with the release, `bin/first_hr.dart`), with the
+person beside it (2026-11-13: one step instead of three). It asks for the employee code, the name
+when the code is new, the access group, the module when that group opens none yet, and the
+password, which the person types. It is never shown, never taken from the command line and never
+printed. In one transaction it adds the employee or uses their row, assigns the group, links the
+module and sets the password; a failure leaves nothing changed. Each step is audited, the person
+as actor (`employee.created`, `credential_group.module.linked`,
+`employee.credential_group.assigned`, `employee.password.first_set`).
 
-   ```sh
-   dart compile exe bin/set_first_password.dart -o set_first_password   # with the release
-   ./set_first_password SBW
-   ```
-
-It only works for an active employee with no password, so it can't take over an account. It is
-audited as `employee.password.first_set`. The person signs in, and everyone else onboards from
-there. Ask them to change this password in the employee app.
+It refuses an account that already has a password, so it can't take over an account, and never
+reuses the code of a switched-off or removed employee. The person signs in, and everyone else
+onboards from there. Ask them to change this password in the employee app.
 
 ## Kilometres
 
