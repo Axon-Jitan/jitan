@@ -335,6 +335,7 @@ abstract final class EmployeeTextKeys {
   static const profilePasswordRow = 'profile.passwordRow';
   static const profileSignOut = 'profile.signOut';
   static const profileLanguageRow = 'profile.language.row';
+  static const profileMethodQrValue = 'profile.method.qrValue';
   static const profileAllowed = 'profile.location.allowed';
   static const profileOff = 'profile.location.off';
   static const profileCheck = 'profile.location.check';

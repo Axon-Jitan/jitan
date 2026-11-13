@@ -91,9 +91,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (await askToSignOut(context)) _profile.onSignOut();
   }
 
+  /// The row's value: short, so the row stays one line ("QR", not "QR at
+  /// a Jitan Terminal"); the page names it in full.
   String _methodName(BuildContext context, RegistrationMethod method) => context.t(switch (method) {
     RegistrationMethod.automatic => EmployeeTextKeys.methodAutomaticTitle,
-    RegistrationMethod.qr => EmployeeTextKeys.methodQrTitle,
+    RegistrationMethod.qr => EmployeeTextKeys.profileMethodQrValue,
     RegistrationMethod.manual => EmployeeTextKeys.methodManualTitle,
   });
 

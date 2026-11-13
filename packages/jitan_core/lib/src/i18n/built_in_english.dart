@@ -721,6 +721,7 @@ const builtInEnglish = <String, String>{
   'profile.passwordRow': 'Password',
   'profile.signOut': 'Sign out',
   'profile.language.row': 'Language',
+  'profile.method.qrValue': 'QR',
   'profile.location.allowed': 'Allowed',
   'profile.location.off': 'Off',
   'profile.location.check': 'Check settings',

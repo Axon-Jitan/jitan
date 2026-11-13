@@ -395,6 +395,7 @@ void main() {
 
       await h.services.settings.setRegistrationMethod(RegistrationMethod.qr);
       await tap(tester, 'Profile');
+      expect(find.text('QR'), findsNWidgets(2), reason: 'the row says "QR" in short, beside the tab');
       await tap(tester, 'Home');
       expect(find.widgetWithText(JitanMobileButton, 'Show my QR'), findsOneWidget);
     });
