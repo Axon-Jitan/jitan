@@ -2,49 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../onboarding/qr_scanner_view.dart';
-import 'mobile_widgets.dart';
 
 // Spacing measured from the Figma "Auth / 06" and "Onboarding / 02B" frames
 // (390 × 844).
-
-/// Logo, title and subtitle at the top of the auth and scanner screens
-/// (Figma "Auth / …", "Onboarding / 02B").
-class BrandedHeader extends StatelessWidget {
-  const BrandedHeader({super.key, required this.title, required this.text});
-
-  final String title;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      JitanWordmark(style: JitanMobileTextStyles.logo.copyWith(fontSize: 24)),
-      const SizedBox(height: 28),
-      Semantics(header: true, child: Text(title, style: JitanMobileTextStyles.formTitle)),
-      const SizedBox(height: 10),
-      Text(text, style: JitanMobileTextStyles.caption),
-    ],
-  );
-}
-
-/// The warm-white scrolling page of those screens.
-class BrandedScaffold extends StatelessWidget {
-  const BrandedScaffold({super.key, required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: JitanColors.warmWhite,
-    body: SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(OnboardingPage.margin, 0, OnboardingPage.margin, 24),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
-      ),
-    ),
-  );
-}
 
 /// The square camera viewfinder of "Recover account" and "Scan your
 /// onboarding QR": dark frame, live camera, white corners and a hint. While

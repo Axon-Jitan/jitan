@@ -3,12 +3,13 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
 
-/// The layout of every onboarding screen (Figma `1591:356`, 2026-11-13): the
-/// wordmark or a back chevron with "n of 5" at the top, a title and a line
-/// under it, the content, then the main button and a quiet link at the
-/// bottom. The same calm style as Home.
-class OnboardingStepPage extends StatelessWidget {
-  const OnboardingStepPage({
+/// The layout of the first-run screens: onboarding (Figma `1591:356`) and
+/// sign-in and recovery (`1592:211`), 2026-11-13. The wordmark or a back
+/// chevron with "n of 5" at the top, a title and a line under it, the
+/// content, then the main button and a quiet link at the bottom. The same
+/// calm style as Home.
+class PhoneStepPage extends StatelessWidget {
+  const PhoneStepPage({
     super.key,
     required this.title,
     this.subtitle,
@@ -23,7 +24,7 @@ class OnboardingStepPage extends StatelessWidget {
     this.link,
   });
 
-  /// The steps after the scan: "Is this you?" … "Set a password".
+  /// Onboarding's steps after the scan: "Is this you?" … "Set a password".
   static const stepCount = 5;
 
   final String title;
@@ -119,17 +120,17 @@ class OnboardingStepPage extends StatelessWidget {
 
 /// The round icon above an error's title: red for a dead end, amber for
 /// "do this instead", grey for "try again".
-class OnboardingStatusIcon extends StatelessWidget {
-  const OnboardingStatusIcon({super.key, required this.tone});
+class PhoneStatusIcon extends StatelessWidget {
+  const PhoneStatusIcon({super.key, required this.tone});
 
-  final OnboardingTone tone;
+  final PhoneTone tone;
 
   @override
   Widget build(BuildContext context) {
     final (background, color, icon) = switch (tone) {
-      OnboardingTone.error => (JitanColors.errorSurface, JitanColors.error, Icons.priority_high_rounded),
-      OnboardingTone.warning => (JitanColors.warningSurface, JitanColors.warning, Icons.priority_high_rounded),
-      OnboardingTone.retry => (JitanColors.inputFill, JitanColors.ink, Icons.refresh_rounded),
+      PhoneTone.error => (JitanColors.errorSurface, JitanColors.error, Icons.priority_high_rounded),
+      PhoneTone.warning => (JitanColors.warningSurface, JitanColors.warning, Icons.priority_high_rounded),
+      PhoneTone.retry => (JitanColors.inputFill, JitanColors.ink, Icons.refresh_rounded),
     };
     return Align(
       alignment: Alignment.centerLeft,
@@ -143,4 +144,4 @@ class OnboardingStatusIcon extends StatelessWidget {
   }
 }
 
-enum OnboardingTone { error, warning, retry }
+enum PhoneTone { error, warning, retry }

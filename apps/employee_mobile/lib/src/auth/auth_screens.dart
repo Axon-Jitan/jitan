@@ -5,19 +5,25 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/employee_text_keys.dart';
 import '../onboarding/qr_scanner_view.dart';
 import '../widgets/mobile_widgets.dart';
+import '../widgets/phone_step_page.dart';
+import '../widgets/phone_widgets.dart';
 import '../widgets/qr_camera_frame.dart';
 import 'auth_controller.dart';
 import 'password_rules.dart';
 
-// Spacing measured from the Figma "Auth / …" frames (390 × 844).
+// Sign-in and recovery, drawn in Figma `1592:211` (2026-11-13).
 
-/// Auth / 01 Sign in.
+JitanMobileButton _button(String label, VoidCallback? onPressed, {bool busy = false}) =>
+    JitanMobileButton(label: label, onPressed: onPressed, busy: busy, size: JitanMobileButtonSize.phone);
+
+/// Sign in: employee code and password. "Forgot password?" opens the
+/// recovery scanner; "First time? Set up with my QR" goes back to onboarding.
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key, required this.controller, required this.onUseQr});
 
   final AuthController controller;
 
-  /// "Set up with my QR": back to onboarding for a first-time employee.
+  /// "First time? Set up with my QR": back to onboarding.
   final VoidCallback onUseQr;
 
   @override
@@ -38,10 +44,17 @@ class _SignInScreenState extends State<SignInScreen> {
   void _submit() => widget.controller.signIn(_code.text, _password.text);
 
   @override
-  Widget build(BuildContext context) => BrandedScaffold(
+  Widget build(BuildContext context) => PhoneStepPage(
+    title: context.t(EmployeeTextKeys.signInTitle),
+    subtitle: context.t(EmployeeTextKeys.signInText),
+    contentGap: 28,
+    action: _button(
+      context.t(EmployeeTextKeys.signInAction),
+      AuthController.canSubmit(_code.text, _password.text) ? _submit : null,
+      busy: widget.controller.busy,
+    ),
+    link: PhoneQuietLink(label: context.t(EmployeeTextKeys.signInUseQr), onPressed: widget.onUseQr),
     children: [
-      BrandedHeader(title: context.t(EmployeeTextKeys.signInTitle), text: context.t(EmployeeTextKeys.signInText)),
-      const SizedBox(height: 70),
       AutofillGroup(
         child: Column(
           children: [
@@ -53,8 +66,9 @@ class _SignInScreenState extends State<SignInScreen> {
               autofillHints: const [AutofillHints.username],
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 26),
+            const SizedBox(height: 18),
             PasswordField(
+              phone: true,
               controller: _password,
               label: context.t(EmployeeTextKeys.signInPasswordLabel),
               hint: context.t(EmployeeTextKeys.signInPasswordHint),
@@ -70,119 +84,19 @@ class _SignInScreenState extends State<SignInScreen> {
       ),
       Align(
         alignment: Alignment.centerRight,
-        child: TextButton(
-          onPressed: widget.controller.openForgotPassword,
-          style: TextButton.styleFrom(foregroundColor: JitanColors.vermilion),
-          child: Text(
-            context.t(EmployeeTextKeys.forgotLink),
-            style: JitanMobileTextStyles.link.copyWith(fontSize: 11, color: JitanColors.vermilion),
-          ),
-        ),
-      ),
-      const SizedBox(height: 32),
-      JitanMobileButton(
-        label: context.t(EmployeeTextKeys.signInAction),
-        style: JitanMobileButtonStyle.brand,
-        size: JitanMobileButtonSize.medium,
-        busy: widget.controller.busy,
-        onPressed: AuthController.canSubmit(_code.text, _password.text) ? _submit : null,
-      ),
-      const SizedBox(height: 24),
-      Row(
-        children: [
-          const Expanded(child: Divider(color: JitanColors.inputBorder, height: 1)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(context.t(EmployeeTextKeys.signInOr), style: JitanMobileTextStyles.caption.copyWith(fontSize: 10)),
-          ),
-          const Expanded(child: Divider(color: JitanColors.inputBorder, height: 1)),
-        ],
-      ),
-      const SizedBox(height: 18),
-      JitanMobileButton(
-        label: context.t(EmployeeTextKeys.signInRecoverQr),
-        size: JitanMobileButtonSize.compact,
-        onPressed: widget.controller.openRecovery,
-      ),
-      const SizedBox(height: 24),
-      NoteBox(
-        title: context.t(EmployeeTextKeys.signInHelpTitle),
-        text: context.t(EmployeeTextKeys.signInHelp),
-        minHeight: 86,
-      ),
-      const SizedBox(height: 4),
-      Center(
-        child: TextButton(
-          onPressed: widget.onUseQr,
-          style: TextButton.styleFrom(foregroundColor: JitanColors.vermilion),
-          child: Text(
-            context.t(EmployeeTextKeys.signInUseQr),
-            style: JitanMobileTextStyles.link.copyWith(fontSize: 11, color: JitanColors.vermilion),
-          ),
+        child: PhoneQuietLink(
+          label: context.t(EmployeeTextKeys.forgotLink),
+          onPressed: widget.controller.openRecovery,
         ),
       ),
     ],
   );
 }
 
-/// Auth / 02 Forgot password: asks for the employee code. Continue sends
-/// nothing and resets nothing; it opens "Recover with QR", which tells the
-/// employee to ask HR/Admin for a reset first.
-class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key, required this.controller});
-
-  final AuthController controller;
-
-  @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
-}
-
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  late final _code = TextEditingController(text: widget.controller.code);
-
-  @override
-  void dispose() {
-    _code.dispose();
-    super.dispose();
-  }
-
-  void _submit() => widget.controller.submitForgotPassword(_code.text);
-
-  @override
-  Widget build(BuildContext context) => BrandedScaffold(
-    children: [
-      BrandedHeader(title: context.t(EmployeeTextKeys.forgotTitle), text: context.t(EmployeeTextKeys.forgotText)),
-      const SizedBox(height: 88),
-      LabeledTextField(
-        controller: _code,
-        label: context.t(EmployeeTextKeys.codeLabel),
-        hint: context.t(EmployeeTextKeys.codeHint),
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) => _submit(),
-        onChanged: (_) => setState(() {}),
-      ),
-      const SizedBox(height: 46),
-      JitanMobileButton(
-        label: context.t(CommonTextKeys.continueAction),
-        style: JitanMobileButtonStyle.brand,
-        size: JitanMobileButtonSize.medium,
-        onPressed: _code.text.trim().isEmpty ? null : _submit,
-      ),
-      const SizedBox(height: 12),
-      Center(
-        child: TextButton(
-          onPressed: widget.controller.back,
-          style: TextButton.styleFrom(foregroundColor: JitanColors.inkMuted),
-          child: Text(context.t(EmployeeTextKeys.forgotBack), style: JitanMobileTextStyles.link.copyWith(fontSize: 11)),
-        ),
-      ),
-    ],
-  );
-}
-
-/// Auth / 06 Recover with QR: embedded camera. The QR is accepted only
-/// after HR/Admin "Reset account access"; otherwise it shows Auth / 06B
-/// Recovery refused ("Account reset required") and scanning continues.
+/// "Forgot your password?": the recovery scanner. Only HR can reset access,
+/// so the screen says that first. The QR is accepted only after HR/Admin
+/// "Reset account access"; before that a red line says so and scanning goes
+/// on. An expired or used QR shows "QR expired or used" on the same screen.
 class RecoverWithQrScreen extends StatelessWidget {
   const RecoverWithQrScreen({super.key, required this.controller, required this.scannerView});
 
@@ -193,61 +107,39 @@ class RecoverWithQrScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final refusal = controller.recoveryRefusal;
     final expired = refusal == RecoveryRefusal.qrExpiredOrUsed;
-    final (noteTitle, noteText) = switch (refusal) {
-      null => (EmployeeTextKeys.recoverNoteTitle, EmployeeTextKeys.recoverNoteText),
-      RecoveryRefusal.resetRequired => (EmployeeTextKeys.recoverRefusedTitle, EmployeeTextKeys.recoverRefusedText),
-      RecoveryRefusal.qrExpiredOrUsed => (EmployeeTextKeys.recoverExpiredNoteTitle, EmployeeTextKeys.recoverExpiredNoteText),
+    final (note, color) = switch (refusal) {
+      null => (EmployeeTextKeys.recoverNoteText, JitanColors.inkMuted),
+      RecoveryRefusal.resetRequired => (EmployeeTextKeys.recoverRefused, JitanColors.errorStrong),
+      RecoveryRefusal.qrExpiredOrUsed => (EmployeeTextKeys.recoverExpiredNoteText, JitanColors.inkMuted),
     };
-    return BrandedScaffold(
+    return PhoneStepPage(
+      showBack: true,
+      onBack: controller.busy ? null : controller.back,
+      title: context.t(expired ? EmployeeTextKeys.recoverExpiredTitle : EmployeeTextKeys.recoverTitle),
+      subtitle: context.t(expired ? EmployeeTextKeys.recoverExpiredText : EmployeeTextKeys.recoverText),
       children: [
-        // Auth / 06, 06B (refused) and 06C (QR expired or used).
-        BrandedHeader(
-          title: context.t(expired ? EmployeeTextKeys.recoverExpiredTitle : EmployeeTextKeys.recoverTitle),
-          text: context.t(expired ? EmployeeTextKeys.recoverExpiredText : EmployeeTextKeys.recoverText),
-        ),
-        const SizedBox(height: 56),
         QrCameraFrame(
           scannerView: scannerView,
           onDetected: controller.submitRecoveryQr,
           busy: controller.busy,
-          hint: context.t(expired ? EmployeeTextKeys.recoverExpiredScanHint : EmployeeTextKeys.recoverScanHint),
+          hint: context.t(EmployeeTextKeys.recoverScanHint),
         ),
-        if (refusal == RecoveryRefusal.resetRequired)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Text(
-              context.t(EmployeeTextKeys.recoverRefused),
-              textAlign: TextAlign.center,
-              style: JitanMobileTextStyles.noteTitle.copyWith(color: JitanColors.errorStrong),
-            ),
-          )
-        else
-          const SizedBox(height: 26),
+        const SizedBox(height: 14),
         Semantics(
           liveRegion: true,
-          child: NoteBox(
-            title: context.t(noteTitle),
-            text: context.t(noteText),
-            background: refusal != null ? JitanColors.errorSurface : JitanColors.warningSurface,
-            foreground: refusal != null ? JitanColors.errorStrong : JitanColors.warning,
-            textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 9),
-            minHeight: 94,
+          child: Text(
+            context.t(note),
+            textAlign: TextAlign.center,
+            style: JitanMobileTextStyles.detail.copyWith(color: color),
           ),
-        ),
-        const SizedBox(height: 32),
-        JitanMobileButton(
-          label: context.t(CommonTextKeys.back),
-          style: JitanMobileButtonStyle.secondary,
-          size: JitanMobileButtonSize.compact,
-          onPressed: controller.busy ? null : controller.back,
         ),
       ],
     );
   }
 }
 
-/// Auth / 07 Set new password after reset. "Set password & sign in" stores
-/// the new password (Argon2id on the server) and signs this device in.
+/// Set a new password after the reset. "Save and sign in" stores it
+/// (Argon2id on the server) and signs this phone in.
 class SetNewPasswordScreen extends StatefulWidget {
   const SetNewPasswordScreen({super.key, required this.controller});
 
@@ -272,17 +164,23 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final problem = widget.controller.passwordProblem;
+    final controller = widget.controller;
+    final problem = controller.passwordProblem;
     final showLabel = context.t(EmployeeTextKeys.passwordShow);
     final hideLabel = context.t(EmployeeTextKeys.passwordHide);
-    return BrandedScaffold(
+    return PhoneStepPage(
+      showBack: true,
+      onBack: controller.busy ? null : controller.back,
+      title: context.t(EmployeeTextKeys.newPasswordTitle),
+      subtitle: context.t(EmployeeTextKeys.newPasswordText),
+      contentGap: 28,
+      action: _button(context.t(EmployeeTextKeys.newPasswordAction), _submit, busy: controller.busy),
       children: [
-        BrandedHeader(title: context.t(EmployeeTextKeys.newPasswordTitle), text: context.t(EmployeeTextKeys.newPasswordText)),
-        const SizedBox(height: 70),
         AutofillGroup(
           child: Column(
             children: [
               PasswordField(
+                phone: true,
                 controller: _password,
                 label: context.t(EmployeeTextKeys.passwordLabel),
                 hint: context.t(EmployeeTextKeys.passwordHint),
@@ -297,8 +195,9 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.newPassword],
               ),
-              const SizedBox(height: 26),
+              const SizedBox(height: 18),
               PasswordField(
+                phone: true,
                 controller: _confirmation,
                 label: context.t(EmployeeTextKeys.passwordConfirmLabel),
                 hint: context.t(EmployeeTextKeys.passwordConfirmHint),
@@ -312,27 +211,15 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 38),
-        NoteBox(
-          title: context.t(EmployeeTextKeys.newPasswordNoteTitle),
-          text: context.t(EmployeeTextKeys.newPasswordNoteText),
-          textStyle: JitanMobileTextStyles.noteText.copyWith(fontSize: 9),
-          minHeight: 86,
-        ),
-        const SizedBox(height: 50),
-        JitanMobileButton(
-          label: context.t(EmployeeTextKeys.newPasswordAction),
-          style: JitanMobileButtonStyle.brand,
-          size: JitanMobileButtonSize.compact,
-          busy: widget.controller.busy,
-          onPressed: _submit,
-        ),
+        const SizedBox(height: 14),
+        Text(context.t(EmployeeTextKeys.newPasswordNoteText), style: JitanMobileTextStyles.detail),
       ],
     );
   }
 }
 
-/// Auth / 03 Invalid credentials, 04 Account unavailable, 05 Network error.
+/// Couldn't sign in, account unavailable, too many attempts, can't reach
+/// Jitan: a small icon, the title, one sentence, a line of help, one action.
 class AuthErrorScreen extends StatelessWidget {
   const AuthErrorScreen({super.key, required this.controller});
 
@@ -340,59 +227,62 @@ class AuthErrorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final retry = StatusAction(
-      label: context.t(CommonTextKeys.retry),
-      primary: true,
-      busy: controller.busy,
-      onPressed: controller.retry,
+    void retry() => controller.retry();
+    void back() => controller.back();
+    final (tone, title, text, help, actionKey, onAction, linkKey, onLink) =
+        switch (controller.problem ?? AuthProblem.unreachable) {
+          AuthProblem.invalidCredentials => (
+            PhoneTone.error,
+            EmployeeTextKeys.errorInvalidTitle,
+            EmployeeTextKeys.errorInvalidText,
+            EmployeeTextKeys.errorInvalidHelp,
+            CommonTextKeys.retry,
+            retry,
+            EmployeeTextKeys.errorInvalidForgot,
+            controller.openRecovery,
+          ),
+          AuthProblem.accountUnavailable => (
+            PhoneTone.warning,
+            EmployeeTextKeys.errorAccountTitle,
+            EmployeeTextKeys.errorAccountText,
+            EmployeeTextKeys.errorAccountHelp,
+            CommonTextKeys.back,
+            back,
+            null,
+            null,
+          ),
+          AuthProblem.tooManyAttempts => (
+            PhoneTone.warning,
+            EmployeeTextKeys.errorTooManyTitle,
+            EmployeeTextKeys.errorTooManyText,
+            EmployeeTextKeys.errorTooManyHelp,
+            CommonTextKeys.back,
+            back,
+            null,
+            null,
+          ),
+          AuthProblem.unreachable => (
+            PhoneTone.retry,
+            EmployeeTextKeys.errorReachTitle,
+            EmployeeTextKeys.errorReachText,
+            EmployeeTextKeys.errorReachHelp,
+            CommonTextKeys.retry,
+            retry,
+            CommonTextKeys.back,
+            back,
+          ),
+        };
+    final busy = controller.busy;
+    return PhoneStepPage(
+      showBack: true,
+      onBack: busy ? null : back,
+      above: Padding(padding: const EdgeInsets.only(top: 14, bottom: 10), child: PhoneStatusIcon(tone: tone)),
+      title: context.t(title),
+      subtitle: context.t(text),
+      contentGap: 12,
+      action: _button(context.t(actionKey), onAction, busy: busy),
+      link: linkKey == null ? null : PhoneQuietLink(label: context.t(linkKey), onPressed: busy ? null : onLink),
+      children: [Text(context.t(help), style: JitanMobileTextStyles.detail)],
     );
-    final back = StatusAction(label: context.t(CommonTextKeys.back), onPressed: controller.busy ? null : controller.back);
-    return switch (controller.problem ?? AuthProblem.unreachable) {
-      AuthProblem.invalidCredentials => StatusPage(
-        showLogo: true,
-        buttonSize: JitanMobileButtonSize.medium,
-        tone: StatusTone.error,
-        title: context.t(EmployeeTextKeys.errorInvalidTitle),
-        text: context.t(EmployeeTextKeys.errorInvalidText),
-        helpTitle: context.t(EmployeeTextKeys.errorInvalidHelpTitle),
-        help: context.t(EmployeeTextKeys.errorInvalidHelp),
-        actions: [
-          retry,
-          StatusAction(label: context.t(EmployeeTextKeys.errorInvalidForgot), onPressed: controller.openForgotPassword),
-        ],
-      ),
-      AuthProblem.accountUnavailable => StatusPage(
-        showLogo: true,
-        buttonSize: JitanMobileButtonSize.medium,
-        tone: StatusTone.warning,
-        inkHelpTitle: true,
-        title: context.t(EmployeeTextKeys.errorAccountTitle),
-        text: context.t(EmployeeTextKeys.errorAccountText),
-        helpTitle: context.t(EmployeeTextKeys.errorAccountHelpTitle),
-        help: context.t(EmployeeTextKeys.errorAccountHelp),
-        actions: [back],
-      ),
-      AuthProblem.tooManyAttempts => StatusPage(
-        showLogo: true,
-        buttonSize: JitanMobileButtonSize.medium,
-        tone: StatusTone.warning,
-        inkHelpTitle: true,
-        title: context.t(EmployeeTextKeys.errorTooManyTitle),
-        text: context.t(EmployeeTextKeys.errorTooManyText),
-        helpTitle: context.t(EmployeeTextKeys.errorTooManyHelpTitle),
-        help: context.t(EmployeeTextKeys.errorTooManyHelp),
-        actions: [back],
-      ),
-      AuthProblem.unreachable => StatusPage(
-        showLogo: true,
-        buttonSize: JitanMobileButtonSize.medium,
-        tone: StatusTone.error,
-        title: context.t(EmployeeTextKeys.errorReachTitle),
-        text: context.t(EmployeeTextKeys.errorReachText),
-        helpTitle: context.t(EmployeeTextKeys.errorReachHelpTitle),
-        help: context.t(EmployeeTextKeys.errorReachHelp),
-        actions: [retry, back],
-      ),
-    };
   }
 }

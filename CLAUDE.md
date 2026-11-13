@@ -168,7 +168,7 @@ before inserting (e.g. `CreateEmployeeRequest.max…Length`). Exports from IT's 
     locked-out one asks HR/Admin for **Reset account access**
     (`POST /companies/{id}/employees/{userId}/reset-access`): `userPassword = NULL`,
     audited, every session ends. HR/Admin then generates a **temporary recovery QR**
-    (`…/recovery-qr`); the employee scans it on Sign in → Recover account
+    (`…/recovery-qr`); the employee scans it on Sign in → Forgot password?
     (`/recovery/start`, `/recovery/complete`), sets a new password and is signed in.
     Employees can never clear their own password. All password writes outside onboarding
     are in `CredentialRepository`.

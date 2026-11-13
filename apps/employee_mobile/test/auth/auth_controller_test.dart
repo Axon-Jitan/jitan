@@ -52,11 +52,10 @@ void main() {
     expect(h.server.requests, isEmpty);
   });
 
-  test('forgot password sends nothing, resets nothing, and leads to Recover with QR', () {
-    c.openForgotPassword();
-    c.submitForgotPassword(' SBW ');
+  test('forgot password sends nothing, resets nothing: it opens the recovery scanner (only HR can reset)', () {
+    c.openRecovery();
 
-    expect((c.step, c.code), (AuthStep.recoverWithQr, 'SBW'));
+    expect(c.step, AuthStep.recoverWithQr);
     expect(h.server.requests, isEmpty);
   });
 

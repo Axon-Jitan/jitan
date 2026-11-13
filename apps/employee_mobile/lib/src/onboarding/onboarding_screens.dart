@@ -8,7 +8,7 @@ import '../l10n/employee_text_keys.dart';
 import '../widgets/mobile_widgets.dart';
 import '../widgets/phone_widgets.dart';
 import 'onboarding_controller.dart';
-import 'onboarding_step_page.dart';
+import '../widgets/phone_step_page.dart';
 
 // The onboarding screens, drawn in Figma `1591:356` (2026-11-13).
 
@@ -24,7 +24,7 @@ class WelcomeScreen extends StatelessWidget {
   final VoidCallback onSignIn;
 
   @override
-  Widget build(BuildContext context) => OnboardingStepPage(
+  Widget build(BuildContext context) => PhoneStepPage(
     large: true,
     title: context.t(EmployeeTextKeys.welcomeTitle),
     subtitle: context.t(EmployeeTextKeys.welcomeText),
@@ -52,7 +52,7 @@ class JoinScreen extends StatelessWidget {
   final VoidCallback onScan;
 
   @override
-  Widget build(BuildContext context) => OnboardingStepPage(
+  Widget build(BuildContext context) => PhoneStepPage(
     showBack: true,
     onBack: controller.back,
     title: context.t(EmployeeTextKeys.joinTitle),
@@ -82,7 +82,7 @@ class ConfirmScreen extends StatelessWidget {
     final name = [account?.firstName, account?.lastName].whereType<String>().where((n) => n.isNotEmpty).join(' ');
     final displayName = name.isEmpty ? (account?.code ?? '') : name;
     final details = [...?account?.companies, ?account?.code].join(' · ');
-    return OnboardingStepPage(
+    return PhoneStepPage(
       showBack: true,
       onBack: controller.back,
       step: 1,
@@ -158,7 +158,7 @@ class MethodScreen extends StatelessWidget {
       );
     }
 
-    return OnboardingStepPage(
+    return PhoneStepPage(
       showBack: true,
       onBack: controller.back,
       step: 2,
@@ -199,7 +199,7 @@ class PermissionsScreen extends StatelessWidget {
   final OnboardingController controller;
 
   @override
-  Widget build(BuildContext context) => OnboardingStepPage(
+  Widget build(BuildContext context) => PhoneStepPage(
     showBack: true,
     onBack: controller.busy ? null : controller.back,
     step: 3,
@@ -236,7 +236,7 @@ class LanguageScreen extends StatelessWidget {
   final OnboardingController controller;
 
   @override
-  Widget build(BuildContext context) => OnboardingStepPage(
+  Widget build(BuildContext context) => PhoneStepPage(
     showBack: true,
     onBack: controller.back,
     step: 4,
@@ -320,7 +320,7 @@ class _PasswordScreenState extends State<PasswordScreen> {
     };
     final showLabel = context.t(EmployeeTextKeys.passwordShow);
     final hideLabel = context.t(EmployeeTextKeys.passwordHide);
-    return OnboardingStepPage(
+    return PhoneStepPage(
       showBack: true,
       onBack: controller.busy ? null : controller.back,
       step: 5,
@@ -384,7 +384,7 @@ class ReadyScreen extends StatelessWidget {
       RegistrationMethod.qr => EmployeeTextKeys.methodQrTitle,
       RegistrationMethod.manual => EmployeeTextKeys.methodManualTitle,
     });
-    return OnboardingStepPage(
+    return PhoneStepPage(
       large: true,
       title: context.t(EmployeeTextKeys.readyTitle),
       subtitle: context.t(EmployeeTextKeys.readyText),

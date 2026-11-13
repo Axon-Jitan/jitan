@@ -180,7 +180,7 @@ void main() {
     expect(find.text('Can’t sign in? Ask HR to reset your access.'), findsOneWidget);
 
     await tapText(tester, 'Sign in');
-    expect(find.text('Sign in to Jitan'), findsOneWidget);
+    expect(find.text('Use your employee code and password.'), findsOneWidget);
     expect(h.server.requestsTo('/onboarding/complete'), isEmpty, reason: 'onboarding never restarted');
   });
 
@@ -203,7 +203,7 @@ void main() {
 
     await tapText(tester, 'Sign in');
 
-    expect(find.text('Sign in to Jitan'), findsOneWidget);
+    expect(find.text('Use your employee code and password.'), findsOneWidget);
   });
 
   testWidgets('the scanner matches Figma; the back chevron returns to Join without sending anything', (tester) async {
@@ -263,14 +263,14 @@ void main() {
 
       await startApp(tester);
 
-      expect(find.text('Sign in to Jitan'), findsOneWidget, reason: 'expired/revoked session → sign-in');
+      expect(find.text('Use your employee code and password.'), findsOneWidget, reason: 'expired/revoked session → sign-in');
       expect(h.store.values.containsKey('session.token'), isFalse);
     });
 
     testWidgets('a device signed in before (signed out, expired) opens sign-in; a fresh one onboarding', (tester) async {
       h.store.values['device.signedInBefore'] = 'true';
       await startApp(tester);
-      expect(find.text('Sign in to Jitan'), findsOneWidget);
+      expect(find.text('Use your employee code and password.'), findsOneWidget);
     });
 
     testWidgets('an expired session is discarded without asking the server', (tester) async {

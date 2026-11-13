@@ -29,7 +29,6 @@ class AuthFlow extends StatelessWidget {
           key: ValueKey(controller.step),
           child: switch (controller.step) {
             AuthStep.signIn => SignInScreen(controller: controller, onUseQr: onLeave),
-            AuthStep.forgotPassword => ForgotPasswordScreen(controller: controller),
             AuthStep.recoverWithQr => RecoverWithQrScreen(controller: controller, scannerView: scannerView),
             AuthStep.setNewPassword => SetNewPasswordScreen(controller: controller),
             AuthStep.error => AuthErrorScreen(controller: controller),

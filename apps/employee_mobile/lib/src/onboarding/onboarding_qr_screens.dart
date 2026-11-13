@@ -4,7 +4,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/employee_text_keys.dart';
 import '../widgets/qr_camera_frame.dart';
 import 'onboarding_controller.dart';
-import 'onboarding_step_page.dart';
+import '../widgets/phone_step_page.dart';
 import 'qr_scanner_view.dart';
 
 /// "Scan your setup QR" (Figma `1591:33`): the camera scanner. A read QR is
@@ -17,7 +17,7 @@ class ScanScreen extends StatelessWidget {
   final QrScannerView scannerView;
 
   @override
-  Widget build(BuildContext context) => OnboardingStepPage(
+  Widget build(BuildContext context) => PhoneStepPage(
     showBack: true,
     onBack: controller.busy ? null : controller.back,
     title: context.t(EmployeeTextKeys.scanTitle),

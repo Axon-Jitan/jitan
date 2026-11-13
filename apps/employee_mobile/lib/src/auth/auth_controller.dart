@@ -13,10 +13,9 @@ enum AuthStep {
   /// 01 Sign in.
   signIn,
 
-  /// 02 Forgot password.
-  forgotPassword,
-
-  /// 06 Recover with QR.
+  /// "Forgot your password?": the recovery scanner. Only HR can reset
+  /// access, so it opens straight from "Forgot password?" (product owner,
+  /// 2026-11-13; the screen that only asked for the code is gone).
   recoverWithQr,
 
   /// 07 Set new password after reset.
@@ -141,19 +140,11 @@ class AuthController extends ChangeNotifier {
     });
   }
 
-  // ── 02 Forgot password → 06 Recover with QR ────────────────────────────
+  // ── Forgot password: recover with QR ──────────────────────────────────
 
-  void openForgotPassword() => _go(AuthStep.forgotPassword);
-
-  /// Forgot password → Continue: nothing is sent or reset; the employee is
-  /// told to ask HR/Admin for a reset and a temporary recovery QR ("Recover
-  /// account").
-  void submitForgotPassword(String code) {
-    _code = code.trim();
-    openRecovery();
-  }
-
-  /// "Scan QR to recover account" (Sign in) or after Forgot password.
+  /// "Forgot password?" on Sign in or "Couldn’t sign in". Nothing is sent or
+  /// reset: the screen tells the employee to ask HR for a reset and a
+  /// temporary recovery QR.
   void openRecovery() {
     _recoveryRefusal = null;
     _refusedQr = null;

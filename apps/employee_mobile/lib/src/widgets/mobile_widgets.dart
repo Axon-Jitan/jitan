@@ -103,70 +103,7 @@ class OnboardingIllustration extends StatelessWidget {
   );
 }
 
-/// A selectable card with a radio indicator (Figma "Method / …").
-class ChoiceCard extends StatelessWidget {
-  const ChoiceCard({
-    super.key,
-    required this.title,
-    required this.selected,
-    required this.onTap,
-    this.text,
-    this.minHeight = 142,
-  });
-
-  final String title;
-  final String? text;
-  final bool selected;
-  final VoidCallback onTap;
-  final double minHeight;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    inMutuallyExclusiveGroup: true,
-    checked: selected,
-    button: true,
-    child: Material(
-      color: JitanColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: selected
-            ? const BorderSide(color: JitanColors.vermilion, width: 2)
-            : const BorderSide(color: JitanColors.cardBorder),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: minHeight),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 17, 24, 17),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RadioDot(selected: selected),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: JitanMobileTextStyles.cardTitle),
-                      if (text != null) ...[
-                        const SizedBox(height: 12),
-                        Text(text!, style: JitanMobileTextStyles.cardText),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// The 24 px radio circle of a [ChoiceCard].
+/// The 24 px radio circle of a choice (Profile / Registration method).
 class RadioDot extends StatelessWidget {
   const RadioDot({super.key, required this.selected});
 
@@ -377,114 +314,6 @@ class _PasswordFieldState extends State<PasswordField> {
   }
 }
 
-/// Tone of a [StatusPage]: the colours of its circle and help note.
-enum StatusTone { error, warning, info }
-
-/// One button on a [StatusPage].
-class StatusAction {
-  const StatusAction({required this.label, required this.onPressed, this.primary = false, this.busy = false});
-
-  final String label;
-  final VoidCallback? onPressed;
-
-  /// Vermilion main action; otherwise the warm-grey secondary style.
-  final bool primary;
-  final bool busy;
-}
-
-/// Full-screen state with a title, an 82 px status circle, a coloured help
-/// note and actions (Figma "Onboarding Error / …", "Auth / 03–05").
-class StatusPage extends StatelessWidget {
-  const StatusPage({
-    super.key,
-    required this.title,
-    required this.text,
-    required this.tone,
-    required this.helpTitle,
-    required this.help,
-    required this.actions,
-    this.showLogo = false,
-    this.buttonSize = JitanMobileButtonSize.compact,
-    this.footer = const [],
-    this.inkHelpTitle = false,
-  });
-
-  final String title;
-  final String text;
-  final StatusTone tone;
-  final String helpTitle;
-  final String help;
-  final List<StatusAction> actions;
-  final bool showLogo;
-  final JitanMobileButtonSize buttonSize;
-
-  /// Shown after the actions, e.g. an instruction that is not an action.
-  final List<Widget> footer;
-
-  /// The help title in ink instead of the tone's colour (Figma "Onboarding
-  /// Error / 03", "Auth / 04": "Contact HR/Admin").
-  final bool inkHelpTitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final (surface, strong, icon) = switch (tone) {
-      StatusTone.error => (JitanColors.errorSurface, JitanColors.errorStrong, Icons.priority_high_rounded),
-      StatusTone.warning => (JitanColors.warningSurface, JitanColors.warning, Icons.priority_high_rounded),
-      StatusTone.info => (JitanColors.infoSurface, JitanColors.info, Icons.refresh_rounded),
-    };
-    return Scaffold(
-      backgroundColor: JitanColors.warmWhite,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(OnboardingPage.margin, showLogo ? 0 : 14, OnboardingPage.margin, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (showLogo) ...[
-                const JitanWordmark(),
-                const SizedBox(height: 28),
-              ],
-              Semantics(
-                header: true,
-                child: Text(title, style: showLogo ? JitanMobileTextStyles.formTitle : JitanMobileTextStyles.errorTitle),
-              ),
-              const SizedBox(height: 10),
-              Text(text, style: JitanMobileTextStyles.caption),
-              SizedBox(height: showLogo ? 58 : 92),
-              Center(child: StatusCircle(background: surface, foreground: strong, icon: icon)),
-              const SizedBox(height: 28),
-              Semantics(
-                liveRegion: true,
-                child: NoteBox(
-                  title: helpTitle,
-                  text: help,
-                  background: surface,
-                  foreground: strong,
-                  titleForeground: inkHelpTitle ? JitanColors.ink : null,
-                  radius: 18,
-                  minHeight: showLogo ? 116 : 120,
-                ),
-              ),
-              const SizedBox(height: 34),
-              for (final (i, action) in actions.indexed) ...[
-                if (i > 0) const SizedBox(height: 12),
-                JitanMobileButton(
-                  label: action.label,
-                  style: action.primary ? JitanMobileButtonStyle.brand : JitanMobileButtonStyle.secondary,
-                  size: buttonSize,
-                  busy: action.busy,
-                  onPressed: action.onPressed,
-                ),
-              ],
-              if (footer.isNotEmpty) ...[const SizedBox(height: 12), ...footer],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// A labelled text field in the mobile form style (Figma "Field / Employee
 /// code"): white, 50 px, radius 14.
 class LabeledTextField extends StatelessWidget {
@@ -516,10 +345,10 @@ class LabeledTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: JitanMobileTextStyles.fieldLabel),
-        const SizedBox(height: 6),
+        Text(label, style: JitanMobileTextStyles.label),
+        const SizedBox(height: 8),
         SizedBox(
-          height: 50,
+          height: 52,
           child: TextField(
             controller: controller,
             autocorrect: false,
@@ -529,13 +358,13 @@ class LabeledTextField extends StatelessWidget {
             onSubmitted: onSubmitted,
             onChanged: onChanged,
             autofillHints: autofillHints,
-            style: JitanMobileTextStyles.fieldText,
+            style: JitanMobileTextStyles.rowText,
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: JitanMobileTextStyles.fieldHint,
+              hintStyle: JitanMobileTextStyles.rowText.copyWith(color: JitanColors.inkMuted),
               filled: true,
               fillColor: JitanColors.surface,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 15),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
               enabledBorder: border(JitanColors.inputBorder),
               focusedBorder: border(JitanColors.ink),
             ),

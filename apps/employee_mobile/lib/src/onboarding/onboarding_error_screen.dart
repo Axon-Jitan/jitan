@@ -5,7 +5,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../l10n/employee_text_keys.dart';
 import '../widgets/phone_widgets.dart';
 import 'onboarding_controller.dart';
-import 'onboarding_step_page.dart';
+import '../widgets/phone_step_page.dart';
 
 /// When onboarding can't go on (Figma `1591:294`, `1591:316`, `1591:335`):
 /// a small icon, the title, one sentence and a quiet line of help, then what
@@ -27,7 +27,7 @@ class OnboardingErrorScreen extends StatelessWidget {
     void back() => controller.back();
     final (tone, title, text, help, actionKey, onAction, withBack) = switch (problem) {
       OnboardingProblem.invalidQr => (
-        OnboardingTone.error,
+        PhoneTone.error,
         EmployeeTextKeys.errorInvalidQrTitle,
         EmployeeTextKeys.errorInvalidQrText,
         EmployeeTextKeys.errorInvalidQrHelp,
@@ -36,7 +36,7 @@ class OnboardingErrorScreen extends StatelessWidget {
         true,
       ),
       OnboardingProblem.qrExpired => (
-        OnboardingTone.error,
+        PhoneTone.error,
         EmployeeTextKeys.errorQrExpiredTitle,
         EmployeeTextKeys.errorQrExpiredText,
         EmployeeTextKeys.errorQrExpiredHelp,
@@ -45,7 +45,7 @@ class OnboardingErrorScreen extends StatelessWidget {
         true,
       ),
       OnboardingProblem.wrongQr => (
-        OnboardingTone.warning,
+        PhoneTone.warning,
         EmployeeTextKeys.errorWrongQrTitle,
         EmployeeTextKeys.errorWrongQrText,
         EmployeeTextKeys.errorWrongQrHelp,
@@ -54,7 +54,7 @@ class OnboardingErrorScreen extends StatelessWidget {
         true,
       ),
       OnboardingProblem.alreadyActivated => (
-        OnboardingTone.warning,
+        PhoneTone.warning,
         EmployeeTextKeys.errorAlreadyActivatedTitle,
         EmployeeTextKeys.errorAlreadyActivatedText,
         EmployeeTextKeys.errorAlreadyActivatedHelp,
@@ -63,7 +63,7 @@ class OnboardingErrorScreen extends StatelessWidget {
         false,
       ),
       OnboardingProblem.accountUnavailable => (
-        OnboardingTone.error,
+        PhoneTone.error,
         EmployeeTextKeys.errorUnavailableTitle,
         EmployeeTextKeys.errorUnavailableText,
         EmployeeTextKeys.errorUnavailableHelp,
@@ -72,7 +72,7 @@ class OnboardingErrorScreen extends StatelessWidget {
         false,
       ),
       OnboardingProblem.activatedElsewhere => (
-        OnboardingTone.warning,
+        PhoneTone.warning,
         EmployeeTextKeys.errorActivatedElsewhereTitle,
         EmployeeTextKeys.errorActivatedElsewhereText,
         EmployeeTextKeys.errorActivatedElsewhereHelp,
@@ -81,7 +81,7 @@ class OnboardingErrorScreen extends StatelessWidget {
         true,
       ),
       OnboardingProblem.networkFailure => (
-        OnboardingTone.retry,
+        PhoneTone.retry,
         EmployeeTextKeys.errorNetworkTitle,
         EmployeeTextKeys.errorNetworkText,
         EmployeeTextKeys.errorNetworkHelp,
@@ -90,7 +90,7 @@ class OnboardingErrorScreen extends StatelessWidget {
         true,
       ),
       OnboardingProblem.serverUnavailable => (
-        OnboardingTone.retry,
+        PhoneTone.retry,
         EmployeeTextKeys.errorServerTitle,
         EmployeeTextKeys.errorServerText,
         EmployeeTextKeys.errorServerHelp,
@@ -99,7 +99,7 @@ class OnboardingErrorScreen extends StatelessWidget {
         true,
       ),
       OnboardingProblem.sessionRecovery => (
-        OnboardingTone.retry,
+        PhoneTone.retry,
         EmployeeTextKeys.errorSessionRecoveryTitle,
         EmployeeTextKeys.errorSessionRecoveryText,
         EmployeeTextKeys.errorSessionRecoveryHelp,
@@ -109,10 +109,10 @@ class OnboardingErrorScreen extends StatelessWidget {
       ),
     };
     final busy = controller.busy;
-    return OnboardingStepPage(
+    return PhoneStepPage(
       showBack: true,
       onBack: busy ? null : back,
-      above: Padding(padding: const EdgeInsets.only(top: 14, bottom: 10), child: OnboardingStatusIcon(tone: tone)),
+      above: Padding(padding: const EdgeInsets.only(top: 14, bottom: 10), child: PhoneStatusIcon(tone: tone)),
       title: context.t(title),
       subtitle: context.t(text),
       contentGap: 12,
