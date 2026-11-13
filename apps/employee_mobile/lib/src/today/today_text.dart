@@ -20,17 +20,16 @@ abstract final class TodayText {
   }
 
   /// "8h 07m".
-  static String duration(BuildContext context, int minutes) => context.t(
-    EmployeeTextKeys.todayDuration,
-    args: {'hours': minutes ~/ 60, 'minutes': (minutes % 60).toString().padLeft(2, '0')},
-  );
+  static String duration(BuildContext context, int minutes) =>
+      context.t(EmployeeTextKeys.todayDuration, args: {'hours': minutes ~/ 60, 'minutes': (minutes % 60).toString().padLeft(2, '0')});
 }
 
 /// The start or finish of [day] as the employee sees it: what counts, or the
 /// correction waiting for HR (D31).
 ({String? local, DateTime? at, bool pending}) shownTime(TimeRecordDay? day, RegistrationBoundary boundary) {
   final request = day?.pending.where((p) => p.boundary == boundary).firstOrNull;
-  if (request != null) return (local: request.requestedLocal, at: request.requested, pending: true);
+  // Shown as entered; counted from where it will count once HR approves.
+  if (request != null) return (local: request.requestedLocal, at: request.rounded ?? request.requested, pending: true);
   final time = boundary == RegistrationBoundary.start ? day?.start : day?.finish;
   return (local: time?.actualLocal, at: time?.rounded ?? time?.actual, pending: false);
 }

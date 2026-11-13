@@ -152,6 +152,24 @@ void main() {
     expect(find.text('Waiting for HR'), findsOneWidget, reason: 'on the start in the timeline');
   });
 
+  testWidgets('a start waiting for HR counts from its rounded time, as a normal start does', (tester) async {
+    // Entered 06:04; rounded up to the next quarter it counts from 06:15 once
+    // approved (the server's preview).
+    h.server.registrations.add({
+      'boundary': 'start',
+      'entry': 'corrected',
+      'at': DateTime(2026, 10, 22, 6, 4).toUtc().toIso8601String(),
+      'reason': 'Forgot',
+    });
+    h.server.pendingRounded = DateTime(2026, 10, 22, 6, 15);
+    h.server.firstDay = false;
+    now = DateTime(2026, 10, 22, 9, 30);
+    await startApp(tester);
+
+    expect(find.text('Since 06:04 · Your start time waits for HR'), findsOneWidget, reason: 'shown as entered');
+    expect(find.text('3h 15m'), findsOneWidget, reason: 'counted from 06:15, as it will count, not 3h 26m from 06:04');
+  });
+
   testWidgets('finished earlier: the finish correction waits for HR; the day shows WAITING FOR HR and no total', (tester) async {
     await startApp(tester);
     await tap(tester, 'Start work');
@@ -249,7 +267,11 @@ void main() {
 
     expect(find.text('P-1042 Office refurbishment'), findsOneWidget);
     expect(find.text('Switch'), findsOneWidget);
-    expect(find.text('Planned finish 16:30 · + 0h 42m travel · 36 km'), findsOneWidget, reason: 'travel beside the total, never in it (D46)');
+    expect(
+      find.text('Planned finish 16:30 · + 0h 42m travel · 36 km'),
+      findsOneWidget,
+      reason: 'travel beside the total, never in it (D46)',
+    );
     expect(find.text('09:00'), findsOneWidget, reason: 'the start once, not again as its first switch');
     expect(find.text('Transport'), findsOneWidget);
     expect(find.text('36 km'), findsOneWidget);

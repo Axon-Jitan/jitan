@@ -117,7 +117,10 @@ class _PeriodScreenState extends State<PeriodScreen> {
     final start =
         day?.start?.rounded ??
         day?.start?.actual ??
-        day?.pending.where((p) => p.boundary == RegistrationBoundary.start).firstOrNull?.requested;
+        switch (day?.pending.where((p) => p.boundary == RegistrationBoundary.start).firstOrNull) {
+          final p? => p.rounded ?? p.requested,
+          null => null,
+        };
     final working = day?.status == TimeRecordStatus.working;
     final now = _controller.now();
     final minutes =

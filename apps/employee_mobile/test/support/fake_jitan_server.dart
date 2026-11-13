@@ -307,6 +307,10 @@ class FakeJitanServer {
   /// JSON and its registered minutes.
   final pastDays = <String, (Map<String, Object?>, int?)>{};
 
+  /// What a correction waiting for HR would count as after rounding, as the
+  /// server previews it; `null` sends no preview.
+  DateTime? pendingRounded;
+
   /// What other days went on (Period's timeline), by `yyyy-MM-dd`.
   final pastActivities = <String, List<ActivityEntry>>{};
 
@@ -358,6 +362,7 @@ class FakeJitanServer {
           'requested': at.toIso8601String(),
           'requestedLocal': local(at),
           'reason': r['reason'],
+          if (pendingRounded case final rounded?) ...{'rounded': rounded.toUtc().toIso8601String(), 'roundedLocal': local(rounded)},
         });
       } else {
         times[r['boundary']! as String] = {

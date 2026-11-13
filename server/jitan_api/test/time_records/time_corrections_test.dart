@@ -86,6 +86,7 @@ void main() {
         '08:15',
         'Forgot to tap',
       ));
+      expect(pending.rounded, DateTime.utc(2026, 10, 22, 6, 15), reason: '08:15 in Brussels, as UTC: the phone counts its running total from it');
     });
 
     test('approve: HR\'s corrected time and its rounded time count; the request stays as history', () async {

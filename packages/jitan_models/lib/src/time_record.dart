@@ -37,10 +37,8 @@ enum TimeRecordStatus {
 
   final String wireName;
 
-  static TimeRecordStatus fromWire(String value) => values.firstWhere(
-        (s) => s.wireName == value,
-        orElse: () => throw FormatException('Unknown time record status "$value".'),
-      );
+  static TimeRecordStatus fromWire(String value) =>
+      values.firstWhere((s) => s.wireName == value, orElse: () => throw FormatException('Unknown time record status "$value".'));
 }
 
 /// A finished day against its schedule (D11b): on time, late, or left early.
@@ -54,10 +52,8 @@ enum DayAttendance {
 
   final String wireName;
 
-  static DayAttendance fromWire(String value) => values.firstWhere(
-        (a) => a.wireName == value,
-        orElse: () => throw FormatException('Unknown attendance "$value".'),
-      );
+  static DayAttendance fromWire(String value) =>
+      values.firstWhere((a) => a.wireName == value, orElse: () => throw FormatException('Unknown attendance "$value".'));
 }
 
 /// How a time was registered: the method of its "actual" `tblTimeRegType`
@@ -71,10 +67,8 @@ enum TimeRecordMethod {
 
   final String wireName;
 
-  static TimeRecordMethod fromWire(String value) => values.firstWhere(
-        (m) => m.wireName == value,
-        orElse: () => throw FormatException('Unknown method "$value".'),
-      );
+  static TimeRecordMethod fromWire(String value) =>
+      values.firstWhere((m) => m.wireName == value, orElse: () => throw FormatException('Unknown method "$value".'));
 }
 
 /// Who corrected a time.
@@ -108,17 +102,17 @@ class TimeRecordTime {
   });
 
   factory TimeRecordTime.fromJson(Map<String, Object?> json) => TimeRecordTime(
-        actualId: json.readInt('actualId'),
-        actual: DateTime.parse(json.readString('actual')).toUtc(),
-        rounded: json['rounded'] == null ? null : DateTime.parse(json.readString('rounded')).toUtc(),
-        method: TimeRecordMethod.fromWire(json.readString('method')),
-        enteredByHand: json.readBool('enteredByHand'),
-        actualLocal: json.readString('actualLocal'),
-        roundedLocal: json.readOptionalString('roundedLocal'),
-        reason: json.readOptionalString('reason'),
-        correctedBy: TimeCorrectionBy.fromWire(json.readOptionalString('correctedBy')),
-        originalLocal: json.readOptionalString('originalLocal'),
-      );
+    actualId: json.readInt('actualId'),
+    actual: DateTime.parse(json.readString('actual')).toUtc(),
+    rounded: json['rounded'] == null ? null : DateTime.parse(json.readString('rounded')).toUtc(),
+    method: TimeRecordMethod.fromWire(json.readString('method')),
+    enteredByHand: json.readBool('enteredByHand'),
+    actualLocal: json.readString('actualLocal'),
+    roundedLocal: json.readOptionalString('roundedLocal'),
+    reason: json.readOptionalString('reason'),
+    correctedBy: TimeCorrectionBy.fromWire(json.readOptionalString('correctedBy')),
+    originalLocal: json.readOptionalString('originalLocal'),
+  );
 
   /// `tblTimeReg.timeRegID` of the row that counts (actual or corrected).
   final int actualId;
@@ -150,17 +144,17 @@ class TimeRecordTime {
   final String? originalLocal;
 
   Map<String, Object?> toJson() => {
-        'actualId': actualId,
-        'actual': actual.toUtc().toIso8601String(),
-        'rounded': rounded?.toUtc().toIso8601String(),
-        'method': method.wireName,
-        'enteredByHand': enteredByHand,
-        'actualLocal': actualLocal,
-        'roundedLocal': roundedLocal,
-        'reason': reason,
-        'correctedBy': correctedBy?.wireName,
-        'originalLocal': originalLocal,
-      };
+    'actualId': actualId,
+    'actual': actual.toUtc().toIso8601String(),
+    'rounded': rounded?.toUtc().toIso8601String(),
+    'method': method.wireName,
+    'enteredByHand': enteredByHand,
+    'actualLocal': actualLocal,
+    'roundedLocal': roundedLocal,
+    'reason': reason,
+    'correctedBy': correctedBy?.wireName,
+    'originalLocal': originalLocal,
+  };
 }
 
 /// An employee's correction waiting for HR (D31, Figma `160:338`).
@@ -172,16 +166,18 @@ class TimeRecordPending {
     required this.requestedLocal,
     required this.reason,
     this.roundedLocal,
+    this.rounded,
   });
 
   factory TimeRecordPending.fromJson(Map<String, Object?> json) => TimeRecordPending(
-        id: json.readInt('id'),
-        boundary: RegistrationBoundary.fromWire(json.readString('boundary')),
-        requested: DateTime.parse(json.readString('requested')).toUtc(),
-        requestedLocal: json.readString('requestedLocal'),
-        reason: json.readOptionalString('reason'),
-        roundedLocal: json.readOptionalString('roundedLocal'),
-      );
+    id: json.readInt('id'),
+    boundary: RegistrationBoundary.fromWire(json.readString('boundary')),
+    requested: DateTime.parse(json.readString('requested')).toUtc(),
+    requestedLocal: json.readString('requestedLocal'),
+    reason: json.readOptionalString('reason'),
+    roundedLocal: json.readOptionalString('roundedLocal'),
+    rounded: json['rounded'] == null ? null : DateTime.parse(json.readString('rounded')).toUtc(),
+  );
 
   /// `tblTimeReg.timeRegID` of the employee's row.
   final int id;
@@ -193,14 +189,19 @@ class TimeRecordPending {
   /// What it would count as after rounding with the employee's schedule.
   final String? roundedLocal;
 
+  /// The same moment in UTC, so a running total counts from it as it will
+  /// once HR approves: rounded like any registration (D4).
+  final DateTime? rounded;
+
   Map<String, Object?> toJson() => {
-        'id': id,
-        'boundary': boundary.wireName,
-        'requested': requested.toUtc().toIso8601String(),
-        'requestedLocal': requestedLocal,
-        'reason': reason,
-        'roundedLocal': roundedLocal,
-      };
+    'id': id,
+    'boundary': boundary.wireName,
+    'requested': requested.toUtc().toIso8601String(),
+    'requestedLocal': requestedLocal,
+    'reason': reason,
+    'roundedLocal': roundedLocal,
+    if (rounded != null) 'rounded': rounded!.toUtc().toIso8601String(),
+  };
 }
 
 /// What happened in a day's timeline.
@@ -224,10 +225,8 @@ enum TimeRecordEventKind {
 
   final String wireName;
 
-  static TimeRecordEventKind fromWire(String value) => values.firstWhere(
-        (k) => k.wireName == value,
-        orElse: () => throw FormatException('Unknown event "$value".'),
-      );
+  static TimeRecordEventKind fromWire(String value) =>
+      values.firstWhere((k) => k.wireName == value, orElse: () => throw FormatException('Unknown event "$value".'));
 }
 
 /// One row of a day's detailed timeline: every start and finish stored that
@@ -243,13 +242,13 @@ class TimeRecordEvent {
   });
 
   factory TimeRecordEvent.fromJson(Map<String, Object?> json) => TimeRecordEvent(
-        atLocal: json.readString('atLocal'),
-        boundary: RegistrationBoundary.fromWire(json.readString('boundary')),
-        kind: TimeRecordEventKind.fromWire(json.readString('kind')),
-        active: json.readBool('active'),
-        method: json['method'] == null ? null : TimeRecordMethod.fromWire(json.readString('method')),
-        reason: json.readOptionalString('reason'),
-      );
+    atLocal: json.readString('atLocal'),
+    boundary: RegistrationBoundary.fromWire(json.readString('boundary')),
+    kind: TimeRecordEventKind.fromWire(json.readString('kind')),
+    active: json.readBool('active'),
+    method: json['method'] == null ? null : TimeRecordMethod.fromWire(json.readString('method')),
+    reason: json.readOptionalString('reason'),
+  );
 
   final String atLocal;
   final RegistrationBoundary boundary;
@@ -261,13 +260,13 @@ class TimeRecordEvent {
   final String? reason;
 
   Map<String, Object?> toJson() => {
-        'atLocal': atLocal,
-        'boundary': boundary.wireName,
-        'kind': kind.wireName,
-        'active': active,
-        'method': method?.wireName,
-        'reason': reason,
-      };
+    'atLocal': atLocal,
+    'boundary': boundary.wireName,
+    'kind': kind.wireName,
+    'active': active,
+    'method': method?.wireName,
+    'reason': reason,
+  };
 }
 
 /// One employee's working day in Time records (Figma `160:2`, `160:94`):
@@ -297,29 +296,29 @@ class TimeRecordDay {
   });
 
   factory TimeRecordDay.fromJson(Map<String, Object?> json) => TimeRecordDay(
-        employeeId: json.readInt('employeeId'),
-        firstName: json.readOptionalString('firstName'),
-        lastName: json.readOptionalString('lastName'),
-        employeeCode: json.readString('employeeCode'),
-        date: parseDate(json.readString('date')),
-        status: TimeRecordStatus.fromWire(json.readString('status')),
-        start: json['start'] == null ? null : TimeRecordTime.fromJson(json.readObject('start')),
-        finish: json['finish'] == null ? null : TimeRecordTime.fromJson(json.readObject('finish')),
-        pending: json['pending'] == null ? const [] : json.readObjectList('pending').map(TimeRecordPending.fromJson).toList(),
-        events: json['events'] == null ? const [] : json.readObjectList('events').map(TimeRecordEvent.fromJson).toList(),
-        nonWorkReason: json.readOptionalString('nonWorkReason'),
-        companyIds: json['companyIds'] == null ? const [] : json.readIntList('companyIds'),
-        awayMinutes: json.readOptionalInt('awayMinutes') ?? 0,
-        transportMinutes: json.readOptionalInt('transportMinutes') ?? 0,
-        travellingSince: json.readOptionalDateTime('travellingSince')?.toUtc(),
-        attendance: switch (json.readOptionalString('attendance')) {
-          final String a => DayAttendance.fromWire(a),
-          null => null,
-        },
-        trips: json.readOptionalInt('trips') ?? 0,
-        distanceMetres: json.readOptionalInt('distanceMetres') ?? 0,
-        tripsWithoutDistance: json.readOptionalInt('tripsWithoutDistance') ?? 0,
-      );
+    employeeId: json.readInt('employeeId'),
+    firstName: json.readOptionalString('firstName'),
+    lastName: json.readOptionalString('lastName'),
+    employeeCode: json.readString('employeeCode'),
+    date: parseDate(json.readString('date')),
+    status: TimeRecordStatus.fromWire(json.readString('status')),
+    start: json['start'] == null ? null : TimeRecordTime.fromJson(json.readObject('start')),
+    finish: json['finish'] == null ? null : TimeRecordTime.fromJson(json.readObject('finish')),
+    pending: json['pending'] == null ? const [] : json.readObjectList('pending').map(TimeRecordPending.fromJson).toList(),
+    events: json['events'] == null ? const [] : json.readObjectList('events').map(TimeRecordEvent.fromJson).toList(),
+    nonWorkReason: json.readOptionalString('nonWorkReason'),
+    companyIds: json['companyIds'] == null ? const [] : json.readIntList('companyIds'),
+    awayMinutes: json.readOptionalInt('awayMinutes') ?? 0,
+    transportMinutes: json.readOptionalInt('transportMinutes') ?? 0,
+    travellingSince: json.readOptionalDateTime('travellingSince')?.toUtc(),
+    attendance: switch (json.readOptionalString('attendance')) {
+      final String a => DayAttendance.fromWire(a),
+      null => null,
+    },
+    trips: json.readOptionalInt('trips') ?? 0,
+    distanceMetres: json.readOptionalInt('distanceMetres') ?? 0,
+    tripsWithoutDistance: json.readOptionalInt('tripsWithoutDistance') ?? 0,
+  );
 
   final int employeeId;
   final String? firstName;
@@ -373,50 +372,49 @@ class TimeRecordDay {
     int? distanceMetres,
     int? tripsWithoutDistance,
     DayAttendance? attendance,
-  }) =>
-      TimeRecordDay(
-        employeeId: employeeId,
-        employeeCode: employeeCode,
-        date: date,
-        status: status,
-        firstName: firstName,
-        lastName: lastName,
-        start: start,
-        finish: finish,
-        pending: pending ?? this.pending,
-        events: events,
-        nonWorkReason: nonWorkReason,
-        companyIds: companyIds,
-        awayMinutes: awayMinutes,
-        transportMinutes: transportMinutes,
-        travellingSince: travellingSince,
-        attendance: attendance ?? this.attendance,
-        trips: trips ?? this.trips,
-        distanceMetres: distanceMetres ?? this.distanceMetres,
-        tripsWithoutDistance: tripsWithoutDistance ?? this.tripsWithoutDistance,
-      );
+  }) => TimeRecordDay(
+    employeeId: employeeId,
+    employeeCode: employeeCode,
+    date: date,
+    status: status,
+    firstName: firstName,
+    lastName: lastName,
+    start: start,
+    finish: finish,
+    pending: pending ?? this.pending,
+    events: events,
+    nonWorkReason: nonWorkReason,
+    companyIds: companyIds,
+    awayMinutes: awayMinutes,
+    transportMinutes: transportMinutes,
+    travellingSince: travellingSince,
+    attendance: attendance ?? this.attendance,
+    trips: trips ?? this.trips,
+    distanceMetres: distanceMetres ?? this.distanceMetres,
+    tripsWithoutDistance: tripsWithoutDistance ?? this.tripsWithoutDistance,
+  );
 
   Map<String, Object?> toJson() => {
-        'employeeId': employeeId,
-        'firstName': firstName,
-        'lastName': lastName,
-        'employeeCode': employeeCode,
-        'date': dateText(date),
-        'status': status.wireName,
-        'start': start?.toJson(),
-        'finish': finish?.toJson(),
-        if (pending.isNotEmpty) 'pending': [for (final p in pending) p.toJson()],
-        if (events.isNotEmpty) 'events': [for (final e in events) e.toJson()],
-        'nonWorkReason': nonWorkReason,
-        if (companyIds.isNotEmpty) 'companyIds': companyIds,
-        if (awayMinutes > 0) 'awayMinutes': awayMinutes,
-        if (transportMinutes > 0) 'transportMinutes': transportMinutes,
-        if (travellingSince case final at?) 'travellingSince': at.toUtc().toIso8601String(),
-        if (attendance case final a?) 'attendance': a.wireName,
-        if (trips > 0) 'trips': trips,
-        if (distanceMetres > 0) 'distanceMetres': distanceMetres,
-        if (tripsWithoutDistance > 0) 'tripsWithoutDistance': tripsWithoutDistance,
-      };
+    'employeeId': employeeId,
+    'firstName': firstName,
+    'lastName': lastName,
+    'employeeCode': employeeCode,
+    'date': dateText(date),
+    'status': status.wireName,
+    'start': start?.toJson(),
+    'finish': finish?.toJson(),
+    if (pending.isNotEmpty) 'pending': [for (final p in pending) p.toJson()],
+    if (events.isNotEmpty) 'events': [for (final e in events) e.toJson()],
+    'nonWorkReason': nonWorkReason,
+    if (companyIds.isNotEmpty) 'companyIds': companyIds,
+    if (awayMinutes > 0) 'awayMinutes': awayMinutes,
+    if (transportMinutes > 0) 'transportMinutes': transportMinutes,
+    if (travellingSince case final at?) 'travellingSince': at.toUtc().toIso8601String(),
+    if (attendance case final a?) 'attendance': a.wireName,
+    if (trips > 0) 'trips': trips,
+    if (distanceMetres > 0) 'distanceMetres': distanceMetres,
+    if (tripsWithoutDistance > 0) 'tripsWithoutDistance': tripsWithoutDistance,
+  };
 
   /// A `yyyy-MM-dd` date as a UTC-flagged calendar day (no time zone meant).
   static DateTime parseDate(String text) {
@@ -441,7 +439,9 @@ class TimeRecordList {
   /// Longest period one request may cover, in days.
   static const maxPeriodDays = 62;
 
-  Map<String, Object?> toJson() => {'days': [for (final d in days) d.toJson()]};
+  Map<String, Object?> toJson() => {
+    'days': [for (final d in days) d.toJson()],
+  };
 }
 
 /// Body of `POST /companies/{c}/employees/{u}/time-records/{date}/correct`:
@@ -452,10 +452,10 @@ class CorrectTimeRequest {
   const CorrectTimeRequest({required this.boundary, required this.time, required this.reason});
 
   factory CorrectTimeRequest.fromJson(Map<String, Object?> json) => CorrectTimeRequest(
-        boundary: RegistrationBoundary.fromWire(json.readString(fieldBoundary)),
-        time: localTime(json.readString(fieldTime)),
-        reason: json.readString(fieldReason),
-      );
+    boundary: RegistrationBoundary.fromWire(json.readString(fieldBoundary)),
+    time: localTime(json.readString(fieldTime)),
+    reason: json.readString(fieldReason),
+  );
 
   final RegistrationBoundary boundary;
   final String time;
@@ -473,19 +473,14 @@ class CorrectTimeRequest {
     return text.trim();
   }
 
-  Map<String, Object?> toJson() => {
-        fieldBoundary: boundary.wireName,
-        fieldTime: time,
-        fieldReason: reason,
-      };
+  Map<String, Object?> toJson() => {fieldBoundary: boundary.wireName, fieldTime: time, fieldReason: reason};
 }
 
 /// Body of `…/time-records/{date}/non-work` (Figma `273:166`).
 class MarkNonWorkRequest {
   const MarkNonWorkRequest({required this.reason});
 
-  factory MarkNonWorkRequest.fromJson(Map<String, Object?> json) =>
-      MarkNonWorkRequest(reason: json.readString(fieldReason));
+  factory MarkNonWorkRequest.fromJson(Map<String, Object?> json) => MarkNonWorkRequest(reason: json.readString(fieldReason));
 
   final String reason;
 

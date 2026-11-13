@@ -86,12 +86,7 @@ class TimeRecordService {
   /// What only HR's list has, as the Dashboard counts it: each finished day's
   /// attendance against the schedule (D11b), and today's scheduled employees
   /// without any registration yet, as "Not started".
-  Future<List<TimeRecordDay>> _forHr(
-    List<EmployeeSummary> employees,
-    List<TimeRecordDay> days,
-    DateTime first,
-    DateTime last,
-  ) async {
+  Future<List<TimeRecordDay>> _forHr(List<EmployeeSummary> employees, List<TimeRecordDay> days, DateTime first, DateTime last) async {
     final plans = await WeekPlans(_schedules).of([for (final e in employees) e.id]);
     final local = _clock.wallClockOf(_now().toUtc());
     final today = DateTime.utc(local.year, local.month, local.day);
@@ -103,7 +98,10 @@ class TimeRecordService {
         },
     ];
     if (today.isBefore(first) || today.isAfter(last)) return result;
-    final hasToday = {for (final day in days) if (day.date == today) day.employeeId};
+    final hasToday = {
+      for (final day in days)
+        if (day.date == today) day.employeeId,
+    };
     for (final employee in employees) {
       if (!employee.isActive || hasToday.contains(employee.id)) continue;
       if (WeekPlans.plannedMinutes(plans[employee.id]?[today.weekday]) == null) continue;
@@ -162,14 +160,12 @@ class TimeRecordService {
   /// [day] with what each pending correction would count as after rounding.
   Future<TimeRecordDay> _withPreview(TimeRecordDay day) async {
     final policy = await _rounding.policyOn(day.employeeId, day.date.weekday);
-    String preview(TimeRecordPending p) {
-      final rounded = RoundingCalculator.round(
-        actual: _clock.wallClockOf(p.requested),
-        boundary: p.boundary == RegistrationBoundary.start ? RoundingBoundary.start : RoundingBoundary.finish,
-        policy: policy,
-      ).registered;
-      return '${rounded.hour.toString().padLeft(2, '0')}:${rounded.minute.toString().padLeft(2, '0')}';
-    }
+    DateTime preview(TimeRecordPending p) => RoundingCalculator.round(
+      actual: _clock.wallClockOf(p.requested),
+      boundary: p.boundary == RegistrationBoundary.start ? RoundingBoundary.start : RoundingBoundary.finish,
+      policy: policy,
+    ).registered;
+    String local(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
     return day.copyWith(
       pending: [
@@ -180,7 +176,8 @@ class TimeRecordService {
             requested: p.requested,
             requestedLocal: p.requestedLocal,
             reason: p.reason,
-            roundedLocal: preview(p),
+            roundedLocal: local(preview(p)),
+            rounded: _clock.utcOf(preview(p)),
           ),
       ],
     );
