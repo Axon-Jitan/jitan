@@ -1,5 +1,6 @@
 name: jitan_api
 description: Jitan backend API. The only component allowed to talk to MySQL.
+version: 0.0.1
 publish_to: none
 resolution: workspace
 

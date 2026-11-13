@@ -5,6 +5,10 @@
 // - jitan-first-hr: sets up the very first HR person in one step (Linux x64).
 // - jitan-employee.apk: the employee app, talking to --api-url.
 // - SHA256SUMS: to check the files arrived whole.
+// - jitan-<version>.zip: all of the above with IT_INSTALL_GUIDE.md, to send.
+//
+// The version is lib/src/version.dart's: the APK and the website carry it
+// (--build-name), and the server writes it in its log at start.
 //
 //   dart run tool/build_release.dart --api-url https://10.1.101.65:8080 [--trust-cert agapp05.crt] [--only-apk]
 //
@@ -27,6 +31,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:jitan_api/src/version.dart';
 
 const _assetsFile = 'lib/src/web/embedded_web_assets.dart';
 
@@ -70,6 +75,7 @@ Future<void> _build(List<String> args) async {
     'apk',
     '--release',
     '--dart-define=JITAN_API_BASE_URL=$apiUrl',
+    '--build-name=$jitanVersion',
     if (pin != null) '--dart-define=JITAN_API_CERT_SHA256=$pin',
   ], mobile);
   File('${mobile.path}/build/app/outputs/flutter-apk/app-release.apk').copySync('${out.path}/jitan-employee.apk');
@@ -79,7 +85,14 @@ Future<void> _build(List<String> args) async {
       if (File('${out.path}/$name').existsSync()) '${sha256.convert(File('${out.path}/$name').readAsBytesSync())}  $name',
   ];
   File('${out.path}/SHA256SUMS').writeAsStringSync('${sums.join('\n')}\n');
-  stdout.writeln('Done: ${out.path}\n${sums.join('\n')}');
+  File('${root.path}/docs/IT_INSTALL_GUIDE.md').copySync('${out.path}/IT_INSTALL_GUIDE.md');
+  final zip = File('${out.path}/jitan-$jitanVersion.zip');
+  if (zip.existsSync()) zip.deleteSync();
+  final contents = ['jitan-server', 'jitan-first-hr', 'jitan-employee.apk', 'SHA256SUMS', 'IT_INSTALL_GUIDE.md'];
+  // Windows' own tar writes zip files (-a); Git's tar, often first on the path, can't.
+  final tar = Platform.isWindows ? '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\\System32\\tar.exe' : 'tar';
+  await _run(tar, ['-a', '-cf', 'jitan-$jitanVersion.zip', for (final name in contents) if (File('${out.path}/$name').existsSync()) name], out);
+  stdout.writeln('Done: ${zip.path} (release $jitanVersion)\n${sums.join('\n')}');
 }
 
 String? _option(List<String> args, String name) {
@@ -98,6 +111,7 @@ Future<void> _serverAndWebsite(Directory server, Directory adminWeb, Directory o
       '--release',
       '--no-web-resources-cdn',
       '--dart-define=JITAN_API_BASE_URL=/',
+      '--build-name=$jitanVersion',
       if (mapbox.isNotEmpty) '--dart-define=JITAN_MAPBOX_TOKEN=$mapbox',
     ],
     adminWeb,

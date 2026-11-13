@@ -1,7 +1,7 @@
 name: admin_web
 description: Jitan HR/Admin web application.
 publish_to: none
-version: 0.1.0
+version: 0.0.1
 resolution: workspace
 
 environment:

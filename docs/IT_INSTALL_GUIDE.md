@@ -1,4 +1,4 @@
-# Jitan: installing the first test release
+# Jitan 0.0.1: installing the first test release
 
 For IT. This release puts the Jitan API and the HR website on your server
 `agapp05` (`https://10.1.101.65:8080`), connected to the development database

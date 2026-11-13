@@ -78,6 +78,7 @@ import 'package:jitan_api/src/onboarding/onboarding_routes.dart';
 import 'package:jitan_api/src/recovery/recovery_routes.dart';
 import 'package:jitan_api/src/recovery/recovery_service.dart';
 import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
+import 'package:jitan_api/src/version.dart';
 import 'package:jitan_api/src/web/embedded_web_assets.dart';
 import 'package:jitan_api/src/web/web_routes.dart';
 import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
@@ -128,6 +129,7 @@ Future<void> main() async {
     return;
   }
 
+  _log.info('Jitan $jitanVersion');
   _log.info('Environment: ${config.environment.name}');
   _log.info('Database: ${config.database}');
   _log.info('Workplace time zone: ${workplaceClock.name}');
