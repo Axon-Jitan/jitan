@@ -26,8 +26,7 @@ class LanguageRoutes {
 
   /// - `GET /me/language`: the signed-in user's language.
   /// - `PUT /me/language` `{languageCode}`: change it (audited). Consumer:
-  ///   the employee app's language setting, whose Profile screen is not
-  ///   designed yet (PRODUCT_CLARIFICATIONS, EMP-06).
+  ///   the employee app's Profile → Language (EMP-06).
   ///
   /// Any signed-in user may read and change their own language, so this
   /// needs an identity but no permission.

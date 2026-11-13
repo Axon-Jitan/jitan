@@ -200,7 +200,9 @@ Still open:
    Profile from a profile icon until the navigation bar exists.
 
 ## DESIGN-CLARIFY-PROFILE-LANGUAGE: Employee changes their language after onboarding
-Status: `OPEN` · small, does not block
+Status: `RESOLVED` (2026-11-13): Profile has a Language row and page (Figma `1611:2`,
+`1612:244`), approved by the product owner and built: a tap saves it, the check moves once
+the server confirmed.
 
 Employees may change their preferred language whenever they want (decision 2026-10-08).
 The server endpoint (`PUT /me/language`, audited) and the client
