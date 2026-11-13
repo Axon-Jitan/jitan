@@ -122,7 +122,12 @@ void main() {
   });
 
   testWidgets('a correction waiting for HR says so in the timeline; once approved it does not', (tester) async {
-    h.server.registrations.add({'boundary': 'start', 'entry': 'corrected', 'at': DateTime(2026, 10, 22, 8).toUtc().toIso8601String(), 'reason': 'Forgot'});
+    h.server.registrations.add({
+      'boundary': 'start',
+      'entry': 'corrected',
+      'at': DateTime(2026, 10, 22, 8).toUtc().toIso8601String(),
+      'reason': 'Forgot',
+    });
     h.server.firstDay = false;
     await startApp(tester);
     await tap(tester, 'Period');
@@ -284,6 +289,25 @@ void main() {
       await settle(tester);
     }
     expect(find.text('Thursday 22 October'), findsOneWidget, reason: 'no swiping past today');
+  });
+
+  testWidgets('the tab bar on a day’s details works: Home closes the day and shows Home', (tester) async {
+    await startApp(tester);
+    await tap(tester, 'Period');
+    await view(tester, 'Week');
+    await tap(tester, 'Mon 19');
+    expect(find.text('Monday 19 October'), findsOneWidget);
+
+    await tap(tester, 'Home');
+    expect(find.text('Monday 19 October'), findsNothing, reason: 'the day closed');
+    expect(find.text('Start work'), findsOneWidget);
+
+    await tap(tester, 'Period');
+    await view(tester, 'Week');
+    await tap(tester, 'Mon 19');
+    await tap(tester, 'Period', last: true);
+    expect(find.text('Monday 19 October'), findsNothing, reason: 'Period again: back to the tab');
+    expect(find.byType(PeriodViewSwitch), findsOneWidget);
   });
 
   testWidgets('Period fits a small phone (320 × 568) without overflowing', (tester) async {

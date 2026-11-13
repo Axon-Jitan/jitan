@@ -148,7 +148,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Back from Profile: the registration method may have changed.
+  /// The tab bar also shows on pages opened from a tab (a day's details,
+  /// Switch, a time entry): a tap on it first closes them, so the tab shows.
+  void _closePagesOnTop() {
+    final tabs = ModalRoute.of(context);
+    if (tabs != null && !tabs.isCurrent) Navigator.of(context).popUntil((route) => route == tabs);
+  }
+
   Future<void> _openProfile() async {
+    _closePagesOnTop();
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ProfileScreen(profile: widget.profileFor(_account))));
     await _loadMode();
   }
@@ -157,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
 
   void _select(int tab) {
+    _closePagesOnTop();
     if (tab == _tab) return;
     setState(() => _tab = tab);
     // Back on Home: what changed in Period (a time added) shows at once.
@@ -179,8 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
         entry: RegistrationEntry.corrected,
         scheduled: boundary == RegistrationBoundary.start ? day.scheduledStart : day.scheduledFinish,
         now: _today.now,
-        onConfirm: (hour, minute, reason) =>
-            _today.registerAt(boundary, RegistrationEntry.corrected, hour, minute, reason: reason),
+        onConfirm: (hour, minute, reason) => _today.registerAt(boundary, RegistrationEntry.corrected, hour, minute, reason: reason),
       ),
     ),
   );
@@ -222,7 +230,6 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
-  Future<void> _openSwitch() => Navigator.of(
-    context,
-  ).push(MaterialPageRoute<void>(builder: (_) => SwitchActivityScreen(controller: _activity)));
+  Future<void> _openSwitch() =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => SwitchActivityScreen(controller: _activity)));
 }
