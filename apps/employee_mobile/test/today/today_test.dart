@@ -1,5 +1,6 @@
 import 'package:employee_mobile/src/app/employee_app.dart';
 import 'package:employee_mobile/src/device/device_settings.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jitan_models/jitan_models.dart';
@@ -275,6 +276,39 @@ void main() {
 
     await tap(tester, 'Try again');
     expect(find.text('Good morning, Disan.'), findsOneWidget);
+  });
+
+  testWidgets('Android back key: from a tab to Home first; from a page opened on a tab, back to that tab', (tester) async {
+    await startApp(tester);
+
+    for (final tab in ['Period', 'QR', 'Profile']) {
+      await tap(tester, tab);
+      await tester.binding.handlePopRoute();
+      await settle(tester);
+      expect(find.widgetWithText(JitanMobileButton, 'Start work'), findsOneWidget, reason: 'back from $tab shows Home');
+    }
+
+    await tap(tester, 'Profile');
+    await tap(tester, 'Language');
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+    expect(find.text('Registration method'), findsOneWidget, reason: 'back from Language shows Profile');
+  });
+
+  testWidgets('the back button is "←" on Android and "‹" on iPhone', (tester) async {
+    await startApp(tester);
+    await tap(tester, 'Profile');
+    await tap(tester, 'Language');
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_left), findsNothing);
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    await tester.pumpWidget(const SizedBox.shrink());
+    await startApp(tester);
+    await tap(tester, 'Profile');
+    await tap(tester, 'Language');
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('no schedule today; Profile opens from the bar', (tester) async {

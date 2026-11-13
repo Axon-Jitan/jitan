@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
+import 'phone_widgets.dart';
 
 /// The layout of the first-run screens: onboarding (Figma `1591:356`) and
 /// sign-in and recovery (`1592:211`), 2026-11-13. The wordmark or a back
@@ -82,7 +83,7 @@ class PhoneStepPage extends StatelessWidget {
                               padding: EdgeInsets.zero,
                               alignment: Alignment.centerLeft,
                               constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-                              icon: const Icon(Icons.chevron_left, size: 30, color: JitanColors.ink),
+                              icon: const PhoneBackIcon(),
                             )
                           else
                             const JitanWordmark(),

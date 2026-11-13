@@ -214,7 +214,19 @@ class PhoneErrorNote extends StatelessWidget {
   );
 }
 
-/// The top bar of a page opened from another: only a back chevron.
+/// The back button's icon as each phone draws it (user, 2026-11-13): "←" on
+/// Android, "‹" on iPhone.
+class PhoneBackIcon extends StatelessWidget {
+  const PhoneBackIcon({super.key});
+
+  @override
+  Widget build(BuildContext context) => switch (Theme.of(context).platform) {
+    TargetPlatform.iOS || TargetPlatform.macOS => const Icon(Icons.chevron_left, size: 30, color: JitanColors.ink),
+    _ => const Icon(Icons.arrow_back, size: 24, color: JitanColors.ink),
+  };
+}
+
+/// The top bar of a page opened from another: only a back button.
 PreferredSizeWidget phoneAppBar(BuildContext context) => AppBar(
   backgroundColor: JitanColors.warmWhite,
   elevation: 0,
@@ -222,7 +234,7 @@ PreferredSizeWidget phoneAppBar(BuildContext context) => AppBar(
   automaticallyImplyLeading: false,
   leading: IconButton(
     tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-    icon: const Icon(Icons.chevron_left, size: 30, color: JitanColors.ink),
+    icon: const PhoneBackIcon(),
     onPressed: () => Navigator.of(context).maybePop(),
   ),
 );

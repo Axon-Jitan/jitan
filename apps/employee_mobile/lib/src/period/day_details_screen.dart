@@ -5,6 +5,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../home/home_hero.dart';
 import '../l10n/employee_text_keys.dart';
+import '../widgets/phone_widgets.dart';
 import 'missing_time_screen.dart';
 import 'period_stamps.dart';
 import 'period_text.dart';
@@ -120,7 +121,7 @@ class _DayDetailsScreenState extends State<DayDetailsScreen> {
                       alignment: Alignment.centerLeft,
                       constraints: const BoxConstraints.tightFor(width: 44, height: 44),
                       onPressed: () => Navigator.of(context).pop(_changed),
-                      icon: const Icon(Icons.chevron_left, size: 30, color: JitanColors.ink),
+                      icon: const PhoneBackIcon(),
                     ),
                   ),
                 ),

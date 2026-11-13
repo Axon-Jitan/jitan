@@ -220,8 +220,19 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
+  /// Android's back key on Period, My QR or Profile goes to Home first, as
+  /// in other apps with a tab bar; only on Home does it leave the app (user,
+  /// 2026-11-13). Pages opened from a tab still go back to their tab.
   @override
-  Widget build(BuildContext context) => switch (_tab) {
+  Widget build(BuildContext context) => PopScope(
+    canPop: _tab == 0,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop) _select(0);
+    },
+    child: _tabView(context),
+  );
+
+  Widget _tabView(BuildContext context) => switch (_tab) {
     1 => PeriodScreen(
       api: widget.timeRegistrationsApi,
       onSessionEnded: widget.onSessionEnded,
