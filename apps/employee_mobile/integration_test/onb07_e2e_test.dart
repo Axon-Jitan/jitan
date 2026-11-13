@@ -48,6 +48,9 @@ class _GrantAll implements PermissionsGateway {
   Future<LocationAccess> locationAccess() async => (whileInUse: true, always: true);
 
   @override
+  Future<bool> canAskLocation() async => true;
+
+  @override
   Future<void> openSettings() async {}
 
   @override

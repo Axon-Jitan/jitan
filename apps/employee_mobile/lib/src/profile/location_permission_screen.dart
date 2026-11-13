@@ -12,6 +12,10 @@ import 'location_status.dart';
 /// whether automatic registration can work on this phone, and what location
 /// is used for. "Open phone settings" is the main button only when something
 /// is off; otherwise a quiet link.
+///
+/// The two rows can be tapped too (user, 2026-11-13). An app can't switch its
+/// own location permission: while the system may still ask, a tap shows its
+/// prompt; otherwise, and to turn it off, it opens the phone's settings.
 class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key, required this.permissions, required this.presence, required this.bottomBar});
 
@@ -47,11 +51,39 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
     if (mounted) setState(() => _status = status);
   }
 
-  Widget _row(BuildContext context, String label, bool? on) => PhoneListRow(
+  /// Location while Jitan is open.
+  Future<void> _changeLocation() async {
+    final status = _status;
+    if (status == null) return;
+    if (!status.whileInUse && await widget.permissions.canAskLocation()) {
+      await widget.permissions.requestLocation();
+    } else {
+      await widget.permissions.openSettings();
+    }
+    await _load();
+  }
+
+  /// Location while Jitan is closed: asked after location while open.
+  Future<void> _changeWhileClosed() async {
+    final status = _status;
+    if (status == null) return;
+    if (!status.always && await widget.permissions.canAskLocation()) {
+      if (status.whileInUse || await widget.permissions.requestLocation()) {
+        await widget.permissions.requestBackgroundLocation();
+      }
+    } else {
+      await widget.permissions.openSettings();
+    }
+    await _load();
+  }
+
+  Widget _row(BuildContext context, String label, bool? on, Future<void> Function() onTap) => PhoneListRow(
     title: context.t(label),
     titleStyle: JitanMobileTextStyles.rowText,
     value: on == null ? null : context.t(on ? EmployeeTextKeys.profileAllowed : EmployeeTextKeys.profileOff),
     valueColor: on == false ? JitanColors.warning : null,
+    trailing: const PhoneChevron(),
+    onTap: on == null ? null : onTap,
   );
 
   Widget _use(BuildContext context, String title, String text) =>
@@ -79,7 +111,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
       children: [
         PhoneListCard(
           padding: EdgeInsets.zero,
-          children: [_row(context, EmployeeTextKeys.locationRow, status?.whileInUse), _row(context, EmployeeTextKeys.locationWhileClosed, status?.always)],
+          children: [
+            _row(context, EmployeeTextKeys.locationRow, status?.whileInUse, _changeLocation),
+            _row(context, EmployeeTextKeys.locationWhileClosed, status?.always, _changeWhileClosed),
+          ],
         ),
         if (problem != null) ...[const SizedBox(height: 12), Text(context.t(problem), style: JitanMobileTextStyles.detail)],
         const SizedBox(height: 28),

@@ -479,6 +479,47 @@ void main() {
       expect(h.permissions.asked, contains('settings'));
     });
 
+    testWidgets('the rows can be tapped: the system asks while it still may, otherwise the phone settings open', (tester) async {
+      h.permissions
+        ..grantLocation = false
+        ..backgroundLocationGranted = false;
+      await open(tester);
+
+      // Never refused for good: the system prompt, no settings.
+      await tester.tap(find.text('Location'));
+      await tester.pumpAndSettle();
+      expect(h.permissions.asked, ['location']);
+
+      // "While Jitan is closed" asks for location first, then in the background.
+      h.permissions
+        ..asked.clear()
+        ..grantLocation = true;
+      await tester.pumpWidget(const SizedBox.shrink()); // a fresh page reads the new state
+      await open(tester);
+      await tester.tap(find.text('While Jitan is closed'));
+      await tester.pumpAndSettle();
+      expect(h.permissions.asked, ['background location']);
+
+      // Refused for good: only the phone's settings can allow it.
+      h.permissions
+        ..asked.clear()
+        ..grantLocation = false
+        ..locationBlocked = true;
+      await tester.pumpWidget(const SizedBox.shrink());
+      await open(tester);
+      await tester.tap(find.text('Location'));
+      await tester.pumpAndSettle();
+      expect(h.permissions.asked, ['settings']);
+    });
+
+    testWidgets('allowed: a tap opens the phone settings, where it can be turned off', (tester) async {
+      await open(tester);
+
+      await tester.tap(find.text('While Jitan is closed'));
+      await tester.pumpAndSettle();
+      expect(h.permissions.asked, ['settings']);
+    });
+
     testWidgets('the phone refused the geofences: names the setting', (tester) async {
       await presence.setGeofencesRefused(true);
       await open(tester);

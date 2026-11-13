@@ -17,6 +17,11 @@ abstract interface class PermissionsGateway {
 
   Future<LocationAccess> locationAccess();
 
+  /// Whether the system can still ask for location: `false` once the
+  /// employee said no for good (iOS after one no, Android after two). Then
+  /// only the phone's settings can allow it.
+  Future<bool> canAskLocation();
+
   /// Opens this app's page in the phone's settings.
   Future<void> openSettings();
 }
@@ -36,6 +41,9 @@ class PlatformPermissionsGateway implements PermissionsGateway {
   @override
   Future<LocationAccess> locationAccess() async =>
       (whileInUse: await Permission.locationWhenInUse.isGranted, always: await Permission.locationAlways.isGranted);
+
+  @override
+  Future<bool> canAskLocation() async => !await Permission.locationWhenInUse.isPermanentlyDenied;
 
   @override
   Future<void> openSettings() async {

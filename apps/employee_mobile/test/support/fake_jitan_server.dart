@@ -489,6 +489,9 @@ class FakePermissions implements PermissionsGateway {
   bool grantLocation = true;
   bool grantNotifications = true;
   bool backgroundLocationGranted = true;
+
+  /// The employee said no for good: no prompt any more, only settings.
+  bool locationBlocked = false;
   final asked = <String>[];
 
   @override
@@ -511,6 +514,9 @@ class FakePermissions implements PermissionsGateway {
 
   @override
   Future<LocationAccess> locationAccess() async => (whileInUse: grantLocation, always: backgroundLocationGranted);
+
+  @override
+  Future<bool> canAskLocation() async => !locationBlocked;
 
   @override
   Future<void> openSettings() async => asked.add('settings');
