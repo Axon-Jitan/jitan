@@ -2,6 +2,7 @@ import 'package:employee_mobile/src/app/employee_app.dart';
 import 'package:employee_mobile/src/period/period_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jitan_models/jitan_models.dart';
 
 import '../support/fake_jitan_server.dart';
 
@@ -42,9 +43,37 @@ void main() {
   }
 
   Future<void> view(WidgetTester tester, String name) async {
-    await tester.tap(find.byType(PeriodViewSelector));
+    await tester.tap(find.descendant(of: find.byType(PeriodViewSwitch), matching: find.text(name)));
     await settle(tester);
-    await tap(tester, name, last: true);
+  }
+
+  Map<String, Object?> time(String date, String local, String utc) => {
+    'actualId': 1,
+    'actual': '${date}T$utc:00.000Z',
+    'rounded': '${date}T$utc:00.000Z',
+    'method': 'manual',
+    'enteredByHand': false,
+    'actualLocal': local,
+    'roundedLocal': local,
+  };
+
+  /// Tuesday 20 October: 08:00 to 16:00 in the app.
+  void completeTuesday() {
+    h.server.pastDays['2026-10-20'] = (
+      {
+        'employeeId': 1,
+        'employeeCode': '',
+        'date': '2026-10-20',
+        'status': 'complete',
+        'start': time('2026-10-20', '08:00', '06:00'),
+        'finish': time('2026-10-20', '16:00', '14:00'),
+        'events': [
+          {'atLocal': '08:00', 'boundary': 'start', 'kind': 'registered', 'active': true, 'method': 'manual'},
+          {'atLocal': '16:00', 'boundary': 'finish', 'kind': 'registered', 'active': true, 'method': 'manual'},
+        ],
+      },
+      450,
+    );
   }
 
   /// Wednesday 21 October: started 08:00, no finish.
@@ -72,18 +101,21 @@ void main() {
     );
   }
 
-  testWidgets('Period from the bar: this day, registered so far and today\'s timeline', (tester) async {
+  testWidgets('Period from the bar: this day, Home’s total and the timeline with its stamps', (tester) async {
     await startApp(tester);
     await tap(tester, 'Start work');
     now = DateTime(2026, 10, 22, 11, 30);
 
     await tap(tester, 'Period');
-    expect(find.text('Thursday, 22 October'), findsOneWidget);
-    expect(find.text('This day'), findsOneWidget);
+    expect(find.text('Thursday 22 October'), findsOneWidget);
+    expect(find.text('Day'), findsOneWidget);
+    expect(find.text('Registered today'), findsOneWidget);
     expect(find.text('2h 30m'), findsOneWidget);
-    expect(find.text('registered so far'), findsOneWidget);
-    expect(find.text('WORKING'), findsOneWidget);
-    expect(find.text('Work started'), findsOneWidget);
+    expect(find.text('Working since 09:00'), findsOneWidget);
+    expect(find.text('Timeline'), findsOneWidget);
+    expect(find.text('Started'), findsOneWidget);
+    expect(find.text('In the app'), findsOneWidget);
+    expect(find.text('Break · 30 min'), findsNothing, reason: 'the break starts at 12:00, still to come');
 
     await tap(tester, 'Home');
     expect(find.text('You’re working'), findsOneWidget);
@@ -95,65 +127,115 @@ void main() {
     await startApp(tester);
     await tap(tester, 'Period');
     expect(find.text('Start corrected'), findsOneWidget);
-    expect(find.text('Waiting for HR approval'), findsOneWidget);
+    expect(find.text('Waiting for HR'), findsOneWidget);
+    expect(find.text('“Forgot”'), findsOneWidget, reason: 'the employee’s reason');
 
     // Approved: the request stays in the timeline as history, no longer waiting.
     h.server.registrations.single['entry'] = 'now';
-    await view(tester, 'This week');
-    await view(tester, 'This day');
-    expect(find.text('Waiting for HR approval'), findsNothing);
+    await view(tester, 'Week');
+    await view(tester, 'Day');
+    expect(find.text('Waiting for HR'), findsNothing);
   });
 
-  testWidgets('this week: the total, a bar per day, the daily records and Day details', (tester) async {
+  testWidgets('this week: the total, a bar per day, the days and a day with its stamps', (tester) async {
+    completeTuesday();
+    h.server.pastActivities['2026-10-20'] = const [
+      ActivityEntry(timeLocal: '09:15', kind: ActivityKind.clientOnSite, projectName: 'P-1057 Cooling towers', placeName: 'Engis'),
+      ActivityEntry(timeLocal: '13:00', kind: ActivityKind.transport, metres: 36000),
+    ];
+    await startApp(tester);
+    await tap(tester, 'Period');
+    await view(tester, 'Week');
+
+    expect(find.text('19–25 October 2026'), findsOneWidget);
+    expect(find.text('Registered this week'), findsOneWidget);
+    expect(find.text('7h 30m'), findsWidgets, reason: 'the week total and Tuesday');
+    expect(find.text('Planned 40h'), findsOneWidget);
+    expect(find.text('Tue 20'), findsOneWidget);
+    expect(find.text('Fri 23'), findsNothing, reason: 'no future days in the list');
+
+    await tap(tester, 'Tue 20');
+    expect(find.text('Tuesday 20 October'), findsOneWidget);
+    expect(find.text('08:00 – 16:00'), findsOneWidget);
+    expect(find.text('Planned 8h 00m · 30 min break'), findsOneWidget);
+    // The day's stamps: start, what it went on, the automatic break, finish.
+    expect(find.text('Client · On site'), findsOneWidget);
+    expect(find.text('P-1057 Cooling towers · Engis'), findsOneWidget);
+    expect(find.text('Transport'), findsOneWidget);
+    expect(find.text('36 km'), findsOneWidget);
+    expect(find.text('Break · 30 min'), findsOneWidget);
+    expect(find.text('Automatic, from your schedule'), findsOneWidget);
+    expect(find.text('Finished'), findsOneWidget);
+    final order = ['08:00', '09:15', '12:00', '13:00', '16:00'].map((t) => tester.getTopLeft(find.text(t)).dy).toList();
+    expect(order, [...order]..sort(), reason: 'oldest first');
+  });
+
+  testWidgets('time away replaces the break: one stamp, never both (D34)', (tester) async {
     h.server.pastDays['2026-10-20'] = (
-      {'employeeId': 1, 'employeeCode': '', 'date': '2026-10-20', 'status': 'complete', 'events': <Object?>[]},
-      450,
+      {
+        'employeeId': 1,
+        'employeeCode': '',
+        'date': '2026-10-20',
+        'status': 'complete',
+        'start': time('2026-10-20', '08:00', '06:00'),
+        'finish': time('2026-10-20', '16:00', '14:00'),
+        'awayMinutes': 38,
+        'events': [
+          {'atLocal': '08:00', 'boundary': 'start', 'kind': 'registered', 'active': true, 'method': 'geofence'},
+          {'atLocal': '12:03', 'boundary': 'finish', 'kind': 'registered', 'active': true, 'method': 'geofence'},
+          {'atLocal': '12:41', 'boundary': 'start', 'kind': 'registered', 'active': true, 'method': 'geofence'},
+          {'atLocal': '16:00', 'boundary': 'finish', 'kind': 'registered', 'active': true, 'method': 'geofence'},
+        ],
+      },
+      442,
     );
     await startApp(tester);
     await tap(tester, 'Period');
-    await view(tester, 'This week');
-
-    expect(find.text('19–25 October 2026'), findsOneWidget);
-    expect(find.text('REGISTERED THIS WEEK'), findsOneWidget);
-    expect(find.text('7h 30m'), findsWidgets, reason: 'the week total and Tuesday');
-    expect(find.text('Daily registered hours'), findsOneWidget);
-    expect(find.text('Tue 20'), findsOneWidget);
-    expect(find.text('Fri 23'), findsNothing, reason: 'no future days in the records');
-
+    await view(tester, 'Week');
     await tap(tester, 'Tue 20');
-    expect(find.text('Day details'), findsOneWidget);
-    expect(find.text('Tuesday, 20 October 2026'), findsOneWidget);
-    expect(find.text('COMPLETE'), findsOneWidget);
+
+    expect(find.text('7h 22m'), findsOneWidget);
+    expect(find.text('Planned 8h 00m · 38 min away instead of the 30 min break'), findsOneWidget);
+    expect(find.text('Time away · 38 min'), findsOneWidget);
+    expect(find.text('Replaces your break'), findsOneWidget);
+    expect(find.text('Break · 30 min'), findsNothing);
+    expect(find.text('Started'), findsOneWidget, reason: 'coming back is part of the time away');
+    expect(find.text('Finished'), findsOneWidget);
+    expect(find.text('Automatically'), findsNWidgets(2));
   });
 
-  testWidgets('this month: planned and registered, the calendar and its legend', (tester) async {
+  testWidgets('this month: registered and planned, the calendar and its legend', (tester) async {
     await startApp(tester);
     await tap(tester, 'Period');
-    await view(tester, 'This month');
+    await view(tester, 'Month');
 
     expect(find.text('October 2026'), findsOneWidget);
     expect(find.text('Planned'), findsWidgets);
     expect(find.text('Registered'), findsOneWidget);
     expect(find.text('176h'), findsOneWidget, reason: '22 weekdays × 8h');
-    expect(find.text('Needs attention'), findsOneWidget);
+    expect(find.text('Needs you'), findsOneWidget);
     expect(find.text('31'), findsOneWidget);
   });
 
-  testWidgets('a missing finish yesterday: Day details offers to add it; it goes to HR', (tester) async {
+  testWidgets('a missing finish yesterday: the day offers to add it, on a page; it goes to HR', (tester) async {
     missingFinishYesterday();
     await startApp(tester);
     await tap(tester, 'Period');
-    await view(tester, 'This week');
-    expect(find.text('MISSING FINISH'), findsOneWidget, reason: 'in the daily records');
+    await view(tester, 'Week');
+    expect(find.text('Finish missing'), findsOneWidget, reason: 'in the list, in amber');
 
     await tap(tester, 'Wed 21');
-    expect(find.text('Actual 08:03 — --:--'), findsOneWidget);
+    expect(find.text('Your finish time is missing.'), findsOneWidget);
+    expect(find.text('Not counted yet'), findsOneWidget);
+    expect(find.text('Started 08:00 · planned finish 16:30'), findsOneWidget);
+    expect(find.text('Break · 30 min'), findsNothing, reason: 'the break counts once the day has a finish');
     await tap(tester, 'Add your finish time');
 
-    expect(find.text('Missing end time'), findsOneWidget);
-    expect(find.text('Actual: 08:03'), findsOneWidget);
+    expect(find.text('When did you finish?'), findsOneWidget);
+    expect(find.text('Wednesday 21 October. You started at 08:03.'), findsOneWidget);
+    expect(find.text('Scheduled finish 16:30'), findsOneWidget);
     final send = find.widgetWithText(FilledButton, 'Send to HR');
-    expect(tester.widget<FilledButton>(send).onPressed, isNull, reason: 'no comment yet');
+    expect(tester.widget<FilledButton>(send).onPressed, isNull, reason: 'no reason yet');
 
     await tester.enterText(find.byType(TextField).last, 'Forgot to tap Finish.');
     await tester.pump();
@@ -162,27 +244,46 @@ void main() {
     final sent = h.server.registrations.single;
     expect((sent['boundary'], sent['entry'], sent['reason']), ('finish', 'corrected', 'Forgot to tap Finish.'));
     expect(sent['at'], DateTime(2026, 10, 21, 16, 30).toUtc().toIso8601String(), reason: 'the scheduled finish, on that day');
-    expect(find.text('Missing end time'), findsNothing);
+    expect(find.text('When did you finish?'), findsNothing);
   });
 
-  testWidgets('a day without activity, and the arrows stop at today', (tester) async {
+  testWidgets('a day without anything, and the arrows either side of the date stop at today', (tester) async {
     await startApp(tester);
     await tap(tester, 'Period');
-    await view(tester, 'This week');
+    await view(tester, 'Week');
     await tap(tester, 'Mon 19');
 
     await tester.tap(find.byTooltip('Previous day'));
     await settle(tester);
     await tester.tap(find.byTooltip('Previous day'));
     await settle(tester);
-    expect(find.text('Saturday, 17 October 2026'), findsOneWidget);
-    expect(find.text('No activity for this day'), findsOneWidget);
+    expect(find.text('Saturday 17 October'), findsOneWidget);
+    expect(find.text('No work was planned and nothing was registered.'), findsOneWidget);
 
     for (var i = 0; i < 5; i++) {
       await tester.tap(find.byTooltip('Next day'));
       await settle(tester);
     }
-    expect(find.text('Thursday, 22 October 2026'), findsOneWidget);
+    expect(find.text('Thursday 22 October'), findsOneWidget);
     expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_right)).onPressed, isNull, reason: 'no future days');
+  });
+
+  testWidgets('Period fits a small phone (320 × 568) without overflowing', (tester) async {
+    completeTuesday();
+    missingFinishYesterday();
+    tester.view.physicalSize = const Size(640, 1136);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(EmployeeApp(services: h.services));
+    await settle(tester);
+    await tap(tester, 'Period');
+    for (final v in ['Week', 'Month', 'Day']) {
+      await view(tester, v);
+    }
+    await view(tester, 'Week');
+    await tap(tester, 'Wed 21');
+    await tap(tester, 'Add your finish time');
+    expect(find.text('When did you finish?'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

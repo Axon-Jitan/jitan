@@ -307,6 +307,9 @@ class FakeJitanServer {
   /// JSON and its registered minutes.
   final pastDays = <String, (Map<String, Object?>, int?)>{};
 
+  /// What other days went on (Period's timeline), by `yyyy-MM-dd`.
+  final pastActivities = <String, List<ActivityEntry>>{};
+
   /// Planned Monday to Friday from the schedule; today from [_today];
   /// other days from [pastDays].
   http.Response _period(http.Request request) {
@@ -330,6 +333,9 @@ class FakeJitanServer {
             'scheduledStart': d.weekday <= 5 ? scheduledStart : null,
             'scheduledFinish': d.weekday <= 5 ? scheduledFinish : null,
             'plannedMinutes': d.weekday <= 5 ? planned : null,
+            if (d.weekday <= 5 && today['breakStart'] != null) 'breakStart': today['breakStart'],
+            if (d.weekday <= 5 && breakMinutes != null) 'breakMinutes': breakMinutes,
+            if (pastActivities[text(d)] case final lines?) 'activities': [for (final a in lines) a.toJson()],
             if (text(d) == '2026-10-22') ...{'day': today['day'], 'registeredMinutes': today['registeredMinutes']}
             else if (pastDays[text(d)] case (final day, final minutes)) ...{'day': day, 'registeredMinutes': minutes},
           },

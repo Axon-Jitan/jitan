@@ -5,6 +5,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
 import '../widgets/phone_widgets.dart';
+import 'time_entry_parts.dart';
 import 'time_picker_card.dart';
 
 /// "When did you arrive?" / "When did you finish?" (Figma 1436:2, 1436:43,
@@ -183,13 +184,23 @@ class _TimeEntryScreenState extends State<TimeEntryScreen> {
                                   style: JitanMobileTextStyles.detail.copyWith(fontSize: 14),
                                 ),
                               )
-                            : _scheduledRow(context, scheduled),
+                            : ScheduledTimeRow(
+                                label:
+                                    '${context.t(_isStart ? EmployeeTextKeys.entryScheduledStart : EmployeeTextKeys.entryScheduledFinish)} $scheduled',
+                                useLabel: context.t(EmployeeTextKeys.entryUseScheduled),
+                                onUse: _busy
+                                    ? null
+                                    : () {
+                                        final time = _parse(scheduled);
+                                        if (time != null) _set(time.$1, time.$2);
+                                      },
+                              ),
                       ],
                       if (_needsReason) ...[
                         const SizedBox(height: 16),
                         Text(context.t(EmployeeTextKeys.entryReason), style: JitanMobileTextStyles.label),
                         const SizedBox(height: 8),
-                        _reasonField(context),
+                        EntryReasonField(controller: _reason, hint: context.t(EmployeeTextKeys.entryReasonHint)),
                         const SizedBox(height: 8),
                         Text(context.t(EmployeeTextKeys.entryReasonHelp), style: JitanMobileTextStyles.detail),
                       ],
@@ -216,55 +227,6 @@ class _TimeEntryScreenState extends State<TimeEntryScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  /// "Scheduled start 08:00 · Use it".
-  Widget _scheduledRow(BuildContext context, String scheduled) => Row(
-    children: [
-      const SizedBox(width: 2),
-      Expanded(
-        child: Text(
-          '${context.t(_isStart ? EmployeeTextKeys.entryScheduledStart : EmployeeTextKeys.entryScheduledFinish)} $scheduled',
-          style: JitanMobileTextStyles.detail.copyWith(fontSize: 14),
-        ),
-      ),
-      TextButton(
-        onPressed: _busy
-            ? null
-            : () {
-                final time = _parse(scheduled);
-                if (time != null) _set(time.$1, time.$2);
-              },
-        style: TextButton.styleFrom(foregroundColor: JitanColors.ink, minimumSize: const Size(44, 44)),
-        child: Text(
-          context.t(EmployeeTextKeys.entryUseScheduled),
-          style: JitanMobileTextStyles.rowTitle.copyWith(fontSize: 14),
-        ),
-      ),
-    ],
-  );
-
-  Widget _reasonField(BuildContext context) {
-    OutlineInputBorder border(Color color) =>
-        OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: color));
-    return TextField(
-      controller: _reason,
-      minLines: 3,
-      maxLines: 3,
-      maxLength: RegisterTimeRequest.maxReasonLength,
-      buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
-      style: JitanMobileTextStyles.rowText.copyWith(height: 1.4),
-      cursorColor: JitanColors.ink,
-      decoration: InputDecoration(
-        hintText: context.t(EmployeeTextKeys.entryReasonHint),
-        hintStyle: JitanMobileTextStyles.rowText.copyWith(color: JitanColors.inkMuted, height: 1.4),
-        filled: true,
-        fillColor: JitanColors.surface,
-        contentPadding: const EdgeInsets.all(16),
-        enabledBorder: border(JitanColors.inputBorder),
-        focusedBorder: border(JitanColors.ink),
       ),
     );
   }

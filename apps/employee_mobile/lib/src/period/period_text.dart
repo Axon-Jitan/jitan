@@ -10,9 +10,9 @@ import '../l10n/employee_text_keys.dart';
 abstract final class PeriodText {
   static String _month(BuildContext context, DateTime d) => context.t(CommonTextKeys.monthLong[d.month - 1]);
 
-  /// "Friday, 2 October".
+  /// "Friday 2 October".
   static String dayMonth(BuildContext context, DateTime d) =>
-      '${context.t(CommonTextKeys.weekdayLong[d.weekday - 1])}, ${d.day} ${_month(context, d)}';
+      '${context.t(CommonTextKeys.weekdayLong[d.weekday - 1])} ${d.day} ${_month(context, d)}';
 
   /// "Tuesday, 6 October 2026".
   static String fullDate(BuildContext context, DateTime d) => '${dayMonth(context, d)} ${d.year}';
@@ -31,10 +31,7 @@ abstract final class PeriodText {
   /// "8h" or "8h 30m".
   static String hours(BuildContext context, int minutes) => minutes % 60 == 0
       ? context.t(EmployeeTextKeys.periodHours, args: {'hours': minutes ~/ 60})
-      : context.t(
-          EmployeeTextKeys.todayDuration,
-          args: {'hours': minutes ~/ 60, 'minutes': (minutes % 60).toString().padLeft(2, '0')},
-        );
+      : context.t(EmployeeTextKeys.todayDuration, args: {'hours': minutes ~/ 60, 'minutes': (minutes % 60).toString().padLeft(2, '0')});
 
   /// The day's badge ("COMPLETE", "WAITING FOR HR", …).
   static String status(BuildContext context, TimeRecordStatus status) => context.t(switch (status) {
@@ -50,15 +47,6 @@ abstract final class PeriodText {
     TimeRecordStatus.notStarted => EmployeeTextKeys.periodStatusNoRegistration,
   });
 
-  /// Orange for what the employee should act on or wait for.
-  static Color statusColor(TimeRecordStatus status) => switch (status) {
-    TimeRecordStatus.missingFinish ||
-    TimeRecordStatus.missingStart ||
-    TimeRecordStatus.noRegistration ||
-    TimeRecordStatus.pendingReview => JitanColors.warning,
-    _ => JitanColors.ink,
-  };
-
   /// A timeline line's title.
   static String eventTitle(BuildContext context, TimeRecordEvent e) {
     final start = e.boundary == RegistrationBoundary.start;
@@ -72,25 +60,74 @@ abstract final class PeriodText {
     });
   }
 
-  /// A timeline line's detail: how it was registered, or that it waits.
-  /// [waiting]: the boundaries with a correction still waiting for HR (the
-  /// request row stays in the timeline after approval, as history).
-  static String? eventDetail(BuildContext context, TimeRecordEvent e, Set<RegistrationBoundary> waiting) => switch (e.kind) {
-    TimeRecordEventKind.correctionRequested when e.active && waiting.contains(e.boundary) =>
-      context.t(EmployeeTextKeys.periodEventWaiting),
-    TimeRecordEventKind.registered => context.t(switch (e.method) {
-      TimeRecordMethod.qr => EmployeeTextKeys.periodEventQr,
-      TimeRecordMethod.geofence => EmployeeTextKeys.periodEventAutomatic,
-      _ => EmployeeTextKeys.periodEventApp,
-    }),
-    _ => null,
-  };
+  /// "8h 00m": hours and minutes, always both, so the list lines up.
+  static String duration(BuildContext context, int minutes) =>
+      context.t(EmployeeTextKeys.todayDuration, args: {'hours': minutes ~/ 60, 'minutes': (minutes % 60).toString().padLeft(2, '0')});
 
-  /// The dot colour of a timeline line.
-  static Color eventColor(TimeRecordEvent e) => switch (e.kind) {
-    TimeRecordEventKind.correctionRequested => JitanColors.warning,
-    TimeRecordEventKind.corrected => JitanColors.info,
-    TimeRecordEventKind.rejected || TimeRecordEventKind.nonWork => JitanColors.inkMuted,
-    TimeRecordEventKind.registered => e.boundary == RegistrationBoundary.start ? JitanColors.vermilion : JitanColors.success,
-  };
+  /// A day's value in the week list: its registered time, or what it needs
+  /// ("Finish missing"), or its state ("Working").
+  static String dayValue(BuildContext context, MyPeriodDay d) {
+    final record = d.day?.status;
+    if (d.needsAttention && record != null) return status(context, record);
+    if (d.registeredMinutes case final minutes?) return duration(context, minutes);
+    if (record != null) return status(context, record);
+    return context.t(EmployeeTextKeys.periodNotCounted);
+  }
+
+  /// The line under a day's date: its times, or what it needs (amber).
+  static (String, bool needsYou) dayLine(BuildContext context, MyPeriodDay d) {
+    final record = d.day;
+    if (record == null) {
+      return (context.t(d.plannedMinutes == null ? EmployeeTextKeys.periodNothing : EmployeeTextKeys.periodSubNoRegistration), false);
+    }
+    String key(String k) => context.t(k);
+    return switch (record.status) {
+      TimeRecordStatus.missingFinish => (key(EmployeeTextKeys.periodSubMissingFinish), true),
+      TimeRecordStatus.missingStart => (key(EmployeeTextKeys.periodSubMissingStart), true),
+      TimeRecordStatus.noRegistration || TimeRecordStatus.notStarted => (key(EmployeeTextKeys.periodSubNoRegistration), true),
+      TimeRecordStatus.pendingReview => (key(EmployeeTextKeys.periodSubWaiting), true),
+      TimeRecordStatus.nonWork => (key(EmployeeTextKeys.periodSubNonWork), false),
+      TimeRecordStatus.working => (key(EmployeeTextKeys.periodSubWorking), false),
+      TimeRecordStatus.complete || TimeRecordStatus.corrected => (
+        '${record.start?.roundedLocal ?? record.start?.actualLocal ?? '--:--'} – '
+            '${record.finish?.roundedLocal ?? record.finish?.actualLocal ?? '--:--'}',
+        false,
+      ),
+    };
+  }
+
+  /// The line under a day's total: the plan and its break, or how time
+  /// away replaced the break (D34), or why it doesn't count yet.
+  static String? totalLine(BuildContext context, MyPeriodDay d) {
+    final record = d.day;
+    if (d.registeredMinutes == null) {
+      if (record == null) return null;
+      if (record.pending.isNotEmpty) return context.t(EmployeeTextKeys.periodCountsAfterHr);
+      if (record.status == TimeRecordStatus.working) {
+        return context.t(
+          EmployeeTextKeys.periodWorkingSince,
+          args: {'time': record.start?.roundedLocal ?? record.start?.actualLocal ?? '--:--'},
+        );
+      }
+      if (record.status == TimeRecordStatus.missingFinish && record.start != null && d.scheduledFinish != null) {
+        return context.t(
+          EmployeeTextKeys.periodStartedLine,
+          args: {'start': record.start!.roundedLocal ?? record.start!.actualLocal, 'finish': d.scheduledFinish!},
+        );
+      }
+      if (d.scheduledStart != null && d.scheduledFinish != null) {
+        return context.t(EmployeeTextKeys.periodDayPlanned, args: {'range': '${d.scheduledStart} – ${d.scheduledFinish}'});
+      }
+      return null;
+    }
+    final planned = d.plannedMinutes;
+    if (planned == null) return null;
+    final breakMinutes = d.breakMinutes ?? 0;
+    final total = duration(context, planned);
+    if (record != null && record.awayMinutes > 0 && breakMinutes > 0) {
+      return context.t(EmployeeTextKeys.periodAwayLine, args: {'total': total, 'away': record.awayMinutes, 'minutes': breakMinutes});
+    }
+    if (breakMinutes > 0) return context.t(EmployeeTextKeys.periodPlannedLine, args: {'total': total, 'minutes': breakMinutes});
+    return context.t(EmployeeTextKeys.periodWeekPlanned, args: {'hours': total});
+  }
 }

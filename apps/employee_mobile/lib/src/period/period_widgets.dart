@@ -4,12 +4,17 @@ import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
+import '../widgets/phone_widgets.dart';
 import 'period_controller.dart';
+import 'period_stamps.dart';
 import 'period_text.dart';
 
-/// "VIEW · This week ⌄" (Figma 48:2) with its menu (398:6).
-class PeriodViewSelector extends StatelessWidget {
-  const PeriodViewSelector({super.key, required this.view, required this.onSelected});
+// The pieces of Period in the calm phone style (Figma `1595:577`,
+// 2026-11-13).
+
+/// Day | Week | Month, as an iOS segmented control.
+class PeriodViewSwitch extends StatelessWidget {
+  const PeriodViewSwitch({super.key, required this.view, required this.onSelected});
 
   final PeriodView view;
   final ValueChanged<PeriodView> onSelected;
@@ -21,162 +26,196 @@ class PeriodViewSelector extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => PopupMenuButton<PeriodView>(
-      onSelected: onSelected,
-      position: PopupMenuPosition.under,
-      constraints: BoxConstraints.tightFor(width: constraints.maxWidth),
-      color: JitanColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      itemBuilder: (context) => [
-        for (final v in PeriodView.values)
-          PopupMenuItem(
-            value: v,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              decoration: BoxDecoration(
-                color: v == view ? JitanColors.inputFill : null,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(label(context, v), style: JitanMobileTextStyles.cardTitleSmall.copyWith(fontWeight: FontWeight.w400)),
-            ),
-          ),
-      ],
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(18, 12, 16, 12),
-        decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(16)),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(context.t(EmployeeTextKeys.periodView), style: JitanMobileTextStyles.fieldLabel),
-                  const SizedBox(height: 4),
-                  Text(label(context, view), style: JitanMobileTextStyles.cardTitle),
-                ],
-              ),
-            ),
-            const Icon(Icons.keyboard_arrow_down, color: JitanColors.ink),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-/// The dark total card ("38h 30m · REGISTERED THIS WEEK", "5h 27m
-/// registered so far · WORKING").
-class PeriodTotalCard extends StatelessWidget {
-  const PeriodTotalCard({super.key, required this.children});
-
-  final List<Widget> children;
-
-  @override
   Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-    decoration: BoxDecoration(color: JitanColors.ink, borderRadius: BorderRadius.circular(20)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
-  );
-
-  static TextStyle big() => JitanMobileTextStyles.displayLarge.copyWith(fontSize: 32, color: JitanColors.warmWhite);
-  static TextStyle small() => JitanMobileTextStyles.cardText.copyWith(color: JitanColors.sidebarText);
-}
-
-/// The light pill on the dark card ("WORKING", "COMPLETE").
-class PeriodBadge extends StatelessWidget {
-  const PeriodBadge({super.key, required this.label, this.color = JitanColors.ink});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-    decoration: BoxDecoration(color: JitanColors.warmWhite, borderRadius: BorderRadius.circular(16)),
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(12)),
     child: Row(
-      mainAxisSize: MainAxisSize.min,
+      spacing: 2,
       children: [
-        Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 6),
-        Text(label, style: JitanMobileTextStyles.fieldLabel.copyWith(color: color)),
-      ],
-    ),
-  );
-}
-
-/// The timeline of a day (Figma 35:57, 99:56): time, dot and line, title,
-/// detail and reason.
-class PeriodTimeline extends StatelessWidget {
-  const PeriodTimeline({super.key, required this.events, this.pending = const []});
-
-  final List<TimeRecordEvent> events;
-
-  /// The day's corrections still waiting for HR.
-  final List<TimeRecordPending> pending;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      for (final (i, e) in events.indexed)
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(width: 52, child: Padding(padding: const EdgeInsets.only(top: 2), child: Text(e.atLocal, style: JitanMobileTextStyles.cardText.copyWith(color: JitanColors.ink, fontSize: 13)))),
-              SizedBox(
-                width: 28,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 4),
-                    Container(width: 11, height: 11, decoration: BoxDecoration(color: PeriodText.eventColor(e), shape: BoxShape.circle)),
-                    if (i < events.length - 1) Expanded(child: Container(width: 1.5, color: JitanColors.inputBorder)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(PeriodText.eventTitle(context, e), style: JitanMobileTextStyles.cardTitleSmall.copyWith(fontSize: 14)),
-                      if (PeriodText.eventDetail(context, e, {for (final p in pending) p.boundary}) case final detail?) ...[
-                        const SizedBox(height: 3),
-                        Text(detail, style: JitanMobileTextStyles.cardText),
-                      ],
-                      if (e.reason case final reason? when reason.isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        Text(reason, style: JitanMobileTextStyles.cardText.copyWith(fontSize: 11)),
-                      ],
-                    ],
+        for (final v in PeriodView.values)
+          Expanded(
+            child: Semantics(
+              button: true,
+              selected: v == view,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onSelected(v),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: v == view ? JitanColors.surface : null,
+                    borderRadius: BorderRadius.circular(9),
+                    boxShadow: v == view ? const [BoxShadow(color: Color(0x0F000000), blurRadius: 3, offset: Offset(0, 1))] : null,
+                  ),
+                  child: Text(
+                    label(context, v),
+                    style: JitanMobileTextStyles.rowTitle.copyWith(
+                      fontSize: 14,
+                      fontWeight: v == view ? FontWeight.w600 : FontWeight.w500,
+                      color: v == view ? JitanColors.ink : JitanColors.inkMuted,
+                    ),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-    ],
+      ],
+    ),
   );
 }
 
-/// "Daily registered hours" (Figma 48:2): one bar per weekday.
+/// Two totals side by side ("Registered 15h 30m · Planned 176h").
+class PeriodPairCard extends StatelessWidget {
+  const PeriodPairCard({super.key, required this.items});
+
+  final List<(String label, String value)> items;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(22),
+    decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(20)),
+    child: Row(
+      spacing: 16,
+      children: [
+        for (final (label, value) in items)
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 8,
+              children: [
+                Text(label, style: JitanMobileTextStyles.label),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(value, style: JitanMobileTextStyles.hero.copyWith(fontSize: 34, letterSpacing: -1)),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+/// A day's timeline with its stamps: the time, a dot on a line, the title
+/// and how or where under it (Figma `1595:362`).
+class PeriodTimeline extends StatelessWidget {
+  const PeriodTimeline({super.key, required this.stamps});
+
+  final List<PeriodStamp> stamps;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(context.t(EmployeeTextKeys.periodTimelineLabel), style: JitanMobileTextStyles.label),
+      const SizedBox(height: 12),
+      for (final (i, stamp) in stamps.indexed) _stamp(stamp, last: i == stamps.length - 1),
+    ],
+  );
+
+  Widget _stamp(PeriodStamp stamp, {required bool last}) => IntrinsicHeight(
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: 52,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Text(
+              stamp.time,
+              style: JitanMobileTextStyles.rowText.copyWith(
+                fontSize: 14,
+                color: stamp.isPause ? JitanColors.inkMuted : JitanColors.ink,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 24,
+          child: Column(
+            children: [
+              const SizedBox(height: 6),
+              _dot(stamp.dot),
+              if (!last) Expanded(child: Container(width: 1.5, color: JitanColors.inputBorder)),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(left: 10, bottom: last ? 0 : 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 3,
+              children: [
+                Text(
+                  stamp.title,
+                  style: stamp.isPause
+                      ? JitanMobileTextStyles.rowTitle.copyWith(fontWeight: FontWeight.w500, color: JitanColors.inkMuted)
+                      : JitanMobileTextStyles.rowTitle,
+                ),
+                if (stamp.detail case final detail?)
+                  Text(
+                    detail,
+                    style: JitanMobileTextStyles.detail.copyWith(
+                      color: stamp.detailColor,
+                      fontWeight: stamp.detailColor == null ? null : FontWeight.w500,
+                    ),
+                  ),
+                if (stamp.reason case final reason?) Text('“$reason”', style: JitanMobileTextStyles.detail),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  static Widget _dot(StampDot dot) {
+    final (size, color) = switch (dot) {
+      StampDot.start => (10.0, JitanColors.vermilion),
+      StampDot.finish => (10.0, JitanColors.success),
+      StampDot.activity => (8.0, JitanColors.ink),
+      StampDot.waiting => (10.0, JitanColors.warning),
+      StampDot.confirmed => (10.0, JitanColors.info),
+      StampDot.quiet => (10.0, JitanColors.radioBorder),
+      StampDot.pause => (10.0, JitanColors.warmWhite),
+    };
+    return SizedBox(
+      height: 10,
+      child: Center(
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: dot == StampDot.pause ? Border.all(color: JitanColors.radioBorder, width: 1.5) : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One bar per weekday (Figma `1595:54`): registered time in ink, today
+/// while it runs in grey, nothing as a thin line.
 class PeriodWeekChart extends StatelessWidget {
-  const PeriodWeekChart({super.key, required this.days});
+  const PeriodWeekChart({super.key, required this.days, required this.today});
 
   final List<MyPeriodDay> days;
+  final DateTime today;
 
   @override
   Widget build(BuildContext context) {
     final most = days.fold<int>(0, (m, d) => [m, d.registeredMinutes ?? 0, d.plannedMinutes ?? 0].reduce((a, b) => a > b ? a : b));
-    const height = 72.0;
+    const height = 76.0;
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
-      decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: JitanColors.inputBorder)),
+      padding: const EdgeInsets.fromLTRB(12, 18, 12, 14),
+      decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(18)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -185,6 +224,7 @@ class PeriodWeekChart extends StatelessWidget {
               child: Semantics(
                 label: '${PeriodText.shortDay(context, d.date)}: ${PeriodText.hours(context, d.registeredMinutes ?? 0)}',
                 child: Column(
+                  spacing: 8,
                   children: [
                     SizedBox(
                       height: height,
@@ -194,13 +234,22 @@ class PeriodWeekChart extends StatelessWidget {
                             ? Container(
                                 width: 20,
                                 height: height * d.registeredMinutes! / most,
-                                decoration: BoxDecoration(color: JitanColors.ink, borderRadius: BorderRadius.circular(6)),
+                                decoration: BoxDecoration(
+                                  color: d.date == today ? JitanColors.radioBorder : JitanColors.ink,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
                               )
-                            : Container(width: 20, height: 1.5, color: JitanColors.inputBorder),
+                            : Container(width: 20, height: 2, color: JitanColors.inputBorder),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(context.t(CommonTextKeys.weekdayShort[d.date.weekday - 1]), style: JitanMobileTextStyles.cardText),
+                    Text(
+                      context.t(CommonTextKeys.weekdayShort[d.date.weekday - 1]),
+                      style: JitanMobileTextStyles.detail.copyWith(
+                        fontSize: 12,
+                        color: d.date == today ? JitanColors.ink : JitanColors.inkMuted,
+                        fontWeight: d.date == today ? FontWeight.w600 : null,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -211,8 +260,8 @@ class PeriodWeekChart extends StatelessWidget {
   }
 }
 
-/// "Daily records" (Figma 48:2): a row per day that is planned or has
-/// registrations, with its registered time; a tap opens Day details.
+/// The week's days as a white list: registered time, or what the day needs
+/// in amber; a tap opens the day.
 class PeriodDayList extends StatelessWidget {
   const PeriodDayList({super.key, required this.days, required this.onOpen});
 
@@ -221,47 +270,51 @@ class PeriodDayList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shown = [for (final d in days) if (d.plannedMinutes != null || d.day != null) d];
-    if (shown.isEmpty) return Text(context.t(EmployeeTextKeys.periodWeekNone), style: JitanMobileTextStyles.body);
-    return Container(
-      decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: JitanColors.inputBorder)),
-      child: Column(
-        children: [
-          for (final (i, d) in shown.indexed) ...[
-            if (i > 0) const Divider(height: 1, indent: 18, endIndent: 18, color: JitanColors.inputBorder),
-            InkWell(
-              onTap: () => onOpen(d),
-              borderRadius: BorderRadius.circular(18),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 13, 10, 13),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(PeriodText.shortDay(context, d.date), style: JitanMobileTextStyles.summary.copyWith(fontSize: 14))),
-                    if (d.needsAttention && d.day != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 10),
-                        child: Text(PeriodText.status(context, d.day!.status), style: JitanMobileTextStyles.fieldLabel.copyWith(color: JitanColors.warning)),
-                      )
-                    else
-                      Text(
-                        d.registeredMinutes == null ? '—' : PeriodText.hours(context, d.registeredMinutes!),
-                        style: JitanMobileTextStyles.cardTitleSmall.copyWith(fontSize: 14),
+    final shown = [
+      for (final d in days)
+        if (d.plannedMinutes != null || d.day != null) d,
+    ];
+    if (shown.isEmpty) return Text(context.t(EmployeeTextKeys.periodWeekNone), style: JitanMobileTextStyles.pageSubtitle);
+    return PhoneListCard(
+      padding: EdgeInsets.zero,
+      children: [
+        for (final d in shown)
+          PhoneListRow(
+            title: PeriodText.shortDay(context, d.date),
+            titleStyle: JitanMobileTextStyles.rowText,
+            onTap: () => onOpen(d),
+            trailing: ConstrainedBox(
+              // Room for the day on a small phone; a long value ends in "…".
+              constraints: const BoxConstraints(maxWidth: 160),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 8,
+                children: [
+                  Flexible(
+                    child: Text(
+                      PeriodText.dayValue(context, d),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: JitanMobileTextStyles.rowText.copyWith(
+                        color: d.needsAttention ? JitanColors.warning : null,
+                        fontWeight: d.needsAttention ? FontWeight.w500 : null,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
-                    const SizedBox(width: 10),
-                    const Icon(Icons.chevron_right, size: 18, color: JitanColors.inkMuted),
-                  ],
-                ),
+                    ),
+                  ),
+                  const PhoneChevron(),
+                ],
               ),
             ),
-          ],
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
 
-/// The month grid (Figma 48:49): Monday first, a dot under each day —
-/// green worked, grey planned, red needs attention — and today circled.
+/// The month (Figma `1595:152`): Monday first, today a dark circle,
+/// weekends lighter, and a dot under each day: dark worked, amber needs
+/// you, grey planned.
 class PeriodMonthCalendar extends StatelessWidget {
   const PeriodMonthCalendar({super.key, required this.days, required this.today, required this.onOpen});
 
@@ -270,25 +323,22 @@ class PeriodMonthCalendar extends StatelessWidget {
   final ValueChanged<MyPeriodDay> onOpen;
 
   static Color? dotOf(MyPeriodDay d) => switch (d) {
-    _ when d.needsAttention => JitanColors.vermilion,
-    _ when (d.registeredMinutes ?? 0) > 0 => JitanColors.success,
-    _ when d.plannedMinutes != null => JitanColors.radioBorder,
+    _ when d.needsAttention => JitanColors.warning,
+    _ when (d.registeredMinutes ?? 0) > 0 => JitanColors.ink,
+    _ when d.plannedMinutes != null => JitanColors.radioIdle,
     _ => null,
   };
 
   @override
   Widget build(BuildContext context) {
     final lead = days.first.date.weekday - 1;
-    final cells = <Widget>[
-      for (var i = 0; i < lead; i++) const SizedBox.shrink(),
-      for (final d in days) _cell(context, d),
-    ];
+    final cells = <Widget>[for (var i = 0; i < lead; i++) const SizedBox.shrink(), for (final d in days) _cell(context, d)];
     while (cells.length % 7 != 0) {
       cells.add(const SizedBox.shrink());
     }
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 14, 10, 10),
-      decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: JitanColors.inputBorder)),
+      decoration: BoxDecoration(color: JitanColors.surface, borderRadius: BorderRadius.circular(18)),
       child: Column(
         children: [
           Row(
@@ -298,15 +348,17 @@ class PeriodMonthCalendar extends StatelessWidget {
                   child: Center(
                     child: Text(
                       context.t(CommonTextKeys.weekdayShort[w - 1]).characters.first,
-                      style: JitanMobileTextStyles.fieldLabel,
+                      style: JitanMobileTextStyles.label.copyWith(fontSize: 12),
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           for (var row = 0; row < cells.length ~/ 7; row++)
-            Row(children: [for (var c = 0; c < 7; c++) Expanded(child: SizedBox(height: 46, child: cells[row * 7 + c]))]),
+            Row(
+              children: [for (var c = 0; c < 7; c++) Expanded(child: SizedBox(height: 46, child: cells[row * 7 + c]))],
+            ),
         ],
       ),
     );
@@ -314,61 +366,83 @@ class PeriodMonthCalendar extends StatelessWidget {
 
   Widget _cell(BuildContext context, MyPeriodDay d) {
     final isToday = d.date == today;
+    final weekend = d.date.weekday >= DateTime.saturday;
     final dot = dotOf(d);
     return InkWell(
       onTap: () => onOpen(d),
-      borderRadius: BorderRadius.circular(10),
+      customBorder: const CircleBorder(),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        spacing: 3,
         children: [
           Container(
-            width: 32,
-            height: 28,
+            width: 30,
+            height: 30,
             alignment: Alignment.center,
-            decoration: isToday
-                ? BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(9), border: Border.all(color: JitanColors.radioBorder))
-                : null,
-            child: Text('${d.date.day}', style: JitanMobileTextStyles.summary.copyWith(fontSize: 13)),
+            decoration: isToday ? const BoxDecoration(color: JitanColors.ink, shape: BoxShape.circle) : null,
+            child: Text(
+              '${d.date.day}',
+              style: JitanMobileTextStyles.rowText.copyWith(
+                color: isToday ? JitanColors.surface : (weekend ? JitanColors.radioBorder : JitanColors.ink),
+                fontWeight: isToday ? FontWeight.w600 : null,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
           ),
-          const SizedBox(height: 3),
-          Container(width: 5, height: 5, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+          ),
         ],
       ),
     );
   }
 }
 
-/// "● Worked ● Planned ● Needs attention ○ Today".
+/// "● Worked ● Needs you ● Planned".
 class PeriodLegend extends StatelessWidget {
   const PeriodLegend({super.key});
 
   @override
   Widget build(BuildContext context) {
-    Widget item(Color? fill, String key) => Row(
+    Widget item(Color fill, String key) => Row(
       mainAxisSize: MainAxisSize.min,
+      spacing: 6,
       children: [
         Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: fill,
-            shape: BoxShape.circle,
-            border: fill == null ? Border.all(color: JitanColors.ink) : null,
-          ),
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 5),
-        Text(context.t(key), style: JitanMobileTextStyles.cardText.copyWith(fontSize: 11)),
+        Text(context.t(key), style: JitanMobileTextStyles.detail.copyWith(fontSize: 12)),
       ],
     );
     return Wrap(
-      spacing: 14,
+      spacing: 16,
       runSpacing: 6,
       children: [
-        item(JitanColors.success, EmployeeTextKeys.periodLegendWorked),
-        item(JitanColors.radioBorder, EmployeeTextKeys.periodLegendPlanned),
-        item(JitanColors.vermilion, EmployeeTextKeys.periodLegendAttention),
-        item(null, EmployeeTextKeys.periodLegendToday),
+        item(JitanColors.ink, EmployeeTextKeys.periodLegendWorked),
+        item(JitanColors.warning, EmployeeTextKeys.periodLegendAttention),
+        item(JitanColors.radioIdle, EmployeeTextKeys.periodLegendPlanned),
       ],
+    );
+  }
+}
+
+/// The grey shapes while a period loads: the total card and a list.
+class PeriodSkeleton extends StatelessWidget {
+  const PeriodSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget block(double height, double radius) => Container(
+      height: height,
+      decoration: BoxDecoration(color: JitanColors.inputFill, borderRadius: BorderRadius.circular(radius)),
+    );
+    return Semantics(
+      label: MaterialLocalizations.of(context).refreshIndicatorSemanticLabel,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 12, children: [block(141, 20), block(160, 18)]),
     );
   }
 }

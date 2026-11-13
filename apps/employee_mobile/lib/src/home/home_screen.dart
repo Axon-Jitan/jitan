@@ -193,6 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
       clock: widget.clock,
       bottomBar: _navBar(context),
       current: _activity.activity.current,
+      activities: _activity.activity.today,
     ),
     2 => MyQrScreen(meApi: widget.meApi, account: _account, onSessionEnded: widget.onSessionEnded, bottomBar: _navBar(context)),
     _ => HomeTodayView(
