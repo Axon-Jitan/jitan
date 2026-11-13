@@ -60,6 +60,9 @@ class HomePage extends StatelessWidget {
                       if (notice case final notice?) ...[const SizedBox(height: 4), notice],
                       if (title != null || subtitle != null) const SizedBox(height: 20),
                       ...children,
+                      // Room at the end, so the last card scrolls clear of
+                      // the button below it.
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),

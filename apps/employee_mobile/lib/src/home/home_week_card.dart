@@ -20,7 +20,7 @@ class HomeWeekCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final planned = week.plannedMinutes;
-    const height = 28.0;
+    const height = 56.0;
     return Material(
       color: JitanColors.surface,
       borderRadius: BorderRadius.circular(18),
@@ -78,13 +78,13 @@ class HomeWeekCard extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.bottomCenter,
                     child: Container(
-                      width: 6,
-                      height: (d.registeredMinutes ?? 0) > 0 && most > 0 ? (height * d.registeredMinutes! / most).clamp(3, height) : 2,
+                      width: 8,
+                      height: (d.registeredMinutes ?? 0) > 0 && most > 0 ? (height * d.registeredMinutes! / most).clamp(4, height) : 2,
                       decoration: BoxDecoration(
                         color: (d.registeredMinutes ?? 0) > 0
                             ? (d.date == today ? JitanColors.radioBorder : JitanColors.ink)
                             : JitanColors.inputBorder,
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                   ),
