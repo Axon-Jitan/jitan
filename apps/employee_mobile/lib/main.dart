@@ -32,7 +32,7 @@ void main() {
 
   const store = PlatformSecureStore();
   final session = SessionManager(store);
-  final transport = ApiTransport(baseUri: config.apiBaseUri, accessToken: () => session.accessToken);
+  final transport = ApiTransport(baseUri: config.apiBaseUri, httpClient: config.httpClient(), accessToken: () => session.accessToken);
   final languagesApi = LanguagesApi(transport);
   final locationsApi = LocationsApi(transport);
   const presence = WorkplacePresence(store);

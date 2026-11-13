@@ -22,7 +22,7 @@ Future<void> onGeofenceEvent(GeofenceCallbackParams params) async {
   const store = PlatformSecureStore();
   final session = SessionManager(store);
   if (!await session.restore()) return;
-  final transport = ApiTransport(baseUri: config.apiBaseUri, accessToken: () => session.accessToken);
+  final transport = ApiTransport(baseUri: config.apiBaseUri, httpClient: config.httpClient(), accessToken: () => session.accessToken);
   final handler = GeofenceEventHandler(
     api: TimeRegistrationsApi(transport),
     activities: ActivityApi(transport),

@@ -90,14 +90,17 @@ They then sign in on the HR website, and everyone else is set up from there.
 
 ## 5. The tablet
 
-Install `jitan-employee.apk`. The tablet needs to reach `10.1.101.65:8080` and to
-trust the server's HTTPS certificate:
+Install `jitan-employee.apk`. The tablet needs to reach `10.1.101.65:8080`.
 
-- The certificate must name `10.1.101.65` (an IP entry in its Subject Alternative
-  Name), because the app connects to that address.
-- Android apps trust only public certificate authorities. If `agapp05.crt` comes from
-  your own CA, send us that CA's certificate (the public part only), and we build the
-  app again to trust it.
+Your certificate `agapp05` is self-signed and names `10.1.101.65`, so the app is built
+to accept exactly that certificate, from that address only (SHA-256
+`B6:CB:0A:74:75:BF:EA:46:21:B7:15:68:F9:32:86:BA:69:F8:78:CB:7B:09:7D:E7:04:EB:2B:A2:F8:83:BF:C4`;
+please confirm it is yours: `openssl x509 -in /etc/jitan/tls/agapp05.crt -noout
+-fingerprint -sha256`). **If you replace the certificate, tell us first**: the app needs
+a new build, or it will refuse the server.
+
+Browsers will warn about the self-signed certificate on the HR website until the
+certificate is trusted on the HR computers (for example pushed to them by policy).
 
 An employee is set up from the HR website (Employees → the employee → onboarding QR),
 and scans that QR in the app with the tablet's camera.
@@ -114,7 +117,7 @@ never changes the database structure and never deletes rows. Test records are na
 ## Questions for you
 
 1. The CA fingerprint of the database (step 1).
-2. Does `agapp05.crt` name `10.1.101.65`, and who issued it (step 5)?
+2. Is `B6:CB:0A:74:…:83:BF:C4` the fingerprint of your `agapp05.crt` (step 5)?
 3. Can phones reach `10.1.101.65:8080` from the office Wi-Fi? And later from outside
    the office, for employees on mobile data?
 4. Who is the first HR person (step 4), and do `tblCredGroup` and `tblAppModules` already
