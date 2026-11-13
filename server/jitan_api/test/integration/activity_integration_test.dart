@@ -1,6 +1,7 @@
 @Tags(['integration'])
 library;
 
+import 'package:jitan_api/src/activities/activity_entries.dart';
 import 'package:jitan_api/src/activities/activity_repository.dart';
 import 'package:jitan_api/src/activities/activity_service.dart';
 import 'package:jitan_api/src/activities/trip_kilometres.dart';
@@ -44,6 +45,7 @@ void main() {
 
   late Database db;
   late ActivityService activities;
+  late MyDayService myDayLines;
   late TimeRegistrationWriteService writes;
   late int company;
   late int otherCompany;
@@ -172,6 +174,26 @@ void main() {
       transactions: db,
       executor: db,
       clock: clock,
+    );
+    myDayLines = MyDayService(
+      days: days,
+      records: records,
+      plans: WeekPlans(schedules),
+      clock: clock,
+      activities: ActivityEntries(
+        activities: const ActivityRepository(),
+        projects: const ProjectRepository(),
+        locations: const LocationRepository(),
+        kilometres: TripKilometres(
+          activities: const ActivityRepository(),
+          locations: const LocationRepository(),
+          distance: _FixedDistance(),
+          executor: db,
+          clock: clock,
+        ),
+        executor: db,
+        clock: clock,
+      ),
     );
     writes = TimeRegistrationWriteService(
       transactions: db,
@@ -338,6 +360,27 @@ void main() {
     expect(mine.breakdown.transportMinutes, inInclusiveRange(29, 31));
     expect(mine.breakdown.trips, 1);
     expect(mine.breakdown.isMixed, isTrue);
+  });
+
+  test('Period: a day carries what it went on, the same lines as today (2026-11-13)', () async {
+    final user = await newUser();
+    final internal = await internalProject();
+    await start(user, moment(120));
+    await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(119), projectId: internal));
+    await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60)));
+    final today = (await activities.mine(user)).today;
+
+    final local = clock.wallClockOf(DateTime.now().toUtc());
+    String two(int n) => n.toString().padLeft(2, '0');
+    final date = '${local.year}-${two(local.month)}-${two(local.day)}';
+    final day = (await myDayLines.period(user, date, date)).days.single;
+
+    expect(day.activities, hasLength(2));
+    expect(
+      [for (final a in day.activities) (a.timeLocal, a.kind, a.projectName)],
+      [for (final a in today) (a.timeLocal, a.kind, a.projectName)],
+    );
+    expect(day.activities.first.projectName, isNotNull);
   });
 
   group('D40: a trip is known on arrival', () {

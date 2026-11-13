@@ -1,3 +1,4 @@
+import 'activity.dart';
 import 'json_reading.dart';
 import 'time_record.dart';
 
@@ -12,6 +13,9 @@ class MyPeriodDay {
     this.scheduledFinish,
     this.plannedMinutes,
     this.registeredMinutes,
+    this.breakStart,
+    this.breakMinutes,
+    this.activities = const [],
   });
 
   factory MyPeriodDay.fromJson(Map<String, Object?> json) => MyPeriodDay(
@@ -21,6 +25,11 @@ class MyPeriodDay {
         scheduledFinish: json.readOptionalString('scheduledFinish'),
         plannedMinutes: json.readOptionalInt('plannedMinutes'),
         registeredMinutes: json.readOptionalInt('registeredMinutes'),
+        breakStart: json.readOptionalString('breakStart'),
+        breakMinutes: json.readOptionalInt('breakMinutes'),
+        activities: json['activities'] == null
+            ? const []
+            : json.readObjectList('activities').map(ActivityEntry.fromJson).toList(),
       );
 
   /// The workplace-local calendar day.
@@ -37,6 +46,15 @@ class MyPeriodDay {
   /// Rounded finish − rounded start − break (D4, D13); `null` while the day
   /// is open, has no registration, or a correction waits for HR (D31).
   final int? registeredMinutes;
+
+  /// When the schedule's break usually starts (`HH:mm`) and how long it is
+  /// (D13: deducted, never registered); `null` on a day without a break.
+  final String? breakStart;
+  final int? breakMinutes;
+
+  /// What the day went on: each activity with its project or place, oldest
+  /// first, as on Home's timeline (D44). Empty without activities.
+  final List<ActivityEntry> activities;
 
   /// A day the employee should look at: a missing start or finish, a day
   /// without registration, or a correction waiting for HR.
@@ -56,6 +74,9 @@ class MyPeriodDay {
         'scheduledFinish': scheduledFinish,
         'plannedMinutes': plannedMinutes,
         'registeredMinutes': registeredMinutes,
+        if (breakStart != null) 'breakStart': breakStart,
+        if (breakMinutes != null) 'breakMinutes': breakMinutes,
+        if (activities.isNotEmpty) 'activities': [for (final a in activities) a.toJson()],
       };
 }
 

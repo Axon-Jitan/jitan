@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:jitan_api/src/app.dart';
+import 'package:jitan_api/src/activities/activity_entries.dart';
 import 'package:jitan_api/src/activities/activity_repository.dart';
 import 'package:jitan_api/src/activities/activity_routes.dart';
 import 'package:jitan_api/src/activities/activity_service.dart';
@@ -259,6 +260,14 @@ Future<void> main() async {
     records: TimeRecordRepository(db),
     plans: WeekPlans(ScheduleRepository(db)),
     clock: workplaceClock,
+    activities: ActivityEntries(
+      activities: const ActivityRepository(),
+      projects: const ProjectRepository(),
+      locations: const LocationRepository(),
+      kilometres: tripKilometres,
+      executor: db,
+      clock: workplaceClock,
+    ),
   );
   final activityService = ActivityService(
     activities: const ActivityRepository(),

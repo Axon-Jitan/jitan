@@ -1,5 +1,6 @@
 import 'package:jitan_models/jitan_models.dart';
 
+import '../activities/activity_entries.dart';
 import '../activities/activity_minutes.dart';
 import '../http/api_exception.dart';
 import '../time_registration/workplace_clock.dart';
@@ -18,6 +19,7 @@ class MyDayService {
     required this._records,
     required this._plans,
     required this._clock,
+    this.activities,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -26,6 +28,10 @@ class MyDayService {
   final WeekPlans _plans;
   final WorkplaceClock _clock;
   final DateTime Function() _now;
+
+  /// The days' activities for Period's timeline; without it the days carry
+  /// none (tests that don't need them).
+  final ActivityEntries? activities;
 
   static final _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
 
@@ -49,8 +55,8 @@ class MyDayService {
 
   /// Every day from [from] to [to] (workplace-local `yyyy-MM-dd`, both
   /// inclusive, at most [MyPeriod.maxDays]): the day as on Time records,
-  /// the planned time from the schedule and the registered time of finished
-  /// days, with the totals. 400 for a missing, malformed, reversed or too
+  /// the planned time and break from the schedule, the registered time of
+  /// finished days, and the day's activities, with the totals. 400 for a missing, malformed, reversed or too
   /// long period.
   Future<MyPeriod> period(int userId, String? from, String? to) async {
     final first = _parseDate(from, 'from');
@@ -61,6 +67,7 @@ class MyDayService {
     }
     final byDate = {for (final d in await _days.daysOf([_me(userId)], first, last)) d.date: d};
     final week = await _weekPlan(userId);
+    final lines = await activities?.byDay(userId, first, last) ?? const {};
     final days = <MyPeriodDay>[];
     for (var date = first; !date.isAfter(last); date = DateTime.utc(date.year, date.month, date.day + 1)) {
       final plan = week[date.weekday];
@@ -73,6 +80,9 @@ class MyDayService {
           scheduledFinish: plan?.finish,
           plannedMinutes: WeekPlans.plannedMinutes(plan),
           registeredMinutes: day == null ? null : registeredMinutes(day, plan?.breakMinutes ?? 0),
+          breakStart: plan?.breakStart,
+          breakMinutes: plan?.breakMinutes,
+          activities: lines[date] ?? const [],
         ),
       );
     }

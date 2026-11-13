@@ -10,6 +10,7 @@ import '../projects/project_service.dart';
 import '../time_records/my_day_service.dart';
 import '../time_registration/time_registration_write_repository.dart';
 import '../time_registration/workplace_clock.dart';
+import 'activity_entries.dart';
 import 'activity_minutes.dart';
 import 'activity_repository.dart';
 import 'trip_kilometres.dart';
@@ -71,7 +72,7 @@ class ActivityService {
       enabled: await _typesReady(_executor),
       current: await _current(userId, projects, companies),
       breakdown: await _breakdown(userId),
-      today: await _entries(userId, projects),
+      today: await _entries(userId),
       projects: projects,
       companies: companies,
     );
@@ -184,41 +185,19 @@ class ActivityService {
   }
 
   /// Today's list: transports in a row are one line.
-  Future<List<ActivityEntry>> _entries(int userId, List<MyProject> projects) async {
+  Future<List<ActivityEntry>> _entries(int userId) async {
     final (from, to) = _todayBounds();
-    final rows = await _activities.between(_executor, userId, from, to);
-    if (rows.isEmpty) return const [];
-    final names = {for (final p in projects) p.id: p.name};
-    final places = {for (final l in await _locations.all(_executor)) l.id: l.name};
-    final trips = await _kilometres.distancesOf(rows);
-    bool isTransport(int i) => rows[i].typeName == ActivityRepository.transportType;
-    var trip = 0;
-    return [
-      for (final (i, row) in rows.indexed)
-        if (!isTransport(i))
-          ActivityEntry(
-            timeLocal: _time(row.at),
-            kind: _kindOf(row.typeName),
-            projectName: names[row.addressId],
-            placeName: places[row.addressId],
-          )
-        else if (i == 0 || !isTransport(i - 1))
-          () {
-            final (trip: to, :metres) = trips[trip++];
-            return ActivityEntry(
-              timeLocal: _time(row.at),
-              kind: ActivityKind.transport,
-              placeName: places[to.to],
-              metres: metres,
-            );
-          }(),
-    ];
+    return _lines.between(userId, from, to);
   }
 
-  String _time(DateTime at) {
-    final local = _clock.wallClockOf(at);
-    return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-  }
+  late final _lines = ActivityEntries(
+    activities: _activities,
+    projects: _projects,
+    locations: _locations,
+    kilometres: _kilometres,
+    executor: _executor,
+    clock: _clock,
+  );
 
   /// Today's activities, each until the next one, the finish or now.
   Future<ActivityBreakdown> _breakdown(int userId) async {
