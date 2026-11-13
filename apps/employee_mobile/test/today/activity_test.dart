@@ -143,9 +143,51 @@ void main() {
       expect(find.text('0h 50m'), findsOneWidget, reason: 'Home’s usual format');
     });
 
+    testWidgets('one kind of work on two projects: the projects as rows, most time first (Figma 1606:128)', (tester) async {
+      const breakdown = ActivityBreakdown(
+        internalMinutes: 258,
+        projects: [
+          ProjectMinutes(name: 'P-0990 Clean the workshop', minutes: 190),
+          ProjectMinutes(name: 'P-1102 Maintenance', minutes: 68),
+        ],
+      );
+      expect(HomeWorkCard.shows(breakdown), isTrue);
+      await _show(tester, const Scaffold(body: HomeWorkCard(breakdown: breakdown)));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('P-0990 Clean the workshop'), findsOneWidget);
+      expect(find.text('3h 10m'), findsOneWidget);
+      expect(find.text('P-1102 Maintenance'), findsOneWidget);
+      expect(find.text('1h 08m'), findsOneWidget);
+      expect(find.text('Internal work'), findsNothing, reason: 'one kind says nothing new');
+    });
+
+    testWidgets('a fourth project and later share one line', (tester) async {
+      const breakdown = ActivityBreakdown(
+        internalMinutes: 300,
+        projects: [
+          ProjectMinutes(name: 'A', minutes: 120),
+          ProjectMinutes(name: 'B', minutes: 90),
+          ProjectMinutes(name: 'C', minutes: 60),
+          ProjectMinutes(name: 'D', minutes: 30),
+        ],
+      );
+      await _show(tester, const Scaffold(body: HomeWorkCard(breakdown: breakdown)));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Other projects'), findsOneWidget);
+      expect(find.text('1h 30m'), findsNWidgets(2), reason: 'B, and C + D together');
+      expect(find.text('C'), findsNothing);
+    });
+
     test('one kind of work says nothing new: no card', () {
       expect(HomeWorkCard.shows(const ActivityBreakdown(clientMinutes: 200, transportMinutes: 40, trips: 1)), isFalse);
       expect(HomeWorkCard.shows(const ActivityBreakdown()), isFalse);
+      expect(
+        HomeWorkCard.shows(const ActivityBreakdown(internalMinutes: 90, projects: [ProjectMinutes(name: 'A', minutes: 90)])),
+        isFalse,
+        reason: 'one project is already on the project row',
+      );
     });
   });
 

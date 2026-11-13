@@ -12,6 +12,7 @@ import '../device/permissions_gateway.dart';
 import '../geofencing/away_reminder.dart';
 import '../geofencing/workplace_presence.dart';
 import '../l10n/employee_text_keys.dart';
+import '../period/period_controller.dart';
 import '../period/period_screen.dart';
 import '../profile/profile_screens.dart';
 import '../qr/my_qr_screen.dart';
@@ -87,10 +88,36 @@ class _HomeScreenState extends State<HomeScreen> {
     presence: widget.presence,
     reminder: widget.reminder,
     onSessionEnded: widget.onSessionEnded,
-    onDayLoaded: () => _activity.load(),
+    onDayLoaded: () {
+      _activity.load();
+      _loadWeek();
+    },
     clock: widget.clock,
   )..load();
   HomeMode? _mode;
+
+  /// This week, for Home's card (Figma `1606:2`); `null` until loaded or when
+  /// it couldn't be: the card then stays away, nothing else depends on it.
+  MyPeriod? _week;
+
+  Future<void> _loadWeek() async {
+    final now = _today.now();
+    final today = DateTime.utc(now.year, now.month, now.day);
+    try {
+      final week = await widget.timeRegistrationsApi.period(
+        from: today.subtract(Duration(days: today.weekday - 1)),
+        to: today.add(Duration(days: 7 - today.weekday)),
+      );
+      if (mounted) setState(() => _week = week);
+    } on ApiClientException {
+      // The day itself says when the connection fails; the card waits.
+    }
+  }
+
+  /// Period opens on the week from "This week", on the day otherwise.
+  PeriodView _periodView = PeriodView.day;
+
+  void _openWeek() => _select(1, periodView: PeriodView.week);
 
   Future<void> _loadMode() async {
     final mode = await homeModeOf(widget.settings, widget.permissions, widget.presence);
@@ -164,8 +191,10 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Home (0), Period (1) or My QR (2).
   int _tab = 0;
 
-  void _select(int tab) {
+  void _select(int tab, {PeriodView periodView = PeriodView.day}) {
     _closePagesOnTop();
+    // The tab bar opens Period on the day; only "This week" opens the week.
+    _periodView = periodView;
     if (tab == _tab) return;
     setState(() => _tab = tab);
     // Back on Home: what changed in Period (a time added) shows at once.
@@ -202,6 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomBar: _navBar(context),
       current: _activity.activity.current,
       activities: _activity.activity.today,
+      initialView: _periodView,
     ),
     2 => MyQrScreen(meApi: widget.meApi, account: _account, onSessionEnded: widget.onSessionEnded, bottomBar: _navBar(context)),
     _ => HomeTodayView(
@@ -214,6 +244,8 @@ class _HomeScreenState extends State<HomeScreen> {
       onShowQr: () => _select(2),
       onSwitch: _openSwitch,
       onAnswerWithTime: _answerWithTime,
+      week: _week,
+      onOpenWeek: _openWeek,
     ),
   };
 

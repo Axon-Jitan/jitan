@@ -12,6 +12,8 @@ class HomeHero extends StatelessWidget {
     this.dark = false,
     this.smallValue = false,
     this.plainValue = false,
+    this.progress,
+    this.progressLabel,
   });
 
   /// "Registered today", "Planned today", "Away for".
@@ -29,6 +31,11 @@ class HomeHero extends StatelessWidget {
 
   /// A plain line instead of a value ("No schedule today").
   final bool plainValue;
+
+  /// How far the day is toward its planned time, 0 to 1 (Figma `1606:2`):
+  /// a slim line under the value with [progressLabel] ("of 8h 00m").
+  final double? progress;
+  final String? progressLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -55,10 +62,33 @@ class HomeHero extends StatelessWidget {
                   : JitanMobileTextStyles.hero.copyWith(color: strong),
             ),
           ),
-          for (final line in lines) ...[
+          if (progress case final done?) ...[
+            const SizedBox(height: 10),
+            Row(
+              spacing: 10,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: done.clamp(0, 1).toDouble()),
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, _) => LinearProgressIndicator(
+                        value: value,
+                        minHeight: 4,
+                        color: dark ? JitanColors.surface : JitanColors.ink,
+                        backgroundColor: dark ? JitanColors.sidebarItemActive : JitanColors.inputFill,
+                      ),
+                    ),
+                  ),
+                ),
+                if (progressLabel case final label?) Text(label, style: JitanMobileTextStyles.detail.copyWith(color: quiet)),
+              ],
+            ),
             const SizedBox(height: 4),
-            Text(line, style: JitanMobileTextStyles.detail.copyWith(color: quiet)),
           ],
+          for (final line in lines) ...[const SizedBox(height: 4), Text(line, style: JitanMobileTextStyles.detail.copyWith(color: quiet))],
         ],
       ),
     );

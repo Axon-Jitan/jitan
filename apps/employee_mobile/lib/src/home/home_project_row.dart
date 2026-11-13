@@ -36,8 +36,7 @@ class HomeProjectRow extends StatelessWidget {
                       ? JitanMobileTextStyles.rowText.copyWith(color: JitanColors.inkMuted)
                       : JitanMobileTextStyles.rowTitle,
                 ),
-                if (current != null && project != null)
-                  Text(ActivityText.kind(context, current.kind), style: JitanMobileTextStyles.detail),
+                if (current != null && project != null) Text(ActivityText.kind(context, current.kind), style: JitanMobileTextStyles.detail),
               ],
             ),
           ),

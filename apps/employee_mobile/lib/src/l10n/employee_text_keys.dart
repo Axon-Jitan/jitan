@@ -205,6 +205,10 @@ abstract final class EmployeeTextKeys {
   static const todayCheckConnection = 'today.checkConnection';
   static const todaySaveRefused = 'today.saveRefused';
   static const todayTryAgain = 'today.tryAgain';
+  static const todayThisWeek = 'today.thisWeek';
+  static const todayWeekOf = 'today.weekOf';
+  static const todayDayOf = 'today.dayOf';
+  static const activityOtherProjects = 'activity.otherProjects';
   static const todayRefreshFailed = 'today.refreshFailed';
   static const entryArriveTitle = 'entry.arrive.title';
   static const entryArriveText = 'entry.arrive.text';

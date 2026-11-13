@@ -28,6 +28,7 @@ class PeriodScreen extends StatefulWidget {
     this.bottomBar,
     this.current,
     this.activities = const [],
+    this.initialView = PeriodView.day,
   });
 
   final TimeRegistrationsApi api;
@@ -41,12 +42,20 @@ class PeriodScreen extends StatefulWidget {
   /// Today's activities, as Home already has them.
   final List<ActivityEntry> activities;
 
+  /// Week when opened from Home's "This week".
+  final PeriodView initialView;
+
   @override
   State<PeriodScreen> createState() => _PeriodScreenState();
 }
 
 class _PeriodScreenState extends State<PeriodScreen> {
-  late final _controller = PeriodController(widget.api, onSessionEnded: widget.onSessionEnded, clock: widget.clock)..load();
+  late final _controller = PeriodController(
+    widget.api,
+    onSessionEnded: widget.onSessionEnded,
+    clock: widget.clock,
+    view: widget.initialView,
+  )..load();
 
   @override
   void dispose() {

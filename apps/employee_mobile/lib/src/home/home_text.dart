@@ -46,16 +46,20 @@ abstract final class HomeText {
   /// planned time is today's schedule as HR set it, shown only.
   static String? plannedLine(BuildContext context, MyDay day) {
     final breakMinutes = day.breakMinutes ?? 0;
-    final planned = switch ((_minutes(day.scheduledStart), _minutes(day.scheduledFinish))) {
-      (final start?, final finish?) when finish > start => finish - start - breakMinutes,
-      _ => null,
-    };
+    final planned = plannedMinutes(day);
     final parts = [
       if (planned != null) context.t(EmployeeTextKeys.todayPlannedTotal, args: {'time': TodayText.duration(context, planned)}),
       if (breakMinutes > 0) context.t(EmployeeTextKeys.todayBreak, args: {'minutes': breakMinutes}),
     ];
     return parts.isEmpty ? null : parts.join(' · ');
   }
+
+  /// Today's planned work time from the schedule, minus the break; `null`
+  /// without a schedule. Shown only: the totals are the server's.
+  static int? plannedMinutes(MyDay day) => switch ((_minutes(day.scheduledStart), _minutes(day.scheduledFinish))) {
+    (final start?, final finish?) when finish > start => finish - start - (day.breakMinutes ?? 0),
+    _ => null,
+  };
 
   static int? _minutes(String? hhmm) {
     if (hhmm == null || hhmm.length < 5) return null;
@@ -76,7 +80,8 @@ abstract final class HomeText {
         ),
       // The first switch is usually the start itself: shown once.
       for (final entry in activity.today)
-        if (entry.timeLocal != start.local) HomeMoment(time: entry.timeLocal, title: ActivityText.kind(context, entry.kind), detail: _where(context, entry)),
+        if (entry.timeLocal != start.local)
+          HomeMoment(time: entry.timeLocal, title: ActivityText.kind(context, entry.kind), detail: _where(context, entry)),
       if (finish.local case final time?)
         HomeMoment(
           time: time,

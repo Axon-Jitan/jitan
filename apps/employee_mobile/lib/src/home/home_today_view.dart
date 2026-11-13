@@ -17,6 +17,7 @@ import 'home_page.dart';
 import 'home_project_row.dart';
 import 'home_text.dart';
 import 'home_timeline.dart';
+import 'home_week_card.dart';
 import 'home_work_card.dart';
 
 /// Every state of Home (Figma `1585:2`): loading, couldn't load, the first
@@ -34,6 +35,8 @@ class HomeTodayView extends StatelessWidget {
     required this.onShowQr,
     required this.onSwitch,
     required this.onAnswerWithTime,
+    this.week,
+    this.onOpenWeek,
   });
 
   final TodayController today;
@@ -51,6 +54,13 @@ class HomeTodayView extends StatelessWidget {
 
   /// "Travelling for work" / "Other": the time and reason wait for HR.
   final void Function(MyDay day) onAnswerWithTime;
+
+  /// This week, for the card at the bottom (Figma `1606:2`); `null` until
+  /// it loaded, or when it couldn't.
+  final MyPeriod? week;
+
+  /// Opens Period on the week.
+  final VoidCallback? onOpenWeek;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -111,6 +121,25 @@ class HomeTodayView extends StatelessWidget {
         children: children,
       );
 
+  /// How far toward today's planned time; `null` without a schedule.
+  static double? _progress(MyDay day, int? minutes) {
+    final planned = HomeText.plannedMinutes(day);
+    if (planned == null || planned <= 0 || minutes == null) return null;
+    return minutes / planned;
+  }
+
+  /// "of 8h 00m".
+  static String? _progressLabel(BuildContext context, MyDay day) => switch (HomeText.plannedMinutes(day)) {
+    final planned? when planned > 0 => context.t(EmployeeTextKeys.todayDayOf, args: {'time': TodayText.duration(context, planned)}),
+    _ => null,
+  };
+
+  /// This week at the bottom, once it loaded.
+  List<Widget> _weekCard(MyDay day) => switch ((week, onOpenWeek)) {
+    (final week?, final open?) => [const SizedBox(height: 12), HomeWeekCard(week: week, today: day.date, onOpen: open)],
+    _ => const [],
+  };
+
   /// The day's work under the total, when there are two or more kinds.
   List<Widget> _workCard() {
     final breakdown = activity.activity.breakdown;
@@ -158,6 +187,7 @@ class HomeTodayView extends StatelessWidget {
             if (!noSchedule && breakMinutes > 0) context.t(EmployeeTextKeys.todayBreak, args: {'minutes': breakMinutes}),
           ],
         ),
+        ..._weekCard(day),
       ],
       action: switch (mode) {
         HomeMode.automatic => null,
@@ -187,11 +217,14 @@ class HomeTodayView extends StatelessWidget {
           dark: true,
           label: context.t(EmployeeTextKeys.todayWorkingRegistered),
           value: elapsed == null ? '--' : TodayText.duration(context, elapsed),
+          progress: _progress(day, elapsed),
+          progressLabel: _progressLabel(context, day),
           lines: [?line],
         ),
         ..._workCard(),
         if (activity.showsCard) ...[const SizedBox(height: 12), HomeProjectRow(activity: activity.activity.current, onSwitch: onSwitch)],
         if (moments.isNotEmpty) ...[const SizedBox(height: 12), HomeTimeline(moments: moments)],
+        ..._weekCard(day),
       ],
       action: switch (mode) {
         HomeMode.automatic => null,
@@ -292,10 +325,13 @@ class HomeTodayView extends StatelessWidget {
           HomeHero(
             label: context.t(EmployeeTextKeys.todayWorkingRegistered),
             value: TodayText.duration(context, minutes),
+            progress: _progress(day, minutes),
+            progressLabel: _progressLabel(context, day),
             lines: [?planned],
           ),
         ..._workCard(),
         if (moments.isNotEmpty) ...[const SizedBox(height: 12), HomeTimeline(moments: moments)],
+        ..._weekCard(day),
       ],
     );
   }

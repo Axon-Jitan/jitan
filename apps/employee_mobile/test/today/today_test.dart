@@ -96,7 +96,7 @@ void main() {
     await tap(tester, 'Finish work');
     expect(h.server.registrations.last['boundary'], 'finish');
     expect(find.text('Your day is done'), findsOneWidget);
-    expect(find.text('7h 37m'), findsOneWidget, reason: '09:00–17:07 minus the 30 min break, from the server');
+    expect(find.text('7h 37m'), findsNWidgets(2), reason: '09:00–17:07 minus the 30 min break, from the server; also the week so far');
     expect(find.text('09:00 – 17:07'), findsOneWidget);
     expect(find.text('Planned 8h 00m · 30 min break'), findsOneWidget);
     expect(find.text('Finished'), findsOneWidget);
@@ -150,6 +150,32 @@ void main() {
     expect(find.text('You’re working'), findsOneWidget);
     expect(find.text('Since 08:00 · Your start time waits for HR'), findsOneWidget);
     expect(find.text('Waiting for HR'), findsOneWidget, reason: 'on the start in the timeline');
+  });
+
+  testWidgets('progress toward the planned day sits under the total (Figma 1606:2)', (tester) async {
+    await startApp(tester);
+    await tap(tester, 'Start work');
+    expect(find.text('of 8h 00m'), findsOneWidget, reason: '08:00–16:30 minus the 30 min break');
+    final line = tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator));
+    expect(line.value, inInclusiveRange(0, 1));
+  });
+
+  testWidgets('This week sits at the bottom of Home and opens Period on the week; the tab opens it on the day', (tester) async {
+    h.server.pastDays['2026-10-20'] = (
+      {'employeeId': 1, 'employeeCode': '', 'date': '2026-10-20', 'status': 'complete', 'events': <Object?>[]},
+      450,
+    );
+    await startApp(tester);
+    expect(find.text('This week'), findsOneWidget);
+    expect(find.text('7h 30m'), findsOneWidget, reason: 'the same number as Period’s week');
+    expect(find.text('of 40h'), findsOneWidget);
+
+    await tap(tester, 'This week');
+    expect(find.text('19–25 October 2026'), findsOneWidget, reason: 'Period on the week');
+
+    await tap(tester, 'Home');
+    await tap(tester, 'Period');
+    expect(find.text('Thursday 22 October'), findsOneWidget, reason: 'the tab opens Period on the day');
   });
 
   testWidgets('a refresh that fails keeps the day and says so; Try again loads it again (Figma 1602:2)', (tester) async {

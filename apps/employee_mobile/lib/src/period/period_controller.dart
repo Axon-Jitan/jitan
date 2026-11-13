@@ -37,7 +37,8 @@ class PeriodFailed extends PeriodState {
 /// server (`GET /me/today`, `GET /me/period`). Every total and status comes
 /// from the server; nothing is calculated here (rule §6).
 class PeriodController extends ChangeNotifier {
-  PeriodController(this._api, {required this.onSessionEnded, DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  PeriodController(this._api, {required this.onSessionEnded, DateTime Function()? clock, this._view = PeriodView.day})
+    : _clock = clock ?? DateTime.now;
 
   final TimeRegistrationsApi _api;
   final DateTime Function() _clock;
@@ -45,7 +46,7 @@ class PeriodController extends ChangeNotifier {
   /// A 401: the session is no longer valid.
   final VoidCallback onSessionEnded;
 
-  PeriodView _view = PeriodView.day;
+  PeriodView _view;
   PeriodView get view => _view;
 
   PeriodState _state = const PeriodLoading();
