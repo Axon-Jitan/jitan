@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:jitan_core/jitan_core.dart';
-import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
 
 import '../device/device_settings.dart';
 import '../l10n/employee_text_keys.dart';
+import '../l10n/language_names.dart';
 import '../widgets/mobile_widgets.dart';
 import '../widgets/phone_widgets.dart';
 import 'onboarding_controller.dart';
@@ -249,9 +249,9 @@ class LanguageScreen extends StatelessWidget {
         children: [
           for (final language in controller.languages)
             PhoneListRow(
-              title: _ownName(context, language),
+              title: LanguageNames.own(context, language),
               titleStyle: JitanMobileTextStyles.rowTitle.copyWith(fontWeight: FontWeight.w500),
-              detail: _translatedName(context, language),
+              detail: LanguageNames.translated(context, language),
               selected: controller.languageCode == language.code,
               trailing: controller.languageCode == language.code ? const PhoneCheck() : null,
               onTap: () => controller.chooseLanguage(language.code),
@@ -272,16 +272,6 @@ class LanguageScreen extends StatelessWidget {
       ],
     ],
   );
-}
-
-String _ownName(BuildContext context, Language language) =>
-    language.code == englishLanguageCode ? context.t(EmployeeTextKeys.languageEnglish) : language.name;
-
-/// The language's name in the current language, unless it reads the same
-/// ("English" under "English").
-String? _translatedName(BuildContext context, Language language) {
-  final translated = context.tOrNull(CommonTextKeys.languageName(language.code));
-  return translated == _ownName(context, language) ? null : translated;
 }
 
 /// Step 5, the password. Mandatory: there is no "Set this later" (decision

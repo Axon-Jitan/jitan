@@ -286,7 +286,7 @@ void main() {
     expect(find.text('No schedule today'), findsOneWidget);
 
     await tap(tester, 'Profile');
-    expect(find.text('Employee code'), findsOneWidget);
+    expect(find.text('Registration method'), findsOneWidget);
   });
 
   testWidgets('working: the project with Switch, and the day as one timeline (Figma 1585:2)', (tester) async {
@@ -395,8 +395,7 @@ void main() {
 
       await h.services.settings.setRegistrationMethod(RegistrationMethod.qr);
       await tap(tester, 'Profile');
-      await tester.pageBack();
-      await settle(tester);
+      await tap(tester, 'Home');
       expect(find.widgetWithText(JitanMobileButton, 'Show my QR'), findsOneWidget);
     });
   });

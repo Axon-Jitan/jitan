@@ -4,25 +4,22 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../device/device_settings.dart';
 import '../device/permissions_gateway.dart';
 import '../l10n/employee_text_keys.dart';
-import '../widgets/mobile_widgets.dart';
-import 'profile_screens.dart';
+import '../widgets/phone_step_page.dart';
+import '../widgets/phone_widgets.dart';
 
-/// Profile / Registration method (Figma 94:2, 631:2, 631:30, 631:58): how the
-/// employee's time is recorded. Stays on this phone (GAP-07). Automatic needs
-/// the employee's location permission, also with the app closed (D30).
+/// Profile → Registration method (Figma `1589:68`, `1589:103`): how the
+/// employee's time is registered, the same list as onboarding with the
+/// current method marked. Stays on this phone (GAP-07). Automatic needs
+/// location, also with the app closed (D30): Save asks for it first.
 class RegistrationMethodScreen extends StatefulWidget {
-  const RegistrationMethodScreen({
-    super.key,
-    required this.settings,
-    required this.permissions,
-    required this.onChanged,
-  });
+  const RegistrationMethodScreen({super.key, required this.settings, required this.permissions, required this.onChanged, required this.bottomBar});
 
   final DeviceSettings settings;
   final PermissionsGateway permissions;
 
   /// Saved: detection follows the new method.
   final Future<void> Function() onChanged;
+  final Widget bottomBar;
 
   @override
   State<RegistrationMethodScreen> createState() => _RegistrationMethodScreenState();
@@ -56,8 +53,8 @@ class _RegistrationMethodScreenState extends State<RegistrationMethodScreen> {
       _busy = true;
       _locationRefused = false;
     });
-    final allowed = method != RegistrationMethod.automatic ||
-        (await widget.permissions.requestLocation() && await widget.permissions.requestBackgroundLocation());
+    final allowed =
+        method != RegistrationMethod.automatic || (await widget.permissions.requestLocation() && await widget.permissions.requestBackgroundLocation());
     if (!allowed) {
       if (mounted) {
         setState(() {
@@ -72,122 +69,49 @@ class _RegistrationMethodScreenState extends State<RegistrationMethodScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  Widget _option(
-    BuildContext context,
-    RegistrationMethod method, {
-    required String title,
-    required String text,
-  }) => InkWell(
-    onTap: _busy ? null : () => setState(() => _selected = method),
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          RadioDot(selected: _selected == method),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: Text(title, style: JitanMobileTextStyles.cardTitleSmall)),
-                    if (_current == method)
-                      Text(context.t(EmployeeTextKeys.profileMethodCurrent), style: JitanMobileTextStyles.cardText),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(text, style: JitanMobileTextStyles.cardText),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
+  Widget _option(BuildContext context, RegistrationMethod method, String title, String text) {
+    final selected = _selected == method;
+    return PhoneListRow(
+      title: context.t(title),
+      tag: _current == method ? context.t(EmployeeTextKeys.profileMethodCurrent) : null,
+      detail: context.t(text),
+      selected: selected,
+      trailing: selected ? const PhoneCheck() : null,
+      onTap: _busy ? null : () => setState(() => _selected = method),
+    );
+  }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: JitanColors.warmWhite,
-    body: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(OnboardingPage.margin, 10, OnboardingPage.margin, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ProfileSubHeader(
-                      title: context.t(EmployeeTextKeys.profileMethodTitle),
-                      text: context.t(EmployeeTextKeys.profileMethodText),
-                    ),
-                    const SizedBox(height: 40),
-                    Text(context.t(EmployeeTextKeys.profileMethodEyebrow), style: JitanMobileTextStyles.fieldLabel),
-                    const SizedBox(height: 12),
-                    Material(
-                      color: JitanColors.surface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: const BorderSide(color: JitanColors.inputBorder),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        children: [
-                          _option(
-                            context,
-                            RegistrationMethod.automatic,
-                            title: context.t(EmployeeTextKeys.methodAutomaticTitle),
-                            text: context.t(EmployeeTextKeys.methodAutomaticText),
-                          ),
-                          const Divider(height: 1, indent: 54, endIndent: 16, color: JitanColors.inputBorder),
-                          _option(
-                            context,
-                            RegistrationMethod.qr,
-                            title: context.t(EmployeeTextKeys.methodQrTitle),
-                            text: context.t(EmployeeTextKeys.methodQrText),
-                          ),
-                          const Divider(height: 1, indent: 54, endIndent: 16, color: JitanColors.inputBorder),
-                          _option(
-                            context,
-                            RegistrationMethod.manual,
-                            title: context.t(EmployeeTextKeys.methodManualTitle),
-                            text: context.t(EmployeeTextKeys.methodManualText),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.info_outline, size: 16, color: JitanColors.inkMuted),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(context.t(EmployeeTextKeys.profileMethodNote), style: JitanMobileTextStyles.cardText)),
-                      ],
-                    ),
-                    if (_locationRefused) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        context.t(EmployeeTextKeys.methodNote),
-                        style: JitanMobileTextStyles.cardText.copyWith(color: JitanColors.errorStrong),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            JitanMobileButton(
-              label: context.t(EmployeeTextKeys.profileMethodSave),
-              busy: _busy,
-              onPressed: _selected == null || _selected == _current ? null : _save,
-            ),
-          ],
-        ),
-      ),
+  Widget build(BuildContext context) => PhoneStepPage(
+    showBack: true,
+    onBack: _busy ? null : () => Navigator.of(context).maybePop(),
+    title: context.t(EmployeeTextKeys.profileMethodTitle),
+    subtitle: context.t(EmployeeTextKeys.profileMethodText),
+    action: JitanMobileButton(
+      label: context.t(EmployeeTextKeys.profileMethodSave),
+      size: JitanMobileButtonSize.phone,
+      busy: _busy,
+      onPressed: _selected == null || _selected == _current ? null : _save,
     ),
+    bottomBar: widget.bottomBar,
+    children: [
+      PhoneListCard(
+        padding: EdgeInsets.zero,
+        children: [
+          _option(context, RegistrationMethod.automatic, EmployeeTextKeys.methodAutomaticTitle, EmployeeTextKeys.methodAutomaticText),
+          _option(context, RegistrationMethod.qr, EmployeeTextKeys.methodQrTitle, EmployeeTextKeys.methodQrText),
+          _option(context, RegistrationMethod.manual, EmployeeTextKeys.methodManualTitle, EmployeeTextKeys.methodManualText),
+        ],
+      ),
+      const SizedBox(height: 12),
+      Text(context.t(EmployeeTextKeys.profileMethodNote), style: JitanMobileTextStyles.detail),
+      if (_locationRefused) ...[
+        const SizedBox(height: 8),
+        Semantics(
+          liveRegion: true,
+          child: Text(context.t(EmployeeTextKeys.methodNote), style: JitanMobileTextStyles.detail.copyWith(color: JitanColors.errorStrong)),
+        ),
+      ],
+    ],
   );
 }

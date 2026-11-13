@@ -14,7 +14,8 @@ import '../geofencing/workplace_presence.dart';
 import '../l10n/employee_text_keys.dart';
 import '../period/period_controller.dart';
 import '../period/period_screen.dart';
-import '../profile/profile_screens.dart';
+import '../profile/profile_context.dart';
+import '../profile/profile_screen.dart';
 import '../qr/my_qr_screen.dart';
 import '../today/time_entry_screen.dart';
 import '../today/today_controller.dart';
@@ -30,8 +31,8 @@ import 'home_today_view.dart';
 /// A 401 means the session is no longer valid (expired, password changed,
 /// account disabled): [onSessionEnded] signs the device out.
 ///
-/// The navigation bar switches between Home, Period (Figma 48:2) and My QR
-/// (50:67), and opens Profile.
+/// The navigation bar switches between Home, Period (Figma 48:2), My QR
+/// (50:67) and Profile (`1611:4`).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -174,7 +175,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// Back from Profile: the registration method may have changed.
   /// The tab bar also shows on pages opened from a tab (a day's details,
   /// Switch, a time entry): a tap on it first closes them, so the tab shows.
   void _closePagesOnTop() {
@@ -182,13 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (tabs != null && !tabs.isCurrent) Navigator.of(context).popUntil((route) => route == tabs);
   }
 
-  Future<void> _openProfile() async {
-    _closePagesOnTop();
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ProfileScreen(profile: widget.profileFor(_account))));
-    await _loadMode();
-  }
-
-  /// Home (0), Period (1) or My QR (2).
+  /// Home (0), Period (1), My QR (2) or Profile (3).
   int _tab = 0;
 
   void _select(int tab, {PeriodView periodView = PeriodView.day}) {
@@ -197,8 +191,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _periodView = periodView;
     if (tab == _tab) return;
     setState(() => _tab = tab);
-    // Back on Home: what changed in Period (a time added) shows at once.
-    if (tab == 0) _today.load();
+    // Back on Home: what changed in Period (a time added) shows at once, and
+    // what Home offers follows a method changed in Profile.
+    if (tab == 0) {
+      _today.load();
+      _loadMode();
+    }
   }
 
   Widget _navBar(BuildContext context) => EmployeeNavBar(
@@ -206,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
       EmployeeNavItem(icon: Icons.home_outlined, label: context.t(EmployeeTextKeys.navHome), selected: _tab == 0, onTap: () => _select(0)),
       EmployeeNavItem(icon: Icons.schedule, label: context.t(EmployeeTextKeys.navPeriod), selected: _tab == 1, onTap: () => _select(1)),
       EmployeeNavItem(icon: Icons.qr_code_2, label: context.t(EmployeeTextKeys.navQr), selected: _tab == 2, onTap: () => _select(2)),
-      EmployeeNavItem(icon: Icons.person_outline, label: context.t(EmployeeTextKeys.navProfile), onTap: _openProfile),
+      EmployeeNavItem(icon: Icons.person_outline, label: context.t(EmployeeTextKeys.navProfile), selected: _tab == 3, onTap: () => _select(3)),
     ],
   );
 
@@ -234,6 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
       initialView: _periodView,
     ),
     2 => MyQrScreen(meApi: widget.meApi, account: _account, onSessionEnded: widget.onSessionEnded, bottomBar: _navBar(context)),
+    3 => ProfileScreen(profile: widget.profileFor(_account), bottomBar: _navBar(context)),
     _ => HomeTodayView(
       today: _today,
       activity: _activity,

@@ -20,8 +20,10 @@ class PhoneStepPage extends StatelessWidget {
     this.contentGap = 24,
     this.above,
     this.children = const [],
+    this.note,
     this.action,
     this.link,
+    this.bottomBar,
   });
 
   /// Onboarding's steps after the scan: "Is this you?" … "Set a password".
@@ -46,8 +48,14 @@ class PhoneStepPage extends StatelessWidget {
   /// Above the title: "Setup QR verified", or an error's icon.
   final Widget? above;
   final List<Widget> children;
+
+  /// Above the main button: something wasn't saved.
+  final Widget? note;
   final Widget? action;
   final Widget? link;
+
+  /// The tab bar, on pages opened from a tab (Profile's pages).
+  final Widget? bottomBar;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -109,8 +117,10 @@ class PhoneStepPage extends StatelessWidget {
                 ),
               ),
             ),
+            if (note case final note?) ...[note, const SizedBox(height: 12)],
             ?action,
             if (link case final link?) ...[if (action != null) const SizedBox(height: 4), Center(child: link)],
+            if (bottomBar case final bar?) ...[const SizedBox(height: 12), bar],
           ],
         ),
       ),

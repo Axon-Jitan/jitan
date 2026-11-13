@@ -302,6 +302,7 @@ void main() {
             settings: h.services.settings,
             permissions: h.permissions,
             onChanged: () async => changes++,
+            bottomBar: const SizedBox.shrink(),
           ),
         ),
       ));
@@ -319,7 +320,7 @@ void main() {
 
       await tester.tap(find.text('Automatic'));
       await tester.pump();
-      await tester.tap(find.text('Save changes'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       expect(await h.services.settings.registrationMethod(), RegistrationMethod.automatic);
@@ -334,7 +335,7 @@ void main() {
 
       await tester.tap(find.text('QR at a Jitan Terminal'));
       await tester.pump();
-      await tester.tap(find.text('Save changes'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       expect(await h.services.settings.registrationMethod(), RegistrationMethod.qr);
@@ -349,7 +350,7 @@ void main() {
 
       await tester.tap(find.text('Automatic'));
       await tester.pump();
-      await tester.tap(find.text('Save changes'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       expect(await h.services.settings.registrationMethod(), RegistrationMethod.manual);
@@ -442,7 +443,7 @@ void main() {
     });
   });
 
-  group('Profile / Location permission (Figma 94:23)', () {
+  group('Profile / Location access (Figma 1612:120)', () {
     Future<void> open(WidgetTester tester) async {
       tester.view.physicalSize = const Size(1170, 2532);
       tester.view.devicePixelRatio = 3;
@@ -451,19 +452,19 @@ void main() {
         translations: Translations.english(),
         child: MaterialApp(
           theme: JitanTheme.light(),
-          home: LocationPermissionScreen(permissions: h.permissions, presence: presence),
+          home: LocationPermissionScreen(permissions: h.permissions, presence: presence, bottomBar: const SizedBox.shrink()),
         ),
       ));
       await tester.pumpAndSettle();
     }
 
-    testWidgets('all allowed: working, and what location is used for', (tester) async {
+    testWidgets('all allowed: both rows say so, what location is used for, settings as a quiet link', (tester) async {
       await open(tester);
 
-      expect(find.text('ALLOWED'), findsOneWidget);
-      expect(find.text('Automatic registration is working on this device.'), findsOneWidget);
+      expect(find.text('Allowed'), findsNWidgets(2));
       expect(find.text('No live tracking'), findsOneWidget);
-      expect(find.text('Working'), findsOneWidget);
+      expect(find.widgetWithText(JitanMobileButton, 'Open phone settings'), findsNothing);
+      expect(find.text('Open phone settings'), findsOneWidget);
     });
 
     testWidgets('not allowed: says so and opens the phone settings', (tester) async {
@@ -472,9 +473,9 @@ void main() {
         ..backgroundLocationGranted = false;
       await open(tester);
 
-      expect(find.text('NOT ALLOWED'), findsOneWidget);
-      expect(find.text('Off'), findsOneWidget);
-      await tester.tap(find.text('Open phone settings'));
+      expect(find.text('Off'), findsNWidgets(2));
+      expect(find.text('Automatic registration can’t work until you allow location all the time.'), findsOneWidget);
+      await tester.tap(find.widgetWithText(JitanMobileButton, 'Open phone settings'));
       expect(h.permissions.asked, contains('settings'));
     });
 
@@ -482,7 +483,8 @@ void main() {
       await presence.setGeofencesRefused(true);
       await open(tester);
 
-      expect(find.text('CHECK SETTINGS'), findsOneWidget);
+      expect(find.text('Allowed'), findsNWidgets(2));
+      expect(find.widgetWithText(JitanMobileButton, 'Open phone settings'), findsOneWidget);
       expect(find.text('Turn on Location Accuracy in your phone’s location settings.'), findsOneWidget);
     });
   });

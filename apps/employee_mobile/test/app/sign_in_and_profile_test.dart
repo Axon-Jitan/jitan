@@ -164,6 +164,8 @@ void main() {
       await tester.enterText(find.byType(TextField).at(0), current);
       await tester.enterText(find.byType(TextField).at(1), password);
       await tester.enterText(find.byType(TextField).at(2), confirmation ?? password);
+      // The button turns on with the frame after typing.
+      await tester.pump();
       await tap(tester, find.widgetWithText(FilledButton, 'Change password'));
     }
 
@@ -171,9 +173,8 @@ void main() {
       await startApp(tester);
       await signIn(tester);
       await tap(tester, find.text('Profile'));
-      expect(find.text('SBW'), findsOneWidget);
-      await tapText(tester, 'Password & web login');
-      await tap(tester, find.widgetWithText(FilledButton, 'Change password'));
+      expect(find.textContaining('SBW'), findsOneWidget);
+      await tapText(tester, 'Password');
     }
 
     testWidgets('a signed-in employee changes the password; this device stays signed in, others are signed out', (
@@ -185,7 +186,7 @@ void main() {
 
       await fillChange(tester, current: _password, password: 'a brand new password');
 
-      expect(find.text('Password changed.'), findsOneWidget);
+      expect(find.text('Your password was changed.'), findsOneWidget, reason: 'back on Profile, it says so');
       expect(h.server.password, 'a brand new password');
       final newToken = h.store.values['session.token'];
       expect(newToken, isNot(oldToken), reason: 'this device keeps a (new) session');
@@ -201,7 +202,7 @@ void main() {
 
       await fillChange(tester, current: 'not my password', password: 'a brand new password');
 
-      expect(find.text('The current password is incorrect.'), findsOneWidget);
+      expect(find.text('That isn’t your current password.'), findsOneWidget);
       expect(h.server.password, _password);
       expect(h.server.issuedTokens, contains(h.store.values['session.token']), reason: 'still signed in');
     });
@@ -218,8 +219,76 @@ void main() {
 
       h.server.dropNext.add('/me/password');
       await fillChange(tester, current: _password, password: 'a brand new password');
-      expect(find.text('Can’t reach Jitan. Your password has not been changed.'), findsOneWidget);
+      expect(find.text('Couldn’t change your password. Check your connection and try again.'), findsOneWidget);
       expect(h.server.password, _password);
+    });
+
+    testWidgets('Profile is a tab: each row shows its value (Figma 1611:4)', (tester) async {
+      await startApp(tester);
+      await signIn(tester);
+      await tap(tester, find.text('Profile'));
+
+      expect(find.text('Disan Ssebowa'), findsOneWidget);
+      expect(find.text('SBW · Almeco'), findsOneWidget);
+      expect(find.text('In the app'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
+      expect(find.text('Password'), findsOneWidget);
+
+      await tap(tester, find.text('Home'));
+      expect(find.text('Disan Ssebowa'), findsNothing);
+    });
+
+    testWidgets('Language: a tap saves it, and the check moves once the server confirmed (EMP-06)', (tester) async {
+      await startApp(tester);
+      await signIn(tester);
+      await tap(tester, find.text('Profile'));
+      await tapText(tester, 'Language');
+      expect(find.text('The language Jitan uses for you.'), findsOneWidget);
+
+      h.server.dropNext.add('/me/language');
+      await tapText(tester, 'Français');
+      expect(find.text('Couldn’t change the language. Check your connection and try again.'), findsOneWidget);
+      expect(h.server.userLanguage, isNull);
+
+      await tapText(tester, 'Nederlands');
+      expect(h.server.userLanguage, 'nl');
+      expect(jsonDecode(h.server.requestsTo('/me/language').last.body), {'languageCode': 'nl'});
+      expect(find.text('Couldn’t change the language. Check your connection and try again.'), findsNothing);
+
+      await tester.pageBack();
+      await settle(tester);
+      expect(find.text('Nederlands'), findsOneWidget, reason: 'the row shows the new language');
+    });
+
+    testWidgets('sign out: Cancel keeps the employee signed in', (tester) async {
+      await startApp(tester);
+      await signIn(tester);
+      await tap(tester, find.text('Profile'));
+
+      await tap(tester, find.widgetWithText(TextButton, 'Sign out'));
+      await tap(tester, find.text('Cancel'));
+
+      expect(find.text('Sign out of Jitan?'), findsNothing);
+      expect(find.text('Registration method'), findsOneWidget);
+      expect(h.store.values.containsKey('session.token'), isTrue);
+    });
+
+    testWidgets('Profile and its pages fit a small phone (320 × 568) without overflowing', (tester) async {
+      await startApp(tester);
+      await signIn(tester);
+      tester.view.physicalSize = const Size(640, 1136);
+      tester.view.devicePixelRatio = 2;
+      await settle(tester);
+      await tap(tester, find.text('Profile'));
+      for (final row in ['Registration method', 'Location access', 'Language', 'Password']) {
+        await tapText(tester, row);
+        expect(tester.takeException(), isNull, reason: row);
+        await tester.pageBack();
+        await settle(tester);
+      }
+      await tap(tester, find.widgetWithText(TextButton, 'Sign out'));
+      expect(find.text('Sign out of Jitan?'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('sign out asks first, then opens sign-in; the session is gone', (tester) async {

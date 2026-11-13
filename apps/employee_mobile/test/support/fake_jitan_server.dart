@@ -65,6 +65,10 @@ class FakeJitanServer {
     {'id': 4, 'code': 'de', 'name': 'Deutsch'},
   ];
 
+  /// The signed-in user's language (`tblUserLanguage`); `PUT /me/language`
+  /// changes it.
+  String? userLanguage;
+
   final requests = <http.Request>[];
   final issuedTokens = <String>[];
   var _tokenCount = 0;
@@ -88,12 +92,14 @@ class FakeJitanServer {
       '/languages' => _json({'languages': languages}),
       '/translations' => _json({
         'language': request.url.queryParameters['language'],
-        'translations': {'onboarding.password.title': 'Stel je wachtwoord in', 'language.name.fr': 'Frans'},
+        'translations': {'onboarding.password.title': 'Stel je wachtwoord in', 'language.name.fr': 'Frans', 'language.name.nl': 'Nederlands'},
       }),
       '/me' => _me(request),
       '/auth/sign-in' => _signIn(request),
       '/me/password' => _changePassword(request),
-      '/me/language' => _json({'languageCode': null}),
+      '/me/language' => _json({
+        'languageCode': request.method == 'PUT' ? userLanguage = (jsonDecode(request.body) as Map)['languageCode'] as String? : userLanguage,
+      }),
       '/me/today' => _today(request),
       '/me/activity' => _json(activity.toJson()),
       '/me/activity/trip' => _trip(request),

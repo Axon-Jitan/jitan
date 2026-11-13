@@ -9,7 +9,7 @@ import '../home/home_screen.dart';
 import '../l10n/employee_text_keys.dart';
 import '../onboarding/onboarding_controller.dart';
 import '../onboarding/onboarding_flow.dart';
-import '../profile/profile_screens.dart';
+import '../profile/profile_context.dart';
 import 'employee_services.dart';
 
 /// Where the app is. Signed out has two ways in: onboarding (first time,
@@ -147,10 +147,12 @@ class _EmployeeAppState extends State<EmployeeApp> {
   ProfileContext _profileFor(EmployeeAccount? account) => ProfileContext(
     account: account,
     meApi: _services.meApi,
+    languagesApi: _services.languagesApi,
     session: _services.session,
     settings: _services.settings,
     permissions: _services.permissions,
     onMethodChanged: _services.automaticRegistration.start,
+    onLanguageChanged: _applyLanguage,
     presence: _services.presence,
     onSignOut: _signOut,
     onSessionEnded: _signOut,

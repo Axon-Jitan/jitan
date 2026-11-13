@@ -34,13 +34,31 @@ class PhoneListCard extends StatelessWidget {
   );
 }
 
-/// A row of a [PhoneListCard] that reacts to a tap: a title, an optional
-/// detail under it, and a trailing widget (a checkmark, a chevron, "Now").
+/// A row of a [PhoneListCard] that reacts to a tap: a title (with a small
+/// [tag] after it, "Current"), an optional detail under it, a [value] on the
+/// right as in iPhone Settings ("In the app"), and a trailing widget (a
+/// checkmark, a chevron, "Now").
 class PhoneListRow extends StatelessWidget {
-  const PhoneListRow({super.key, required this.title, this.detail, this.trailing, this.onTap, this.titleStyle, this.selected = false});
+  const PhoneListRow({
+    super.key,
+    required this.title,
+    this.tag,
+    this.detail,
+    this.value,
+    this.valueColor,
+    this.trailing,
+    this.onTap,
+    this.titleStyle,
+    this.selected = false,
+  });
 
   final String title;
+  final String? tag;
   final String? detail;
+  final String? value;
+
+  /// The value's colour: muted unless it needs attention (amber).
+  final Color? valueColor;
   final Widget? trailing;
   final VoidCallback? onTap;
   final TextStyle? titleStyle;
@@ -66,11 +84,31 @@ class PhoneListRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle ?? JitanMobileTextStyles.rowTitle),
+                    Row(
+                      spacing: 8,
+                      children: [
+                        Flexible(
+                          child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle ?? JitanMobileTextStyles.rowTitle),
+                        ),
+                        if (tag case final tag?) Text(tag, style: JitanMobileTextStyles.label),
+                      ],
+                    ),
                     if (detail case final detail?) ...[const SizedBox(height: 2), Text(detail, style: JitanMobileTextStyles.detail)],
                   ],
                 ),
               ),
+              // At most 160 px, so the title keeps the room it needs.
+              if (value case final value?)
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: JitanMobileTextStyles.detail.copyWith(fontSize: 14, color: valueColor),
+                  ),
+                ),
               ?trailing,
             ],
           ),
