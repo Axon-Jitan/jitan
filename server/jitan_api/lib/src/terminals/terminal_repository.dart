@@ -97,7 +97,7 @@ class TerminalRepository {
   /// read, so two adds of the same number wait for each other.
   Future<bool> serialTaken(SqlExecutor tx, String serialNumber, {int? exceptDeviceId}) async => (await tx.query(
     'SELECT deviceID FROM tblDevice WHERE deviceSN $ignoringCaseAndAccents = :serial '
-    '${exceptDeviceId == null ? '' : 'AND deviceID <> :except '}FOR UPDATE',
+    '${exceptDeviceId == null ? '' : 'AND deviceID <> :except '}LIMIT 1',
     {'serial': serialNumber, 'except': ?exceptDeviceId},
   )).isNotEmpty;
 

@@ -16,6 +16,10 @@ import 'terminal_repository.dart';
 /// terminal is shared by every company, so it has no company. Every change is
 /// audited in the same transaction; an action that changes nothing is not.
 class TerminalService {
+  /// Serial numbers are added and changed one at a time (named lock, review
+  /// M7); the unique key catches an exact match, the check ignores capitals.
+  static const serialLock = 'terminal-serial';
+
   TerminalService({
     required this._terminals,
     required this._presence,
@@ -61,7 +65,7 @@ class TerminalService {
 
   Future<Terminal> create(int actorUserId, TerminalRequest request) async {
     final terminal = await _validated(request);
-    final id = await _write(() => _transactions.transaction((tx) async {
+    final id = await _write(() => _transactions.transaction(serializedBy: serialLock, (tx) async {
       if (await _terminals.serialTaken(tx, terminal.serialNumber)) throw _serialTaken();
       final ids = await _terminals.insert(tx, terminal);
       await _audit.record(
@@ -84,7 +88,7 @@ class TerminalService {
 
   Future<Terminal> update(int actorUserId, int terminalId, TerminalRequest request) async {
     final terminal = await _validated(request);
-    await _write(() => _transactions.transaction((tx) async {
+    await _write(() => _transactions.transaction(serializedBy: serialLock, (tx) async {
       if (!await _terminals.lock(tx, terminalId)) throw _notFound();
       final current = await _of(terminalId, tx);
       if (current.name == terminal.name && current.serialNumber == terminal.serialNumber && current.type.id == terminal.typeId) {

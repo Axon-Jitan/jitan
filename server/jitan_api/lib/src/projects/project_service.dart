@@ -6,6 +6,7 @@ import '../database/database_exception.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
 import '../locations/location_repository.dart';
+import '../locations/location_service.dart';
 import 'project_repository.dart';
 
 /// HR/Admin managing projects (D43, D44, Figma `1512:2` …) until SAP is
@@ -50,7 +51,7 @@ class ProjectService {
     final project = _validated(request);
     final fullName = ProjectRequest.fullName(project.sapNumber, project.name);
     final workshop = await _workshop(project);
-    final id = await _write(fullName, () => _transactions.transaction((tx) async {
+    final id = await _write(fullName, () => _transactions.transaction(serializedBy: LocationService.nameLock, (tx) async {
       final kind = await _projects.projectKindId(tx) ?? (throw _kindMissing());
       if (await _locations.nameTaken(tx, fullName)) throw _nameTaken(fullName);
       final int addressId;
@@ -77,7 +78,7 @@ class ProjectService {
     final project = _validated(request);
     final fullName = ProjectRequest.fullName(project.sapNumber, project.name);
     final workshop = await _workshop(project);
-    await _write(fullName, () => _transactions.transaction((tx) async {
+    await _write(fullName, () => _transactions.transaction(serializedBy: LocationService.nameLock, (tx) async {
       if (!await _projects.lock(tx, projectId)) throw _notFound();
       final current = (await _projects.find(tx, projectId))!;
       if (current.hasArea != (project.site != null)) {

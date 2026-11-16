@@ -79,11 +79,14 @@ class LocationService {
   Future<(Location, LocationKeys)> _lock(SqlExecutor tx, int locationId) async =>
       await _locations.lock(tx, locationId) ?? (throw _notFound(locationId));
 
-  /// A name in use is checked first, ignoring capitals and accents
-  /// (CLARIFY-16); the unique key still catches an exact race.
+  /// Address names (locations and projects) are added and changed one at a
+  /// time (named lock, review M7): a name in use is checked ignoring capitals
+  /// and accents (CLARIFY-16); the unique key still catches an exact match.
+  static const nameLock = 'address-name';
+
   Future<T> _write<T>(LocationRequest location, Future<T> Function(SqlExecutor tx) action) async {
     try {
-      return await _transactions.transaction(action);
+      return await _transactions.transaction(action, serializedBy: nameLock);
     } on DatabaseQueryException catch (e) {
       if (e.isDuplicateKey) throw _nameTaken(location);
       if (e.isValueTooLong) throw const ApiException.badRequest('A value is longer than allowed.');

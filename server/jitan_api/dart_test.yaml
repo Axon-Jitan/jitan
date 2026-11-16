@@ -1,3 +1,8 @@
+# One test file at a time: the integration tests share one database, and some
+# read every group or count whole tables, so two files at once made them fail
+# now and then (review I6, 2026-11-16). About 90 s instead of 35 s.
+concurrency: 1
+
 tags:
   integration:
     # Needs a dev/test MySQL (JITAN_TEST_DB_* or .env.test). Skipped otherwise.

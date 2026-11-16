@@ -41,7 +41,7 @@ class GroupManagementRepository {
   /// name wait for each other instead of both passing the check.
   Future<bool> nameTaken(SqlExecutor tx, String name, {int? exceptGroupId}) async => (await tx.query(
         'SELECT groupID FROM tblGroup WHERE groupMFD = 0 AND groupName $ignoringCaseAndAccents = :name '
-        '${exceptGroupId == null ? '' : 'AND groupID <> :except '}FOR UPDATE',
+        '${exceptGroupId == null ? '' : 'AND groupID <> :except '}LIMIT 1',
         {'name': name, 'except': ?exceptGroupId},
       ))
           .isNotEmpty;

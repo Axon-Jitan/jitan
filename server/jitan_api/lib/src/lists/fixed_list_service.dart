@@ -28,17 +28,20 @@ class FixedListService {
   Future<FixedListDetail> detail(FixedListKind kind) async =>
       _detail(kind, await _lists.names(_executor, FixedListCatalog.of(kind)));
 
+  /// Completing the lists runs one at a time, also across API instances.
+  static const addLock = 'fixed-lists';
+
   /// Adds what [kind] is missing; nothing when it is complete.
   Future<FixedListDetail> addMissing(int actorUserId, FixedListKind kind) async {
     final list = FixedListCatalog.of(kind);
     if (!list.addable) throw const ApiException.validation('kind', 'This list is added to elsewhere.');
-    await _transactions.transaction((tx) => _addMissing(tx, actorUserId, list));
+    await _transactions.transaction(serializedBy: addLock, (tx) => _addMissing(tx, actorUserId, list));
     return detail(kind);
   }
 
   /// "Add what's missing": every list Jitan adds to, in one transaction.
   Future<FixedListOverview> addAllMissing(int actorUserId) async {
-    await _transactions.transaction((tx) async {
+    await _transactions.transaction(serializedBy: addLock, (tx) async {
       for (final kind in FixedListKind.values) {
         final list = FixedListCatalog.of(kind);
         if (list.addable) await _addMissing(tx, actorUserId, list);
@@ -48,7 +51,7 @@ class FixedListService {
   }
 
   Future<void> _addMissing(SqlExecutor tx, int actorUserId, FixedListTable list) async {
-    final present = await _lists.names(tx, list, lock: true);
+    final present = await _lists.names(tx, list);
     for (final name in list.required) {
       if (present.contains(name)) continue;
       final id = await _lists.insert(tx, list, name);

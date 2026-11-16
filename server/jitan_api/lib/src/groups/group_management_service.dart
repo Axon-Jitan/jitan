@@ -25,6 +25,11 @@ class GroupManagementService {
   final TransactionRunner _transactions;
   final SqlExecutor _executor;
 
+  /// Group names are added and changed one at a time (named lock, review M7):
+  /// a locking read on the name would lock every group row and deadlock with
+  /// people joining groups.
+  static const nameLock = 'group-name';
+
   Future<List<GroupOverview>> overview() => _groups.overview(_executor);
 
   /// Adds the group [name] (from [validName]) inside the caller's
@@ -39,7 +44,7 @@ class GroupManagementService {
 
   Future<GroupOverview> rename(int actorUserId, int groupId, GroupNameRequest request) async {
     final name = validName(request.name);
-    await _transactions.transaction((tx) async {
+    await _transactions.transaction(serializedBy: nameLock, (tx) async {
       final group = await _lock(tx, groupId);
       if (group.name == name) return;
       if (await _groups.nameTaken(tx, name, exceptGroupId: groupId)) throw _duplicate(name);

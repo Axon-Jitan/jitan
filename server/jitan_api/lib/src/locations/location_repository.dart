@@ -46,11 +46,16 @@ class LocationRepository {
     return rows.isEmpty ? null : _toLocation(rows.first);
   }
 
-  /// The location, its rows locked for the rest of the transaction.
+  /// The location, its address row locked for the rest of the transaction.
+  /// The lock is a read of that one row (the driver mishandles a locking read
+  /// with joins, DB-DRIVER-01); its geofence rows follow it.
   Future<(Location, LocationKeys)?> lock(SqlExecutor tx, int addressId) async {
+    if ((await tx.query('SELECT addressID FROM tblAddress WHERE addressID = :id AND addressMFD = 0 FOR UPDATE', {'id': addressId})).isEmpty) {
+      return null;
+    }
     final rows = await tx.query(
       '${_select.replaceFirst(' FROM tblAddress', ', g.geofenceID, ga.geofenceAddressID FROM tblAddress')} '
-      'AND a.addressID = :id FOR UPDATE',
+      'AND a.addressID = :id',
       {'id': addressId},
     );
     if (rows.isEmpty) return null;
@@ -63,11 +68,11 @@ class LocationRepository {
 
   /// Whether another address, including deactivated and MFD ones (the
   /// name's unique key covers them all), has [name] ignoring capitals and
-  /// accents (CLARIFY-16). A locking read: two adds of the same name wait for
-  /// each other instead of both passing.
+  /// accents (CLARIFY-16). Called under [LocationService.nameLock], so two
+  /// adds of the same name run one after the other (review M7).
   Future<bool> nameTaken(SqlExecutor tx, String name, {int? exceptAddressId}) async => (await tx.query(
         'SELECT addressID FROM tblAddress WHERE addressLogicalName $ignoringCaseAndAccents = :name '
-        '${exceptAddressId == null ? '' : 'AND addressID <> :except '}FOR UPDATE',
+        '${exceptAddressId == null ? '' : 'AND addressID <> :except '}LIMIT 1',
         {'name': name, 'except': ?exceptAddressId},
       ))
           .isNotEmpty;

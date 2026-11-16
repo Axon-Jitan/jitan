@@ -7,11 +7,12 @@ class FixedListRepository {
   const FixedListRepository();
 
   /// The names of the list's usable rows (active and not marked for deletion
-  /// where the table has those columns). With [lock], the rows are locked for
-  /// the rest of the transaction, so two adds don't both insert.
-  Future<Set<String>> names(SqlExecutor executor, FixedListTable list, {bool lock = false}) async {
+  /// where the table has those columns). Adding runs under
+  /// [FixedListService.addLock], so two adds don't both insert (review M7: a
+  /// locking read here locked whole lists and blocked every audit insert).
+  Future<Set<String>> names(SqlExecutor executor, FixedListTable list) async {
     final usable = list.activeColumn == null ? '' : ' WHERE ${list.activeColumn} = 1 AND ${list.mfdColumn} = 0';
-    final rows = await executor.query('SELECT ${list.nameColumn} AS name FROM ${list.table}$usable${lock ? ' FOR UPDATE' : ''}');
+    final rows = await executor.query('SELECT ${list.nameColumn} AS name FROM ${list.table}$usable');
     return {for (final row in rows) row.readString('name')};
   }
 

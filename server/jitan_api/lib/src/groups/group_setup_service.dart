@@ -60,7 +60,7 @@ class GroupSetupService {
         );
       }
     }
-    final id = await _transactions.transaction((tx) async {
+    final id = await _transactions.transaction(serializedBy: GroupManagementService.nameLock, (tx) async {
       final id = await _management.createIn(tx, actorUserId, name);
       if (ids.isNotEmpty) await _members.addIn(tx, actorUserId, id, ids);
       if (schedule != null) {
