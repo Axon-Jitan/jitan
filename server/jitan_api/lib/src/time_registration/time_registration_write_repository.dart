@@ -43,18 +43,24 @@ class TimeRegistrationWriteRepository {
     return rows.isEmpty ? null : rows.first.readInt('timeRegID');
   }
 
-  /// The first active row of [userId] with [typeId] written after row
-  /// [afterId] (the rounded row stored with an actual row), with its time.
-  Future<({int id, DateTime at})?> nextOfType(SqlExecutor tx, int userId, int typeId, int afterId) async {
+  /// [userId]'s row stored right after row [afterId], whatever its state:
+  /// an actual row's rounded row is written next, under the employee's lock,
+  /// so this is its pair (review 2026-11-16: never a later day's row).
+  Future<({int id, int typeId, DateTime at, bool counts})?> nextRow(SqlExecutor tx, int userId, int afterId) async {
     final rows = await tx.query(
-      'SELECT timeRegID, timeRegTimestamp FROM tblTimeReg '
-      'WHERE userID = :userId AND timeRegTypeID = :typeId AND timeRegID > :afterId '
-      'AND timeRegActive = 1 AND timeRegMFD = 0 ORDER BY timeRegID LIMIT 1',
-      {'userId': userId, 'typeId': typeId, 'afterId': afterId},
+      'SELECT timeRegID, timeRegTypeID, timeRegTimestamp, (timeRegActive = 1 AND timeRegMFD = 0) AS counts '
+      'FROM tblTimeReg WHERE userID = :userId AND timeRegID > :afterId ORDER BY timeRegID LIMIT 1',
+      {'userId': userId, 'afterId': afterId},
     );
     if (rows.isEmpty) return null;
-    final at = rows.first.readOptionalDateTime('timeRegTimestamp')!;
-    return (id: rows.first.readInt('timeRegID'), at: DateTime.utc(at.year, at.month, at.day, at.hour, at.minute, at.second));
+    final row = rows.first;
+    final at = row.readOptionalDateTime('timeRegTimestamp')!;
+    return (
+      id: row.readInt('timeRegID'),
+      typeId: row.readInt('timeRegTypeID'),
+      at: DateTime.utc(at.year, at.month, at.day, at.hour, at.minute, at.second),
+      counts: row.readBool('counts'),
+    );
   }
 
   /// [userId]'s latest active row of [typeIds] from [from] up to [to], or

@@ -198,15 +198,18 @@ class TimeRegistrationWriteService {
       );
     }
     if (existing != null) {
-      final pair = await _repository.nextOfType(tx, userId, roundedType, existing);
-      if (pair != null) {
+      // A retry: its own rounded row, the one stored right after it. When HR
+      // has replaced that row since, the retry still adds nothing, and says
+      // no rounded time of its own counts any more.
+      final pair = await _repository.nextRow(tx, userId, existing);
+      if (pair != null && pair.typeId == roundedType) {
         return (
           registered: RegisteredTime(
             boundary: request.boundary,
             actualId: existing,
             actualAt: at,
-            roundedId: pair.id,
-            roundedAt: pair.at,
+            roundedId: pair.counts ? pair.id : null,
+            roundedAt: pair.counts ? pair.at : null,
           ),
           created: false,
         );

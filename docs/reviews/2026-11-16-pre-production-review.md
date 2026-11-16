@@ -67,6 +67,16 @@ Every technical finding is fixed, each with a regression test; the full server s
 | I5 | By decision D31; no change | – |
 | I6 | Fixed: server test files run one at a time | `eb04024` |
 
+Second review (of `3f7484a`, received 2026-11-16): its H1 and the accent part of its
+sign-in finding were already fixed (`c4ec718`, `a5c98f9`). New and fixed:
+- **Phone events for another employee:** what the phone remembers (arrival, leaving,
+  pending trips) belongs to the employee code that signed in; another employee signing in
+  drops it, so it is never sent with their session.
+- **Pending trips lost:** trips wait in a list (a new one never replaces an unsent one) and
+  are dropped only on a refusal (4xx); no connection, 408, 429 or 5xx keep them for later.
+- **Retry returning another row:** a retry answers with the rounded row stored right after
+  its own time; when HR replaced it, with none, never a later day's row.
+
 Found while fixing L13: the driver (mysql_client_plus) fills parameters in on the client
 with backslash escaping. Quotes are always safe, but with `NO_BACKSLASH_ESCAPES` every
 stored backslash would be doubled; hence the startup refusal. Replacing the driver stays

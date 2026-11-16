@@ -736,9 +736,9 @@ class FakeTimeRegistrationWriteRepository implements TimeRegistrationWriteReposi
       .firstOrNull;
 
   @override
-  Future<({int id, DateTime at})?> nextOfType(SqlExecutor tx, int userId, int typeId, int afterId) async => rows
-      .where((r) => r.userId == userId && r.typeId == typeId && r.id > afterId)
-      .map((r) => (id: r.id, at: r.at))
+  Future<({int id, int typeId, DateTime at, bool counts})?> nextRow(SqlExecutor tx, int userId, int afterId) async => rows
+      .where((r) => r.userId == userId && r.id > afterId)
+      .map((r) => (id: r.id, typeId: r.typeId, at: r.at, counts: true))
       .firstOrNull;
 
   @override

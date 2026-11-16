@@ -99,17 +99,27 @@ class GeofenceEventHandler {
     await _sendTrip();
   }
 
-  /// Kept until the server answers: kilometres are paid. Refused, it is gone.
+  /// Sends the waiting trips, oldest first. Each is kept until the server
+  /// answers (kilometres are paid): no connection or a server failure keeps
+  /// it for later; only a refusal (4xx) drops it (review 2026-11-16).
   Future<void> _sendTrip() async {
-    final trip = await _presence.heldTrip();
-    if (trip == null) return;
-    try {
-      await _activities.registerTrip(trip);
+    while (true) {
+      final trip = await _presence.heldTrip();
+      if (trip == null) return;
+      try {
+        await _activities.registerTrip(trip);
+      } on ApiClientException catch (e) {
+        _log.warning('The trip could not be sent: ${e.kind.name} ${e.statusCode ?? ''}');
+        if (_tryLater(e)) return;
+      }
       await _presence.clearHeldTrip();
-    } on ApiClientException catch (e) {
-      _log.warning('The trip could not be sent: ${e.kind.name} ${e.statusCode ?? ''}');
-      if (e.kind != ApiFailureKind.network) await _presence.clearHeldTrip();
     }
+  }
+
+  /// No answer, the server failed or is busy: the trip may still be stored.
+  static bool _tryLater(ApiClientException e) {
+    final status = e.statusCode ?? 0;
+    return e.kind == ApiFailureKind.network || status >= 500 || status == 429 || status == 408;
   }
 
   Future<void> _left(int addressId) async {

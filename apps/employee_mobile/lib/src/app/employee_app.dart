@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
@@ -61,7 +63,7 @@ class _EmployeeAppState extends State<EmployeeApp> {
     final returning = !signedIn && await session.hasSignedInBefore();
     if (!mounted) return;
     if (signedIn) {
-      _enterSignedIn(null);
+      await _enterSignedIn(null);
     } else if (returning) {
       _startSignIn();
     } else {
@@ -114,13 +116,17 @@ class _EmployeeAppState extends State<EmployeeApp> {
     });
   }
 
-  void _enterSignedIn(EmployeeAccount? account) {
+  Future<void> _enterSignedIn(EmployeeAccount? account) async {
+    // Events the phone remembered for another employee are never sent with
+    // this one's session.
+    if (account != null) await _services.presence.belongTo(account.code);
+    if (!mounted) return;
     _disposeFlows();
     setState(() {
       _account = account;
       _phase = _Phase.signedIn;
     });
-    _applyUserLanguage();
+    unawaited(_applyUserLanguage());
   }
 
   Future<void> _applyLanguage(String code) async {

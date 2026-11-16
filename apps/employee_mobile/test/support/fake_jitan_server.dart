@@ -277,8 +277,15 @@ class FakeJitanServer {
   /// The day isn't running: the trip is refused.
   bool refuseTrips = false;
 
+  /// The server fails (503) on the next trips this many times.
+  int failTrips = 0;
+
   http.Response _trip(http.Request request) {
     if (refuseTrips) return _error(409, 'workday_not_running');
+    if (failTrips > 0) {
+      failTrips--;
+      return _error(503, 'database_unavailable');
+    }
     trips.add(jsonDecode(request.body) as Map<String, Object?>);
     return _json(MyActivity.disabled.toJson());
   }

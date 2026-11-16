@@ -176,6 +176,32 @@ void main() {
         expect(await presence.heldTrip(), isNull);
       });
 
+      test('a server failure keeps the trip, and it is sent later (review 2026-11-16)', () async {
+        await leftAlmeco();
+        await handler.handle(GeofenceChange.entered, client);
+        now = now.add(const Duration(minutes: 5));
+        h.server.failTrips = 1;
+        await handler.handle(GeofenceChange.stayed, client);
+        expect(await presence.heldTrip(), isNotNull, reason: 'a 503 is not a refusal');
+
+        await handler.catchUp();
+
+        expect(h.server.trips, hasLength(1));
+        expect(await presence.heldTrip(), isNull);
+      });
+
+      test('a second trip never replaces one not sent yet; both go, oldest first', () async {
+        final first = TripRequest(fromAddressId: almeco, toAddressId: client, leftAt: DateTime.utc(2026, 10, 22, 6), arrivedAt: DateTime.utc(2026, 10, 22, 6, 30));
+        final second = TripRequest(fromAddressId: client, toAddressId: almeco, leftAt: DateTime.utc(2026, 10, 22, 9), arrivedAt: DateTime.utc(2026, 10, 22, 9, 30));
+        await presence.holdTrip(first);
+        await presence.holdTrip(second);
+
+        await handler.catchUp();
+
+        expect([for (final t in h.server.trips) t['fromAddressId']], [almeco, client]);
+        expect(await presence.heldTrip(), isNull);
+      });
+
       test('refused by the server: not sent again', () async {
         await leftAlmeco();
         await handler.handle(GeofenceChange.entered, client);
@@ -564,6 +590,31 @@ void main() {
 
       expect(find.text('You’re away'), findsNothing);
       expect(await presence.away(), isNull, reason: 'cleared');
+    });
+  });
+  group('another employee signs in on this phone (review 2026-11-16)', () {
+    test('what the phone remembered for the first one is dropped, never sent for the second', () async {
+      final presence = WorkplacePresence(MemorySecureStore());
+      await presence.belongTo('KDV');
+      await presence.entered(7, DateTime(2026, 10, 22, 8));
+      await presence.left(7, DateTime(2026, 10, 22, 9));
+      await presence.holdTrip(TripRequest(fromAddressId: 7, toAddressId: 8, leftAt: DateTime.utc(2026, 10, 22, 7), arrivedAt: DateTime.utc(2026, 10, 22, 7, 30)));
+
+      await presence.belongTo('SBW');
+
+      expect(await presence.lastEntered(), isNull);
+      expect(await presence.away(), isNull);
+      expect(await presence.heldTrip(), isNull);
+    });
+
+    test('the same employee signing in again keeps theirs', () async {
+      final presence = WorkplacePresence(MemorySecureStore());
+      await presence.belongTo('KDV');
+      await presence.entered(7, DateTime(2026, 10, 22, 8));
+
+      await presence.belongTo('KDV');
+
+      expect(await presence.lastEntered(), isNotNull);
     });
   });
 }

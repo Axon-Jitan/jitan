@@ -401,6 +401,37 @@ void main() {
       expect(midday.single.readBool('timeRegActive'), isTrue, reason: 'the 13:00 finish keeps its rounded row');
     });
 
+    test('a retry after HR replaced its rounded row adds nothing and returns no other day\'s row (review 2026-11-16)', () async {
+      // Monday 12 October, 08:04 local; then Tuesday's start, stored later.
+      final first = RegisterTimeRequest(
+        boundary: RegistrationBoundary.start,
+        method: TimeRegistrationMethod.manual,
+        entry: RegistrationEntry.now,
+        at: DateTime.utc(2026, 10, 12, 6, 4),
+      );
+      final stored = (await registerNow(first)).registered;
+      await at(RegistrationBoundary.start, DateTime.utc(2026, 10, 13, 6, 4));
+      await corrections.correct(
+        hrId,
+        companyId,
+        userId,
+        '2026-10-12',
+        CorrectTimeRequest(boundary: RegistrationBoundary.start, time: '07:45', reason: '[DEV-TEST] came earlier'),
+      );
+
+      final (:registered, :created) = await registerNow(first);
+
+      expect(created, isFalse);
+      expect(registered.actualId, stored.actualId);
+      expect(registered.roundedId, isNull, reason: 'its own rounded row was replaced by HR; no later row instead');
+      final rows = await db.query(
+        'SELECT COUNT(*) AS n FROM tblTimeReg tr JOIN tblTimeRegType t ON t.timeRegTypeID = tr.timeRegTypeID '
+        "WHERE tr.userID = :u AND tr.timeRegTimestamp = :at AND t.timeRegTypeName = 'Start – actual – Manual'",
+        {'u': userId, 'at': '2026-10-12 06:04:00'},
+      );
+      expect(rows.single.readInt('n'), 1, reason: 'the actual time is not stored twice');
+    });
+
     test('a finish before the start or a start after the finish is refused', () async {
       final day = DateTime.utc(2026, 10, 15);
       await at(RegistrationBoundary.start, day.add(const Duration(hours: 6)));
