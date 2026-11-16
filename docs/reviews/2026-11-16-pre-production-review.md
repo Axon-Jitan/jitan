@@ -31,8 +31,7 @@ tests against the local database. No schema, data or code was changed for this r
 ## Fix status (updated 2026-11-16)
 
 Every technical finding is fixed, each with a regression test; the full server suite
-(843 tests, with the local MySQL) and the analyzer pass. Two items wait on a product
-decision and are not changed yet.
+(843 tests, with the local MySQL) and the analyzer pass. Every product decision is taken; L4 and L5 are accepted as they are.
 
 | Finding | Status | Commit |
 |---|---|---|
@@ -51,8 +50,8 @@ decision and are not changed yet.
 | M11 | Fixed (product owner): the tablet sends a scan whose answer was lost once more with the same time (the server knows it); if that fails too it says "Your scan may not be registered" | see git log |
 | L2 | Fixed (D52, product owner): only day shifts; nothing outside 05:00–19:00 is registered, so rounding can't cross midnight | see git log |
 | L3 | Fixed: the right is checked in every company of the employee | `a878d8d` |
-| L4 | **Decision needed:** may HR reset a fellow HR or Admin account? | – |
-| L5 | **Decision needed:** locations and projects are shared by every company | – |
+| L4 | Accepted (product owner): any HR person may reset any account, HR and Admin included; the reset is audited with who did it | – |
+| L5 | Accepted (product owner): every employee sees every company's places and projects; IT's ERD has no place-to-company link and none is asked for (GAP-03) | – |
 | L6 | Fixed: the tablet's id is checked; a retry is not audited twice | `56a79e9` |
 | L7 | Fixed: the website's token is `JITAN_MAPBOX_PUBLIC_TOKEN`, only `pk.` accepted | `56a79e9` |
 | L8 | Fixed: Jitan's own connection pool discards a broken connection | `3c406bd` |

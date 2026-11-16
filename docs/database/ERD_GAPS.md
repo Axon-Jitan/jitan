@@ -169,6 +169,8 @@ Recorded so they aren't raised again.
    say what kind of place an address is (office, customer site), not whose. Ask IT again
    if HR needs each company's own location list, or Jitan should pick the company from the
    place.
+7. **Seen by every employee (product owner, 2026-11-16, review L5):** the phone lists every
+   company's places and projects to every employee. Accepted as it is; no database change.
 
 ## GAP-04: Employee onboarding QR
 **RESOLVED (IT decision 2026-10-08): temporary QR codes, not stored in MySQL.** Supersedes
