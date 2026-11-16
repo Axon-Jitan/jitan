@@ -127,10 +127,10 @@ void main() {
       expect(app.audit.events, hasLength(1));
     });
 
-    test('a deadlock that keeps recurring fails after three attempts', () async {
+    test('a deadlock that keeps recurring fails after three attempts: busy, try again (503, review M7)', () async {
       final app = _app()..assignments.groupDeadlocks = 3;
 
-      expect((await app.post(_path, _add([2]))).statusCode, 500);
+      expect((await app.post(_path, _add([2]))).statusCode, 503);
       expect(app.transactions.outcomes, ['rollback', 'rollback', 'rollback']);
       expect(app.audit.events, isEmpty);
     });
