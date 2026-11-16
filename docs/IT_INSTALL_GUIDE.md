@@ -40,6 +40,14 @@ sudo openssl x509 -in /var/lib/mysql/server-cert.pem -noout -fingerprint -sha256
 We already have the server certificate's (`70:26:23:E5:…:85:B9`); please send us the
 CA's too, so we can confirm both.
 
+Two more things about the setup:
+
+- **Database mode:** MySQL's `sql_mode` for Jitan's account must not contain
+  `NO_BACKSLASH_ESCAPES`. Jitan refuses to start with it, and `/health/ready` says so.
+  Check it with `SELECT @@GLOBAL.sql_mode;`.
+- **One process:** run a single `jitan-server` (one service, no load balancing over
+  copies). Temporary QR codes and the sign-in limit are kept in its memory.
+
 ## 2. Install the executable
 
 The same routine as every later update: stop the service, keep the previous
