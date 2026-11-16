@@ -30,6 +30,10 @@ class DatabaseQueryException implements Exception {
   /// back entirely; it may be retried as a whole.
   bool get isDeadlock => errorCode == 1213;
 
+  /// 1213 (deadlock) or 1205 (lock wait timeout): the work met someone else's
+  /// locks and was rolled back; it may be retried as a whole (review M7).
+  bool get isLockConflict => errorCode == 1213 || errorCode == 1205;
+
   @override
   String toString() => 'DatabaseQueryException(${errorCode ?? '-'}): $cause';
 }

@@ -41,6 +41,21 @@ Middleware errorMiddleware() => (inner) => (request) async {
           ).toJson(),
           statusCode: 503,
         );
+      } on DatabaseQueryException catch (e, stack) {
+        // MySQL's own message can hold stored values (a duplicated code, for
+        // example): only its number is logged (review I1).
+        _log.severe('Database error ${e.errorCode ?? '-'}: ${request.method} ${request.requestedUri.path}', null, stack);
+        // Someone else's locks: the work was rolled back, trying again helps (M7).
+        if (e.isLockConflict) {
+          return jsonResponse(
+            const ApiError(code: ApiErrorCode.databaseUnavailable, message: 'Jitan is busy. Please try again in a moment.').toJson(),
+            statusCode: 503,
+          );
+        }
+        return jsonResponse(
+          const ApiError(code: ApiErrorCode.internalError, message: 'An unexpected error occurred.').toJson(),
+          statusCode: 500,
+        );
       } catch (e, stack) {
         _log.severe('Unhandled error: ${request.method} ${request.requestedUri.path}', e, stack);
         return jsonResponse(

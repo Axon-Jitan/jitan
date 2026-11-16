@@ -243,7 +243,7 @@ class GroupMemberService {
       try {
         return await _transactions.transaction(body);
       } on DatabaseQueryException catch (e) {
-        if (!e.isDeadlock || attempt == _deadlockAttempts) rethrow;
+        if (!e.isLockConflict || attempt == _deadlockAttempts) rethrow;
       }
     }
   }
