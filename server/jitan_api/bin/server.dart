@@ -43,6 +43,7 @@ import 'package:jitan_api/src/groups/group_member_service.dart';
 import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/groups/group_routes.dart';
 import 'package:jitan_api/src/groups/group_setup_service.dart';
+import 'package:jitan_api/src/database/database_exception.dart';
 import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:jitan_api/src/health/health_routes.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
@@ -141,6 +142,21 @@ Future<void> main() async {
   }
   if (!config.listener.https && !config.environment.allowsDevelopmentMechanisms) {
     _log.warning('Serving plain HTTP: only behind an IT-managed HTTPS proxy. Set TLS_CERT and TLS_KEY for direct HTTPS.');
+  }
+
+  // A database in a mode Jitan can't use is refused at once (review L13);
+  // one that isn't reachable yet is only reported: /health/ready shows it.
+  final databaseHealth = DatabaseHealthRepository(db);
+  try {
+    await databaseHealth.ping();
+  } on DatabaseUnavailableException catch (e) {
+    if (e.cause == DatabaseHealthRepository.backslashModeProblem) {
+      _log.severe('Refusing to start: ${e.cause}');
+      await db.close();
+      exitCode = 78; // EX_CONFIG
+      return;
+    }
+    _log.warning('The database is not reachable yet; requests that need it answer 503 until it is.');
   }
 
   final users = UserRepository(db);
@@ -301,9 +317,10 @@ Future<void> main() async {
 
   final handler = buildApp(
     corsOrigins: config.corsOrigins,
+    strictTransport: config.listener.https,
     // The HR website, when this executable was built with it.
     web: embeddedWebAssets.isEmpty ? null : WebRoutes(embeddedWebAssets).call,
-    health: HealthRoutes(DatabaseHealthRepository(db)),
+    health: HealthRoutes(databaseHealth),
     companies: CompanyRoutes(authorizer, CompanyService(companyRepository, transactions: db)),
     employees: EmployeeRoutes(
       authorizer,

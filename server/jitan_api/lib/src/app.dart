@@ -17,6 +17,7 @@ import 'health/health_routes.dart';
 import 'http/api_exception.dart';
 import 'http/cors_middleware.dart';
 import 'http/error_middleware.dart';
+import 'http/strict_transport_middleware.dart';
 import 'languages/language_routes.dart';
 import 'lists/fixed_list_routes.dart';
 import 'onboarding/onboarding_routes.dart';
@@ -63,6 +64,7 @@ Handler buildApp({
   required TimeRecordRoutes timeRecords,
   List<Middleware> authentication = const [],
   Handler? web,
+  bool strictTransport = false,
 }) {
   final apiRoutes = Router(notFoundHandler: _notFound)
     ..mount('/', companies.router.call)
@@ -98,8 +100,10 @@ Handler buildApp({
       .add(api.addHandler(apiRoutes.call))
       .handler;
 
-  return const Pipeline()
-      .addMiddleware(logRequests(logger: _logRequest))
+  var pipeline = const Pipeline().addMiddleware(logRequests(logger: _logRequest));
+  // Outside the error middleware, so error answers carry it too.
+  if (strictTransport) pipeline = pipeline.addMiddleware(strictTransportMiddleware());
+  return pipeline
       .addMiddleware(corsMiddleware(corsOrigins))
       .addMiddleware(errorMiddleware())
       .addHandler(routes);

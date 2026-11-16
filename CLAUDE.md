@@ -306,8 +306,10 @@ the `/terminal/` routes.
   `company.add`) are constants in `CommonTextKeys` (shared) or `<App>TextKeys`. **Every
   new key needs its English text in `builtInEnglish`**; a test fails otherwise, and also
   fails if a screen passes a string literal to `t()`.
-- Mobile and Terminal queue events locally (SQLite) when offline and sync on reconnect. An
-  event's actual timestamp is the moment it happened, not the moment it synced.
+- **Offline queueing is not built** (PRODUCT-CLARIFY-OFFLINE, open): Mobile and Terminal
+  send events only while online, and an event that can't be sent is not kept. When the
+  queue is built, an event's actual timestamp is the moment it happened, not the moment
+  it synced.
 - Authorization: role → modules via `tblUserCredGroup` + `tblAppModulesCredGroup`;
   capabilities via `tblUserFunction`. HR and Admin seeing the same screens in V1 is a data
   configuration, not a code branch. Keep permission checks in one place.

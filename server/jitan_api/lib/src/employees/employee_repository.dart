@@ -148,9 +148,9 @@ class EmployeeRepository {
     final companies = SqlInList('co', companyIds);
     final searchFilter = nameOrCodeContains == null
         ? ''
-        : 'AND (u.userName $ignoringCaseAndAccents LIKE :pattern OR u.userSurname $ignoringCaseAndAccents LIKE :pattern '
-            'OR u.userCode $ignoringCaseAndAccents LIKE :pattern '
-            "OR CONCAT_WS(' ', u.userName, u.userSurname) $ignoringCaseAndAccents LIKE :pattern) ";
+        : 'AND (u.userName $ignoringCaseAndAccents LIKE :pattern $likeEscape OR u.userSurname $ignoringCaseAndAccents LIKE :pattern $likeEscape '
+            'OR u.userCode $ignoringCaseAndAccents LIKE :pattern $likeEscape '
+            "OR CONCAT_WS(' ', u.userName, u.userSurname) $ignoringCaseAndAccents LIKE :pattern $likeEscape) ";
     final userFilter = userId == null ? '' : 'AND u.userID = :userId ';
     // One row per membership; an employee of several listed companies is
     // merged below.

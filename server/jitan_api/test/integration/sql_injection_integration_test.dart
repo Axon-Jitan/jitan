@@ -3,11 +3,13 @@ library;
 
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/database/database_exception.dart';
 import 'package:jitan_api/src/database/sql_in_list.dart';
 import 'package:jitan_api/src/employees/employee_repository.dart';
 import 'package:jitan_api/src/groups/group_management_repository.dart';
 import 'package:jitan_api/src/groups/group_management_service.dart';
 import 'package:jitan_api/src/groups/group_member_repository.dart';
+import 'package:jitan_api/src/health/database_health_repository.dart';
 import 'package:test/test.dart';
 
 import '../support/test_database.dart';
@@ -33,6 +35,8 @@ void main() {
     r'\',
     '%',
     '_',
+    '!',
+    '!%',
     "%' AND SLEEP(2) AND '%'='",
   ];
 
@@ -121,6 +125,43 @@ void main() {
     }
     expect(await tableCount('tblUser'), 1, reason: 'tblUser still exists');
     expect([for (final e in await employees.listForCompany(companyA)) e.id], contains(alice), reason: 'data intact');
+  });
+
+  test('search wildcards and backslashes are plain text: %, _, ! and backslash match only themselves (review L13)', () async {
+    final slash = (await db.execute(
+      'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
+      "VALUES ('[DEV-TEST]', :s, :c, :q, 1, 0)",
+      {'s': r'Back\slash 50%_!', 'c': 'SQSlash$stamp', 'q': 'DEV-TEST-SQSlash$stamp'},
+    )).lastInsertId;
+    addTearDown(() async {
+      await db.execute('DELETE FROM tblUserCompany WHERE userID = :u', {'u': slash});
+      await db.execute('DELETE FROM tblUser WHERE userID = :u', {'u': slash});
+    });
+    await db.execute(
+      'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)',
+      {'u': slash, 'c': companyA},
+    );
+    Future<List<int>> found(String text) async =>
+        [for (final e in await employees.listForCompany(companyA, nameOrCodeContains: text)) e.id];
+
+    for (final literal in [r'k\s', '50%', '%_', '_!', '!']) {
+      expect(await found(literal), [slash], reason: literal);
+    }
+    for (final other in ['5%0', 'k_s', '!%', r'\\', 'Back%slash']) {
+      expect(await found(other), isEmpty, reason: other);
+    }
+  });
+
+  test('a database running with NO_BACKSLASH_ESCAPES is reported as unusable (review L13)', () async {
+    final strict = TestDatabase.connect(maxConnections: 1);
+    addTearDown(strict.close);
+    await strict.execute("SET SESSION sql_mode = CONCAT(@@SESSION.sql_mode, ',NO_BACKSLASH_ESCAPES')");
+
+    await expectLater(
+      DatabaseHealthRepository(strict).ping(),
+      throwsA(isA<DatabaseUnavailableException>().having((e) => e.cause, 'cause', DatabaseHealthRepository.backslashModeProblem)),
+    );
+    await DatabaseHealthRepository(db).ping();
   });
 
   test('hostile text in the group candidates search matches nothing', () async {

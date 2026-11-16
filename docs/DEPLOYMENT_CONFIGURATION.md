@@ -75,6 +75,12 @@ DB_NAME=jitandev
 - With neither TLS setting, the test uses HTTP. For the full app, this is only for
   explicit development or an IT-managed HTTPS reverse proxy; IT's supplied setup
   uses direct HTTPS in the executable.
+- With direct HTTPS, every answer carries `Strict-Transport-Security: max-age=31536000`
+  (review I2). Behind an IT-managed HTTPS proxy, the proxy should set it.
+- Run **one** API process (one `systemd` service, no load balancing across copies).
+  Temporary onboarding, recovery and pairing QRs, the sign-in limit and terminal
+  "last seen" live in that process's memory (review L9); a restart ends pending QRs.
+  Scaling out needs a shared store first.
 - Restart to apply configuration/certificate changes; there is no hot reload.
   The service account must be able to read the config and TLS files. Do not make
   private files world-readable or log passwords, private keys or config contents.
@@ -111,6 +117,10 @@ The database connection has its own settings (SEC-01):
 Production refuses to start without one of the two checks, or with both. Development
 may connect unverified and logs a warning. When IT renews the database certificates,
 the fingerprints change with them and must be updated in `/etc/jitan/app.env`.
+
+MySQL's `sql_mode` for Jitan's account must not contain `NO_BACKSLASH_ESCAPES`: the
+driver escapes values with backslashes, which that mode would store as text. The API
+refuses to start in that mode, and `/health/ready` reports it (review L13).
 
 The full application also needs `JITAN_SESSION_SECRET` (at least 32 characters) in
 production, and refuses any `JITAN_DEV_*` setting there, from any source. IT's

@@ -23,7 +23,7 @@ class CompanyRepository {
   /// [nameContains] filters case-insensitively (per the column collation) on
   /// `companyName`; LIKE wildcards in it are matched literally.
   Future<List<CompanySummary>> listCompanies({String? nameContains}) async {
-    final filter = nameContains == null ? '' : 'AND c.companyName $ignoringCaseAndAccents LIKE :namePattern ';
+    final filter = nameContains == null ? '' : 'AND c.companyName $ignoringCaseAndAccents LIKE :namePattern $likeEscape ';
     final rows = await _db.query(
       'SELECT c.companyID, c.companyName, c.companyActive, '
       '(SELECT COUNT(*) FROM tblUserCompany uc '

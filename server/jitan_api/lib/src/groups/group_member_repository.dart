@@ -37,9 +37,9 @@ class GroupMemberRepository {
   Future<List<GroupMemberRow>> candidates(int? groupId, {String? search}) async {
     final searchFilter = search == null
         ? ''
-        : 'AND (u.userName $ignoringCaseAndAccents LIKE :pattern OR u.userSurname $ignoringCaseAndAccents LIKE :pattern '
-            'OR u.userCode $ignoringCaseAndAccents LIKE :pattern '
-            "OR CONCAT_WS(' ', u.userName, u.userSurname) $ignoringCaseAndAccents LIKE :pattern) ";
+        : 'AND (u.userName $ignoringCaseAndAccents LIKE :pattern $likeEscape OR u.userSurname $ignoringCaseAndAccents LIKE :pattern $likeEscape '
+            'OR u.userCode $ignoringCaseAndAccents LIKE :pattern $likeEscape '
+            "OR CONCAT_WS(' ', u.userName, u.userSurname) $ignoringCaseAndAccents LIKE :pattern $likeEscape) ";
     return _rows(await _executor.query(
       'SELECT u.userID, u.userName, u.userSurname, u.userCode FROM tblUser u '
       'WHERE u.userMFD = 0 AND u.userActive = 1 '
