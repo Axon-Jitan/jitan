@@ -28,6 +28,53 @@ tests against the local database. No schema, data or code was changed for this r
 | Low | 14 |
 | Info | 6 |
 
+## Fix status (updated 2026-11-16)
+
+Every technical finding is fixed, each with a regression test; the full server suite
+(843 tests, with the local MySQL) and the analyzer pass. Six items wait on a product
+decision and are not changed yet.
+
+| Finding | Status | Commit |
+|---|---|---|
+| H1 terminal | Fixed: a scan older than 2 minutes is refused (the tablet keeps nothing offline) | `250ec55` |
+| H1 mobile | **Decision needed:** how far back the phone may send a "now" time (geofence answers can come an hour later, D34) | – |
+| H2 | Fixed: the employee's lock is taken before any read; the same time sent twice is stored once | `250ec55` |
+| H3 | Fixed: a correction switches off only what it replaces; impossible start/finish orders refused | `4b4b6be` |
+| H4 | Fixed: allow-all permissions need `JITAN_DEV_ALLOW_ALL_PERMISSIONS=true`; `TLS_CERT` forces production | `3e4cccc` |
+| H5 | Fixed: the terminal decides in/out under the employee's lock | `250ec55` |
+| M1, L12 | Fixed: company names and employee codes under a MySQL named lock | `4d1850d` |
+| M2 | Fixed: attempts counted when they start, accent-folded; at most one Argon2 hash per core | `a5c98f9` |
+| M3 | **Decision needed:** may HR approve their own time? | – |
+| M4, M5, M6, M8, M9 | Fixed: reactivation re-syncs the schedule; a sole member keeps the group's hours; group locks first, then employees; a deactivated group is refused inside the transaction | `3229997` |
+| M7 | Fixed: named locks instead of table-wide locking reads; lock conflicts answer 503 and are retried | `eb04024`, `a7b38b7`, `4e1c829` |
+| M10, L1 | Fixed: the rounding rule is read before the transaction; a request counts as approved only at its own time | `4b4b6be` |
+| M11 | **Decision needed:** terminal wording after a lost answer, or resending | – |
+| L2 | **Decision needed:** rounding across midnight (clamp or carry over) | – |
+| L3 | Fixed: the right is checked in every company of the employee | `a878d8d` |
+| L4 | **Decision needed:** may HR reset a fellow HR or Admin account? | – |
+| L5 | **Decision needed:** locations and projects are shared by every company | – |
+| L6 | Fixed: the tablet's id is checked; a retry is not audited twice | `56a79e9` |
+| L7 | Fixed: the website's token is `JITAN_MAPBOX_PUBLIC_TOKEN`, only `pk.` accepted | `56a79e9` |
+| L8 | Fixed: Jitan's own connection pool discards a broken connection | `3c406bd` |
+| L9 | Documented: run one API process (DEPLOYMENT_CONFIGURATION) | `29015d4` |
+| L10 | Fixed: audit time in UTC. Rows written before keep the database's zone | `3c406bd` |
+| L11 | Fixed: pairing QR audited first, module link only when made, schedule changes per employee | `56a79e9` |
+| L13 | Fixed: `ESCAPE '!'`; the API refuses a database with `NO_BACKSLASH_ESCAPES`, as the driver escapes with backslashes | `29015d4` |
+| L14 | Fixed | `250ec55` |
+| I1 | Fixed: database errors are logged by number only | `a7b38b7` |
+| I2 | Fixed: HSTS on direct HTTPS | `29015d4` |
+| I3 | Fixed: the Terminal app is not backed up | `29015d4` |
+| I4 | Fixed: CLAUDE.md says offline queueing is not built | `29015d4` |
+| I5 | By decision D31; no change | – |
+| I6 | Fixed: server test files run one at a time | `eb04024` |
+
+Found while fixing L13: the driver (mysql_client_plus) fills parameters in on the client
+with backslash escaping. Quotes are always safe, but with `NO_BACKSLASH_ESCAPES` every
+stored backslash would be doubled; hence the startup refusal. Replacing the driver stays
+open (DB-DRIVER-01).
+
+---
+
 Paths below are relative to `server/jitan_api/lib/src/` unless they start with `apps/`,
 `bin/` or `server/`. "Reproduced" means a test against the local MySQL fails today;
 the tests are listed in the appendix.
