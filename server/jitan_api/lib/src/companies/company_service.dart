@@ -15,6 +15,9 @@ class CompanyService {
 
   final CompanyRepository _companies;
 
+  /// The named lock that serializes company names ([TransactionRunner.transaction]).
+  static const nameLock = 'company-name';
+
   /// `null` where only the list is served (no writes).
   final TransactionRunner? _transactions;
   final AuditLogRepository _audit;
@@ -92,11 +95,12 @@ class CompanyService {
     return name;
   }
 
-  /// A name in use is checked with a locking read ([CompanyRepository.nameTaken]);
-  /// a duplicate key from the database is answered the same way.
+  /// Adding and renaming run one at a time ([nameLock]), so two at once can't
+  /// give two companies the same name (review M1); a duplicate key from the
+  /// database is answered the same way.
   Future<T> _write<T>(String name, Future<T> Function(SqlExecutor tx) action) async {
     try {
-      return await _runner.transaction(action);
+      return await _runner.transaction(action, serializedBy: nameLock);
     } on DatabaseQueryException catch (e) {
       if (e.isDuplicateKey) throw _nameTaken(name);
       if (e.isValueTooLong) throw const ApiException.badRequest('A value is longer than allowed.');

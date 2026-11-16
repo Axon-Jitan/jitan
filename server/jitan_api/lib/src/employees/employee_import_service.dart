@@ -53,7 +53,7 @@ class EmployeeImportService {
     _requireRows(request);
     final groups = await _groupIdsByName();
     try {
-      return await _transactions.transaction((tx) async {
+      return await _transactions.transaction(serializedBy: EmployeeService.codeLock, (tx) async {
         final rows = _checked(request.rows, groups, await _employees.existingCodes(_codes(request), executor: tx));
         var added = 0;
         for (final row in rows) {

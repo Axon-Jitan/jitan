@@ -18,7 +18,14 @@ abstract interface class SqlExecutor {
 abstract interface class TransactionRunner {
   /// Runs [action] in one transaction: commits when it completes, rolls back
   /// and rethrows when it throws.
-  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action);
+  ///
+  /// [serializedBy] names a lock held from before the transaction starts until
+  /// after it ends (MySQL `GET_LOCK`): transactions with the same name run one
+  /// after the other, and each sees what the previous one committed. For
+  /// checks no unique key or index can guard, such as a name compared ignoring
+  /// capitals and accents (review M1, L12, M7): unlike a locking read it locks
+  /// no table row, so it can't deadlock with ordinary work.
+  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action, {String? serializedBy});
 }
 
 /// Outcome of a write statement.

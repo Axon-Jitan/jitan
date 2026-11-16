@@ -54,19 +54,41 @@ class Database implements SqlExecutor, TransactionRunner {
   /// wait forever. Here the failure is caught inside the pool callback and
   /// rethrown only after the connection is back in the pool.
   @override
-  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) async {
+  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action, {String? serializedBy}) async {
     final outcome = await _run(
       () async => _pool.withConnection((connection) async {
+        var locked = false;
         try {
+          if (serializedBy != null) {
+            locked = await _namedLock(connection, serializedBy);
+          }
           return _Outcome<T>.value(
             await connection.transactional((tx) => action(_ConnectionExecutor(tx))),
           );
         } catch (error, stackTrace) {
           return _Outcome<T>.error(error, stackTrace);
+        } finally {
+          if (locked) await connection.execute('DO RELEASE_LOCK(:name)', {'name': _lockName(serializedBy!)});
         }
       }),
     );
     return outcome.unwrap();
+  }
+
+  /// How long a transaction waits for a named lock before giving up (503).
+  static const namedLockWait = Duration(seconds: 10);
+
+  static String _lockName(String name) => 'jitan.$name';
+
+  /// Takes the named lock on [connection]; throws when it isn't free in time.
+  static Future<bool> _namedLock(MySQLConnection connection, String name) async {
+    final result = await connection.execute('SELECT GET_LOCK(:name, :wait) AS got', {
+      'name': _lockName(name),
+      'wait': namedLockWait.inSeconds,
+    });
+    final got = result.rows.firstOrNull?.colByName('got');
+    if (got != '1') throw DatabaseUnavailableException('The lock "$name" was not free within ${namedLockWait.inSeconds} s.');
+    return true;
   }
 
   Future<void> close() => _pool.close();

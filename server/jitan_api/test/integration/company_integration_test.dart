@@ -78,6 +78,20 @@ void main() {
     );
   });
 
+  test('two "Add company" with the same name at once make one company (review M1)', () async {
+    final name = '$prefix Twin';
+    final outcomes = await Future.wait([
+      for (var i = 0; i < 2; i++)
+        companies.create(actor, CompanyRequest(name: name)).then<Object>((c) {
+          created.add(c.id);
+          return c;
+        }, onError: (Object e) => e),
+    ]);
+
+    expect(outcomes.whereType<CompanySummary>(), hasLength(1));
+    expect(outcomes.whereType<ApiException>().single.code, ApiErrorCode.duplicateCompanyName);
+  });
+
   test('an empty or too long name is refused on the name', () async {
     await expectLater(companies.create(actor, const CompanyRequest(name: '   ')), refused(400));
     await expectLater(

@@ -77,13 +77,11 @@ class EmployeeRepository {
 
   /// Whether any user, in any company and including MFD users, has [code]
   /// (`tblUser.userCode` is unique across the table).
-  /// A locking read: two new employees whose codes differ only by accents
-  /// (RENÉ, RENE) can't both pass at once (review L12); the unique key on
-  /// `userCode` is accent-sensitive.
-  Future<bool> codeExists(SqlExecutor executor, String code) async => (await executor.query(
-    'SELECT 1 AS found FROM tblUser WHERE userCode $ignoringCaseAndAccents = :code FOR UPDATE',
-    {'code': code},
-  )).isNotEmpty;
+  /// In a transaction serialized by [EmployeeService.codeLock]: two new
+  /// employees whose codes differ only by accents (RENÉ, RENE) can't both pass
+  /// at once (review L12); the unique key on `userCode` is accent-sensitive.
+  Future<bool> codeExists(SqlExecutor executor, String code) async =>
+      (await executor.query('SELECT 1 AS found FROM tblUser WHERE userCode $ignoringCaseAndAccents = :code', {'code': code})).isNotEmpty;
 
   /// Which of [codes] some user already has, in any company and including
   /// MFD users, as stored, ignoring capitals and accents (CLARIFY-16). Reads through [executor] (a transaction) when
@@ -91,11 +89,7 @@ class EmployeeRepository {
   Future<List<String>> existingCodes(Iterable<String> codes, {SqlExecutor? executor}) async {
     if (codes.isEmpty) return const [];
     final list = SqlInList('c', codes);
-    // Inside the import's transaction a locking read, as [codeExists] (L12).
-    final rows = await (executor ?? _db).query(
-      'SELECT userCode FROM tblUser WHERE userCode $ignoringCaseAndAccents IN (${list.placeholders})${executor == null ? '' : ' FOR UPDATE'}',
-      list.params,
-    );
+    final rows = await (executor ?? _db).query('SELECT userCode FROM tblUser WHERE userCode $ignoringCaseAndAccents IN (${list.placeholders})', list.params);
     return [for (final row in rows) row.readString('userCode')];
   }
 

@@ -510,7 +510,7 @@ class FakeTransactions implements TransactionRunner {
   final outcomes = <String>[];
 
   @override
-  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) async {
+  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action, {String? serializedBy}) async {
     try {
       final result = await action(UnusedExecutor());
       outcomes.add('commit');

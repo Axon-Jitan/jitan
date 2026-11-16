@@ -18,6 +18,9 @@ import 'personal_qr_code.dart';
 
 /// Employee use cases. Everything is scoped to one company.
 class EmployeeService {
+  /// The named lock that serializes new employee codes, also for the import.
+  static const codeLock = 'employee-code';
+
   EmployeeService({
     required this._employees,
     required this._companies,
@@ -297,7 +300,9 @@ class EmployeeService {
     }
 
     try {
-      return await _transactions.transaction((tx) async {
+      // One new code at a time: codes are unique ignoring accents, which the
+      // database's key can't guard (review L12).
+      return await _transactions.transaction(serializedBy: codeLock, (tx) async {
         if (await _employees.codeExists(tx, code)) throw _duplicateCode(code);
         final userId = await createIn(
           tx,
