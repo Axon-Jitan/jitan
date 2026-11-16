@@ -169,6 +169,9 @@ class TerminalController extends ChangeNotifier {
       case ApiErrorCode.employeeUnavailable || ApiErrorCode.scanNotAllowed:
         _show(const SeeHr());
         _returnIn(hrNoteFor);
+      case ApiErrorCode.outsideWorkingHours:
+        _show(const SeeHr(outsideHours: true));
+        _returnIn(hrNoteFor);
       case ApiErrorCode.terminalOff:
         await _checkInNow();
         _show(const Scanning());

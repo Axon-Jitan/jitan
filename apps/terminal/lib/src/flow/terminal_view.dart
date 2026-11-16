@@ -53,9 +53,12 @@ class ChoosingProject extends TerminalView {
   final bool failed;
 }
 
-/// Ask HR (Figma `1489:77`).
+/// Ask HR (Figma `1489:77`). [outsideHours]: the scan was outside
+/// 05:00–19:00, which Jitan doesn't register (D52).
 class SeeHr extends TerminalView {
-  const SeeHr();
+  const SeeHr({this.outsideHours = false});
+
+  final bool outsideHours;
 }
 
 /// Jitan can't be reached, even after sending the scan once more (Figma

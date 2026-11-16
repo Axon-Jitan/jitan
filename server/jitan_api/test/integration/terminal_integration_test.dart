@@ -63,7 +63,15 @@ void main() {
   final prefix = '[DEV-TEST] $stamp';
   var counter = 0;
 
-  DateTime moment(int minutesAgo) => DateTime.now().toUtc().subtract(Duration(minutes: minutesAgo));
+  /// "Now" for every service here: today at 12:00 in Brussels, so the
+  /// tests don't depend on the hour they run at (Jitan registers from 05:00
+  /// to 19:00, D52).
+  final testNow = () {
+    final today = WorkplaceClock('Europe/Brussels').wallClockOf(DateTime.now().toUtc());
+    return WorkplaceClock('Europe/Brussels').utcOf(DateTime.utc(today.year, today.month, today.day, 12));
+  }();
+
+  DateTime moment(int minutesAgo) => testNow.subtract(Duration(minutes: minutesAgo));
 
   Future<int> newCompany(String name) async => (await db.execute(
     'INSERT INTO tblCompany (companyName, companyActive, companyMFD) VALUES (:n, 1, 0)',
@@ -119,8 +127,9 @@ void main() {
       clock: clock,
       schedules: schedules,
       rounding: RegistrationRounding(schedules),
+      now: () => testNow,
     );
-    final myDay = MyDayService(days: days, records: records, plans: WeekPlans(schedules), clock: clock);
+    final myDay = MyDayService(days: days, records: records, plans: WeekPlans(schedules), clock: clock, now: () => testNow);
     final activities = activitiesHere
         ? ActivityService(
             activities: const ActivityRepository(),
@@ -139,6 +148,7 @@ void main() {
             transactions: db,
             executor: db,
             clock: clock,
+            now: () => testNow,
           )
         : null;
     temporaryQr = TemporaryQrService(tokens: TemporaryQrTokens.withRandomKey(), store: InMemoryTemporaryTokenStore());
@@ -151,6 +161,7 @@ void main() {
       audit: const AuditLogRepository(),
       transactions: db,
       executor: db,
+      now: () => testNow,
     );
     device = TerminalDeviceService(
       terminals: repository,
@@ -161,6 +172,7 @@ void main() {
         rounding: RegistrationRounding(schedules),
         clock: clock,
         onDayStart: activities?.dayStarted,
+        now: () => testNow,
       ),
       activities: activities,
       // The tests scan up to an hour back; a day is still refused (review H1).
@@ -169,6 +181,7 @@ void main() {
       transactions: db,
       executor: db,
       clock: clock,
+      now: () => testNow,
     );
     final types = await repository.types(db);
     officeType = types.firstWhere((t) => t.name == TerminalRepository.officeTypeName).id;

@@ -99,6 +99,7 @@ abstract final class EmployeeWebTextKeys {
   static const addBadTime = 'web.add.badTime';
   static const addFuture = 'web.add.future';
   static const addNoReason = 'web.add.noReason';
+  static const addOutsideWorkingHours = 'web.add.outsideWorkingHours';
   static const sentTitle = 'web.sent.title';
   static const sentStart = 'web.sent.start';
   static const sentFinish = 'web.sent.finish';

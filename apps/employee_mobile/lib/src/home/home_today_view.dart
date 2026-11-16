@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:jitan_api_client/jitan_api_client.dart';
 import 'package:jitan_core/jitan_core.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:jitan_ui/jitan_ui.dart';
@@ -7,6 +6,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 import '../activity/activity_controller.dart';
 import '../geofencing/workplace_presence.dart';
 import '../l10n/employee_text_keys.dart';
+import '../today/registration_failure_text.dart';
 import '../today/time_entry_screen.dart';
 import '../today/today_controller.dart';
 import '../today/today_text.dart';
@@ -154,9 +154,7 @@ class HomeTodayView extends StatelessWidget {
     final finishing = TodayController.phaseOf(state.day) == TodayPhase.working;
     return PhoneErrorNote(
       title: context.t(finishing ? EmployeeTextKeys.todaySaveFinishFailed : EmployeeTextKeys.todaySaveStartFailed),
-      message: context.t(
-        failure.kind == ApiFailureKind.network ? EmployeeTextKeys.todayCheckConnection : EmployeeTextKeys.todaySaveRefused,
-      ),
+      message: context.t(registrationFailureKey(failure)),
     );
   }
 

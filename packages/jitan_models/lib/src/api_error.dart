@@ -66,6 +66,10 @@ abstract final class ApiErrorCode {
   /// A terminal: the QR's owner doesn't belong to its company.
   static const scanNotAllowed = 'scan_not_allowed';
 
+  /// A time outside the hours Jitan registers in, 05:00–19:00 (400, D52):
+  /// the employee sees HR.
+  static const outsideWorkingHours = 'outside_working_hours';
+
   /// Another company (active or inactive) already has this name.
   static const duplicateCompanyName = 'duplicate_company_name';
 

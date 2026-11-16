@@ -5,6 +5,7 @@ import 'package:jitan_ui/jitan_ui.dart';
 
 import '../l10n/employee_text_keys.dart';
 import '../widgets/phone_widgets.dart';
+import 'registration_failure_text.dart';
 import 'time_entry_parts.dart';
 import 'time_picker_card.dart';
 
@@ -211,9 +212,7 @@ class _TimeEntryScreenState extends State<TimeEntryScreen> {
               if (failure != null) ...[
                 PhoneErrorNote(
                   title: context.t(_isStart ? EmployeeTextKeys.todaySaveStartFailed : EmployeeTextKeys.todaySaveFinishFailed),
-                  message: context.t(
-                    failure.kind == ApiFailureKind.network ? EmployeeTextKeys.todayCheckConnection : EmployeeTextKeys.todaySaveRefused,
-                  ),
+                  message: context.t(registrationFailureKey(failure)),
                 ),
                 const SizedBox(height: 12),
               ],

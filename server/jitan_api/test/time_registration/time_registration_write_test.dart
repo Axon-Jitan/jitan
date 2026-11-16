@@ -201,6 +201,32 @@ void main() {
     expect(changed.statusCode, 201, reason: 'an older time with a reason waits for HR');
   });
 
+  group('only from 05:00 to 19:00 in Brussels; outside, the employee sees HR (D52)', () {
+    Future<Map<String, Object?>> refusal(String at, {String boundary = 'start', String entry = 'now', Object? reason}) {
+      final app = _app()..now = DateTime.parse(at).add(const Duration(minutes: 1));
+      return _error(app, _body(boundary: boundary, at: at, entry: entry, reason: reason));
+    }
+
+    test('05:00 and 19:00 themselves are fine', () async {
+      for (final (at, boundary) in [('2026-10-22T03:00:00Z', 'start'), ('2026-10-22T17:00:00Z', 'finish')]) {
+        final app = _app()..now = DateTime.parse(at).add(const Duration(minutes: 1));
+        expect((await app.post(_path, _body(boundary: boundary, at: at))).statusCode, 201, reason: at);
+      }
+    });
+
+    test('04:59 or 19:01 is not registered, tapped or as a change with a reason', () async {
+      for (final (at, boundary, entry, reason) in [
+        ('2026-10-22T02:59:00Z', 'start', 'now', null),
+        ('2026-10-22T17:01:00Z', 'finish', 'now', null),
+        ('2026-10-22T18:30:00Z', 'finish', 'corrected', 'Worked late'),
+      ]) {
+        final error = await refusal(at, boundary: boundary, entry: entry, reason: reason);
+        expect(error, containsPair('status', 400), reason: at);
+        expect(error, containsPair('code', ApiErrorCode.outsideWorkingHours), reason: at);
+      }
+    });
+  });
+
   test('a time in the future is refused; a phone clock a little ahead is fine', () async {
     final app = _app()..now = DateTime.utc(2026, 10, 22, 6, 3);
 

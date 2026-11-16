@@ -147,6 +147,20 @@ void main() {
       await leave(tester);
     });
 
+    testWidgets('a scan outside 05:00–19:00: see HR, with the hours (D52)', (tester) async {
+      final h = await open(tester);
+      h.api.failScan = refused(400, ApiErrorCode.outsideWorkingHours);
+
+      await scan(tester, h);
+
+      expect(find.text('We can’t register you here'), findsOneWidget);
+      expect(find.text('Jitan registers from 05:00 to 19:00. Please see HR.'), findsOneWidget);
+      expect(h.api.scans, hasLength(1), reason: 'a refusal is an answer: not sent again');
+      await tester.tap(find.text('Back'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await leave(tester);
+    });
+
     testWidgets('an account problem and not being allowed look the same: ask HR', (tester) async {
       for (final code in [ApiErrorCode.employeeUnavailable, ApiErrorCode.scanNotAllowed]) {
         final h = await open(tester);

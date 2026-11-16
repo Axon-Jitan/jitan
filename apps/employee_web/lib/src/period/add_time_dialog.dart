@@ -93,11 +93,16 @@ class _AddTimeDialogState extends State<_AddTimeDialog> {
         ),
       );
       if (mounted) Navigator.of(context).pop(true);
-    } on ApiClientException {
+    } on ApiClientException catch (e) {
       if (mounted) {
         setState(() {
           _busy = false;
-          _failed = true;
+          // Outside 05:00–19:00: under the time, see HR (D52).
+          if (e.error?.code == ApiErrorCode.outsideWorkingHours) {
+            _timeError = EmployeeWebTextKeys.addOutsideWorkingHours;
+          } else {
+            _failed = true;
+          }
         });
       }
     }

@@ -50,7 +50,15 @@ void main() {
   final prefix = '[DEV-TEST] $stamp';
   var counter = 0;
 
-  DateTime moment(int minutesAgo) => DateTime.now().toUtc().subtract(Duration(minutes: minutesAgo));
+  /// "Now" for every service here: today at 12:00 in Brussels, so the
+  /// tests don't depend on the hour they run at (Jitan registers from 05:00
+  /// to 19:00, D52).
+  final testNow = () {
+    final today = WorkplaceClock('Europe/Brussels').wallClockOf(DateTime.now().toUtc());
+    return WorkplaceClock('Europe/Brussels').utcOf(DateTime.utc(today.year, today.month, today.day, 12));
+  }();
+
+  DateTime moment(int minutesAgo) => testNow.subtract(Duration(minutes: minutesAgo));
   String today() {
     final local = clock.wallClockOf(moment(0));
     return TimeRecordDay.dateText(DateTime.utc(local.year, local.month, local.day));
@@ -95,7 +103,7 @@ void main() {
   }
 
   DateTime? tappedAt;
-  DateTime serverNow() => tappedAt?.add(const Duration(minutes: 1)) ?? DateTime.now().toUtc();
+  DateTime serverNow() => tappedAt?.add(const Duration(minutes: 1)) ?? testNow;
 
   RegisterTimeRequest at(RegistrationBoundary boundary, DateTime when) =>
       RegisterTimeRequest(boundary: boundary, method: TimeRegistrationMethod.manual, entry: RegistrationEntry.now, at: when);
@@ -128,6 +136,7 @@ void main() {
       clock: clock,
       schedules: schedules,
       rounding: RegistrationRounding(schedules),
+      now: serverNow,
     );
     final kilometres = TripKilometres(
       activities: const ActivityRepository(),
@@ -140,7 +149,7 @@ void main() {
       activities: const ActivityRepository(),
       projects: const ProjectRepository(),
       writes: const TimeRegistrationWriteRepository(),
-      myDay: MyDayService(days: days, records: records, plans: WeekPlans(schedules), clock: clock),
+      myDay: MyDayService(days: days, records: records, plans: WeekPlans(schedules), clock: clock, now: serverNow),
       locations: const LocationRepository(),
       kilometres: kilometres,
       audit: const AuditLogRepository(),

@@ -120,10 +120,10 @@ class _TerminalAppState extends State<TerminalApp> {
         onChoose: (kind, projectId) => controller.switchTo(kind, projectId: projectId),
         onKeep: controller.backToCamera,
       ),
-      SeeHr() => MessageScreen(
+      SeeHr(:final outsideHours) => MessageScreen(
         tone: MessageTone.attention,
         title: context.t(TerminalTextKeys.seeHrTitle),
-        text: context.t(TerminalTextKeys.seeHrText),
+        text: context.t(outsideHours ? TerminalTextKeys.seeHrOutsideHours : TerminalTextKeys.seeHrText),
         below: [
           const SizedBox(height: 36),
           TerminalButton(large: true, label: context.t(TerminalTextKeys.back), onPressed: controller.backToCamera),

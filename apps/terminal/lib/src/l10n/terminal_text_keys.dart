@@ -35,6 +35,7 @@ abstract final class TerminalTextKeys {
   static const projectDetail = 'tablet.projectDetail';
   static const seeHrTitle = 'tablet.seeHr.title';
   static const seeHrText = 'tablet.seeHr.text';
+  static const seeHrOutsideHours = 'tablet.seeHr.outsideHours';
   static const back = 'tablet.back';
   static const noConnectionTitle = 'tablet.noConnection.title';
   static const noConnectionText = 'tablet.noConnection.text';

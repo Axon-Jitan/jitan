@@ -59,18 +59,26 @@ void main() {
   final prefix = '[DEV-TEST] $stamp';
   var counter = 0;
 
+  /// "Now" for every service here: today at 12:00 in Brussels, so the
+  /// tests don't depend on the hour they run at (Jitan registers from 05:00
+  /// to 19:00, D52).
+  final testNow = () {
+    final today = WorkplaceClock('Europe/Brussels').wallClockOf(DateTime.now().toUtc());
+    return WorkplaceClock('Europe/Brussels').utcOf(DateTime.utc(today.year, today.month, today.day, 12));
+  }();
+
   /// A moment earlier today, so nothing is in the future.
-  DateTime moment(int minutesAgo) => DateTime.now().toUtc().subtract(Duration(minutes: minutesAgo));
+  DateTime moment(int minutesAgo) => testNow.subtract(Duration(minutes: minutesAgo));
 
   /// The servers' clock while a tapped time is sent: just after it, as when
   /// the employee taps (review H1); the real clock otherwise.
   DateTime? tappedAt;
-  DateTime serverNow() => tappedAt?.add(const Duration(minutes: 1)) ?? DateTime.now().toUtc();
+  DateTime serverNow() => tappedAt?.add(const Duration(minutes: 1)) ?? testNow;
 
   /// [at] as tapped when it happened, unless it is in the future (then the
   /// real clock refuses it).
   Future<T> tapped<T>(DateTime at, Future<T> Function() send) async {
-    tappedAt = at.isAfter(DateTime.now().toUtc()) ? null : at;
+    tappedAt = at.isAfter(testNow) ? null : at;
     try {
       return await send();
     } finally {
@@ -176,12 +184,13 @@ void main() {
       clock: clock,
       schedules: schedules,
       rounding: RegistrationRounding(schedules),
+      now: serverNow,
     );
     activities = ActivityService(
       activities: const ActivityRepository(),
       projects: const ProjectRepository(),
       writes: const TimeRegistrationWriteRepository(),
-      myDay: MyDayService(days: days, records: records, plans: WeekPlans(schedules), clock: clock),
+      myDay: MyDayService(days: days, records: records, plans: WeekPlans(schedules), clock: clock, now: serverNow),
       locations: const LocationRepository(),
       kilometres: TripKilometres(
         activities: const ActivityRepository(),
@@ -201,6 +210,7 @@ void main() {
       records: records,
       plans: WeekPlans(schedules),
       clock: clock,
+      now: serverNow,
       activities: ActivityEntries(
         activities: const ActivityRepository(),
         projects: const ProjectRepository(),
@@ -397,7 +407,7 @@ void main() {
     await switchAt(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60)));
     final today = (await activities.mine(user)).today;
 
-    final local = clock.wallClockOf(DateTime.now().toUtc());
+    final local = clock.wallClockOf(testNow);
     String two(int n) => n.toString().padLeft(2, '0');
     final date = '${local.year}-${two(local.month)}-${two(local.day)}';
     final day = (await myDayLines.period(user, date, date)).days.single;

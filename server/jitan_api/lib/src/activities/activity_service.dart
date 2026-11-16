@@ -15,6 +15,7 @@ import 'activity_minutes.dart';
 import 'activity_repository.dart';
 import 'trip_kilometres.dart';
 import '../time_registration/registration_age.dart';
+import '../time_registration/working_hours.dart';
 
 /// The day as a sequence of activities (D19, D22, D37). Switching changes
 /// only what the time counts for: it adds a row of its own, and the day's
@@ -90,6 +91,7 @@ class ActivityService {
     if (RegistrationAge.tooOld(at, _now().toUtc(), detected: false)) {
       throw const ApiException.validation(SwitchActivityRequest.fieldAt, RegistrationAge.message);
     }
+    WorkingHours.require(_clock.wallClockOf(at));
     final today = await _myDay.today(userId);
     final day = today.day;
     if (day == null || day.finish != null || (day.start == null && day.pending.isEmpty)) {
@@ -140,6 +142,7 @@ class ActivityService {
     if (RegistrationAge.tooOld(arrived, _now().toUtc(), detected: true)) {
       throw const ApiException.validation(TripRequest.fieldArrivedAt, RegistrationAge.message);
     }
+    WorkingHours.require(_clock.wallClockOf(arrived));
     if (!arrived.isAfter(left)) {
       throw const ApiException.validation(TripRequest.fieldArrivedAt, 'A trip ends after it starts.');
     }
