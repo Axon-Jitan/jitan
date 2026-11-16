@@ -133,7 +133,7 @@ class TerminalController extends ChangeNotifier {
   Future<void> _scan(String code) async {
     _setBusy(true);
     try {
-      final result = await _api.scan(TerminalScanRequest(qrCode: code, at: _clock().toUtc()));
+      final result = await _sendScan(TerminalScanRequest(qrCode: code, at: _clock().toUtc()));
       _show(Registered(result, code));
       _returnIn(resultFor);
     } on ApiClientException catch (e) {
@@ -142,6 +142,23 @@ class TerminalController extends ChangeNotifier {
       _setBusy(false);
     }
   }
+
+  /// Sends [request]; when its answer is lost, sends the very same scan
+  /// once more. It carries the same time, so a scan the server already has
+  /// comes back as already registered, never as a second check-in or a
+  /// check-out (review M11, product owner 2026-11-16).
+  Future<TerminalScanResult> _sendScan(TerminalScanRequest request) async {
+    try {
+      return await _api.scan(request);
+    } on ApiClientException catch (e) {
+      if (!_answerLost(e)) rethrow;
+      _log.info('No answer to a scan; sending it once more.');
+      return _api.scan(request);
+    }
+  }
+
+  /// No answer, or the server failed: the scan may or may not be stored.
+  static bool _answerLost(ApiClientException e) => e.kind == ApiFailureKind.network || (e.statusCode ?? 0) >= 500;
 
   Future<void> _refused(ApiClientException e) async {
     if (e.statusCode == 401) return _disconnected();

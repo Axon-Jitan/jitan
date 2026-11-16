@@ -73,8 +73,15 @@ class FakeDeviceApi implements TerminalDeviceApi {
   Future<TerminalScanResult> scan(TerminalScanRequest request) async {
     scans.add(request);
     if (failScan case final failure?) throw failure;
+    if (loseScanAnswers > 0) {
+      loseScanAnswers--;
+      throw const ApiClientException.network('answer lost');
+    }
     return result;
   }
+
+  /// The next scans whose answer is lost on the way back.
+  int loseScanAnswers = 0;
 
   @override
   Future<TerminalScanResult> switchTo(TerminalSwitchRequest request) async {

@@ -1289,6 +1289,7 @@ const builtInEnglish = <String, String>{
   'tablet.back': 'Back',
   'tablet.noConnection.title': 'Jitan can’t be reached',
   'tablet.noConnection.text': 'Nothing was registered. Please try again in a moment.',
+  'tablet.noConnection.scanText': 'Your scan may not be registered. Please try again in a moment.',
   'tablet.tryAgain': 'Try again',
   'tablet.connect.title': 'Connect this tablet',
   'tablet.connect.text': 'In Jitan, go to Terminals and choose Add terminal. Then hold the code on that screen up to the camera.',

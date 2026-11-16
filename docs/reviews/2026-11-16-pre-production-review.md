@@ -31,7 +31,7 @@ tests against the local database. No schema, data or code was changed for this r
 ## Fix status (updated 2026-11-16)
 
 Every technical finding is fixed, each with a regression test; the full server suite
-(843 tests, with the local MySQL) and the analyzer pass. Four items wait on a product
+(843 tests, with the local MySQL) and the analyzer pass. Three items wait on a product
 decision and are not changed yet.
 
 | Finding | Status | Commit |
@@ -48,7 +48,7 @@ decision and are not changed yet.
 | M4, M5, M6, M8, M9 | Fixed: reactivation re-syncs the schedule; a sole member keeps the group's hours; group locks first, then employees; a deactivated group is refused inside the transaction | `3229997` |
 | M7 | Fixed: named locks instead of table-wide locking reads; lock conflicts answer 503 and are retried | `eb04024`, `a7b38b7`, `4e1c829` |
 | M10, L1 | Fixed: the rounding rule is read before the transaction; a request counts as approved only at its own time | `4b4b6be` |
-| M11 | **Decision needed:** terminal wording after a lost answer, or resending | – |
+| M11 | Fixed (product owner): the tablet sends a scan whose answer was lost once more with the same time (the server knows it); if that fails too it says "Your scan may not be registered" | see git log |
 | L2 | **Decision needed:** rounding across midnight (clamp or carry over) | – |
 | L3 | Fixed: the right is checked in every company of the employee | `a878d8d` |
 | L4 | **Decision needed:** may HR reset a fellow HR or Admin account? | – |

@@ -58,7 +58,9 @@ class SeeHr extends TerminalView {
   const SeeHr();
 }
 
-/// Jitan can't be reached, and nothing was registered (Figma `1494:34`, D42).
+/// Jitan can't be reached, even after sending the scan once more (Figma
+/// `1494:34`, D42). The scan may have been stored, so the text doesn't say
+/// that nothing was registered (review M11).
 class NoConnection extends TerminalView {
   const NoConnection();
 }

@@ -132,7 +132,7 @@ class _TerminalAppState extends State<TerminalApp> {
       NoConnection() => MessageScreen(
         tone: MessageTone.attention,
         title: context.t(TerminalTextKeys.noConnectionTitle),
-        text: context.t(TerminalTextKeys.noConnectionText),
+        text: context.t(TerminalTextKeys.noConnectionScanText),
         below: [
           const SizedBox(height: 36),
           TerminalButton(large: true, label: context.t(TerminalTextKeys.tryAgain), onPressed: controller.backToCamera),

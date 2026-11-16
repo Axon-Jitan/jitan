@@ -161,14 +161,28 @@ void main() {
       }
     });
 
-    testWidgets('no connection says nothing was registered, and keeps nothing (D42)', (tester) async {
+    testWidgets('an answer lost once: the same scan sent again gives the result (review M11)', (tester) async {
+      final h = await open(tester);
+      h.api.loseScanAnswers = 1;
+
+      await scan(tester, h);
+
+      expect(h.api.scans, hasLength(2));
+      expect(h.api.scans.last.at, h.api.scans.first.at);
+      expect(find.text('Jitan can’t be reached'), findsNothing);
+      await leave(tester);
+    });
+
+    testWidgets('no connection: the same scan is sent once more, then it says it may not be registered (D42, review M11)', (tester) async {
       final h = await open(tester);
       h.api.failScan = const ApiClientException.network('offline');
 
       await scan(tester, h);
 
+      expect(h.api.scans, hasLength(2), reason: 'sent once more');
+      expect(h.api.scans.last.at, h.api.scans.first.at, reason: 'the same moment, so the server knows it');
       expect(find.text('Jitan can’t be reached'), findsOneWidget);
-      expect(find.text('Nothing was registered. Please try again in a moment.'), findsOneWidget);
+      expect(find.text('Your scan may not be registered. Please try again in a moment.'), findsOneWidget);
       await tester.tap(find.text('Try again'));
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Hold your Jitan QR up to the camera'), findsOneWidget);

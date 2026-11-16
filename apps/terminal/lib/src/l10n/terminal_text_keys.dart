@@ -38,6 +38,7 @@ abstract final class TerminalTextKeys {
   static const back = 'tablet.back';
   static const noConnectionTitle = 'tablet.noConnection.title';
   static const noConnectionText = 'tablet.noConnection.text';
+  static const noConnectionScanText = 'tablet.noConnection.scanText';
   static const tryAgain = 'tablet.tryAgain';
   static const connectTitle = 'tablet.connect.title';
   static const connectText = 'tablet.connect.text';
