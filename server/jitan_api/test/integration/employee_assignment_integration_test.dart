@@ -276,8 +276,8 @@ void main() {
     final companiesBefore = await db.query('SELECT COUNT(*) AS n FROM tblUserCompany WHERE userID = :u', {'u': userId});
 
     final results = await Future.wait([
-      service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [active])),
-      service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [active])),
+      service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [active]), mayManage: (_) async {}),
+      service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [active]), mayManage: (_) async {}),
     ]);
 
     expect(results.first.options.firstWhere((o) => o.id == active).isAssigned, isTrue);
@@ -386,13 +386,13 @@ void main() {
   test('groups: soft removal keeps the row, hides it; reactivation reuses it', () async {
     final home = companyIds['home']!;
     final group = groupIds['active']!;
-    await service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [group]));
+    await service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [group]), mayManage: (_) async {});
     final id = (await db.query(
       'SELECT userGroupID FROM tblUserGroup WHERE userID = :u AND groupID = :g',
       {'u': userId, 'g': group},
     )).single.readInt('userGroupID');
 
-    final removed = await service().removeGroup(actorId, home, userId, group);
+    final removed = await service().removeGroup(actorId, home, userId, group, mayManage: (_) async {});
 
     final row = (await db.query(
       'SELECT userGroupActive, userGroupMFD FROM tblUserGroup WHERE userGroupID = :id',
@@ -402,7 +402,7 @@ void main() {
     expect(removed.options.firstWhere((o) => o.id == group).isAssigned, isFalse);
     expect((await EmployeeRepository(db).findDetails(home, userId))!.groups, isNot(contains('[DEV-TEST] active $stamp')));
 
-    await service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [group]));
+    await service().addGroups(actorId, home, userId, AddAssignmentsRequest(ids: [group]), mayManage: (_) async {});
     expect(
       (await db.query('SELECT COUNT(*) AS n FROM tblUserGroup WHERE userID = :u AND groupID = :g', {'u': userId, 'g': group}))
           .single

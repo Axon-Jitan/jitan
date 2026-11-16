@@ -188,7 +188,7 @@ void main() {
   test('Deactivate and reactivate: userActive switches, listed as inactive, memberships kept, audited', () async {
     final created = await service().create(actorId, companyId, request('RM1'));
 
-    await service().setActive(actorId, companyId, created.id, active: false);
+    await service().setActive(actorId, companyId, created.id, active: false, mayManage: (_) async {});
 
     final user = (await db.query('SELECT userActive, userMFD FROM tblUser WHERE userID = :id', {'id': created.id})).single;
     expect(user.readBool('userActive'), isFalse);
@@ -201,11 +201,11 @@ void main() {
     final listed = await EmployeeRepository(db).listForCompany(companyId, nameOrCodeContains: 'DT${stamp}RM1');
     expect(listed.single.isActive, isFalse, reason: 'still listed, as Inactive');
     await expectLater(
-      service().setActive(actorId, companyId, created.id, active: false),
+      service().setActive(actorId, companyId, created.id, active: false, mayManage: (_) async {}),
       throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 404)),
     );
 
-    await service().setActive(actorId, companyId, created.id, active: true);
+    await service().setActive(actorId, companyId, created.id, active: true, mayManage: (_) async {});
     final again = (await db.query('SELECT userActive FROM tblUser WHERE userID = :id', {'id': created.id})).single;
     expect(again.readBool('userActive'), isTrue);
     expect(

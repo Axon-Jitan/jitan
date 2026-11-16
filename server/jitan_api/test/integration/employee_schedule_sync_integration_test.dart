@@ -259,11 +259,11 @@ void main() {
     final before = await rowsOf('W');
     expect(await rowsOf('R'), before);
 
-    await employees().setActive(users['actor']!, companyId, users['R']!, active: false);
+    await employees().setActive(users['actor']!, companyId, users['R']!, active: false, mayManage: (_) async {});
     await setHours('white', '07:00');
     expect(await rowsOf('W'), isNot(before));
 
-    await employees().setActive(users['actor']!, companyId, users['R']!, active: true);
+    await employees().setActive(users['actor']!, companyId, users['R']!, active: true, mayManage: (_) async {});
     expect(await rowsOf('R'), await rowsOf('W'));
   });
 

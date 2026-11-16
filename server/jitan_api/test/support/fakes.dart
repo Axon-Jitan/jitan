@@ -61,6 +61,15 @@ class FakeCompanyRepository implements CompanyRepository {
 class FakeEmployeeRepository implements EmployeeRepository {
   /// companyId → employees.
   Map<int, List<EmployeeSummary>> byCompany = {};
+
+  @override
+  Future<List<int>> companyIdsOf(int userId) async => {
+        for (final MapEntry(:key, :value) in byCompany.entries)
+          if (value.any((e) => e.id == userId)) key,
+        for (final (companyId, memberId) in members)
+          if (memberId == userId) companyId,
+      }.toList()
+        ..sort();
   final calls = <(int, String?)>[];
 
   /// Codes [codeExists] and [existingCodes] report as taken.

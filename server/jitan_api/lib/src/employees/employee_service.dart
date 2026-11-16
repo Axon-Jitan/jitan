@@ -115,11 +115,15 @@ class EmployeeService {
   ///
   /// 403 for one's own account; 404 outside [companyId] or when it already
   /// is so.
-  Future<void> setActive(int actorUserId, int companyId, int userId, {required bool active}) async {
+  ///
+  /// [mayManage] is checked in every company of the employee: the change
+  /// reaches all of them (review L3).
+  Future<void> setActive(int actorUserId, int companyId, int userId, {required bool active, required Future<void> Function(int companyId) mayManage}) async {
     if (actorUserId == userId) {
       throw const ApiException.forbidden('You can’t deactivate or reactivate your own account.');
     }
     await _requireCompany(companyId);
+    await requireInEveryCompany(userId, mayManage);
     await _transactions.transaction((tx) async {
       // Before any plain read: the groups' hours as they are now (M6).
       if (active) await _scheduleSync.lockGroupsOf(tx, userId);
@@ -152,11 +156,12 @@ class EmployeeService {
   ///
   /// 404 outside [companyId]; 409 `account_not_activated` when the employee
   /// never set a password (nothing to reset).
-  Future<void> resetAccess(int actorUserId, int companyId, int userId) async {
+  Future<void> resetAccess(int actorUserId, int companyId, int userId, {required Future<void> Function(int companyId) mayManage}) async {
     if (actorUserId == userId) {
       throw const ApiException.forbidden('You can’t reset your own account access.');
     }
     await _requireCompany(companyId);
+    await requireInEveryCompany(userId, mayManage);
     await _transactions.transaction((tx) async {
       if (await _employees.findInCompany(tx, companyId, userId) == null) {
         throw ApiException.notFound('Employee $userId is not in company $companyId.');
@@ -440,6 +445,13 @@ class EmployeeService {
   /// Something@something.something, without spaces: catches typing
   /// mistakes; the address is never used to sign in.
   static final emailShape = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  /// [mayManage] in every company [userId] belongs to (rule §28a.5).
+  Future<void> requireInEveryCompany(int userId, Future<void> Function(int companyId) mayManage) async {
+    for (final companyId in await _employees.companyIdsOf(userId)) {
+      await mayManage(companyId);
+    }
+  }
 
   Future<void> _requireCompany(int companyId) async {
     if (!await _companies.exists(companyId)) {

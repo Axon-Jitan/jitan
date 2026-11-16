@@ -178,9 +178,20 @@ class EmployeeAssignmentService {
 
   /// Adds the active, non-MFD groups in [request]; current ones are skipped,
   /// a removed one is reactivated, never duplicated.
-  Future<AssignmentOptions> addGroups(int actorUserId, int companyId, int userId, AddAssignmentsRequest request) async {
+  ///
+  /// Groups and schedules are user-wide, so [mayManage] is checked in every
+  /// company of the employee (review L3); the same for the other group
+  /// changes below.
+  Future<AssignmentOptions> addGroups(
+    int actorUserId,
+    int companyId,
+    int userId,
+    AddAssignmentsRequest request, {
+    required Future<void> Function(int companyId) mayManage,
+  }) async {
     final ids = _checkedIds(request);
     await _requireMember(_executor, companyId, userId);
+    await _requireInEveryCompany(userId, mayManage);
     final options = {for (final o in await _assignments.groupOptions(_executor, userId)) o.id: o};
     for (final id in ids) {
       final option = options[id];
@@ -223,8 +234,15 @@ class EmployeeAssignmentService {
 
   /// Removes group [groupId] from [userId] (soft delete, audited). Removing
   /// an assignment that is already gone changes nothing.
-  Future<AssignmentOptions> removeGroup(int actorUserId, int companyId, int userId, int groupId) async {
+  Future<AssignmentOptions> removeGroup(
+    int actorUserId,
+    int companyId,
+    int userId,
+    int groupId, {
+    required Future<void> Function(int companyId) mayManage,
+  }) async {
     await _requireMember(_executor, companyId, userId);
+    await _requireInEveryCompany(userId, mayManage);
     await _addTransaction((tx) async {
       await _scheduleSync.lockGroups(tx, [groupId]);
       await _lockEmployee(tx, userId);
@@ -266,9 +284,11 @@ class EmployeeAssignmentService {
     int actorUserId,
     int companyId,
     int userId,
-    ScheduleSourceRequest request,
-  ) async {
+    ScheduleSourceRequest request, {
+    required Future<void> Function(int companyId) mayManage,
+  }) async {
     await _requireMember(_executor, companyId, userId);
+    await _requireInEveryCompany(userId, mayManage);
     await _addTransaction((tx) async {
       await _scheduleSync.lockGroupsOf(tx, userId);
       await _lockEmployee(tx, userId);
@@ -402,6 +422,13 @@ class EmployeeAssignmentService {
   /// deadlock victim (two concurrent adds of the same pair lock each other's
   /// gap). Safe because adding is idempotent: a pair that now exists is
   /// skipped and not audited again.
+  /// [mayManage] in every company [userId] belongs to (rule §28a.5).
+  Future<void> _requireInEveryCompany(int userId, Future<void> Function(int companyId) mayManage) async {
+    for (final companyId in await _employees.companyIdsOf(userId)) {
+      await mayManage(companyId);
+    }
+  }
+
   Future<void> _addTransaction(Future<void> Function(SqlExecutor tx) body) async {
     for (var attempt = 1; ; attempt++) {
       try {

@@ -63,7 +63,8 @@ class EmployeeAssignmentRoutes {
     } on FormatException catch (e) {
       throw ApiException.badRequest(e.message);
     }
-    return jsonResponse((await _assignments.setScheduleSource(identity.userId, id, _userId(userId), body)).toJson());
+    final result = await _assignments.setScheduleSource(identity.userId, id, _userId(userId), body, mayManage: (other) => _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: other));
+    return jsonResponse(result.toJson());
   }
 
   Future<Response> _languages(Request request, String companyId, String userId) async {
@@ -119,7 +120,13 @@ class EmployeeAssignmentRoutes {
   Future<Response> _removeGroup(Request request, String companyId, String userId, String targetId) async {
     final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
-    final result = await _assignments.removeGroup(identity.userId, id, _userId(userId), pathId(targetId, 'No such group.'));
+    final result = await _assignments.removeGroup(
+      identity.userId,
+      id,
+      _userId(userId),
+      pathId(targetId, 'No such group.'),
+      mayManage: (other) => _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: other),
+    );
     return jsonResponse(result.toJson());
   }
 
@@ -132,7 +139,7 @@ class EmployeeAssignmentRoutes {
   Future<Response> _addGroups(Request request, String companyId, String userId) async {
     final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: id);
-    final result = await _assignments.addGroups(identity.userId, id, _userId(userId), await _body(request));
+    final result = await _assignments.addGroups(identity.userId, id, _userId(userId), await _body(request), mayManage: (other) => _authorizer.require(request, Permission.manageEmployeeAssignments, companyId: other));
     return jsonResponse(result.toJson());
   }
 

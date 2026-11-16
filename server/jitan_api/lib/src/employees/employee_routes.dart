@@ -59,14 +59,25 @@ class EmployeeRoutes {
   Future<Response> _setActive(Request request, String companyId, String userId, {required bool active}) async {
     final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.changeEmployeeStatus, companyId: id);
-    await _employees.setActive(identity.userId, id, _id(userId), active: active);
+    await _employees.setActive(
+      identity.userId,
+      id,
+      _id(userId),
+      active: active,
+      mayManage: (other) => _authorizer.require(request, Permission.changeEmployeeStatus, companyId: other),
+    );
     return Response(204);
   }
 
   Future<Response> _resetAccess(Request request, String companyId, String userId) async {
     final id = _companyId(companyId);
     final identity = await _authorizer.require(request, Permission.resetEmployeeAccess, companyId: id);
-    await _employees.resetAccess(identity.userId, id, _id(userId));
+    await _employees.resetAccess(
+      identity.userId,
+      id,
+      _id(userId),
+      mayManage: (other) => _authorizer.require(request, Permission.resetEmployeeAccess, companyId: other),
+    );
     return Response(204);
   }
 

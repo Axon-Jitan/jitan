@@ -75,6 +75,18 @@ class EmployeeRepository {
     );
   }
 
+  /// The companies [userId] currently belongs to, for checking the right in
+  /// each of them (rule §28a.5, review L3).
+  Future<List<int>> companyIdsOf(int userId) async => [
+        for (final row in await _db.query(
+          'SELECT uc.companyID FROM tblUserCompany uc '
+          'JOIN tblCompany c ON c.companyID = uc.companyID AND c.companyMFD = 0 '
+          'WHERE uc.userID = :u AND ${MembershipFilters.activeCompany('uc')} ORDER BY uc.companyID',
+          {'u': userId},
+        ))
+          row.readInt('companyID'),
+      ];
+
   /// Whether any user, in any company and including MFD users, has [code]
   /// (`tblUser.userCode` is unique across the table).
   /// In a transaction serialized by [EmployeeService.codeLock]: two new

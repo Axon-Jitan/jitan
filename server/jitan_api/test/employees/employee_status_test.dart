@@ -30,7 +30,7 @@ void main() {
     expect(event.type, AuditEventType.employeeDeactivated);
     expect(event.actorUserId, 9);
     expect(event.references, {EventLogReference.user: 5, EventLogReference.company: 7});
-    expect(app.permissions.checked.single, (9, Permission.changeEmployeeStatus, 7));
+    expect(app.permissions.checked.toSet().single, (9, Permission.changeEmployeeStatus, 7), reason: 'company 7 is the only one');
   });
 
   test('reactivate undoes it, audited as reactivated', () async {
@@ -76,5 +76,16 @@ void main() {
 
   test('Remove is gone: its path answers 404', () async {
     expect((await _app().post('/companies/7/employees/5/remove', '')).statusCode, 404);
+  });
+
+  test('the right is needed in every company of the employee, not only the path one (review L3)', () async {
+    final app = _app();
+    app.employees.members = {(7, 5), (8, 5), (7, 9)};
+    app.permissions.deniedCompanies = {8};
+
+    expect((await app.post(_deactivate, '')).statusCode, 403);
+    expect(app.employees.inactive, isEmpty);
+    expect(app.audit.events, isEmpty);
+    expect(app.permissions.checked.map((c) => c.$3), containsAll([7, 8]));
   });
 }
