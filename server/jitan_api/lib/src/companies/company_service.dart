@@ -92,7 +92,8 @@ class CompanyService {
     return name;
   }
 
-  /// A name in use is checked first; the database still catches a race.
+  /// A name in use is checked with a locking read ([CompanyRepository.nameTaken]);
+  /// a duplicate key from the database is answered the same way.
   Future<T> _write<T>(String name, Future<T> Function(SqlExecutor tx) action) async {
     try {
       return await _runner.transaction(action);

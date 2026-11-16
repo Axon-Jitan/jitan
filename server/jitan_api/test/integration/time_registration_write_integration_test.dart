@@ -374,7 +374,7 @@ void main() {
 
       expect((corrected!.finish!.actualLocal, corrected.finish!.roundedLocal, corrected.awayMinutes), ('17:30', '17:30', 120));
       final midday = await db.query(
-        "SELECT tr.timeRegActive FROM tblTimeReg tr JOIN tblTimeRegType t ON t.timeRegTypeID = tr.timeRegTypeID "
+        'SELECT tr.timeRegActive FROM tblTimeReg tr JOIN tblTimeRegType t ON t.timeRegTypeID = tr.timeRegTypeID '
         "WHERE tr.userID = :u AND t.timeRegTypeName = 'Finish – rounded' AND tr.timeRegTimestamp = :at",
         {'u': userId, 'at': '2026-10-14 11:00:00'},
       );

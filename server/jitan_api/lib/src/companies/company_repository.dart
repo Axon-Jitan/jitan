@@ -56,10 +56,12 @@ class CompanyRepository {
       (await listCompanies()).where((c) => c.id == companyId).firstOrNull;
 
   /// Whether another non-deleted company has [name], ignoring capitals and
-  /// accents (CLARIFY-16).
+  /// accents (CLARIFY-16). A locking read: a second "Add company" with the
+  /// same name waits for the first and then sees it (review M1); `tblCompany`
+  /// has no unique key on the name.
   Future<bool> nameTaken(SqlExecutor tx, String name, {int? exceptId}) async => (await tx.query(
     'SELECT 1 AS found FROM tblCompany WHERE companyMFD = 0 AND companyName $ignoringCaseAndAccents = :name '
-    '${exceptId == null ? '' : 'AND companyID <> :except '}LIMIT 1',
+    '${exceptId == null ? '' : 'AND companyID <> :except '}FOR UPDATE',
     {'name': name, 'except': ?exceptId},
   )).isNotEmpty;
 
