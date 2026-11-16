@@ -178,8 +178,19 @@ class EmployeeScheduleSync {
     final removed = [for (final l in own) if (!keep.contains(l.scheduleId)) l];
     final have = {for (final l in own) l.scheduleId};
     await _writes.removeLinks(tx, [for (final l in removed) l.userScheduleId]);
-    for (final scheduleId in target) {
-      if (!have.contains(scheduleId)) await _writes.linkUser(tx, userId, scheduleId);
+    final added = [for (final scheduleId in target) if (!have.contains(scheduleId)) scheduleId];
+    for (final scheduleId in added) {
+      await _writes.linkUser(tx, userId, scheduleId);
+    }
+    if (removed.isNotEmpty || added.isNotEmpty) {
+      await _audit.record(
+        tx,
+        AuditEvent(
+          type: AuditEventType.employeeScheduleChanged,
+          actorUserId: actorUserId,
+          references: {EventLogReference.user: userId},
+        ),
+      );
     }
     final previous = [for (final l in removed) l.scheduleId];
     final stillLinked = await _groupLinks?.stillLinked(tx, previous) ?? const <int>{};

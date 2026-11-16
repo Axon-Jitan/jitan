@@ -304,6 +304,18 @@ class ScheduleEditingService {
         await _writes.linkUser(tx, userId, scheduleId);
       }
     }
+    // Whose schedule changed, one event each (review L11).
+    final changed = {if (created.isNotEmpty) ...affected, for (final l in links) l.userId}.toList()..sort();
+    for (final userId in changed) {
+      await _audit.record(
+        tx,
+        AuditEvent(
+          type: AuditEventType.employeeScheduleChanged,
+          actorUserId: actorUserId,
+          references: {EventLogReference.user: userId, EventLogReference.group: groupId},
+        ),
+      );
+    }
     final previous = {for (final l in links) l.scheduleId, for (final l in groupOwn) l.scheduleId}.toList();
     final stillLinked = groupLinks == null ? const <int>{} : await groupLinks.stillLinked(tx, previous);
     for (final scheduleId in [for (final id in await _writes.unused(tx, previous)) if (!stillLinked.contains(id)) id]) {

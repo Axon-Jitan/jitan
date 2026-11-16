@@ -120,8 +120,9 @@ class TerminalService {
     if (!terminal.isActive) {
       throw const ApiException.validation('terminal', 'Turn this terminal back on first.');
     }
-    final issued = await _temporaryQr.issue(terminalId, TemporaryQrPurpose.terminalPairing);
+    // Audited first: a QR is never out without its audit row (review L11).
     await _transactions.transaction((tx) => _record(tx, AuditEventType.terminalPairingStarted, actorUserId, terminalId));
+    final issued = await _temporaryQr.issue(terminalId, TemporaryQrPurpose.terminalPairing);
     return TemporaryQrResponse(qrCode: issued.token, purpose: TemporaryQrPurpose.terminalPairing, expiresAt: issued.claims.expiresAt);
   }
 

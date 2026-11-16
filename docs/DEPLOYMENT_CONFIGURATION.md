@@ -182,7 +182,8 @@ The API asks Mapbox for the driving distance of trips (D23), so it needs `JITAN_
 `/etc/jitan/app.env` and outbound HTTPS to `api.mapbox.com`. Only the coordinates of the two places
 are sent. A token restricted to web addresses is refused for a server, so use one without that
 restriction. Without the setting trips are still recorded, and Reports marks their distance as
-unknown.
+unknown. The HR website's map uses a different, public token (`JITAN_MAPBOX_PUBLIC_TOKEN`, `pk.…`,
+limited to Jitan's web addresses), set when the release is built, never in `app.env`.
 
 ## Serving the HR web
 
@@ -198,7 +199,7 @@ Build it so that nothing loads from Google's servers:
 ```sh
 flutter build web --release --no-web-resources-cdn \
   --dart-define=JITAN_API_BASE_URL=https://jitan.example.com/api \
-  --dart-define=JITAN_MAPBOX_TOKEN=pk.…
+  --dart-define=JITAN_MAPBOX_PUBLIC_TOKEN=pk.…
 ```
 
 Nginx must send this header on the HR web's pages. HR stays signed in for 30 days with the session

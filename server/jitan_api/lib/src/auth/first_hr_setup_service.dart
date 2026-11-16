@@ -134,8 +134,15 @@ class FirstHrSetupService {
       if (moduleId == null || !(await _repository.modules(tx)).any((m) => m.id == moduleId)) {
         throw const _Stopped(FirstHrResult.moduleNeeded);
       }
-      await _repository.linkModule(tx, credGroupId, moduleId);
-      await _record(tx, AuditEventType.credentialGroupModuleLinked, userId, {EventLogReference.credGroup: credGroupId});
+      final linkId = await _repository.linkModule(tx, credGroupId, moduleId);
+      // Only a link actually made or switched on is audited (review L11).
+      if (linkId != null) {
+        await _record(tx, AuditEventType.credentialGroupModuleLinked, userId, {
+          EventLogReference.credGroup: credGroupId,
+          EventLogReference.appModules: moduleId,
+          EventLogReference.appModulesCredGroup: linkId,
+        });
+      }
     }
 
     final userCredGroupId = await _assignments.addCredentialGroup(tx, userId, credGroupId);

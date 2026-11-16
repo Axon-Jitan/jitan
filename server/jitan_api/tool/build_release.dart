@@ -20,9 +20,12 @@
 //
 // --only-apk: builds the APK alone; the server and the website stay as built.
 //
-// The HR website reaches the API on its own address (`/`). A Mapbox token for
-// its map comes from the JITAN_MAPBOX_TOKEN environment variable, never from
-// the command line or the repository; without it the map says it is not set up.
+// The HR website reaches the API on its own address (`/`). A Mapbox public
+// token (`pk.…`) for its map comes from the JITAN_MAPBOX_PUBLIC_TOKEN
+// environment variable, never from the command line or the repository;
+// without it the map says it is not set up. Any other kind of token is
+// refused: the website is public (review L7). The server's own
+// JITAN_MAPBOX_TOKEN is never built into it.
 //
 // lib/src/web/embedded_web_assets.dart is filled for the compile and put back
 // to its empty form afterwards, also when a step fails.
@@ -64,7 +67,12 @@ Future<void> _build(List<String> args) async {
   final out = Directory('${server.path}/build/release')..createSync(recursive: true);
 
   if (!args.contains('--only-apk')) {
-    await _serverAndWebsite(server, adminWeb, out, Platform.environment['JITAN_MAPBOX_TOKEN']?.trim() ?? '');
+    final mapbox = Platform.environment['JITAN_MAPBOX_PUBLIC_TOKEN']?.trim() ?? '';
+    if (mapbox.isNotEmpty && !mapbox.startsWith('pk.')) {
+      stderr.writeln('JITAN_MAPBOX_PUBLIC_TOKEN must be a Mapbox public token (pk.…): the website is public.');
+      exit(64);
+    }
+    await _serverAndWebsite(server, adminWeb, out, mapbox);
   }
 
   stdout.writeln('4/4 Employee app');
@@ -112,12 +120,12 @@ Future<void> _serverAndWebsite(Directory server, Directory adminWeb, Directory o
       '--no-web-resources-cdn',
       '--dart-define=JITAN_API_BASE_URL=/',
       '--build-name=$jitanVersion',
-      if (mapbox.isNotEmpty) '--dart-define=JITAN_MAPBOX_TOKEN=$mapbox',
+      if (mapbox.isNotEmpty) '--dart-define=JITAN_MAPBOX_PUBLIC_TOKEN=$mapbox',
     ],
     adminWeb,
     secret: mapbox,
   );
-  if (mapbox.isEmpty) stdout.writeln('   (no JITAN_MAPBOX_TOKEN: the Locations map will say it is not set up)');
+  if (mapbox.isEmpty) stdout.writeln('   (no JITAN_MAPBOX_PUBLIC_TOKEN: the Locations map will say it is not set up)');
 
   final stub = File(_assetsFile).readAsStringSync();
   try {

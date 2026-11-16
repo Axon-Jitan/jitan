@@ -165,6 +165,8 @@ class TerminalPairRequest {
 
   /// Random, kept by the tablet: only this tablet can retry a pairing.
   final String deviceId;
+
+  static const fieldDeviceId = 'deviceId';
   final String? deviceName;
 
   Map<String, Object?> toJson() => {'qrCode': qrCode, 'deviceId': deviceId, 'deviceName': deviceName};

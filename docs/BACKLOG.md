@@ -512,7 +512,7 @@ empty, `1465:301` add, `1465:482` name in use, `1465:664` edit, `1465:846` deact
   One shared list until IT links addresses to companies (GAP-03, D36).
 - `GET/POST /locations`, `PUT /locations/{id}`, `POST /locations/{id}/deactivate|reactivate`.
   Audited in one transaction (`location.created`, `.changed`, `.deactivated`, `.reactivated`).
-- **Map (product owner, 2026-10-31): Mapbox.** Build with `--dart-define=JITAN_MAPBOX_TOKEN=pk.…`,
+- **Map (product owner, 2026-10-31): Mapbox.** Build with `--dart-define=JITAN_MAPBOX_PUBLIC_TOKEN=pk.…`,
   a public token limited to Jitan's web addresses in Mapbox; never in the repository. Without
   it the page says the map is not set up, and a new location can't be placed.
 - The typed address goes to Mapbox Geocoding to start the pin near the entrance. HR then drags

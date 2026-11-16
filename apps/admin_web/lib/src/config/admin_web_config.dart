@@ -11,11 +11,18 @@ class AdminWebConfig {
 
   /// Mapbox public token (`pk.…`) for the Locations map. Limit it to Jitan's
   /// web addresses in Mapbox. Without it, Locations says the map is not set
-  /// up, and a new location can't be added.
+  /// up, and a new location can't be added. Its own name,
+  /// `JITAN_MAPBOX_PUBLIC_TOKEN`, not the server's `JITAN_MAPBOX_TOKEN`, so a
+  /// server secret never ends up in the website (review L7); anything but a
+  /// public token is ignored.
   final String? mapboxToken;
 
   static const _apiBaseUrl = String.fromEnvironment('JITAN_API_BASE_URL');
-  static const _mapboxToken = String.fromEnvironment('JITAN_MAPBOX_TOKEN');
+  static const _mapboxToken = String.fromEnvironment('JITAN_MAPBOX_PUBLIC_TOKEN');
+
+  /// Whether [token] is a Mapbox public token, the only kind a web page may
+  /// hold.
+  static bool isPublicMapboxToken(String token) => token.startsWith('pk.');
 
   /// `null` when `JITAN_API_BASE_URL` was not provided.
   static AdminWebConfig? fromEnvironment({Uri? pageUri}) {
@@ -25,7 +32,7 @@ class AdminWebConfig {
     final token = _mapboxToken.trim();
     return AdminWebConfig(
       apiBaseUri: (pageUri ?? Uri.base).resolve(withSlash),
-      mapboxToken: token.isEmpty ? null : token,
+      mapboxToken: isPublicMapboxToken(token) ? token : null,
     );
   }
 }

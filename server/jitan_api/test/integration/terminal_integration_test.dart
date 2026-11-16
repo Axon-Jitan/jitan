@@ -100,7 +100,7 @@ void main() {
     final (actor, _) = await newEmployee();
     final terminal = await add(actor, request(name));
     final qr = await terminals.pairingQr(actor, terminal.id);
-    final paired = await device.pair(TerminalPairRequest(qrCode: qr.qrCode, deviceId: 'tablet-${++counter}'));
+    final paired = await device.pair(TerminalPairRequest(qrCode: qr.qrCode, deviceId: 'tablet-device-id-${++counter}'));
     return (terminal, paired.token);
   }
 
@@ -282,9 +282,9 @@ void main() {
       final first = await terminals.pairingQr(actor, terminal.id);
       final second = await terminals.pairingQr(actor, terminal.id);
 
-      await expectLater(device.pair(TerminalPairRequest(qrCode: first.qrCode, deviceId: 'x')), throwsA(isA<ApiException>()));
+      await expectLater(device.pair(TerminalPairRequest(qrCode: first.qrCode, deviceId: 'tablet-x-device-0001')), throwsA(isA<ApiException>()));
 
-      final paired = await device.pair(TerminalPairRequest(qrCode: second.qrCode, deviceId: 'x'));
+      final paired = await device.pair(TerminalPairRequest(qrCode: second.qrCode, deviceId: 'tablet-x-device-0001'));
 
       final stored = (await repository.find(db, terminal.id))!.secretHash!;
       expect(paired.token.split('.').last, isNot(stored));
@@ -292,10 +292,26 @@ void main() {
       expect(seen.status, TerminalStatus.online);
       expect(seen.lastSeen, isNotNull, reason: 'kept in memory');
       await expectLater(
-        device.pair(TerminalPairRequest(qrCode: second.qrCode, deviceId: 'y')),
+        device.pair(TerminalPairRequest(qrCode: second.qrCode, deviceId: 'tablet-y-device-0002')),
         throwsA(isA<ApiException>()),
         reason: 'single use',
       );
+    });
+
+    test('a malformed device id is refused before the QR is used (review L6)', () async {
+      final (actor, _) = await newEmployee();
+      final terminal = await add(actor, request('l6'));
+      final qr = await terminals.pairingQr(actor, terminal.id);
+
+      for (final bad in ['x', 'tablet id with spaces', '']) {
+        await expectLater(
+          device.pair(TerminalPairRequest(qrCode: qr.qrCode, deviceId: bad)),
+          throwsA(isA<ApiException>().having((e) => e.field, 'field', TerminalPairRequest.fieldDeviceId)),
+          reason: bad,
+        );
+      }
+      final paired = await device.pair(TerminalPairRequest(qrCode: qr.qrCode, deviceId: 'tablet-l6-device-0001'));
+      expect((await device.authenticate(paired.token)).id, terminal.id, reason: 'the QR was still unused');
     });
 
     test('a kiosk user can never sign in, even with its own code', () async {
@@ -311,7 +327,7 @@ void main() {
       final (terminal, oldToken) = await connected();
 
       final qr = await terminals.pairingQr(actor, terminal.id);
-      final paired = await device.pair(TerminalPairRequest(qrCode: qr.qrCode, deviceId: 'new'));
+      final paired = await device.pair(TerminalPairRequest(qrCode: qr.qrCode, deviceId: 'tablet-new-device-01'));
 
       await expectLater(device.authenticate(oldToken), refusedWith(401, 'unauthenticated'));
       expect((await device.authenticate(paired.token)).id, terminal.id);

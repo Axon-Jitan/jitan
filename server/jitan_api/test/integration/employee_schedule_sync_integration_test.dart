@@ -1,6 +1,7 @@
 @Tags(['integration'])
 library;
 
+import 'package:jitan_api/src/audit/audit_event.dart';
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
 import 'package:jitan_api/src/companies/company_repository.dart';
 import 'package:jitan_api/src/database/database.dart';
@@ -41,6 +42,7 @@ void main() {
   final groups = <String, int>{};
   final createdTypes = <int>[];
   final createdDays = <int>[];
+  final createdEventTypes = <int>[];
   late int monday;
   late int companyId;
 
@@ -106,6 +108,11 @@ void main() {
           'INSERT INTO tblScheduleType (scheduleTypeName, scheduleTypeActive, scheduleTypeMFD) VALUES (:n, 1, 0)',
           {'n': name},
         )).lastInsertId);
+      }
+    }
+    for (final name in [AuditEventType.employeeScheduleChanged.typeName]) {
+      if ((await db.query('SELECT 1 FROM tblEventType WHERE eventTypeName = :n', {'n': name})).isEmpty) {
+        createdEventTypes.add((await db.execute('INSERT INTO tblEventType (eventTypeName) VALUES (:n)', {'n': name})).lastInsertId);
       }
     }
     final mondays = await db.query("SELECT dayID FROM tblDays WHERE dayName = 'Monday' AND dayActive = 1 AND dayMFD = 0");
@@ -186,18 +193,27 @@ void main() {
     for (final id in createdTypes) {
       await db.execute('DELETE FROM tblScheduleType WHERE scheduleTypeID = :t', {'t': id});
     }
+    for (final id in createdEventTypes) {
+      await db.execute('DELETE FROM tblEventType WHERE eventTypeID = :t', {'t': id});
+    }
     for (final id in createdDays) {
       await db.execute('DELETE FROM tblDays WHERE dayID = :d', {'d': id});
     }
     await db.close();
   });
 
-  test('joining one group gives that group\'s schedule', () async {
+  test('joining one group gives that group\'s schedule, audited once for the employee (review L11)', () async {
     await join('N', 'blue');
     await synced('N');
 
     expect(await rowsOf('N'), await rowsOf('A'));
     expect(await rowsOf('N'), isNotEmpty);
+    final audited = await db.query(
+      'SELECT COUNT(*) AS n FROM tblEventLog l JOIN tblEventLogEventType et ON et.eventLogID = l.eventLogID '
+      'JOIN tblEventType t ON t.eventTypeID = et.eventTypeID WHERE t.eventTypeName = :t AND l.userIDTarget = :u',
+      {'t': AuditEventType.employeeScheduleChanged.typeName, 'u': users['N']},
+    );
+    expect(audited.single.readInt('n'), 1);
   });
 
   test('joining a second group keeps the schedule; its source is still the first group', () async {

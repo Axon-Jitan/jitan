@@ -24,7 +24,7 @@ const _usedColumns = {
     'eventLogID', 'eventLogTimestamp', 'userIDInit', 'userIDTarget', 'companyID', 'userCompanyID',
     'groupID', 'userGroupID', 'credGroupID', 'userCredGroupID', 'scheduleID', 'scheduleTypeID', 'dayID',
     'roundingRuleID', 'scheduleRoundingRuleID', 'addressID', 'geofenceID', 'geofenceAddressID',
-    'deviceID', 'deviceDeviceTypeID', 'userDeviceID',
+    'deviceID', 'deviceDeviceTypeID', 'userDeviceID', 'appModulesID', 'appModulesCredGroupID',
   ],
   'tblTimeReg': [
     'timeRegID', 'userID', 'addressID', 'timeRegTypeID', 'timeRegTimestamp', 'timeRegManualEntry',

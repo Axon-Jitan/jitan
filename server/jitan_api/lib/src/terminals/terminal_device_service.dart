@@ -7,6 +7,7 @@ import 'package:jitan_models/jitan_models.dart';
 import '../activities/activity_service.dart';
 import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
+import '../auth/device_id.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
 import '../temporary_qr/temporary_qr_service.dart';
@@ -65,10 +66,14 @@ class TerminalDeviceService {
   final Random _random;
 
   /// Connects this tablet; a tablet connected before is cut off.
+  ///
+  /// The same tablet may send the same QR again when the answer was lost
+  /// ([isRetry]): it gets a new secret (only its hash is kept, so the first
+  /// can't be sent again), and the pairing is not audited twice (review L6).
   Future<TerminalPairResponse> pair(TerminalPairRequest request) async => _temporaryQr.redeem(
     request.qrCode,
     TemporaryQrPurpose.terminalPairing,
-    request.deviceId,
+    checkedDeviceId(request.deviceId, field: TerminalPairRequest.fieldDeviceId),
     (claims, {required isRetry}) async {
       final terminalId = claims.userId;
       final secret = base64Url.encode(List<int>.generate(_secretBytes, (_) => _random.nextInt(256))).replaceAll('=', '');
@@ -79,6 +84,7 @@ class TerminalDeviceService {
           throw const ApiException(410, ApiErrorCode.qrExpired, 'This terminal is no longer available.');
         }
         await _terminals.setSecret(tx, kiosk, _hash(secret));
+        if (isRetry) return row;
         await _audit.record(
           tx,
           AuditEvent(type: AuditEventType.terminalPaired, actorUserId: null, references: {EventLogReference.device: terminalId}),

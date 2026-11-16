@@ -103,6 +103,12 @@ enum AuditEventType {
   /// ("Schedules come from").
   scheduleSourceChanged('employee.schedule_source.changed'),
 
+  /// An employee's schedule changed: their `tblUserSchedule` links were
+  /// switched off or added, after a group's save or a change of their
+  /// groups. One event per employee and change (review L11); the links
+  /// themselves keep their history (Active/MFD).
+  employeeScheduleChanged('employee.schedule.changed'),
+
   /// A schedule row no employee uses any more was switched off (soft
   /// delete), after a save or a removal by HR/Admin.
   scheduleDeactivated('schedule.deactivated'),
@@ -176,6 +182,8 @@ enum EventLogReference {
   userGroup('userGroupID'),
   credGroup('credGroupID'),
   userCredGroup('userCredGroupID'),
+  appModules('appModulesID'),
+  appModulesCredGroup('appModulesCredGroupID'),
   schedule('scheduleID'),
   scheduleType('scheduleTypeID'),
   day('dayID'),
