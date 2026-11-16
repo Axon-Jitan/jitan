@@ -240,7 +240,6 @@ class TestApp {
             locations: locations,
             now: () => now,
           ),
-          myDay: myDays,
           audit: audit,
           transactions: transactions,
           executor: unusedExecutor,

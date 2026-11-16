@@ -428,7 +428,6 @@ Future<void> main() async {
           onDayStart: activityService.dayStarted,
         ),
         activities: activityService,
-        myDay: myDayService,
         audit: const AuditLogRepository(),
         transactions: db,
         executor: db,

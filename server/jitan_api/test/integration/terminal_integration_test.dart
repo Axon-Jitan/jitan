@@ -163,7 +163,8 @@ void main() {
         onDayStart: activities?.dayStarted,
       ),
       activities: activities,
-      myDay: myDay,
+      // The tests scan up to an hour back; a day is still refused (review H1).
+      maxScanAge: const Duration(hours: 12),
       audit: const AuditLogRepository(),
       transactions: db,
       executor: db,
@@ -374,6 +375,44 @@ void main() {
         {'u': user},
       );
       expect(rows.single.readInt('n'), 0);
+    });
+
+    test('a double scan after coming back changes nothing (review H5)', () async {
+      final terminal = await tablet();
+      final (_, qr) = await newEmployee();
+      await device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(40)));
+      final out = await device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(20)));
+      expect(out.outcome, TerminalScanOutcome.checkedOut);
+      final back = await device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(1)));
+      expect(back.outcome, TerminalScanOutcome.checkedIn);
+
+      final repeat = await device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(1).add(const Duration(seconds: 20))));
+
+      expect(repeat.outcome, TerminalScanOutcome.alreadyCheckedIn, reason: 'compared with the latest check-in, not the first of the day');
+    });
+
+    test('two scans arriving together check in once (review H5)', () async {
+      final terminal = await tablet();
+      final (user, qr) = await newEmployee();
+
+      final results = await Future.wait([
+        device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(1))),
+        device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(1).add(const Duration(seconds: 3)))),
+      ]);
+
+      expect(results.map((r) => r.outcome).toSet(), {TerminalScanOutcome.checkedIn, TerminalScanOutcome.alreadyCheckedIn});
+      final starts = await db.query(
+        "SELECT COUNT(*) AS n FROM tblTimeReg r JOIN tblTimeRegType t ON t.timeRegTypeID = r.timeRegTypeID WHERE r.userID = :u AND t.timeRegTypeName LIKE 'Start – actual%'",
+        {'u': user},
+      );
+      expect(starts.single.readInt('n'), 1);
+    });
+
+    test('a scan dated in the past is refused: the tablet keeps nothing (D42, review H1)', () async {
+      final terminal = await tablet();
+      final (_, qr) = await newEmployee();
+
+      await expectLater(device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(3 * 24 * 60))), refusedWith(400, 'validation_failed'));
     });
 
     test('employees of every company may scan; unknown QRs and inactive employees may not', () async {

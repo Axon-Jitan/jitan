@@ -10,7 +10,6 @@ import '../audit/audit_log_repository.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
 import '../temporary_qr/temporary_qr_service.dart';
-import '../time_records/my_day_service.dart';
 import '../time_registration/time_registration_write_service.dart';
 import '../time_registration/workplace_clock.dart';
 import 'terminal_presence.dart';
@@ -30,17 +29,21 @@ class TerminalDeviceService {
     required this._temporaryQr,
     required this._writes,
     this._activities,
-    required this._myDay,
     required this._audit,
     required this._transactions,
     required this._executor,
     required this._clock,
     DateTime Function()? now,
     Random? random,
+    this.maxScanAge = const Duration(minutes: 2),
   }) : _now = now ?? DateTime.now,
        _random = random ?? Random.secure();
 
   static const repeatWindow = Duration(minutes: 1);
+
+  /// How old a scan may be when it arrives: the tablet keeps nothing offline
+  /// (D42), so a scan is sent when it happens (review H1).
+  final Duration maxScanAge;
 
   /// How far ahead of the server's clock a scan may be.
   static const _allowedClockSkew = Duration(minutes: 2);
@@ -54,7 +57,6 @@ class TerminalDeviceService {
   /// `null` on a database without the proposed activity tables: a scan still
   /// starts and finishes the day, but nobody switches project there.
   final ActivityService? _activities;
-  final MyDayService _myDay;
   final AuditLogRepository _audit;
   final TransactionRunner _transactions;
   final SqlExecutor _executor;
@@ -107,26 +109,11 @@ class TerminalDeviceService {
   Future<TerminalScanResult> scan(TerminalRow terminal, TerminalScanRequest request) async {
     final at = _toSecond(request.at);
     final owner = await _ownerAt(terminal, request.qrCode, at);
-
-    final day = (await _myDay.today(owner.id)).day;
-    final start = day?.start?.actual, finish = day?.finish?.actual;
-    final running = start != null && finish == null;
-    final last = running ? start : finish;
-    if (last != null && at.difference(last).abs() < repeatWindow) {
-      return _result(owner, running ? TerminalScanOutcome.alreadyCheckedIn : TerminalScanOutcome.alreadyCheckedOut, last);
-    }
-    await _writes.register(
-      owner.id,
-      RegisterTimeRequest(
-        boundary: running ? RegistrationBoundary.finish : RegistrationBoundary.start,
-        method: TimeRegistrationMethod.qr,
-        entry: RegistrationEntry.now,
-        at: at,
-      ),
-      // Shared by every company: the day counts for the employee's default.
-      terminalId: terminal.id,
-    );
-    return _result(owner, running ? TerminalScanOutcome.checkedOut : TerminalScanOutcome.checkedIn, at);
+    // In or out, and the repeat window, are decided under the employee's lock,
+    // against the day's latest start or finish (review H5, 2026-11-16). Shared
+    // by every company: the day counts for the employee's default.
+    final scanned = await _writes.registerScan(owner.id, at, terminalId: terminal.id, repeatWindow: repeatWindow);
+    return _result(owner, scanned.outcome, scanned.at);
   }
 
   /// "What are you working on?", right after checking in (D19).
@@ -159,8 +146,14 @@ class TerminalDeviceService {
     if (!terminal.isActive) {
       throw const ApiException(409, ApiErrorCode.terminalOff, 'Nobody can scan here right now.');
     }
-    if (at.isAfter(_now().toUtc().add(_allowedClockSkew))) {
+    final now = _now().toUtc();
+    if (at.isAfter(now.add(_allowedClockSkew))) {
       throw const ApiException.validation(TerminalScanRequest.fieldAt, 'A scan can’t be in the future.');
+    }
+    // Nothing is kept offline (D42): a scan is sent when it happens, so an older
+    // one is refused rather than registered in the past (review H1, 2026-11-16).
+    if (at.isBefore(now.subtract(maxScanAge))) {
+      throw const ApiException.validation(TerminalScanRequest.fieldAt, 'A scan is sent when it happens.');
     }
     final owner = await _terminals.ownerOfQr(_executor, qrCode.trim());
     if (owner == null) throw const ApiException(400, ApiErrorCode.qrNotRecognised, 'This QR code isn’t recognised.');

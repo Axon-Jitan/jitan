@@ -42,7 +42,7 @@ void main() {
       (await db.query(sql, params)).single.readInt(column);
 
   setUpAll(() async {
-    db = TestDatabase.connect();
+    db = TestDatabase.connect(maxConnections: 3);
     service = TimeRegistrationWriteService(
       transactions: db,
       rounding: RegistrationRounding(ScheduleRepository(db)),
@@ -264,5 +264,24 @@ void main() {
       await db.execute('DELETE FROM tblEventLog WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
     }
     await db.execute('DELETE FROM tblCompany WHERE companyID = :c', {'c': companyId});
+  });
+
+  test('the same start sent twice at the same moment is stored once (review H2)', () async {
+    final request = RegisterTimeRequest(
+      boundary: RegistrationBoundary.start,
+      method: TimeRegistrationMethod.manual,
+      entry: RegistrationEntry.now,
+      at: DateTime.utc(2026, 10, 21, 6, 2, 9),
+    );
+
+    final results = await Future.wait([service.register(userId, request), service.register(userId, request)]);
+
+    expect(results.where((r) => r.created), hasLength(1));
+    expect(results[0].registered.actualId, results[1].registered.actualId);
+    final rows = await db.query(
+      'SELECT tr.timeRegID FROM tblTimeReg tr WHERE tr.userID = :u AND tr.timeRegTimestamp >= :from AND tr.timeRegTimestamp < :to',
+      {'u': userId, 'from': '2026-10-21 00:00:00', 'to': '2026-10-21 23:59:59'},
+    );
+    expect(rows, hasLength(2), reason: 'one actual and one rounded row');
   });
 }
