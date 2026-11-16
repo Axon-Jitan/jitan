@@ -2,6 +2,7 @@ import 'package:jitan_models/jitan_models.dart';
 
 import '../audit/audit_event.dart';
 import '../audit/audit_log_repository.dart';
+import '../database/database_exception.dart';
 import '../database/sql_executor.dart';
 import '../http/api_exception.dart';
 import 'group_schedule_link_repository.dart';
@@ -53,6 +54,20 @@ class ScheduleEditingService {
   final TransactionRunner _transactions;
   final GroupScheduleLinkRepository? _groupLinks;
 
+  static const _lockAttempts = 3;
+
+  /// One save in a transaction, tried again as a whole when it met someone
+  /// else's locks (deadlock or lock wait timeout, review M6).
+  Future<void> _retrying(Future<void> Function(SqlExecutor tx) body) async {
+    for (var attempt = 1; ; attempt++) {
+      try {
+        return await _transactions.transaction(body);
+      } on DatabaseQueryException catch (e) {
+        if (!e.isLockConflict || attempt == _lockAttempts) rethrow;
+      }
+    }
+  }
+
   static const _workTypes = [ScheduleTypeNames.workStart, ScheduleTypeNames.workFinish];
   static const _breakTypes = [ScheduleTypeNames.breakTime];
   static final _time = RegExp(r'^([01]\d|2[0-3]):[0-5]\d$');
@@ -62,7 +77,7 @@ class ScheduleEditingService {
   /// start and finish rounding (up or down by an interval, or none).
   Future<GroupSchedule> setWorkHours(int actorUserId, int groupId, SetWorkHoursRequest request) async {
     final rows = await _workRows(request);
-    await _transactions.transaction((tx) => _replace(tx, actorUserId, groupId, _workTypes, rows));
+    await _retrying((tx) => _replace(tx, actorUserId, groupId, _workTypes, rows));
     return _result(groupId);
   }
 
@@ -70,7 +85,7 @@ class ScheduleEditingService {
   /// transaction: when anything is refused, nothing is saved.
   Future<GroupSchedule> setSchedule(int actorUserId, int groupId, SetGroupScheduleRequest request) async {
     final schedule = await prepareSchedule(request);
-    await _transactions.transaction((tx) => applySchedule(tx, actorUserId, groupId, schedule));
+    await _retrying((tx) => applySchedule(tx, actorUserId, groupId, schedule));
     return _result(groupId);
   }
 
@@ -155,7 +170,7 @@ class ScheduleEditingService {
 
   /// Removes [groupId]'s work hours (and nothing else).
   Future<GroupSchedule> removeWorkHours(int actorUserId, int groupId) async {
-    await _transactions.transaction((tx) => _replace(tx, actorUserId, groupId, _workTypes, const []));
+    await _retrying((tx) => _replace(tx, actorUserId, groupId, _workTypes, const []));
     return _result(groupId);
   }
 
@@ -163,7 +178,7 @@ class ScheduleEditingService {
   /// within the group's work hours of that day.
   Future<GroupSchedule> setBreaks(int actorUserId, int groupId, SetBreaksRequest request) async {
     final rows = await _breakRows(request.days, SetBreaksRequest.fieldDays);
-    await _transactions.transaction((tx) async {
+    await _retrying((tx) async {
       if (!await _writes.lockGroup(tx, groupId)) throw ApiException.notFound('Group $groupId does not exist.');
       _breaksWithin(rows, await _currentWorkHours(tx, groupId), SetBreaksRequest.fieldDays);
       await _replace(tx, actorUserId, groupId, _breakTypes, rows, locked: true);
@@ -206,7 +221,7 @@ class ScheduleEditingService {
 
   /// Removes [groupId]'s breaks.
   Future<GroupSchedule> removeBreaks(int actorUserId, int groupId) async {
-    await _transactions.transaction((tx) => _replace(tx, actorUserId, groupId, _breakTypes, const []));
+    await _retrying((tx) => _replace(tx, actorUserId, groupId, _breakTypes, const []));
     return _result(groupId);
   }
 

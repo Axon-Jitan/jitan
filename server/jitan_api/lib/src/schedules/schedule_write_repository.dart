@@ -34,6 +34,47 @@ class ScheduleWriteRepository {
       ))
           .isNotEmpty;
 
+  /// Shares the lock on the group rows [groupIds], in ID order: a schedule
+  /// save of one of them (which locks its row for update) waits until this
+  /// transaction ends, and this one waits for a save already running. The
+  /// IDs of those that are active (review M6, M9). Call it before any plain
+  /// read, so the transaction's snapshot comes after the lock.
+  Future<Set<int>> shareGroups(SqlExecutor tx, List<int> groupIds) async {
+    if (groupIds.isEmpty) return const {};
+    final ids = groupIds.toSet().toList()..sort();
+    final rows = await tx.query(
+      'SELECT groupID, groupActive FROM tblGroup WHERE groupID IN (${_placeholders('g', ids.length)}) '
+      'AND groupMFD = 0 ORDER BY groupID FOR SHARE',
+      _params('g', ids),
+    );
+    return {for (final row in rows) if (row.readBool('groupActive')) row.readInt('groupID')};
+  }
+
+  /// Shares the lock on the rows of [userId]'s current groups, as
+  /// [shareGroups] does (review M4, M6).
+  Future<void> shareGroupsOf(SqlExecutor tx, int userId) => tx.query(
+        'SELECT g.groupID FROM tblUserGroup ug JOIN tblGroup g ON g.groupID = ug.groupID '
+        'WHERE ug.userID = :u AND ${MembershipFilters.activeGroup('ug')} AND g.groupMFD = 0 '
+        'ORDER BY g.groupID FOR SHARE',
+        {'u': userId},
+      );
+
+  /// Whether someone other than [userId], and not in [groupId], has a
+  /// current link to one of [scheduleIds]: then those rows are another
+  /// group's hours, not [groupId]'s (review M5).
+  Future<bool> usedOutside(SqlExecutor tx, Set<int> scheduleIds, int groupId, int userId) async {
+    if (scheduleIds.isEmpty) return false;
+    final ids = scheduleIds.toList()..sort();
+    final rows = await tx.query(
+      'SELECT 1 FROM tblUserSchedule us '
+      'WHERE us.scheduleID IN (${_placeholders('s', ids.length)}) AND ${MembershipFilters.activeSchedule('us')} '
+      'AND us.userID <> :u AND NOT EXISTS (SELECT 1 FROM tblUserGroup ug WHERE ug.userID = us.userID '
+      ' AND ug.groupID = :g AND ${MembershipFilters.activeGroup('ug')}) LIMIT 1',
+      {..._params('s', ids), 'u': userId, 'g': groupId},
+    );
+    return rows.isNotEmpty;
+  }
+
   /// Active employees currently in [groupId], with their number of current,
   /// active groups.
   Future<List<GroupEmployee>> groupEmployees(SqlExecutor tx, int groupId) async {
@@ -201,16 +242,28 @@ class ScheduleWriteRepository {
   }
 
   /// Of [scheduleIds], those no current link uses any more.
+  ///
+  /// The links are read as they are committed now, and locked, not from the
+  /// transaction's snapshot: a link another transaction just added keeps
+  /// its row on (review M6).
   Future<List<int>> unused(SqlExecutor tx, List<int> scheduleIds) async {
     if (scheduleIds.isEmpty) return const [];
+    final used = {
+      for (final row in await tx.query(
+        'SELECT us.scheduleID FROM tblUserSchedule us '
+        'WHERE us.scheduleID IN (${_placeholders('s', scheduleIds.length)}) '
+        'AND ${MembershipFilters.activeSchedule('us')} FOR SHARE',
+        _params('s', scheduleIds),
+      ))
+        row.readInt('scheduleID'),
+    };
     final rows = await tx.query(
       'SELECT s.scheduleID FROM tblSchedule s '
       'WHERE s.scheduleID IN (${_placeholders('s', scheduleIds.length)}) AND s.scheduleActive = 1 AND s.scheduleMFD = 0 '
-      'AND NOT EXISTS (SELECT 1 FROM tblUserSchedule us WHERE us.scheduleID = s.scheduleID '
-      ' AND ${MembershipFilters.activeSchedule('us')}) ORDER BY s.scheduleID',
+      'ORDER BY s.scheduleID',
       _params('s', scheduleIds),
     );
-    return [for (final row in rows) row.readInt('scheduleID')];
+    return [for (final row in rows) if (!used.contains(row.readInt('scheduleID'))) row.readInt('scheduleID')];
   }
 
   /// Switches the schedule rows [scheduleIds] off, with their rounding-rule

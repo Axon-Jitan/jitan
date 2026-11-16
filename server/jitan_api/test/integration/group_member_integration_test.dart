@@ -206,4 +206,16 @@ void main() {
       throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 404)),
     );
   });
+
+  test('a group deactivated after the first check is refused inside the transaction, nothing added (review M9)', () async {
+    await expectLater(
+      db.transaction((tx) => service.addIn(tx, users['actor']!, inactiveGroup, [users['A']!])),
+      throwsA(isA<ApiException>().having((e) => e.field, 'field', 'ids')),
+    );
+    final links = await db.query(
+      'SELECT 1 FROM tblUserGroup WHERE userID = :u AND groupID = :g AND userGroupActive = 1',
+      {'u': users['A'], 'g': inactiveGroup},
+    );
+    expect(links, isEmpty);
+  });
 }

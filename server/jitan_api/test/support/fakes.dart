@@ -479,6 +479,16 @@ class FakeEmployeeScheduleSync implements EmployeeScheduleSync {
   final sources = <(int actor, int user, int group)>[];
   int? currentSourceGroupId;
 
+  /// Groups [lockGroups] reports as not active (deactivated meanwhile).
+  final inactiveGroups = <int>{};
+
+  @override
+  Future<Set<int>> lockGroups(SqlExecutor tx, List<int> groupIds) async =>
+      {for (final id in groupIds) if (!inactiveGroups.contains(id)) id};
+
+  @override
+  Future<void> lockGroupsOf(SqlExecutor tx, int userId) async {}
+
   @override
   Future<void> afterGroupChange(SqlExecutor tx, int actorUserId, int userId) async =>
       groupChanges.add((actorUserId, userId));

@@ -121,10 +121,15 @@ class EmployeeService {
     }
     await _requireCompany(companyId);
     await _transactions.transaction((tx) async {
+      // Before any plain read: the groups' hours as they are now (M6).
+      if (active) await _scheduleSync.lockGroupsOf(tx, userId);
       if (await _employees.findInCompany(tx, companyId, userId) == null ||
           !await _employees.setActive(tx, userId, active: active)) {
         throw ApiException.notFound('Employee $userId is not in company $companyId, or already ${active ? 'active' : 'inactive'}.');
       }
+      // The group's hours may have changed while the employee was inactive
+      // (review M4).
+      if (active) await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
       await _audit.record(
         tx,
         AuditEvent(
@@ -303,6 +308,10 @@ class EmployeeService {
       // One new code at a time: codes are unique ignoring accents, which the
       // database's key can't guard (review L12).
       return await _transactions.transaction(serializedBy: codeLock, (tx) async {
+        // The groups first, re-checked (review M6, M9).
+        if ((await _scheduleSync.lockGroups(tx, groupIds)).length != groupIds.length) {
+          throw const ApiException.validation(CreateEmployeeRequest.fieldGroupIds, 'Choose existing, active groups.');
+        }
         if (await _employees.codeExists(tx, code)) throw _duplicateCode(code);
         final userId = await createIn(
           tx,

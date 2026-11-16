@@ -189,6 +189,12 @@ class EmployeeAssignmentService {
       }
     }
     await _addTransaction((tx) async {
+      // The groups first, re-checked: one may have been deactivated since
+      // (review M9); then the employee.
+      final active = await _scheduleSync.lockGroups(tx, ids);
+      if (ids.any((id) => !options[id]!.isAssigned && !active.contains(id))) {
+        throw const ApiException.validation(AddAssignmentsRequest.fieldIds, 'Choose active groups only.');
+      }
       await _lockEmployee(tx, userId);
       await _requireMember(tx, companyId, userId);
       var changed = false;
@@ -220,6 +226,7 @@ class EmployeeAssignmentService {
   Future<AssignmentOptions> removeGroup(int actorUserId, int companyId, int userId, int groupId) async {
     await _requireMember(_executor, companyId, userId);
     await _addTransaction((tx) async {
+      await _scheduleSync.lockGroups(tx, [groupId]);
       await _lockEmployee(tx, userId);
       await _requireMember(tx, companyId, userId);
       final userGroupId = await _assignments.removeGroup(tx, userId, groupId);
@@ -262,7 +269,8 @@ class EmployeeAssignmentService {
     ScheduleSourceRequest request,
   ) async {
     await _requireMember(_executor, companyId, userId);
-    await _transactions.transaction((tx) async {
+    await _addTransaction((tx) async {
+      await _scheduleSync.lockGroupsOf(tx, userId);
       await _lockEmployee(tx, userId);
       await _requireMember(tx, companyId, userId);
       await _scheduleSync.useGroup(tx, actorUserId, userId, request.groupId);

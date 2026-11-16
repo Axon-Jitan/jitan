@@ -123,14 +123,29 @@ class GroupMemberService {
 
   /// Adds [ids] (from [validIds], permission checked) to [groupId] inside
   /// the caller's transaction [tx].
+  ///
+  /// The group first (shared, and re-checked: it may have been deactivated
+  /// since, review M9), then every employee in ID order, all before the
+  /// first plain read, so no employee is read from an older snapshot
+  /// (review M8).
   Future<void> addIn(SqlExecutor tx, int actorUserId, int groupId, List<int> ids) async {
-    // In ID order, so two concurrent saves lock the employees the same way.
+    if (!(await _scheduleSync.lockGroups(tx, [groupId])).contains(groupId)) {
+      throw const ApiException.validation(AddAssignmentsRequest.fieldIds, 'The group is deactivated; reactivate it first.');
+    }
+    await lockEmployees(tx, ids);
     for (final userId in ids) {
-      if (!await _employees.lockUser(tx, userId)) throw ApiException.notFound('Employee $userId does not exist.');
       final userGroupId = await _assignments.addGroup(tx, userId, groupId);
       if (userGroupId == null) continue;
       await _record(tx, AuditEventType.groupAssigned, actorUserId, userId, groupId, userGroupId);
       await _scheduleSync.afterGroupChange(tx, actorUserId, userId);
+    }
+  }
+
+  /// Locks [ids] (from [validIds]) in ID order, so two concurrent saves lock
+  /// the employees the same way; 404 when one does not exist.
+  Future<void> lockEmployees(SqlExecutor tx, List<int> ids) async {
+    for (final userId in [...ids]..sort()) {
+      if (!await _employees.lockUser(tx, userId)) throw ApiException.notFound('Employee $userId does not exist.');
     }
   }
 
@@ -167,6 +182,7 @@ class GroupMemberService {
     await _requireGroup(groupId);
     await requireMayManage([userId], mayManage);
     await _retryOnDeadlock((tx) async {
+      await _scheduleSync.lockGroups(tx, [groupId]);
       if (!await _employees.lockUser(tx, userId)) throw ApiException.notFound('Employee $userId does not exist.');
       final userGroupId = await _assignments.removeGroup(tx, userId, groupId);
       if (userGroupId == null) return;

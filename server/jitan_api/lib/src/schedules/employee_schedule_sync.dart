@@ -16,22 +16,28 @@ import 'schedule_write_repository.dart';
 ///
 /// - **one group**: the employee gets that group's schedule. When those
 ///   employees differ, nothing is picked: the employee keeps what they had,
-///   and HR sees the difference on the Schedules screen. A group whose
-///   only-member is this employee has no schedule, so they get none.
+///   and HR sees the difference on the Schedules screen. In a group with
+///   nobody else only in it, the employee keeps rows nobody outside the
+///   group has (they are the group's hours, review M5); rows of another
+///   group are switched off.
 /// - **no group**: no schedule.
 /// - **several groups**: the employee keeps their schedule while it still
 ///   belongs to one of their groups; one from a group they left is switched
 ///   off, and HR chooses the source ([useGroup], "Schedules come from").
+///   While one of their groups has nobody else defining its hours, the
+///   employee's own rows may be that group's, so they are kept (review M5,
+///   D3b): the only member of a group joining a second group keeps the first
+///   group's hours.
 ///
 /// Runs in the caller's transaction, after the employee's row is locked.
 /// Links are switched off, never deleted, so `tblUserSchedule` keeps the
 /// history; the group change itself is audited by the caller. Schedule rows
 /// nobody uses any more are switched off and audited.
 ///
-/// Group rows are deliberately not locked here (DB-DRIVER-01: assignment
-/// transactions take only the employee lock). If HR saves the group's
-/// schedule at the same moment, the new member may keep the previous rows
-/// until the group's next save.
+/// Callers share the lock on the groups concerned first ([lockGroups],
+/// [lockGroupsOf]), before the employee lock, so a schedule save of the
+/// group and a membership change run one after the other (review M6, M9).
+/// Lock order everywhere: groups (ID order), then employees (ID order).
 ///
 /// With [_groupLinks] (PROPOSAL, ERD_GAPS GAP-15, local database only) a
 /// group's schedule is its own rows in `tblGroupSchedule`, not what its
@@ -50,6 +56,13 @@ class EmployeeScheduleSync {
   /// Every kind of schedule a group gives its employees.
   static const _types = ScheduleTypeNames.all;
 
+  /// Shares the lock on [groupIds] for the rest of the transaction; the IDs
+  /// of those that are active. First in the transaction.
+  Future<Set<int>> lockGroups(SqlExecutor tx, List<int> groupIds) => _writes.shareGroups(tx, groupIds);
+
+  /// Shares the lock on [userId]'s current groups. First in the transaction.
+  Future<void> lockGroupsOf(SqlExecutor tx, int userId) => _writes.shareGroupsOf(tx, userId);
+
   /// Brings [userId]'s schedules in line with their current groups.
   Future<void> afterGroupChange(SqlExecutor tx, int actorUserId, int userId) async {
     final groups = await _writes.groupsOf(tx, userId);
@@ -62,11 +75,22 @@ class EmployeeScheduleSync {
       case [final group]:
         final schedule = await _groupSchedule(tx, group, userId);
         if (schedule.differs) return;
+        // Nobody else defines the group's hours, and nobody outside it has
+        // the employee's rows: they are the group's hours (review M5).
+        if (!schedule.hasEmployees &&
+            _groupLinks == null &&
+            ownRows.isNotEmpty &&
+            !await _writes.usedOutside(tx, ownRows, group, userId)) {
+          return;
+        }
         await _replace(tx, actorUserId, userId, own, schedule.rows);
       default:
         if (ownRows.isEmpty) return;
         for (final group in groups) {
-          if (ownRows.every((await _groupSchedule(tx, group, userId)).allRows.contains)) return;
+          final schedule = await _groupSchedule(tx, group, userId);
+          // A group with nobody else to define its hours: the employee's rows
+          // may be its hours, so nothing is switched off (review M5).
+          if (!schedule.hasEmployees || ownRows.every(schedule.allRows.contains)) return;
         }
         await _replace(tx, actorUserId, userId, own, const []);
     }

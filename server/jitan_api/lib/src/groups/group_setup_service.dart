@@ -61,6 +61,8 @@ class GroupSetupService {
       }
     }
     final id = await _transactions.transaction(serializedBy: GroupManagementService.nameLock, (tx) async {
+      // The employees before the name check's read (review M8).
+      await _members.lockEmployees(tx, ids);
       final id = await _management.createIn(tx, actorUserId, name);
       if (ids.isNotEmpty) await _members.addIn(tx, actorUserId, id, ids);
       if (schedule != null) {

@@ -2,7 +2,10 @@
 library;
 
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
+import 'package:jitan_api/src/companies/company_repository.dart';
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/employees/employee_repository.dart';
+import 'package:jitan_api/src/employees/employee_service.dart';
 import 'package:jitan_api/src/groups/group_repository.dart';
 import 'package:jitan_api/src/http/api_exception.dart';
 import 'package:jitan_api/src/schedules/employee_schedule_sync.dart';
@@ -11,6 +14,9 @@ import 'package:jitan_api/src/schedules/schedule_names.dart';
 import 'package:jitan_api/src/schedules/schedule_repository.dart';
 import 'package:jitan_api/src/schedules/schedule_service.dart';
 import 'package:jitan_api/src/schedules/schedule_write_repository.dart';
+import 'package:jitan_api/src/temporary_qr/in_memory_temporary_token_store.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_service.dart';
+import 'package:jitan_api/src/temporary_qr/temporary_qr_tokens.dart';
 import 'package:jitan_models/jitan_models.dart';
 import 'package:test/test.dart';
 
@@ -36,6 +42,7 @@ void main() {
   final createdTypes = <int>[];
   final createdDays = <int>[];
   late int monday;
+  late int companyId;
 
   Future<void> join(String user, String group) async {
     final existing = await db.query(
@@ -114,13 +121,21 @@ void main() {
         {'n': '[DEV-TEST] $key $stamp'},
       )).lastInsertId;
     }
-    for (final key in ['actor', 'A', 'B', 'W', 'S', 'N']) {
+    for (final key in ['actor', 'A', 'B', 'W', 'S', 'N', 'R']) {
       users[key] = (await db.execute(
         'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
         "VALUES ('[DEV-TEST]', 'Sync', :code, :qr, 1, 0)",
         {'code': 'DY$key$stamp', 'qr': 'DEV-TEST-DY$key$stamp'},
       )).lastInsertId;
     }
+    companyId = (await db.execute(
+      'INSERT INTO tblCompany (companyName, companyActive, companyMFD) VALUES (:n, 1, 0)',
+      {'n': '[DEV-TEST] sync $stamp'},
+    )).lastInsertId;
+    await db.execute(
+      'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)',
+      {'u': users['R'], 'c': companyId},
+    );
     await join('A', 'blue');
     await join('B', 'blue');
     await join('W', 'white');
@@ -160,12 +175,14 @@ void main() {
       await db.execute('DELETE FROM tblSchedule WHERE scheduleID = :s', {'s': id});
     }
     for (final id in users.values) {
+      await db.execute('DELETE FROM tblUserCompany WHERE userID = :u', {'u': id});
       await db.execute('DELETE FROM tblUserGroup WHERE userID = :u', {'u': id});
       await db.execute('DELETE FROM tblUser WHERE userID = :u', {'u': id});
     }
     for (final id in groups.values) {
       await db.execute('DELETE FROM tblGroup WHERE groupID = :g', {'g': id});
     }
+    await db.execute('DELETE FROM tblCompany WHERE companyID = :c', {'c': companyId});
     for (final id in createdTypes) {
       await db.execute('DELETE FROM tblScheduleType WHERE scheduleTypeID = :t', {'t': id});
     }
@@ -227,6 +244,29 @@ void main() {
     expect(history.single.readInt('n'), greaterThan(0), reason: 'nothing deleted');
   });
 
+  test('a reactivated employee gets the hours the group got while they were inactive (review M4)', () async {
+    EmployeeService employees() => EmployeeService(
+      employees: EmployeeRepository(db),
+      companies: CompanyRepository(db),
+      groups: GroupRepository(db),
+      audit: const AuditLogRepository(),
+      transactions: db,
+      temporaryQr: TemporaryQrService(tokens: TemporaryQrTokens.withRandomKey(), store: InMemoryTemporaryTokenStore()),
+      scheduleSync: sync,
+    );
+    await join('R', 'white');
+    await synced('R');
+    final before = await rowsOf('W');
+    expect(await rowsOf('R'), before);
+
+    await employees().setActive(users['actor']!, companyId, users['R']!, active: false);
+    await setHours('white', '07:00');
+    expect(await rowsOf('W'), isNot(before));
+
+    await employees().setActive(users['actor']!, companyId, users['R']!, active: true);
+    expect(await rowsOf('R'), await rowsOf('W'));
+  });
+
   test('when the group\'s employees differ, nothing is picked: the employee keeps what they had', () async {
     // B gets an extra start row, so A and B differ.
     final extra = (await db.execute(
@@ -248,6 +288,23 @@ void main() {
       db.transaction((tx) => sync.useGroup(tx, users['actor']!, users['N']!, groups['blue']!)),
       throwsA(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.scheduleEmployeesDiffer)),
     );
+  });
+
+  test("the only member of a group joining a second group keeps the first group's hours, also after leaving it (review M5)", () async {
+    final soloRows = await rowsOf('S');
+    expect(soloRows, isNotEmpty);
+
+    await join('S', 'white');
+    await synced('S');
+    expect(await rowsOf('S'), soloRows, reason: 'Solo has nobody else to define its hours');
+    final active = await db.query(
+      'SELECT COUNT(*) AS n FROM tblSchedule WHERE scheduleActive = 1 AND scheduleID IN (${soloRows.join(',')})',
+    );
+    expect(active.single.readInt('n'), soloRows.length, reason: "Solo's rows stay on");
+
+    await leave('S', 'white');
+    await synced('S');
+    expect(await rowsOf('S'), soloRows);
   });
 
   test('when the last employee with a schedule leaves, the unused rows are switched off and audited', () async {
