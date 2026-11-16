@@ -7,6 +7,7 @@ import 'package:jitan_api/src/auth/credential_repository.dart';
 import 'package:jitan_api/src/auth/password_hasher.dart';
 import 'package:jitan_api/src/auth/session_tokens.dart';
 import 'package:jitan_api/src/auth/sign_in_service.dart';
+import 'package:jitan_api/src/auth/sign_in_throttle.dart';
 import 'package:jitan_api/src/database/database.dart';
 import 'package:jitan_api/src/http/api_exception.dart';
 import 'package:jitan_api/src/languages/language_repository.dart';
@@ -133,6 +134,31 @@ void main() {
     final lowerCase = await signIn().signIn(request(code.toLowerCase(), 'first password'));
     expect(sessions.verify(lowerCase.session.accessToken)!.userId, id, reason: 'the code in any capitals (CLARIFY-16)');
     await expectLater(signIn().signIn(request('DTA-unknown-$stamp', 'first password')), fails('invalid_credentials'));
+  });
+
+  test('the sign-in limit counts the code as MySQL matches it, also a combining accent (review 2026-11-16)', () async {
+    final keys = [for (final c in ['rene', 'RENE', 'René', 'rene\u0301', 'RENE\u0301']) await credentials.matchKey(db, c)];
+    expect(keys.toSet(), hasLength(1), reason: 'one code for the database, one count');
+    expect(await credentials.matchKey(db, 'renf'), isNot(keys.first));
+
+    final (_, code, _) = await activatedEmployee('T');
+    final service = SignInService(
+      credentials: credentials,
+      users: UserRepository(db),
+      executor: db,
+      sessions: sessions,
+      hasher: hasher,
+      throttle: SignInThrottle(),
+    );
+    for (var i = 0; i < SignInThrottle.maxFailures; i++) {
+      await expectLater(service.signIn(request(code, 'wrong password')), fails('invalid_credentials'));
+    }
+    // DTA… with the A written as A + a combining grave accent, or as À.
+    final combining = code.replaceFirst('A', 'A\u0300');
+    final precomposed = code.replaceFirst('A', 'À');
+    for (final variant in [combining, precomposed]) {
+      await expectLater(service.signIn(request(variant, 'first password')), fails('too_many_attempts'), reason: variant);
+    }
   });
 
   test('inactive and MFD employees are refused with the correct password', () async {

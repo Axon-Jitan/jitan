@@ -39,6 +39,7 @@ void main() {
 
     expect(throttle.begin(' empe01 '), false);
     expect(throttle.begin('EMPÈ01'), false);
+    expect(throttle.begin('EMPE\u030101'), false, reason: 'E + a combining accent');
   });
 
   test('guesses sent in parallel share the same five attempts (review M2)', () {

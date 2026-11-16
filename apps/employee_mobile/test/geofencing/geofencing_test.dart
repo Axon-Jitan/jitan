@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:employee_mobile/src/device/device_settings.dart';
 import 'package:employee_mobile/src/geofencing/automatic_registration.dart';
 import 'package:employee_mobile/src/geofencing/geofence_event_handler.dart';
@@ -592,6 +594,37 @@ void main() {
       expect(await presence.away(), isNull, reason: 'cleared');
     });
   });
+  group('trips waiting, app and background at once (review 2026-11-16)', () {
+    test('two trips held at the same moment are both kept', () async {
+      final presence = WorkplacePresence(MemorySecureStore());
+
+      await Future.wait([presence.holdTrip(_trip(6)), presence.holdTrip(_trip(9))]);
+
+      expect([for (final t in await presence.heldTrips()) t.leftAt], [_trip(6).leftAt, _trip(9).leftAt]);
+    });
+
+    test('confirming a trip removes that one only, never the next', () async {
+      final presence = WorkplacePresence(MemorySecureStore());
+      await presence.holdTrip(_trip(6));
+      await presence.holdTrip(_trip(9));
+
+      await presence.clearHeldTrip(_trip(6));
+      await presence.clearHeldTrip(_trip(6)); // a second sender confirming it again
+
+      expect([for (final t in await presence.heldTrips()) t.leftAt], [_trip(9).leftAt]);
+    });
+
+    test('a trip stored the old way is still sent', () async {
+      final store = MemorySecureStore();
+      store.values['presence.trips'] = jsonEncode([_trip(6).toJson()]);
+      store.values['presence.trip'] = jsonEncode(_trip(9).toJson());
+      final presence = WorkplacePresence(store);
+
+      expect([for (final t in await presence.heldTrips()) t.leftAt], [_trip(6).leftAt, _trip(9).leftAt]);
+      expect(store.values.containsKey('presence.trips'), isFalse);
+    });
+  });
+
   group('another employee signs in on this phone (review 2026-11-16)', () {
     test('what the phone remembered for the first one is dropped, never sent for the second', () async {
       final presence = WorkplacePresence(MemorySecureStore());
@@ -604,6 +637,18 @@ void main() {
 
       expect(await presence.lastEntered(), isNull);
       expect(await presence.away(), isNull);
+      expect(await presence.heldTrip(), isNull);
+    });
+
+    test('events stored before owners were kept are dropped at the first sign-in', () async {
+      final store = MemorySecureStore();
+      final presence = WorkplacePresence(store);
+      await presence.entered(7, DateTime(2026, 10, 22, 8));
+      store.values['presence.trip'] = jsonEncode(_trip(6).toJson());
+
+      await presence.belongTo('SBW');
+
+      expect(await presence.lastEntered(), isNull);
       expect(await presence.heldTrip(), isNull);
     });
 
@@ -626,4 +671,12 @@ const _almeco = Location(
   point: GeoPoint(latitude: 50.7, longitude: 3.2),
   radiusMeters: 50,
   isActive: true,
+);
+
+/// A trip from Almeco (7) to a client (8), leaving at [hour] UTC.
+TripRequest _trip(int hour) => TripRequest(
+  fromAddressId: 7,
+  toAddressId: 8,
+  leftAt: DateTime.utc(2026, 10, 22, hour),
+  arrivedAt: DateTime.utc(2026, 10, 22, hour, 30),
 );

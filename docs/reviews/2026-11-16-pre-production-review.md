@@ -77,6 +77,16 @@ sign-in finding were already fixed (`c4ec718`, `a5c98f9`). New and fixed:
 - **Retry returning another row:** a retry answers with the rounded row stored right after
   its own time; when HR replaced it, with none, never a later day's row.
 
+Third look (of `3d3bff3`): three gaps closed.
+- **Events from before owners were kept** have no owner and are dropped at the first
+  sign-in instead of going to whoever signs in.
+- **Trips waiting** each have their own key (named after their leaving and arrival), so
+  the app and the background isolate adding or confirming trips at once can't lose or
+  remove each other's; a trip is confirmed by its own key, never "the first one".
+- **The sign-in limit** counts per the database's own key for the code
+  (`WEIGHT_STRING` under the collation the account lookup uses), so `rene`, `René` and
+  `rene` + a combining accent share one count, exactly as MySQL matches them.
+
 Found while fixing L13: the driver (mysql_client_plus) fills parameters in on the client
 with backslash escaping. Quotes are always safe, but with `NO_BACKSLASH_ESCAPES` every
 stored backslash would be doubled; hence the startup refusal. Replacing the driver stays

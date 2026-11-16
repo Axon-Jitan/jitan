@@ -17,6 +17,16 @@ class CredentialRepository {
   /// several only if codes were reused (e.g. by a deleted user), so the
   /// caller checks each. Inactive and MFD users are included, flagged, so a
   /// correct password can be answered with "account unavailable".
+  /// [code] as the database compares codes ([candidatesByCode]): its sort
+  /// key under the same collation, so every spelling MySQL takes for one
+  /// code (capitals, accents written as one character or as a letter plus a
+  /// combining accent, …) gives the same value. The sign-in limit counts per
+  /// this key (review 2026-11-16).
+  Future<String> matchKey(SqlExecutor executor, String code) async => (await executor.query(
+    'SELECT HEX(WEIGHT_STRING(CAST(:code AS CHAR) $ignoringCaseAndAccents)) AS k',
+    {'code': code},
+  )).single.readString('k');
+
   Future<List<SignInCandidate>> candidatesByCode(SqlExecutor executor, String code) async {
     final rows = await executor.query(
       'SELECT userID, userPassword, userActive, userMFD FROM tblUser '

@@ -32,6 +32,8 @@ class SignInThrottle {
     final lower = code.trim().toLowerCase();
     final out = StringBuffer();
     for (final rune in lower.runes) {
+      // Combining accents (U+0300–U+036F): "e" + "\u0301" is "é" is "e".
+      if (rune >= 0x300 && rune <= 0x36f) continue;
       final char = String.fromCharCode(rune);
       out.write(_plain[char] ?? char);
     }

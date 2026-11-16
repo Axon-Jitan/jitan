@@ -2,6 +2,7 @@ import 'package:jitan_api/src/time_records/time_correction_repository.dart';
 import 'package:jitan_api/src/time_records/time_record_repository.dart';
 import 'package:jitan_api/src/time_registration/time_registration_write_repository.dart';
 import 'package:jitan_api/src/employees/employee_assignment_repository.dart';
+import 'package:jitan_api/src/auth/sign_in_throttle.dart';
 import 'package:jitan_api/src/auth/credential_repository.dart';
 import 'package:jitan_api/src/audit/audit_event.dart';
 import 'package:jitan_api/src/audit/audit_log_repository.dart';
@@ -290,6 +291,9 @@ class FakeCredentialRepository implements CredentialRepository {
   FakeCredentialRepository(this.onboarding);
 
   final FakeOnboardingRepository onboarding;
+
+  @override
+  Future<String> matchKey(SqlExecutor executor, String code) async => SignInThrottle.keyOf(code);
 
   @override
   Future<List<SignInCandidate>> candidatesByCode(SqlExecutor executor, String code) async => [

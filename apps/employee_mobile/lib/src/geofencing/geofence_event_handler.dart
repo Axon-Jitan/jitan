@@ -102,17 +102,19 @@ class GeofenceEventHandler {
   /// Sends the waiting trips, oldest first. Each is kept until the server
   /// answers (kilometres are paid): no connection or a server failure keeps
   /// it for later; only a refusal (4xx) drops it (review 2026-11-16).
+  ///
+  /// Each trip is confirmed by its own key, so a send running at the same
+  /// time elsewhere (app and background) never removes another trip; a trip
+  /// sent twice is one on the server (a retry changes nothing).
   Future<void> _sendTrip() async {
-    while (true) {
-      final trip = await _presence.heldTrip();
-      if (trip == null) return;
+    for (final trip in await _presence.heldTrips()) {
       try {
         await _activities.registerTrip(trip);
       } on ApiClientException catch (e) {
         _log.warning('The trip could not be sent: ${e.kind.name} ${e.statusCode ?? ''}');
         if (_tryLater(e)) return;
       }
-      await _presence.clearHeldTrip();
+      await _presence.clearHeldTrip(trip);
     }
   }
 

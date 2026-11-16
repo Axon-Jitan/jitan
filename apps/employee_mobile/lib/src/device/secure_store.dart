@@ -6,6 +6,9 @@ abstract interface class SecureStore {
   Future<String?> read(String key);
   Future<void> write(String key, String value);
   Future<void> delete(String key);
+
+  /// The keys stored that start with [prefix].
+  Future<List<String>> keysStartingWith(String prefix);
 }
 
 class PlatformSecureStore implements SecureStore {
@@ -24,4 +27,10 @@ class PlatformSecureStore implements SecureStore {
 
   @override
   Future<void> delete(String key) => _storage.delete(key: key);
+
+  @override
+  Future<List<String>> keysStartingWith(String prefix) async => [
+    for (final key in (await _storage.readAll()).keys)
+      if (key.startsWith(prefix)) key,
+  ];
 }

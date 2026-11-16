@@ -51,7 +51,9 @@ class SignInService {
     // Before any hashing, and counted at once: a blocked code costs the server
     // nothing, even the right password is not tried, and guesses sent in
     // parallel share the same attempts (review M2).
-    if (!_throttle.begin(code)) {
+    // Counted per code as the database matches it, not as typed.
+    final key = await _credentials.matchKey(_executor, code);
+    if (!_throttle.begin(key)) {
       throw const ApiException(429, ApiErrorCode.tooManyAttempts, 'Too many attempts. Try again later.');
     }
     var passwordRight = false;
@@ -77,7 +79,7 @@ class SignInService {
       throw _invalidCredentials();
     } finally {
       // A wrong password, an unknown code or a failure on the way all count.
-      passwordRight ? _throttle.succeeded(code) : _throttle.failed(code);
+      passwordRight ? _throttle.succeeded(key) : _throttle.failed(key);
     }
   }
 

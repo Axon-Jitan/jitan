@@ -32,21 +32,30 @@ class WorkplacePresence {
   static const _namesKey = 'presence.names';
   static const _refusedKey = 'presence.refused';
   static const _tripOriginKey = 'presence.tripOrigin';
-  static const _tripsKey = 'presence.trips';
+  /// Each trip waiting has its own key, named after the moment it began:
+  /// adding or confirming one touches only that key, so the app and the
+  /// background isolate (two geofence events at once) can't lose or remove
+  /// each other's trips (review 2026-11-16).
+  static const _tripPrefix = 'presence.trip.';
 
-  /// One trip, as stored before 2026-11-16; read once into [_tripsKey].
+  /// Trips as stored before: one (`presence.trip`) or a list
+  /// (`presence.trips`); moved to their own keys once read.
   static const _oldTripKey = 'presence.trip';
+  static const _oldTripsKey = 'presence.trips';
 
   /// The employee code the remembered events belong to.
   static const _ownerKey = 'presence.owner';
 
   /// Called when [code] signs in: events remembered for someone else are
-  /// dropped, never sent with this employee's session (review 2026-11-16).
-  /// The same employee signing in again keeps theirs.
+  /// dropped, never sent with this employee's session. Events with no owner
+  /// (stored before owners were kept) can't be told apart, so they are
+  /// dropped too. The same employee signing in again keeps theirs.
   Future<void> belongTo(String code) async {
-    final owner = await _store.read(_ownerKey);
-    if (owner != null && owner != code) {
-      for (final key in [_enteredKey, _awayKey, _tripOriginKey, _tripsKey, _oldTripKey]) {
+    if (await _store.read(_ownerKey) != code) {
+      for (final key in [_enteredKey, _awayKey, _tripOriginKey, _oldTripKey, _oldTripsKey]) {
+        await _store.delete(key);
+      }
+      for (final key in await _store.keysStartingWith(_tripPrefix)) {
         await _store.delete(key);
       }
     }
@@ -118,41 +127,45 @@ class WorkplacePresence {
 
   Future<void> clearTripOrigin() => _store.delete(_tripOriginKey);
 
-  /// A trip the server hasn't confirmed yet, after the ones already waiting:
-  /// a new trip never replaces an unsent one (kilometres are paid).
-  Future<void> holdTrip(TripRequest trip) async => _writeTrips([...await heldTrips(), trip.toJson()]);
+  /// A trip the server hasn't confirmed yet. It never replaces another one
+  /// (kilometres are paid); the same trip held twice is one.
+  Future<void> holdTrip(TripRequest trip) => _store.write(_keyOf(trip), jsonEncode(trip.toJson()));
 
   /// The trips waiting, oldest first.
-  Future<List<Map<String, Object?>>> heldTrips() async {
-    final old = await _store.read(_oldTripKey);
-    if (old != null) {
-      final stored = await _store.read(_tripsKey);
-      final trips = [
-        if (stored != null) ...[for (final t in jsonDecode(stored) as List<Object?>) t! as Map<String, Object?>],
-        jsonDecode(old) as Map<String, Object?>,
-      ];
-      await _writeTrips(trips);
-      await _store.delete(_oldTripKey);
-      return trips;
-    }
-    final stored = await _store.read(_tripsKey);
-    return stored == null ? [] : [for (final t in jsonDecode(stored) as List<Object?>) t! as Map<String, Object?>];
+  Future<List<TripRequest>> heldTrips() async {
+    await _moveOldTrips();
+    final keys = (await _store.keysStartingWith(_tripPrefix))..sort();
+    return [
+      for (final key in keys)
+        if (await _store.read(key) case final stored?) TripRequest.fromJson(jsonDecode(stored) as Map<String, Object?>),
+    ];
   }
 
   /// The oldest trip waiting, or `null`.
-  Future<TripRequest?> heldTrip() async {
-    final trips = await heldTrips();
-    return trips.isEmpty ? null : TripRequest.fromJson(trips.first);
-  }
+  Future<TripRequest?> heldTrip() async => (await heldTrips()).firstOrNull;
 
-  /// Removes the oldest trip waiting: the server confirmed or refused it.
-  Future<void> clearHeldTrip() async {
-    final trips = await heldTrips();
-    if (trips.isNotEmpty) await _writeTrips(trips.sublist(1));
-  }
+  /// [trip] is done: the server confirmed or refused it. Only that trip.
+  Future<void> clearHeldTrip(TripRequest trip) => _store.delete(_keyOf(trip));
 
-  Future<void> _writeTrips(List<Map<String, Object?>> trips) =>
-      trips.isEmpty ? _store.delete(_tripsKey) : _store.write(_tripsKey, jsonEncode(trips));
+  /// Zero-padded milliseconds since 1970 of the leaving and the arrival:
+  /// sorts in time order, and one trip always has the same key.
+  static String _keyOf(TripRequest trip) =>
+      '$_tripPrefix${trip.leftAt.millisecondsSinceEpoch.toString().padLeft(15, '0')}'
+      '.${trip.arrivedAt.millisecondsSinceEpoch.toString().padLeft(15, '0')}';
+
+  Future<void> _moveOldTrips() async {
+    final one = await _store.read(_oldTripKey);
+    final list = await _store.read(_oldTripsKey);
+    if (one == null && list == null) return;
+    for (final json in [
+      if (list != null) ...[for (final t in jsonDecode(list) as List<Object?>) t! as Map<String, Object?>],
+      if (one != null) jsonDecode(one) as Map<String, Object?>,
+    ]) {
+      await holdTrip(TripRequest.fromJson(json));
+    }
+    await _store.delete(_oldTripKey);
+    await _store.delete(_oldTripsKey);
+  }
 
   /// The phone refused the geofences (Google Location Accuracy off, …).
   Future<bool> geofencesRefused() async => await _store.read(_refusedKey) != null;

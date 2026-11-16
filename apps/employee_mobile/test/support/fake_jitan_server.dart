@@ -469,6 +469,12 @@ class MemorySecureStore implements SecureStore {
 
   @override
   Future<void> delete(String key) async => values.remove(key);
+
+  @override
+  Future<List<String>> keysStartingWith(String prefix) async => [
+    for (final key in values.keys)
+      if (key.startsWith(prefix)) key,
+  ];
 }
 
 class FakeAwayReminder implements AwayReminder {
