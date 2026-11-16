@@ -48,33 +48,37 @@ class SignInService {
     if (code.isEmpty || code.length > maxCodeLength) throw _invalidCredentials();
     if (request.password.isEmpty || request.password.length > PasswordPolicy.maxLength) throw _invalidCredentials();
     final deviceId = checkedDeviceId(request.deviceId, field: SignInRequest.fieldDeviceId);
-    // Before any hashing: a blocked code costs the server nothing, and even
-    // the right password is not tried.
-    if (_throttle.isBlocked(code)) {
+    // Before any hashing, and counted at once: a blocked code costs the server
+    // nothing, even the right password is not tried, and guesses sent in
+    // parallel share the same attempts (review M2).
+    if (!_throttle.begin(code)) {
       throw const ApiException(429, ApiErrorCode.tooManyAttempts, 'Too many attempts. Try again later.');
     }
-
-    final candidates = await _credentials.candidatesByCode(_executor, code);
-    if (candidates.isEmpty) {
-      await _hasher.verify(request.password, await (_decoyHash ??= _hasher.hash('decoy-${DateTime.now()}')));
-      _throttle.failed(code);
-      throw _invalidCredentials();
-    }
-    for (final candidate in candidates) {
-      if (!await _hasher.verify(request.password, candidate.passwordHash)) continue;
-      if (!candidate.isActive || candidate.isMarkedForDeletion) {
-        throw const ApiException(403, ApiErrorCode.accountInactive, 'This account can’t sign in right now.');
+    var passwordRight = false;
+    try {
+      final candidates = await _credentials.candidatesByCode(_executor, code);
+      if (candidates.isEmpty) {
+        await _hasher.verify(request.password, await (_decoyHash ??= _hasher.hash('decoy-${DateTime.now()}')));
+        throw _invalidCredentials();
       }
-      _throttle.succeeded(code);
-      final account = await _users.account(candidate.userId) ?? (throw _invalidCredentials());
-      final session = _sessions.issue(userId: candidate.userId, deviceId: deviceId, passwordHash: candidate.passwordHash);
-      return SessionResponse(
-        account: account,
-        session: SessionInfo(accessToken: session.token, expiresAt: session.expiresAt),
-      );
+      for (final candidate in candidates) {
+        if (!await _hasher.verify(request.password, candidate.passwordHash)) continue;
+        passwordRight = true;
+        if (!candidate.isActive || candidate.isMarkedForDeletion) {
+          throw const ApiException(403, ApiErrorCode.accountInactive, 'This account can’t sign in right now.');
+        }
+        final account = await _users.account(candidate.userId) ?? (throw _invalidCredentials());
+        final session = _sessions.issue(userId: candidate.userId, deviceId: deviceId, passwordHash: candidate.passwordHash);
+        return SessionResponse(
+          account: account,
+          session: SessionInfo(accessToken: session.token, expiresAt: session.expiresAt),
+        );
+      }
+      throw _invalidCredentials();
+    } finally {
+      // A wrong password, an unknown code or a failure on the way all count.
+      passwordRight ? _throttle.succeeded(code) : _throttle.failed(code);
     }
-    _throttle.failed(code);
-    throw _invalidCredentials();
   }
 
   static ApiException _invalidCredentials() =>

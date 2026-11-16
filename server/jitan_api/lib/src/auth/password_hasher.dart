@@ -5,6 +5,8 @@ import 'dart:typed_data';
 
 import 'package:pointycastle/export.dart';
 
+import 'hashing_slots.dart';
+
 /// Argon2id cost parameters.
 class Argon2idParameters {
   const Argon2idParameters({required this.memoryKiB, required this.iterations, this.parallelism = 1});
@@ -72,18 +74,22 @@ class PasswordHasher {
   Future<String> hash(String password) {
     final p = parameters;
     final salt = _randomSalt();
-    return Isolate.run(() => _encode(p, salt, _derive(password, salt, p)));
+    return HashingSlots.shared.run(() => Isolate.run(() => _encode(p, salt, _derive(password, salt, p))));
   }
 
   /// Whether [password] matches [encodedHash]. Anything that is not a
   /// well-formed Argon2id hash within bounds (e.g. another system's format,
   /// CLARIFY-01, or a corrupted value) is a mismatch, never an error. Constant-time compare.
-  Future<bool> verify(String password, String encodedHash) => Isolate.run(() {
-        final decoded = _decode(encodedHash);
-        if (decoded == null) return false;
-        final actual = _derive(password, decoded.salt, decoded.parameters, length: decoded.hash.length);
-        return _constantTimeEquals(actual, decoded.hash);
-      });
+  ///
+  /// Hashing waits for one of [HashingSlots.shared] (review M2).
+  Future<bool> verify(String password, String encodedHash) => HashingSlots.shared.run(
+        () => Isolate.run(() {
+          final decoded = _decode(encodedHash);
+          if (decoded == null) return false;
+          final actual = _derive(password, decoded.salt, decoded.parameters, length: decoded.hash.length);
+          return _constantTimeEquals(actual, decoded.hash);
+        }),
+      );
 
   /// Whether [encodedHash] was made with weaker or different parameters than
   /// the current ones (or is not Argon2id), and should be re-hashed the next
