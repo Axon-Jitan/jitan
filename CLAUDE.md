@@ -48,8 +48,9 @@ Unresolved production details never stall development. Classify every issue (ENG
 - **Dev identity:** with `JITAN_ENV=development` or `test`, `JITAN_DEV_USER_ID` supplies the
   acting user. With `JITAN_ENV=production` (also the default when unset), the server refuses
   to start if any `JITAN_DEV_*` variable is set.
-- **Dev permissions:** a dev-only permission evaluator allows everything and is selectable
-  only outside production. Production uses `CredentialPermissionEvaluator` on the same
+- **Dev permissions:** a dev-only permission evaluator allows everything, only with an
+  explicit `JITAN_DEV_ALLOW_ALL_PERMISSIONS=true` outside production (never by `JITAN_ENV`
+  alone; a server with `TLS_CERT` must run as production). Production uses `CredentialPermissionEvaluator` on the same
   interface: IT gives HR access in its own tables (V1, product owner, 2026-10-31).
 - **Dev data:** fixtures go in the dev/test database only, names prefixed `[DEV]`. Production
   code never references them.
@@ -252,7 +253,7 @@ named so it can be found:
 | Item | Replace with | Blocked on |
 |---|---|---|
 | `DevelopmentIdentityMiddleware` | Nothing: sign-in exists, so run the API without `JITAN_DEV_USER_ID`. Only for curl in development | remove before production |
-| `DevelopmentPermissionEvaluator` | Nothing: production already uses `CredentialPermissionEvaluator` | selected only outside production |
+| `DevelopmentPermissionEvaluator` | Nothing: production already uses `CredentialPermissionEvaluator` | selected only with `JITAN_DEV_ALLOW_ALL_PERMISSIONS=true` outside production |
 | Cleartext `http://` in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`) | HTTPS API; release builds already refuse cleartext | production hosting |
 
 Backend modules today (routes / service / repository where they have endpoints and data):

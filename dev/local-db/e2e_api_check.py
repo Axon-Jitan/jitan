@@ -2,7 +2,8 @@
 temporary onboarding/recovery QRs of the 2026-10-08 IT decision.
 
 Needs: the local database freshly seeded (docker compose down -v && up -d),
-and the API running in development mode with JITAN_DEV_USER_ID=1 (Hanne,
+and the API running in development mode with JITAN_DEV_USER_ID=1 and
+JITAN_DEV_ALLOW_ALL_PERMISSIONS=true (Hanne,
 HR) against it. Checks database state through the container.
 
     python dev/local-db/e2e_api_check.py [http://127.0.0.1:8080]

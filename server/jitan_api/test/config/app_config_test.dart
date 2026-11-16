@@ -27,6 +27,30 @@ void main() {
     });
   });
 
+  group('allow-all permissions need an explicit switch (review H4)', () {
+    test('JITAN_ENV=test or development alone keeps the real permission checks', () {
+      for (final env in ['test', 'development']) {
+        expect(AppConfig.fromEnvironment({..._db, 'JITAN_ENV': env}).devAllowAllPermissions, isFalse, reason: env);
+      }
+    });
+
+    test('JITAN_DEV_ALLOW_ALL_PERMISSIONS=true turns them on outside production only', () {
+      final config = AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'development', 'JITAN_DEV_ALLOW_ALL_PERMISSIONS': 'true'});
+      expect(config.devAllowAllPermissions, isTrue);
+      expect(
+        () => AppConfig.fromEnvironment({..._db, 'JITAN_DEV_ALLOW_ALL_PERMISSIONS': 'true'}),
+        throwsA(isA<ConfigException>().having((e) => e.message, 'message', contains('JITAN_DEV_ALLOW_ALL_PERMISSIONS'))),
+      );
+    });
+
+    test('a server with a certificate must run as production', () {
+      expect(
+        () => AppConfig.fromEnvironment({..._db, 'JITAN_ENV': 'test', 'TLS_CERT': '/etc/jitan/tls/a.crt', 'TLS_KEY': '/etc/jitan/tls/a.key'}),
+        throwsA(isA<ConfigException>().having((e) => e.message, 'message', contains('JITAN_ENV=production'))),
+      );
+    });
+  });
+
   group('development identity guard', () {
     test('production refuses to start when JITAN_DEV_USER_ID is set', () {
       expect(

@@ -144,7 +144,9 @@ the server at startup.
 
 **Development identity.** Sign-in for HR/Admin isn't built yet. With `JITAN_ENV=development`, set
 `JITAN_DEV_USER_ID` to an active `tblUser.userID`; every request then acts as that user. A
-dev-only permission evaluator allows everything. With `JITAN_ENV=production` (also the
+dev-only permission evaluator that allows everything is used only with
+`JITAN_DEV_ALLOW_ALL_PERMISSIONS=true`; without it development checks the real credential
+groups too (review H4, 2026-11-16). With `JITAN_ENV=production` (also the
 default when unset) the server **refuses to start** if any `JITAN_DEV_*` variable is set,
 and every protected route answers 401/403 until real auth and permissions exist.
 

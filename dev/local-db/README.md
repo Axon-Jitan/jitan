@@ -28,7 +28,7 @@ cd server/jitan_api
 python ../../dev/local-db/with_local_db.py dart test
 
 # API in development mode (HR user 1 as development identity)
-JITAN_ENV=development JITAN_DEV_USER_ID=1 JITAN_CORS_ORIGINS=http://localhost:5000 \
+JITAN_ENV=development JITAN_DEV_USER_ID=1 JITAN_DEV_ALLOW_ALL_PERMISSIONS=true JITAN_CORS_ORIGINS=http://localhost:5000 \
   python ../../dev/local-db/with_local_db.py dart run bin/server.dart
 
 # End-to-end over HTTP (re-seed first: it changes data)

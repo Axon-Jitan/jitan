@@ -181,7 +181,8 @@ Future<void> main() async {
     transactions: db,
   );
 
-  final PermissionEvaluator permissions = config.environment.allowsDevelopmentMechanisms
+  // Allow-all only when asked for by name, never by the environment alone (H4).
+  final PermissionEvaluator permissions = config.devAllowAllPermissions
       ? DevelopmentPermissionEvaluator(config.environment)
       : CredentialPermissionEvaluator(CredentialAccessRepository(db));
   final authorizer = Authorizer(permissions);

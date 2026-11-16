@@ -19,6 +19,7 @@ class AppConfig {
     required this.database,
     required this.devUserId,
     this.devGroupSchedules = false,
+    this.devAllowAllPermissions = false,
     required this.sessionSecret,
     required this.sessionLifetime,
     required this.passwordHashing,
@@ -39,8 +40,16 @@ class AppConfig {
   ///   required: without it sessions could not be trusted across restarts.
   /// - In production, the database connection is encrypted and its
   ///   certificate verified ([_database]).
+  /// - Outside production, serving HTTPS (`TLS_CERT`) is a startup error: a
+  ///   certificate means a real server, which must run as production
+  ///   (pre-production review H4, 2026-11-16).
   factory AppConfig.fromSources(ConfigSources sources) {
     final environment = AppEnvironment.parse(sources.value(['JITAN_ENV']));
+    if (environment.allowsDevelopmentMechanisms && sources.value(['TLS_CERT']) != null) {
+      throw ConfigException(
+        'JITAN_ENV=${environment.name} with TLS_CERT: a server with a certificate must run with JITAN_ENV=production.',
+      );
+    }
 
     if (!environment.allowsDevelopmentMechanisms) {
       final devKeys = sources.keysWithValues.where((key) => key.startsWith(_devPrefix)).toList()..sort();
@@ -70,6 +79,7 @@ class AppConfig {
           ? _optionalPositiveInt(sources, 'JITAN_DEV_USER_ID')
           : null,
       devGroupSchedules: environment.allowsDevelopmentMechanisms && _flag(sources, 'JITAN_DEV_GROUP_SCHEDULES'),
+      devAllowAllPermissions: environment.allowsDevelopmentMechanisms && _flag(sources, 'JITAN_DEV_ALLOW_ALL_PERMISSIONS'),
       sessionSecret: _sessionSecret(sources, environment),
       sessionLifetime: Duration(days: _optionalPositiveInt(sources, 'JITAN_SESSION_LIFETIME_DAYS') ?? 30),
       passwordHashing: _passwordHashing(sources),
@@ -169,6 +179,13 @@ class AppConfig {
   /// `tblGroupSchedule`, a table only in the local development database.
   /// `JITAN_DEV_GROUP_SCHEDULES=true`; always `false` in production (any
   /// `JITAN_DEV_*` setting stops the server there).
+  /// DEV TEMPORARY: every signed-in user may do everything
+  /// (`DevelopmentPermissionEvaluator`), only with an explicit
+  /// `JITAN_DEV_ALLOW_ALL_PERMISSIONS=true` outside production. A `JITAN_DEV_*`
+  /// name, so production refuses to start with it. Without it, development
+  /// uses the real credential groups too (review H4, 2026-11-16).
+  final bool devAllowAllPermissions;
+
   final bool devGroupSchedules;
 
   /// Key that signs session tokens. `null` only in development/test, where a
