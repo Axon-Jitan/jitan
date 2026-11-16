@@ -51,13 +51,16 @@ class ScheduleWriteRepository {
   }
 
   /// Shares the lock on the rows of [userId]'s current groups, as
-  /// [shareGroups] does (review M4, M6).
-  Future<void> shareGroupsOf(SqlExecutor tx, int userId) => tx.query(
-        'SELECT g.groupID FROM tblUserGroup ug JOIN tblGroup g ON g.groupID = ug.groupID '
-        'WHERE ug.userID = :u AND ${MembershipFilters.activeGroup('ug')} AND g.groupMFD = 0 '
-        'ORDER BY g.groupID FOR SHARE',
-        {'u': userId},
-      );
+  /// [shareGroups] does (review M4, M6). Two single-table locking reads, no
+  /// join (DB-DRIVER-01); both read what is committed, not a snapshot.
+  Future<void> shareGroupsOf(SqlExecutor tx, int userId) async {
+    final links = await tx.query(
+      'SELECT ug.groupID FROM tblUserGroup ug WHERE ug.userID = :u AND ${MembershipFilters.activeGroup('ug')} '
+      'ORDER BY ug.groupID FOR SHARE',
+      {'u': userId},
+    );
+    await shareGroups(tx, [for (final row in links) row.readInt('groupID')]);
+  }
 
   /// Whether someone other than [userId], and not in [groupId], has a
   /// current link to one of [scheduleIds]: then those rows are another
@@ -243,27 +246,21 @@ class ScheduleWriteRepository {
 
   /// Of [scheduleIds], those no current link uses any more.
   ///
-  /// The links are read as they are committed now, and locked, not from the
-  /// transaction's snapshot: a link another transaction just added keeps
-  /// its row on (review M6).
+  /// A plain read is enough (review M6): every transaction that links a
+  /// group's rows first takes a lock on that group ([lockGroup] or
+  /// [shareGroups]), so its snapshot already holds the links committed by
+  /// the others. No locking read here: a deadlock in the middle of one can
+  /// cost the connection (DB-DRIVER-01).
   Future<List<int>> unused(SqlExecutor tx, List<int> scheduleIds) async {
     if (scheduleIds.isEmpty) return const [];
-    final used = {
-      for (final row in await tx.query(
-        'SELECT us.scheduleID FROM tblUserSchedule us '
-        'WHERE us.scheduleID IN (${_placeholders('s', scheduleIds.length)}) '
-        'AND ${MembershipFilters.activeSchedule('us')} FOR SHARE',
-        _params('s', scheduleIds),
-      ))
-        row.readInt('scheduleID'),
-    };
     final rows = await tx.query(
       'SELECT s.scheduleID FROM tblSchedule s '
       'WHERE s.scheduleID IN (${_placeholders('s', scheduleIds.length)}) AND s.scheduleActive = 1 AND s.scheduleMFD = 0 '
-      'ORDER BY s.scheduleID',
+      'AND NOT EXISTS (SELECT 1 FROM tblUserSchedule us WHERE us.scheduleID = s.scheduleID '
+      ' AND ${MembershipFilters.activeSchedule('us')}) ORDER BY s.scheduleID',
       _params('s', scheduleIds),
     );
-    return [for (final row in rows) if (!used.contains(row.readInt('scheduleID'))) row.readInt('scheduleID')];
+    return [for (final row in rows) row.readInt('scheduleID')];
   }
 
   /// Switches the schedule rows [scheduleIds] off, with their rounding-rule

@@ -288,11 +288,15 @@ first byte 0xff, while decoding getVariableEncInt"): a locking read that MySQL r
 `INSERT`/`UPDATE` are parsed fine. Workaround in place: every assignment transaction takes
 the employee's `tblUser` row lock as its **first** statement (a transaction with no locks
 cannot be a deadlock victim) and then uses plain reads; no locking reads with joins. Fix
-or replace the driver before production (also see the transaction-pool leak worked
-around in `Database.transaction`).
-Also because of this, assignment transactions don't lock group rows: a group schedule
-saved at the same moment as an employee joins the group may leave that employee on the
-previous rows until the group's next save (TIME_ENGINE_ANALYSIS D2d). Revisit with the driver.
+or replace the driver before production.
+Worked around since review L8/M6 (2026-11-16):
+- Jitan's own `ConnectionPool` replaces the driver's: a connection goes back only while it
+  is open, so one the driver dropped is never handed out again, and one whose ROLLBACK
+  failed is discarded (closing it makes MySQL roll back). `Database.transaction` runs its
+  own START/COMMIT/ROLLBACK, so the driver's "already in transaction" flag can't stick.
+- Membership changes take a shared lock on their group rows as their **first**
+  statement (no lock held yet, so they can't be a deadlock victim), then the employees;
+  schedule saves retry a deadlock or lock timeout. Plain reads stay plain.
 
 ## QR-TEMP: Temporary onboarding and recovery QRs
 Status: `DONE` (2026-10-08, IT decision) · production multi-instance store pending IT

@@ -95,6 +95,6 @@ class CompanyRepository {
         name: row.readString('companyName'),
         isActive: row.readBool('companyActive'),
         employeeCount: row.readInt('employeeCount'),
-        lastUpdatedAt: row.readOptionalDateTime('lastUpdatedAt'),
+        lastUpdatedAt: row.readOptionalUtcDateTime('lastUpdatedAt'),
       );
 }

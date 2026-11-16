@@ -14,7 +14,8 @@ class AuditLogRepository {
 
   Future<void> record(SqlExecutor tx, AuditEvent event) async {
     final columns = ['eventLogTimestamp', 'userIDInit', for (final r in event.references.keys) r.column];
-    final values = ['NOW()', ':actor', for (final r in event.references.keys) ':${r.name}'];
+    // UTC, as every time Jitan stores (review L10), not the database's zone.
+    final values = ['UTC_TIMESTAMP()', ':actor', for (final r in event.references.keys) ':${r.name}'];
     final logId = (await tx.execute(
       'INSERT INTO tblEventLog (${columns.join(', ')}) VALUES (${values.join(', ')})',
       {

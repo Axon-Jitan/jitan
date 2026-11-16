@@ -66,6 +66,9 @@ void main() {
     expect((company.name, company.isActive, company.employeeCount), ('$prefix Proceq', true, 0));
     expect(await auditOf(company.id), ['company.created']);
     expect(company.lastUpdatedAt, isNotNull, reason: 'from the audit row');
+    // Stored and read as UTC, whatever the database's zone (review L10).
+    expect(company.lastUpdatedAt!.isUtc, isTrue);
+    expect(DateTime.now().toUtc().difference(company.lastUpdatedAt!).inMinutes.abs(), lessThan(2));
   });
 
   test('a name in use is refused, ignoring capitals and accents', () async {

@@ -69,8 +69,13 @@ class DbRow {
 
   /// Reads a MySQL `DATETIME` stored in UTC (registrations, TIME_ENGINE_ANALYSIS
   /// D9) as a UTC [DateTime].
-  DateTime readUtcDateTime(String column) {
-    final wallClock = readOptionalDateTime(column) ?? (throw _unexpected(column, 'NULL', 'a DATETIME'));
+  DateTime readUtcDateTime(String column) =>
+      readOptionalUtcDateTime(column) ?? (throw _unexpected(column, 'NULL', 'a DATETIME'));
+
+  /// [readUtcDateTime] for a nullable column.
+  DateTime? readOptionalUtcDateTime(String column) {
+    final wallClock = readOptionalDateTime(column);
+    if (wallClock == null) return null;
     return DateTime.utc(
       wallClock.year,
       wallClock.month,
