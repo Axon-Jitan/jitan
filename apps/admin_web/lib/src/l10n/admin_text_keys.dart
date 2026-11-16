@@ -303,6 +303,7 @@ abstract final class AdminTextKeys {
   static const timeResolveNonWorkFinishNote = 'timeResolve.nonWorkFinishNote';
   static const timeResolveNonWorkStartNote = 'timeResolve.nonWorkStartNote';
   static const timeResolveNothingToMark = 'timeResolve.nothingToMark';
+  static const timeCorrectOwnRecords = 'timeCorrect.ownRecords';
   static const timeResolveReason = 'timeResolve.reason';
   static const timeResolveHistory = 'timeResolve.history';
   static const timeResolveConfirmNonWork = 'timeResolve.confirmNonWork';

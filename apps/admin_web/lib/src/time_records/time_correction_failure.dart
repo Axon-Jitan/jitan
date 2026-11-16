@@ -19,6 +19,7 @@ sealed class TimeCorrectionFailure {
     ),
     ApiError(code: ApiErrorCode.configurationError) => const MessageFailure(AdminTextKeys.timeCorrectNoRounding),
     ApiError(code: ApiErrorCode.nothingToMarkNonWork) => const MessageFailure(AdminTextKeys.timeResolveNothingToMark),
+    ApiError(code: ApiErrorCode.ownTimeRecords) => const MessageFailure(AdminTextKeys.timeCorrectOwnRecords),
     _ => MessageFailure.keys(failureTextKeysFor(failure)),
   };
 }

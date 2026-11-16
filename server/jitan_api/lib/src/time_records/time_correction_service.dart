@@ -49,6 +49,18 @@ class TimeCorrectionService {
 
   static const maxReasonLength = 500;
 
+  /// HR and Admin never handle their own time: another HR or Admin person
+  /// corrects, approves or rejects it (review M3, product owner 2026-11-16).
+  static void _notOwn(int actorUserId, int userId) {
+    if (actorUserId == userId) {
+      throw const ApiException(
+        403,
+        ApiErrorCode.ownTimeRecords,
+        'You can’t change your own time records. Another HR or Admin person does it.',
+      );
+    }
+  }
+
   /// HR corrects (or adds) the start or finish of [date] (D7, D8): a
   /// "… – corrected" row with the reason and its rounded row; the start or
   /// finish that counted until now (corrected and rounded rows) is switched
@@ -56,6 +68,7 @@ class TimeCorrectionService {
   ///
   /// 400 for a missing reason, a time in the future or on another day.
   Future<TimeRecordDay?> correct(int actorUserId, int companyId, int userId, String date, CorrectTimeRequest request) async {
+    _notOwn(actorUserId, userId);
     final day = _parseDate(date);
     final reason = _reason(request.reason);
     final at = _atOf(day, request.time);
@@ -98,6 +111,7 @@ class TimeCorrectionService {
   /// HR approves the employee's correction [registrationId] (D31): it becomes
   /// HR's corrected time and counts; the employee's row stays as history.
   Future<TimeRecordDay?> approve(int actorUserId, int companyId, int userId, int registrationId) async {
+    _notOwn(actorUserId, userId);
     final employee = await _member(companyId, userId);
     // The request's day and rounding rule before the transaction (review M10);
     // a request's time never changes, and it is checked again inside.
@@ -116,6 +130,7 @@ class TimeCorrectionService {
   /// HR rejects the employee's correction [registrationId] (D31): it is
   /// switched off and the day is as before.
   Future<TimeRecordDay?> reject(int actorUserId, int companyId, int userId, int registrationId) async {
+    _notOwn(actorUserId, userId);
     final employee = await _member(companyId, userId);
     late DateTime day;
     await _transactions.transaction((tx) async {
@@ -133,6 +148,7 @@ class TimeCorrectionService {
   /// has nothing to switch off (an absence can't be stored yet, GAP-16) or
   /// only a correction waiting for review.
   Future<TimeRecordDay?> markNonWork(int actorUserId, int companyId, int userId, String date, String reasonText) async {
+    _notOwn(actorUserId, userId);
     final day = _parseDate(date);
     final reason = _reason(reasonText);
     final employee = await _member(companyId, userId);

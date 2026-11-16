@@ -90,6 +90,10 @@ abstract final class ApiErrorCode {
   /// "Mark as non-work" on a day with no counted time (409, D31, GAP-16).
   static const nothingToMarkNonWork = 'nothing_to_mark_non_work';
 
+  /// HR or Admin tried to correct, approve or reject their own time (403,
+  /// review M3): another HR or Admin person does it.
+  static const ownTimeRecords = 'own_time_records';
+
   static const unauthenticated = 'unauthenticated';
   static const forbidden = 'forbidden';
   static const notFound = 'not_found';

@@ -217,6 +217,28 @@ void main() {
       expect(app.timeRecords.rows, isEmpty);
     });
 
+    test('nobody handles their own time: correct, approve, reject and non-work are 403 (review M3)', () async {
+      final app = TestApp(devUserId: 1, activeUserIds: {1})..now = DateTime.utc(2026, 10, 23, 10);
+      app.companies.existingIds = {7};
+      app.employees.byCompany = {7: [_disan]};
+      app.employees.members = {(7, 1)};
+      final request = (id: ++_id, userId: 1, typeName: 'Start – actual – Manual', at: DateTime.utc(2026, 10, 22, 6), manualEntry: true, comment: 'x', active: true);
+      app.timeRecords.rows = [request];
+
+      for (final (path, body) in [
+        ('$_base/time-records/2026-10-22/correct', {'boundary': 'start', 'time': '08:00', 'reason': 'x'}),
+        ('$_base/time-registrations/${request.id}/approve', <String, Object?>{}),
+        ('$_base/time-registrations/${request.id}/reject', <String, Object?>{}),
+        ('$_base/time-records/2026-10-22/non-work', {'reason': 'x'}),
+      ]) {
+        final response = await app.post(path, jsonEncode(body));
+        expect(response.statusCode, 403, reason: path);
+        expect(((await jsonBody(response))['error']! as Map)['code'], ApiErrorCode.ownTimeRecords, reason: path);
+      }
+      expect(app.timeRecords.rows, [request], reason: 'nothing changed');
+      expect(app.audit.events, isEmpty);
+    });
+
     test('403 without the right; 404 for an employee outside the company or another employee\'s row', () async {
       final noRight = _app(allow: false);
       final body = jsonEncode({'boundary': 'start', 'time': '08:00', 'reason': 'x'});

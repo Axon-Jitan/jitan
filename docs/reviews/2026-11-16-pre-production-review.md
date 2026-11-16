@@ -31,20 +31,20 @@ tests against the local database. No schema, data or code was changed for this r
 ## Fix status (updated 2026-11-16)
 
 Every technical finding is fixed, each with a regression test; the full server suite
-(843 tests, with the local MySQL) and the analyzer pass. Five items wait on a product
+(843 tests, with the local MySQL) and the analyzer pass. Four items wait on a product
 decision and are not changed yet.
 
 | Finding | Status | Commit |
 |---|---|---|
 | H1 terminal | Fixed: a scan older than 2 minutes is refused (the tablet keeps nothing offline) | `250ec55` |
-| H1 mobile | Fixed (D51): a tapped time at most 5 minutes old, a detected one at most 24 hours; older goes as a change for HR | see below |
+| H1 mobile | Fixed (D51): a tapped time at most 5 minutes old, a detected one at most 24 hours; older goes as a change for HR | `c4ec718` |
 | H2 | Fixed: the employee's lock is taken before any read; the same time sent twice is stored once | `250ec55` |
 | H3 | Fixed: a correction switches off only what it replaces; impossible start/finish orders refused | `4b4b6be` |
 | H4 | Fixed: allow-all permissions need `JITAN_DEV_ALLOW_ALL_PERMISSIONS=true`; `TLS_CERT` forces production | `3e4cccc` |
 | H5 | Fixed: the terminal decides in/out under the employee's lock | `250ec55` |
 | M1, L12 | Fixed: company names and employee codes under a MySQL named lock | `4d1850d` |
 | M2 | Fixed: attempts counted when they start, accent-folded; at most one Argon2 hash per core | `a5c98f9` |
-| M3 | **Decision needed:** may HR approve their own time? | – |
+| M3 | Fixed (product owner): nobody corrects, approves, rejects or marks as non-work their own time (403 `own_time_records`, its own message on the HR website) | see git log |
 | M4, M5, M6, M8, M9 | Fixed: reactivation re-syncs the schedule; a sole member keeps the group's hours; group locks first, then employees; a deactivated group is refused inside the transaction | `3229997` |
 | M7 | Fixed: named locks instead of table-wide locking reads; lock conflicts answer 503 and are retried | `eb04024`, `a7b38b7`, `4e1c829` |
 | M10, L1 | Fixed: the rounding rule is read before the transaction; a request counts as approved only at its own time | `4b4b6be` |

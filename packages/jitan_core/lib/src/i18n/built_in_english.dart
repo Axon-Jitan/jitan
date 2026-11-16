@@ -351,6 +351,7 @@ const builtInEnglish = <String, String>{
   'timeResolve.nonWorkFinishNote': 'The day won’t count as work. Its start stays in the history.',
   'timeResolve.nonWorkStartNote': 'The day won’t count as work. Its finish stays in the history.',
   'timeResolve.nothingToMark': 'There is no registration on this day to mark as non-work.',
+  'timeCorrect.ownRecords': 'You can’t change your own time. Another HR or Admin person does it.',
   'timeResolve.reason': 'Reason',
   'timeResolve.history': 'What was registered is always kept.',
   'timeResolve.confirmNonWork': 'Save as not a work day',

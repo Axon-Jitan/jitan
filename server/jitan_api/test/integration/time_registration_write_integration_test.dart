@@ -32,6 +32,10 @@ void main() {
   late Database db;
   final stamp = DateTime.now().microsecondsSinceEpoch % 100000000;
   late int userId;
+
+  /// Another person corrects the employee's time: nobody handles their own
+  /// (review M3).
+  late int hrId;
   late int scheduleId;
   late int userScheduleId;
   late int ruleId;
@@ -63,6 +67,12 @@ void main() {
       'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
       "VALUES ('[DEV-TEST]', 'Registrations', :c, :q, 1, 0)",
       {'c': 'DT${stamp}REG', 'q': 'DEV-TEST-${stamp}REG'},
+    ))
+        .lastInsertId;
+    hrId = (await db.execute(
+      'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
+      "VALUES ('[DEV-TEST]', 'Registrations HR', :c, :q, 1, 0)",
+      {'c': 'DT${stamp}RHR', 'q': 'DEV-TEST-${stamp}RHR'},
     ))
         .lastInsertId;
     // Thursday: start 08:00–16:30, rounded up every 15 minutes.
@@ -111,6 +121,7 @@ void main() {
       await db.execute('DELETE FROM tblCompany WHERE companyID = :c', {'c': c});
     }
     await db.execute('DELETE FROM tblUser WHERE userID = :u', {'u': userId});
+    await db.execute('DELETE FROM tblUser WHERE userID = :u', {'u': hrId});
     await db.close();
   });
 
@@ -237,7 +248,7 @@ void main() {
     );
 
     final day = await corrections.correct(
-      userId,
+      hrId,
       companyId,
       userId,
       '2026-10-22',
@@ -263,7 +274,7 @@ void main() {
     ]);
     expect(rows[1].readOptionalDateTime('timeRegWhenModified'), isNotNull);
 
-    final nonWork = await corrections.markNonWork(userId, companyId, userId, '2026-10-22', '[DEV-TEST] Holiday');
+    final nonWork = await corrections.markNonWork(hrId, companyId, userId, '2026-10-22', '[DEV-TEST] Holiday');
     expect((nonWork!.status, nonWork.nonWorkReason), (TimeRecordStatus.nonWork, '[DEV-TEST] Holiday'));
     expect(await db.query('SELECT 1 FROM tblTimeReg WHERE userID = :u AND timeRegActive = 1', {'u': userId}), isEmpty);
 
@@ -363,7 +374,7 @@ void main() {
       await dayWithGap(day);
       final request = await at(RegistrationBoundary.finish, day.add(const Duration(hours: 13)), reason: '[DEV-TEST] travelling');
 
-      final approved = await corrections.approve(userId, companyId, userId, request);
+      final approved = await corrections.approve(hrId, companyId, userId, request);
 
       expect((approved!.finish!.actualLocal, approved.finish!.roundedLocal, approved.awayMinutes), ('17:00', '17:00', 0));
       expect(approved.pending, isEmpty);
@@ -374,7 +385,7 @@ void main() {
       await dayWithGap(day);
 
       final corrected = await corrections.correct(
-        userId,
+        hrId,
         companyId,
         userId,
         '2026-10-14',
@@ -397,12 +408,12 @@ void main() {
 
       Matcher refused(String message) => throwsA(isA<ApiException>().having((e) => e.message, 'message', contains(message)));
       await expectLater(
-        corrections.correct(userId, companyId, userId, '2026-10-15',
+        corrections.correct(hrId, companyId, userId, '2026-10-15',
             CorrectTimeRequest(boundary: RegistrationBoundary.finish, time: '07:30', reason: '[DEV-TEST] typo')),
         refused('before the start'),
       );
       await expectLater(
-        corrections.correct(userId, companyId, userId, '2026-10-15',
+        corrections.correct(hrId, companyId, userId, '2026-10-15',
             CorrectTimeRequest(boundary: RegistrationBoundary.start, time: '16:30', reason: '[DEV-TEST] typo')),
         refused('after the finish'),
       );
@@ -414,7 +425,7 @@ void main() {
       final request = await at(RegistrationBoundary.finish, day.add(const Duration(hours: 13)), reason: '[DEV-TEST] travelling');
 
       final corrected = await corrections.correct(
-        userId,
+        hrId,
         companyId,
         userId,
         '2026-10-16',
@@ -422,7 +433,7 @@ void main() {
       );
 
       expect(corrected!.pending.map((p) => p.id), [request]);
-      final approved = await corrections.approve(userId, companyId, userId, request);
+      final approved = await corrections.approve(hrId, companyId, userId, request);
       expect(approved!.pending, isEmpty);
     });
   });
