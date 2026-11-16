@@ -75,7 +75,9 @@ void main() {
 
   test('a manual start counts as running as well', () async {
     final app = await _app();
+    app.now = DateTime.utc(2026, 10, 22, 6, 5); // tapped as it happened (review H1)
     await app.post(_path, _body(method: 'manual', addressId: null));
+    app.now = DateTime.utc(2026, 10, 22, 18);
 
     expect((await app.post(_path, _body(at: '2026-10-22T07:00:00Z'))).statusCode, 200);
   });
@@ -154,5 +156,15 @@ void main() {
 
       expect((await app.get('/me/locations')).statusCode, 401);
     });
+  });
+
+  test('a detected time may be up to 24 hours old, not older (review H1)', () async {
+    final app = await _app();
+    app.now = DateTime.utc(2026, 10, 23, 6, 4);
+
+    expect((await app.post(_path, _body(at: '2026-10-22T06:04:00Z'))).statusCode, 201, reason: 'exactly 24 hours');
+    final error = await _error(app, _body(boundary: 'finish', at: '2026-10-22T06:03:59Z'));
+    expect(error, containsPair('status', 400));
+    expect(error, containsPair('field', 'at'));
   });
 }

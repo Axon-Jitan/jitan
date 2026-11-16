@@ -62,6 +62,25 @@ void main() {
   /// A moment earlier today, so nothing is in the future.
   DateTime moment(int minutesAgo) => DateTime.now().toUtc().subtract(Duration(minutes: minutesAgo));
 
+  /// The servers' clock while a tapped time is sent: just after it, as when
+  /// the employee taps (review H1); the real clock otherwise.
+  DateTime? tappedAt;
+  DateTime serverNow() => tappedAt?.add(const Duration(minutes: 1)) ?? DateTime.now().toUtc();
+
+  /// [at] as tapped when it happened, unless it is in the future (then the
+  /// real clock refuses it).
+  Future<T> tapped<T>(DateTime at, Future<T> Function() send) async {
+    tappedAt = at.isAfter(DateTime.now().toUtc()) ? null : at;
+    try {
+      return await send();
+    } finally {
+      tappedAt = null;
+    }
+  }
+
+  Future<MyActivity> switchAt(int user, SwitchActivityRequest request) =>
+      tapped(request.at, () => activities.switchTo(user, request));
+
   Future<int> newCompany(String name) async => (await db.execute(
     'INSERT INTO tblCompany (companyName, companyActive, companyMFD) VALUES (:n, 1, 0)',
     {'n': '$prefix $name'},
@@ -128,21 +147,21 @@ void main() {
     ),
   );
 
-  Future<void> start(int user, DateTime at) => writes.register(
+  Future<void> start(int user, DateTime at) => tapped(at, () => writes.register(
     user,
     RegisterTimeRequest(boundary: RegistrationBoundary.start, method: TimeRegistrationMethod.manual, entry: RegistrationEntry.now, at: at),
-  );
+  ));
 
-  Future<void> finish(int user, DateTime at) => writes.register(
+  Future<void> finish(int user, DateTime at) => tapped(at, () => writes.register(
     user,
     RegisterTimeRequest(boundary: RegistrationBoundary.finish, method: TimeRegistrationMethod.manual, entry: RegistrationEntry.now, at: at),
-  );
+  ));
 
   /// [user] worked on [project] earlier today, and finished.
   Future<void> usedEarlier(int user, int project, ActivityKind kind) async {
     // Close to now, so it is still today just after midnight.
     await start(user, moment(40));
-    await activities.switchTo(user, SwitchActivityRequest(kind: kind, at: moment(35), projectId: project));
+    await switchAt(user, SwitchActivityRequest(kind: kind, at: moment(35), projectId: project));
     await finish(user, moment(30));
   }
 
@@ -175,6 +194,7 @@ void main() {
       transactions: db,
       executor: db,
       clock: clock,
+      now: serverNow,
     );
     myDayLines = MyDayService(
       days: days,
@@ -201,6 +221,7 @@ void main() {
       rounding: RegistrationRounding(schedules),
       clock: clock,
       onDayStart: activities.dayStarted,
+      now: serverNow,
     );
     projectKind = (await const ProjectRepository().projectKindId(db))!;
     company = await newCompany('company');
@@ -278,7 +299,7 @@ void main() {
     expect((await activities.mine(user)).current?.project, isNull);
 
     await expectLater(
-      activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(5), projectId: internal)),
+      switchAt(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(5), projectId: internal)),
       throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)),
     );
   });
@@ -294,7 +315,7 @@ void main() {
     )).single.readInt('n');
     final before = await startRows();
 
-    final switched = await activities.switchTo(
+    final switched = await switchAt(
       user,
       SwitchActivityRequest(kind: ActivityKind.clientOnSite, at: moment(20), projectId: client),
     );
@@ -315,8 +336,8 @@ void main() {
     await start(user, moment(40));
     final request = SwitchActivityRequest(kind: ActivityKind.internal, at: moment(20), projectId: internal);
 
-    await activities.switchTo(user, request);
-    await activities.switchTo(user, request);
+    await switchAt(user, request);
+    await switchAt(user, request);
 
     final rows = await db.query(
       'SELECT COUNT(*) AS n FROM tblTimeReg r JOIN tblTimeRegType t ON t.timeRegTypeID = r.timeRegTypeID '
@@ -332,7 +353,7 @@ void main() {
     final at = moment(5);
 
     await expectLater(
-      activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: at, projectId: internal)),
+      switchAt(user, SwitchActivityRequest(kind: ActivityKind.internal, at: at, projectId: internal)),
       throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 409)),
     );
 
@@ -343,7 +364,7 @@ void main() {
       SwitchActivityRequest(kind: ActivityKind.work, at: at, projectId: internal),
       SwitchActivityRequest(kind: ActivityKind.internal, at: moment(-10), projectId: internal),
     ]) {
-      await expectLater(activities.switchTo(user, request), throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)));
+      await expectLater(switchAt(user, request), throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)));
     }
   });
 
@@ -352,9 +373,11 @@ void main() {
     final internal = await internalProject();
     await start(user, moment(120));
 
-    await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(119), projectId: internal));
-    await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60)));
-    final mine = await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(30), projectId: internal));
+    await switchAt(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(119), projectId: internal));
+    await switchAt(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60)));
+    await switchAt(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(30), projectId: internal));
+    // Read now, on the real clock: the day counts up to this moment.
+    final mine = await activities.mine(user);
 
     expect(mine.breakdown.internalMinutes, inInclusiveRange(88, 90));
     expect(mine.breakdown.transportMinutes, inInclusiveRange(29, 31));
@@ -370,8 +393,8 @@ void main() {
     final user = await newUser();
     final internal = await internalProject();
     await start(user, moment(120));
-    await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(119), projectId: internal));
-    await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60)));
+    await switchAt(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(119), projectId: internal));
+    await switchAt(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60)));
     final today = (await activities.mine(user)).today;
 
     final local = clock.wallClockOf(DateTime.now().toUtc());
@@ -447,7 +470,7 @@ void main() {
       final user = await newUser();
       final client = await clientProject();
       await startAt(user, moment(120), almeco);
-      await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.work, at: moment(30)));
+      await switchAt(user, SwitchActivityRequest(kind: ActivityKind.work, at: moment(30)));
 
       final mine = await activities.registerTrip(user, trip(almeco, client, 60, 15));
 
@@ -459,7 +482,7 @@ void main() {
       final user = await newUser();
       final client = await clientProject();
       await startAt(user, moment(120), almeco);
-      await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(62)));
+      await switchAt(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(62)));
 
       final mine = await activities.registerTrip(user, trip(almeco, client, 60, 15));
 
@@ -472,8 +495,8 @@ void main() {
       final user = await newUser();
       await start(user, moment(120));
 
-      await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60)));
-      final mine = await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.work, at: moment(30)));
+      await switchAt(user, SwitchActivityRequest(kind: ActivityKind.transport, at: moment(60)));
+      final mine = await switchAt(user, SwitchActivityRequest(kind: ActivityKind.work, at: moment(30)));
 
       expect(mine.breakdown.trips, 1);
       expect(mine.breakdown.distanceMetres, 0);
@@ -503,7 +526,7 @@ void main() {
     final user = await newUser();
     final internal = await internalProject();
     await start(user, moment(120));
-    await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(120), projectId: internal));
+    await switchAt(user, SwitchActivityRequest(kind: ActivityKind.internal, at: moment(120), projectId: internal));
     await finish(user, moment(90));
     await start(user, moment(30));
 
@@ -521,7 +544,7 @@ void main() {
     });
     await start(user, moment(30));
 
-    final switched = await activities.switchTo(
+    final switched = await switchAt(
       user,
       SwitchActivityRequest(kind: ActivityKind.internal, at: moment(10), projectId: internal),
     );

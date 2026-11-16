@@ -11,6 +11,7 @@ import 'rounding/rounding_policy.dart';
 import 'time_reg_type_names.dart';
 import 'time_registration_write_repository.dart';
 import 'workplace_clock.dart';
+import 'registration_age.dart';
 
 /// Registers an employee's start or finish (phase 3, TIME_ENGINE_ANALYSIS
 /// D4–D9): two `tblTimeReg` rows in one audited transaction, the **actual**
@@ -87,6 +88,10 @@ class TimeRegistrationWriteService {
     final geofence = request.method == TimeRegistrationMethod.geofence;
     if (geofence && request.entry != RegistrationEntry.now) {
       throw const ApiException.validation(RegisterTimeRequest.fieldEntry, 'A detected time is sent as it happened.');
+    }
+    // A time "as it happened" can't be backdated at will (review H1).
+    if (request.entry == RegistrationEntry.now && RegistrationAge.tooOld(at, _now().toUtc(), detected: geofence)) {
+      throw const ApiException.validation(RegisterTimeRequest.fieldAt, RegistrationAge.message);
     }
     final policy = await _rounding.policyOn(userId, local.weekday);
     return _transactions.transaction((tx) async {

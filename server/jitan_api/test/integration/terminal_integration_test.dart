@@ -460,7 +460,7 @@ void main() {
       final (_, qr) = await newEmployee();
       await device.scan(terminal, TerminalScanRequest(qrCode: qr, at: moment(10)));
 
-      final moved = await device.switchTo(terminal, TerminalSwitchRequest(qrCode: qr, kind: ActivityKind.transport, at: moment(5)));
+      final moved = await device.switchTo(terminal, TerminalSwitchRequest(qrCode: qr, kind: ActivityKind.transport, at: moment(3)));
 
       expect(moved.current?.kind, ActivityKind.transport);
     });

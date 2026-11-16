@@ -31,13 +31,13 @@ tests against the local database. No schema, data or code was changed for this r
 ## Fix status (updated 2026-11-16)
 
 Every technical finding is fixed, each with a regression test; the full server suite
-(843 tests, with the local MySQL) and the analyzer pass. Six items wait on a product
+(843 tests, with the local MySQL) and the analyzer pass. Five items wait on a product
 decision and are not changed yet.
 
 | Finding | Status | Commit |
 |---|---|---|
 | H1 terminal | Fixed: a scan older than 2 minutes is refused (the tablet keeps nothing offline) | `250ec55` |
-| H1 mobile | **Decision needed:** how far back the phone may send a "now" time (geofence answers can come an hour later, D34) | – |
+| H1 mobile | Fixed (D51): a tapped time at most 5 minutes old, a detected one at most 24 hours; older goes as a change for HR | see below |
 | H2 | Fixed: the employee's lock is taken before any read; the same time sent twice is stored once | `250ec55` |
 | H3 | Fixed: a correction switches off only what it replaces; impossible start/finish orders refused | `4b4b6be` |
 | H4 | Fixed: allow-all permissions need `JITAN_DEV_ALLOW_ALL_PERMISSIONS=true`; `TLS_CERT` forces production | `3e4cccc` |

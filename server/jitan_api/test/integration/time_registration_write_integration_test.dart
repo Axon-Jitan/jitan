@@ -39,6 +39,15 @@ void main() {
   late TimeRegistrationWriteService service;
   int? companyIdForCleanup;
 
+  /// The server's clock: just after the time sent, as when it is tapped
+  /// (review H1); [registerNow] moves it.
+  var serverNow = DateTime.utc(2026, 10, 22, 12);
+
+  Future<({RegisteredTime registered, bool created})> registerNow(RegisterTimeRequest request) {
+    serverNow = request.at.toUtc().add(const Duration(minutes: 1));
+    return service.register(userId, request);
+  }
+
   Future<int> id(String sql, Map<String, Object?> params, String column) async =>
       (await db.query(sql, params)).single.readInt(column);
 
@@ -48,7 +57,7 @@ void main() {
       transactions: db,
       rounding: RegistrationRounding(ScheduleRepository(db)),
       clock: WorkplaceClock('Europe/Brussels'),
-      now: () => DateTime.utc(2026, 10, 22, 12),
+      now: () => serverNow,
     );
     userId = (await db.execute(
       'INSERT INTO tblUser (userName, userSurname, userCode, userQRcode, userActive, userMFD) '
@@ -113,7 +122,7 @@ void main() {
       at: DateTime.utc(2026, 10, 22, 6, 4, 37),
     );
 
-    final (:registered, :created) = await service.register(userId, request);
+    final (:registered, :created) = await registerNow(request);
 
     expect(created, isTrue);
     expect(registered.roundedAt, DateTime.utc(2026, 10, 22, 6, 15));
@@ -142,7 +151,7 @@ void main() {
     );
     expect([for (final a in audited) (a.readInt('timeRegID'), a.readInt('userIDInit'))], [(registered.actualId, userId)]);
 
-    final retry = await service.register(userId, request);
+    final retry = await registerNow(request);
     expect(retry.created, isFalse);
     expect((retry.registered.actualId, retry.registered.roundedId), (registered.actualId, registered.roundedId));
     expect(await db.query('SELECT timeRegID FROM tblTimeReg WHERE userID = :u', {'u': userId}), hasLength(2));
@@ -275,6 +284,7 @@ void main() {
       at: DateTime.utc(2026, 10, 21, 6, 2, 9),
     );
 
+    serverNow = request.at.add(const Duration(minutes: 1));
     final results = await Future.wait([service.register(userId, request), service.register(userId, request)]);
 
     expect(results.where((r) => r.created), hasLength(1));
@@ -330,8 +340,7 @@ void main() {
       await db.execute('DELETE FROM tblCompany WHERE companyID = :c', {'c': companyId});
     });
 
-    Future<int> at(RegistrationBoundary boundary, DateTime when, {String? reason}) async => (await service.register(
-      userId,
+    Future<int> at(RegistrationBoundary boundary, DateTime when, {String? reason}) async => (await registerNow(
       RegisterTimeRequest(
         boundary: boundary,
         method: TimeRegistrationMethod.manual,

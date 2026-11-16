@@ -9,9 +9,10 @@ import '../support/test_app.dart';
 const _path = '/me/time-registrations';
 
 /// Thursday 22 October 2026: Brussels is UTC+2 (summer time ends on 25
-/// October).
+/// October). The server's clock is just after the usual time sent, as when
+/// the employee taps it (review H1).
 TestApp _app({bool withSchedule = true}) {
-  final app = TestApp(devUserId: 9, activeUserIds: {9})..now = DateTime.utc(2026, 10, 26, 18);
+  final app = TestApp(devUserId: 9, activeUserIds: {9})..now = DateTime.utc(2026, 10, 22, 6, 5);
   app.schedules.days = const [(id: 1, name: 'Monday'), (id: 4, name: 'Thursday')];
   if (withSchedule) {
     app.schedules.userSchedules = [
@@ -89,7 +90,7 @@ void main() {
   });
 
   test('a finish is rounded with the finish rule (down)', () async {
-    final app = _app();
+    final app = _app()..now = DateTime.utc(2026, 10, 22, 14, 42);
 
     final response = await app.post(_path, _body(boundary: 'finish', at: '2026-10-22T14:41:00Z'));
 
@@ -100,7 +101,7 @@ void main() {
   });
 
   test('rounding follows local time across the switch to winter time', () async {
-    final app = _app();
+    final app = _app()..now = DateTime.utc(2026, 10, 26, 7, 5);
 
     // Monday 26 October: Brussels is UTC+1. 07:04 UTC = 08:04 local → 08:15 = 07:15 UTC.
     final response = await app.post(_path, _body(at: '2026-10-26T07:04:00Z'));
@@ -172,7 +173,7 @@ void main() {
     expect(first.statusCode, 201);
     expect(app.timeRegistrationWrites.rows.first.manualEntry, isTrue);
 
-    final again = await _error(app, _body(entry: 'first_day', at: '2026-10-22T06:30:00Z', reason: null));
+    final again = await _error(app, _body(entry: 'first_day', at: '2026-10-22T06:01:00Z', reason: null));
     expect(again, containsPair('status', 400));
     expect(again, containsPair('field', 'entry'));
   });
@@ -185,6 +186,19 @@ void main() {
       expect(error, containsPair('field', 'reason'));
       expect(app.timeRegistrationWrites.rows, isEmpty);
     }
+  });
+
+  test('a tapped time older than 5 minutes is refused: it goes as a change with a reason (review H1)', () async {
+    final app = _app()..now = DateTime.utc(2026, 10, 22, 6, 10);
+
+    expect((await app.post(_path, _body(at: '2026-10-22T06:05:00Z'))).statusCode, 201, reason: 'exactly 5 minutes');
+    final error = await _error(app, _body(boundary: 'finish', at: '2026-10-22T06:04:59Z'));
+    expect(error, containsPair('status', 400));
+    expect(error, containsPair('field', 'at'));
+    expect(app.timeRegistrationWrites.rows.where((r) => r.typeId == 7), isEmpty, reason: 'no finish stored');
+
+    final changed = await app.post(_path, _body(boundary: 'finish', entry: 'corrected', at: '2026-10-19T15:00:00Z', reason: 'Forgot'));
+    expect(changed.statusCode, 201, reason: 'an older time with a reason waits for HR');
   });
 
   test('a time in the future is refused; a phone clock a little ahead is fine', () async {

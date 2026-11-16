@@ -94,15 +94,28 @@ void main() {
     return id;
   }
 
+  DateTime? tappedAt;
+  DateTime serverNow() => tappedAt?.add(const Duration(minutes: 1)) ?? DateTime.now().toUtc();
+
   RegisterTimeRequest at(RegistrationBoundary boundary, DateTime when) =>
       RegisterTimeRequest(boundary: boundary, method: TimeRegistrationMethod.manual, entry: RegistrationEntry.now, at: when);
 
-  /// [user] worked on [project] from 25 to 5 minutes ago, and finished.
+  /// [user] worked on [project] from 25 to 5 minutes ago, and finished:
+  /// each time tapped when it happened, so the servers' clock is just after
+  /// it while it is sent (review H1).
   Future<void> workedOn(int user, int project) async {
-    await writes.register(user, at(RegistrationBoundary.start, moment(30)));
-    await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.clientOnSite, at: moment(25), projectId: project));
-    await writes.register(user, at(RegistrationBoundary.finish, moment(5)));
+    try {
+      tappedAt = moment(30);
+      await writes.register(user, at(RegistrationBoundary.start, tappedAt!));
+      tappedAt = moment(25);
+      await activities.switchTo(user, SwitchActivityRequest(kind: ActivityKind.clientOnSite, at: tappedAt!, projectId: project));
+      tappedAt = moment(5);
+      await writes.register(user, at(RegistrationBoundary.finish, tappedAt!));
+    } finally {
+      tappedAt = null;
+    }
   }
+
 
   setUpAll(() async {
     db = TestDatabase.connect(maxConnections: 3);
@@ -134,12 +147,14 @@ void main() {
       transactions: db,
       executor: db,
       clock: clock,
+      now: serverNow,
     );
     writes = TimeRegistrationWriteService(
       transactions: db,
       rounding: RegistrationRounding(schedules),
       clock: clock,
       onDayStart: activities.dayStarted,
+      now: serverNow,
     );
     reports = ProjectReportService(
       days: days,
