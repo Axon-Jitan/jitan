@@ -2,6 +2,7 @@
 library;
 
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/http/api_exception.dart';
 import 'package:jitan_api/src/time_records/my_day_service.dart';
 import 'package:jitan_api/src/time_records/time_record_service.dart';
 import 'package:jitan_api/src/time_records/time_correction_service.dart';
@@ -283,5 +284,137 @@ void main() {
       {'u': userId, 'from': '2026-10-21 00:00:00', 'to': '2026-10-21 23:59:59'},
     );
     expect(rows, hasLength(2), reason: 'one actual and one rounded row');
+  });
+
+  group('corrections on a day with a gap (review H3, L1)', () {
+    late int companyId;
+    late TimeCorrectionService corrections;
+    final clock = WorkplaceClock('Europe/Brussels');
+
+    setUp(() async {
+      companyId = (await db.execute(
+        'INSERT INTO tblCompany (companyName, companyActive, companyMFD) VALUES (:n, 1, 0)',
+        {'n': '[DEV-TEST] $stamp Gap ${DateTime.now().microsecondsSinceEpoch}'},
+      )).lastInsertId;
+      await db.execute(
+        'INSERT INTO tblUserCompany (userID, companyID, userCompanyActive, userCompanyMFD) VALUES (:u, :c, 1, 0)',
+        {'u': userId, 'c': companyId},
+      );
+      final rounding = RegistrationRounding(ScheduleRepository(db));
+      corrections = TimeCorrectionService(
+        transactions: db,
+        employees: EmployeeRepository(db),
+        companies: CompanyRepository(db),
+        records: TimeRecordRepository(db),
+        days: TimeRecordService(
+          records: TimeRecordRepository(db),
+          employees: EmployeeRepository(db),
+          companies: CompanyRepository(db),
+          clock: clock,
+          schedules: ScheduleRepository(db),
+          rounding: rounding,
+          now: () => DateTime.utc(2026, 10, 22, 12),
+        ),
+        rounding: rounding,
+        clock: clock,
+        now: () => DateTime.utc(2026, 10, 22, 12),
+      );
+    });
+
+    tearDown(() async {
+      await db.execute('DELETE FROM tblUserCompany WHERE userID = :u AND companyID = :c', {'u': userId, 'c': companyId});
+      for (final log in await db.query('SELECT eventLogID FROM tblEventLog WHERE companyID = :c', {'c': companyId})) {
+        await db.execute('DELETE FROM tblEventLogEventType WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
+        await db.execute('DELETE FROM tblEventLog WHERE eventLogID = :l', {'l': log.readInt('eventLogID')});
+      }
+      await db.execute('DELETE FROM tblCompany WHERE companyID = :c', {'c': companyId});
+    });
+
+    Future<int> at(RegistrationBoundary boundary, DateTime when, {String? reason}) async => (await service.register(
+      userId,
+      RegisterTimeRequest(
+        boundary: boundary,
+        method: TimeRegistrationMethod.manual,
+        entry: reason == null ? RegistrationEntry.now : RegistrationEntry.corrected,
+        at: when,
+        reason: reason,
+      ),
+    )).registered.actualId;
+
+    /// [day] (UTC midnight of a Brussels summer-time date): 08:00–13:00 and 15:00–17:00.
+    Future<void> dayWithGap(DateTime day) async {
+      await at(RegistrationBoundary.start, day.add(const Duration(hours: 6)));
+      await at(RegistrationBoundary.finish, day.add(const Duration(hours: 11)));
+      await at(RegistrationBoundary.start, day.add(const Duration(hours: 13)));
+      await at(RegistrationBoundary.finish, day.add(const Duration(hours: 15)));
+    }
+
+    test('approving a travel finish closes the gap and keeps the day ending at 17:00', () async {
+      final day = DateTime.utc(2026, 10, 13);
+      await dayWithGap(day);
+      final request = await at(RegistrationBoundary.finish, day.add(const Duration(hours: 13)), reason: '[DEV-TEST] travelling');
+
+      final approved = await corrections.approve(userId, companyId, userId, request);
+
+      expect((approved!.finish!.actualLocal, approved.finish!.roundedLocal, approved.awayMinutes), ('17:00', '17:00', 0));
+      expect(approved.pending, isEmpty);
+    });
+
+    test('HR correcting the day’s end replaces only that finish', () async {
+      final day = DateTime.utc(2026, 10, 14);
+      await dayWithGap(day);
+
+      final corrected = await corrections.correct(
+        userId,
+        companyId,
+        userId,
+        '2026-10-14',
+        CorrectTimeRequest(boundary: RegistrationBoundary.finish, time: '17:30', reason: '[DEV-TEST] stayed longer'),
+      );
+
+      expect((corrected!.finish!.actualLocal, corrected.finish!.roundedLocal, corrected.awayMinutes), ('17:30', '17:30', 120));
+      final midday = await db.query(
+        "SELECT tr.timeRegActive FROM tblTimeReg tr JOIN tblTimeRegType t ON t.timeRegTypeID = tr.timeRegTypeID "
+        "WHERE tr.userID = :u AND t.timeRegTypeName = 'Finish – rounded' AND tr.timeRegTimestamp = :at",
+        {'u': userId, 'at': '2026-10-14 11:00:00'},
+      );
+      expect(midday.single.readBool('timeRegActive'), isTrue, reason: 'the 13:00 finish keeps its rounded row');
+    });
+
+    test('a finish before the start or a start after the finish is refused', () async {
+      final day = DateTime.utc(2026, 10, 15);
+      await at(RegistrationBoundary.start, day.add(const Duration(hours: 6)));
+      await at(RegistrationBoundary.finish, day.add(const Duration(hours: 14)));
+
+      Matcher refused(String message) => throwsA(isA<ApiException>().having((e) => e.message, 'message', contains(message)));
+      await expectLater(
+        corrections.correct(userId, companyId, userId, '2026-10-15',
+            CorrectTimeRequest(boundary: RegistrationBoundary.finish, time: '07:30', reason: '[DEV-TEST] typo')),
+        refused('before the start'),
+      );
+      await expectLater(
+        corrections.correct(userId, companyId, userId, '2026-10-15',
+            CorrectTimeRequest(boundary: RegistrationBoundary.start, time: '16:30', reason: '[DEV-TEST] typo')),
+        refused('after the finish'),
+      );
+    });
+
+    test('an unrelated HR correction leaves the employee’s request waiting', () async {
+      final day = DateTime.utc(2026, 10, 16);
+      await dayWithGap(day);
+      final request = await at(RegistrationBoundary.finish, day.add(const Duration(hours: 13)), reason: '[DEV-TEST] travelling');
+
+      final corrected = await corrections.correct(
+        userId,
+        companyId,
+        userId,
+        '2026-10-16',
+        CorrectTimeRequest(boundary: RegistrationBoundary.finish, time: '17:15', reason: '[DEV-TEST] gate log'),
+      );
+
+      expect(corrected!.pending.map((p) => p.id), [request]);
+      final approved = await corrections.approve(userId, companyId, userId, request);
+      expect(approved!.pending, isEmpty);
+    });
   });
 }

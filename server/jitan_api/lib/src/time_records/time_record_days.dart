@@ -117,7 +117,8 @@ abstract final class TimeRecordDays {
       final corrections = [if (!registrationOnly) for (final r in active) if (of<_Corrected>(r)) r];
       final requests = [if (!registrationOnly) for (final r in active) if (of<_Actual>(r) && isEmployeeCorrection(r)) r];
       for (final request in requests) {
-        if (!corrections.any((c) => c.id > request.id)) {
+        // Approved = HR's corrected row at the request's own time (review L1).
+        if (!corrections.any((c) => c.id > request.id && c.at == request.at)) {
           pending.add(
             TimeRecordPending(
               id: request.id,

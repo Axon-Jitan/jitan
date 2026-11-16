@@ -109,14 +109,19 @@ void main() {
   });
 
   test('the same name is refused and leaves nothing behind', () async {
-    final before = (await db.query('SELECT COUNT(*) AS n FROM tblGeofence')).single.readInt('n');
+    // Geofences linked to no address: what a refused create could leave behind.
+    // (Counting all of them failed now and then while other tests add some.)
+    Future<int> orphans() async => (await db.query(
+      'SELECT COUNT(*) AS n FROM tblGeofence g WHERE NOT EXISTS (SELECT 1 FROM tblGeofenceAddress ga WHERE ga.geofenceID = g.geofenceID)',
+    )).single.readInt('n');
+    final before = await orphans();
 
     await expectLater(
       locations.create(actor, request()),
       throwsA(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.duplicateLocationName)),
     );
 
-    expect((await db.query('SELECT COUNT(*) AS n FROM tblGeofence')).single.readInt('n'), before);
+    expect(await orphans(), before);
   });
 
   test('the same name in other capitals is refused too (CLARIFY-16)', () async {

@@ -131,9 +131,11 @@ void main() {
   group('HR corrections (D7, D8)', () {
     test('correcting a start: a corrected row and its rounded row count; the old rounded row is switched off', () async {
       final app = _app();
+      // In the order the system stores them: the actual time, then its rounded time.
+      final actual = _row('Start – actual – Manual', DateTime.utc(2026, 10, 22, 6, 4));
       final oldRounded = _row('Start – rounded', DateTime.utc(2026, 10, 22, 6, 15));
       app.timeRecords.rows = [
-        _row('Start – actual – Manual', DateTime.utc(2026, 10, 22, 6, 4)),
+        actual,
         oldRounded,
         _row('Finish – actual – Manual', DateTime.utc(2026, 10, 22, 14, 41)),
         _row('Finish – rounded', DateTime.utc(2026, 10, 22, 14, 30)),

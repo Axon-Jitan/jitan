@@ -63,9 +63,12 @@ class TimeCorrectionService {
       throw const ApiException.validation(CorrectTimeRequest.fieldTime, 'A time can’t be in the future.');
     }
     final employee = await _member(companyId, userId);
+    // Read before the transaction: inside it, a second connection could be
+    // waited for while holding the first (review M10).
+    final policy = await _rounding.policyOn(userId, day.weekday);
     await _transactions.transaction((tx) async {
       await _writes.lockUser(tx, userId);
-      final correctedId = await _count(tx, userId, day, request.boundary, at, reason);
+      final correctedId = await _count(tx, userId, day, request.boundary, at, reason, policy);
       await _record(tx, AuditEventType.timeCorrected, actorUserId, userId, companyId, correctedId);
     });
     return _dayOf(employee, day);
@@ -96,15 +99,18 @@ class TimeCorrectionService {
   /// HR's corrected time and counts; the employee's row stays as history.
   Future<TimeRecordDay?> approve(int actorUserId, int companyId, int userId, int registrationId) async {
     final employee = await _member(companyId, userId);
-    late DateTime day;
+    // The request's day and rounding rule before the transaction (review M10);
+    // a request's time never changes, and it is checked again inside.
+    final request = await _transactions.transaction((tx) => _records.registrationOf(tx, userId, registrationId));
+    final day = request == null ? null : _localDate(request.at);
+    final policy = day == null ? null : await _rounding.policyOn(userId, day.weekday);
     await _transactions.transaction((tx) async {
       await _writes.lockUser(tx, userId);
       final (:row, :boundary) = await _pendingRequest(tx, userId, registrationId);
-      day = _localDate(row.at);
-      final correctedId = await _count(tx, userId, day, boundary, row.at, row.comment);
+      final correctedId = await _count(tx, userId, day!, boundary, row.at, row.comment, policy!);
       await _record(tx, AuditEventType.timeCorrectionApproved, actorUserId, userId, companyId, correctedId);
     });
-    return _dayOf(employee, day);
+    return _dayOf(employee, day!);
   }
 
   /// HR rejects the employee's correction [registrationId] (D31): it is
@@ -149,19 +155,73 @@ class TimeCorrectionService {
     return _dayOf(employee, day);
   }
 
-  /// Makes [at] the [boundary] of [day] that counts: switches off the
-  /// corrected and rounded rows of that boundary, then adds a corrected row
-  /// with [reason] and its rounded row (D7: rounded like any time). Returns
-  /// the corrected row's id.
-  Future<int> _count(SqlExecutor tx, int userId, DateTime day, RegistrationBoundary boundary, DateTime at, String? reason) async {
-    final replaced = [
-      for (final r in await _dayRows(tx, userId, day))
-        if (r.active &&
-            (r.typeName == TimeRegTypeNames.corrected(boundary) || r.typeName == TimeRegTypeNames.rounded(boundary)))
-          r.id,
-    ];
+  /// Makes [at] the [boundary] of [day] that counts (D7, D8, D34b): switches
+  /// off only what it replaces, then adds a corrected row with [reason] and its
+  /// rounded row (rounded like any time).
+  ///
+  /// - A start replaces the start that counts (HR's newest corrected start, or
+  ///   the day's first detected start) and that start's rounded row.
+  /// - A finish after the day's latest start replaces the finish that counts
+  ///   the same way. A finish at or before the latest start closes the gap
+  ///   between leaving and coming back (travelling, D34b) and replaces nothing,
+  ///   so the day keeps its end (review H3, 2026-11-16).
+  /// - 400 for a finish before the day's first start, or a start after the
+  ///   day's finish.
+  ///
+  /// Returns the corrected row's id.
+  Future<int> _count(
+    SqlExecutor tx,
+    int userId,
+    DateTime day,
+    RegistrationBoundary boundary,
+    DateTime at,
+    String? reason,
+    RoundingPolicy policy,
+  ) async {
+    final active = [for (final r in await _dayRows(tx, userId, day)) if (r.active) r]..sort((a, b) => a.id.compareTo(b.id));
+    bool isRequest(RegistrationRow r) =>
+        _requestType.hasMatch(r.typeName) && r.manualEntry && (r.comment?.isNotEmpty ?? false);
+    bool counts(RegistrationRow r, RegistrationBoundary b) =>
+        r.typeName == TimeRegTypeNames.corrected(b) || (r.typeName.startsWith('${_name(b)} – actual') && !isRequest(r));
+    final starts = [for (final r in active) if (counts(r, RegistrationBoundary.start)) r.at]..sort();
+    final finishes = [for (final r in active) if (counts(r, RegistrationBoundary.finish)) r.at]..sort();
+    final latestStart = starts.lastOrNull;
+
+    if (boundary == RegistrationBoundary.finish && starts.isNotEmpty && !at.isAfter(starts.first)) {
+      throw const ApiException.validation(CorrectTimeRequest.fieldTime, 'A finish can’t be before the start.');
+    }
+    final dayFinish = finishes.lastOrNull;
+    final dayEnded = dayFinish != null && (latestStart == null || !dayFinish.isBefore(latestStart));
+    if (boundary == RegistrationBoundary.start && dayEnded && !at.isBefore(dayFinish)) {
+      throw const ApiException.validation(CorrectTimeRequest.fieldTime, 'A start can’t be after the finish.');
+    }
+
+    final closesGap = boundary == RegistrationBoundary.finish && latestStart != null && !at.isAfter(latestStart);
+    final replaced = <int>[];
+    if (!closesGap) {
+      // HR's corrections of this start, or of the day's end (a gap's stay).
+      final corrections = [
+        for (final r in active)
+          if (r.typeName == TimeRegTypeNames.corrected(boundary) &&
+              (boundary == RegistrationBoundary.start || latestStart == null || r.at.isAfter(latestStart)))
+            r,
+      ];
+      final detected = [
+        for (final r in active)
+          if (counts(r, boundary) && r.typeName != TimeRegTypeNames.corrected(boundary)) r,
+      ]..sort((a, b) => a.at.compareTo(b.at));
+      final counting = corrections.isNotEmpty
+          ? corrections.last
+          : detected.isEmpty
+          ? null
+          : (boundary == RegistrationBoundary.start ? detected.first : detected.last);
+      replaced.addAll([for (final r in corrections) r.id]);
+      if (counting != null) {
+        final paired = active.where((r) => r.typeName == TimeRegTypeNames.rounded(boundary) && r.id > counting.id).firstOrNull;
+        if (paired != null) replaced.add(paired.id);
+      }
+    }
     await _switches.switchOff(tx, replaced, _now().toUtc());
-    final policy = await _rounding.policyOn(userId, day.weekday);
     final rounded = _clock.utcOf(
       RoundingCalculator.round(
         actual: _clock.wallClockOf(at),
@@ -181,6 +241,10 @@ class TimeCorrectionService {
     return correctedId;
   }
 
+  static final _requestType = RegExp(r'^(Start|Finish) – actual – Manual$');
+
+  static String _name(RegistrationBoundary b) => b == RegistrationBoundary.start ? 'Start' : 'Finish';
+
   /// The employee's correction [id] of [userId] that still waits for HR, or
   /// 404 (unknown, another employee's, switched off, not a correction, or
   /// already approved).
@@ -191,8 +255,10 @@ class TimeCorrectionService {
       throw ApiException.notFound('No correction $id waiting for review.');
     }
     final boundary = match.group(1) == 'Start' ? RegistrationBoundary.start : RegistrationBoundary.finish;
+    // Approved = HR's corrected row at the request's own time, stored after it.
+    // Another correction of the day leaves the request waiting (review L1).
     final approved = (await _dayRows(tx, userId, _localDate(row.at))).any(
-      (r) => r.active && r.id > row.id && r.typeName == TimeRegTypeNames.corrected(boundary),
+      (r) => r.active && r.id > row.id && r.typeName == TimeRegTypeNames.corrected(boundary) && r.at == row.at,
     );
     if (approved) throw ApiException.notFound('No correction $id waiting for review.');
     return (row: row, boundary: boundary);
