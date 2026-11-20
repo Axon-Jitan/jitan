@@ -51,8 +51,8 @@ enum FirstHrResult {
 /// it opens none yet, and the password they type. Every step is audited, the
 /// person as actor; any failure leaves nothing changed.
 ///
-/// IT still decides who gets access (V1): the groups and modules are IT's
-/// rows, chosen by IT at its own server.
+/// IT chooses existing groups/modules. On an empty database, the command
+/// can create the initial HR group and Employees module in this transaction.
 class FirstHrSetupService {
   FirstHrSetupService({
     required this._transactions,
@@ -86,12 +86,15 @@ class FirstHrSetupService {
   /// Sets the person up. [firstName] and [lastName] are needed only for a new
   /// code; [moduleId] only when the group opens no module yet. Throws
   /// `ApiException` for a password or a name the rules refuse.
+  /// With [createMissingAccess], omitted access IDs seed only entirely empty
+  /// tables, in the same audited transaction. Existing policies need selection.
   Future<FirstHrResult> setUp({
     required String code,
     String? firstName,
     String? lastName,
-    required int credGroupId,
+    int? credGroupId,
     int? moduleId,
+    bool createMissingAccess = false,
     required String password,
   }) async {
     code = code.trim();
@@ -104,13 +107,25 @@ class FirstHrSetupService {
     // A result other than `done` throws inside, so the transaction rolls
     // back whatever it already did (a new employee, a module link).
     try {
-      return await _transactions.transaction((tx) => _setUp(tx, code, firstName, lastName, credGroupId, moduleId, hash));
+      return await _transactions.transaction(
+        (tx) => _setUp(tx, code, firstName, lastName, credGroupId, moduleId, hash, createMissingAccess),
+        serializedBy: 'jitan.first_hr_setup',
+      );
     } on _Stopped catch (stopped) {
       return stopped.result;
     }
   }
 
-  Future<FirstHrResult> _setUp(SqlExecutor tx, String code, String? firstName, String? lastName, int credGroupId, int? moduleId, String hash) async {
+  Future<FirstHrResult> _setUp(
+    SqlExecutor tx,
+    String code,
+    String? firstName,
+    String? lastName,
+    int? credGroupId,
+    int? moduleId,
+    String hash,
+    bool createMissingAccess,
+  ) async {
     final found = await _lookUp(tx, code);
     final int userId;
     switch (found.code) {
@@ -129,8 +144,22 @@ class FirstHrSetupService {
         await _record(tx, AuditEventType.employeeCreated, userId, {EventLogReference.user: userId});
     }
 
-    if (!(await _repository.accessGroups(tx)).any((g) => g.id == credGroupId)) throw const _Stopped(FirstHrResult.unknownGroup);
+    if (credGroupId == null && createMissingAccess) {
+      credGroupId = await _repository.createInitialGroup(tx);
+      if (credGroupId != null) {
+        await _record(tx, AuditEventType.credentialGroupCreated, userId, {EventLogReference.credGroup: credGroupId});
+      }
+    }
+    if (credGroupId == null || !(await _repository.accessGroups(tx)).any((g) => g.id == credGroupId)) {
+      throw const _Stopped(FirstHrResult.unknownGroup);
+    }
     if (!await _repository.opensAModule(tx, credGroupId)) {
+      if (moduleId == null && createMissingAccess) {
+        moduleId = await _repository.createInitialModule(tx);
+        if (moduleId != null) {
+          await _record(tx, AuditEventType.appModuleCreated, userId, {EventLogReference.appModules: moduleId});
+        }
+      }
       if (moduleId == null || !(await _repository.modules(tx)).any((m) => m.id == moduleId)) {
         throw const _Stopped(FirstHrResult.moduleNeeded);
       }

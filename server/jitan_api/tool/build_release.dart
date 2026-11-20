@@ -88,15 +88,16 @@ Future<void> _build(List<String> args) async {
   ], mobile);
   File('${mobile.path}/build/app/outputs/flutter-apk/app-release.apk').copySync('${out.path}/jitan-employee.apk');
 
+  File('tool/install_release.sh').copySync('${out.path}/install.sh');
   final sums = [
-    for (final name in ['jitan-server', 'jitan-first-hr', 'jitan-employee.apk'])
+    for (final name in ['jitan-server', 'jitan-first-hr', 'jitan-employee.apk', 'install.sh'])
       if (File('${out.path}/$name').existsSync()) '${sha256.convert(File('${out.path}/$name').readAsBytesSync())}  $name',
   ];
   File('${out.path}/SHA256SUMS').writeAsStringSync('${sums.join('\n')}\n');
   File('${root.path}/docs/IT_INSTALL_GUIDE.md').copySync('${out.path}/IT_INSTALL_GUIDE.md');
   final zip = File('${out.path}/jitan-$jitanVersion.zip');
   if (zip.existsSync()) zip.deleteSync();
-  final contents = ['jitan-server', 'jitan-first-hr', 'jitan-employee.apk', 'SHA256SUMS', 'IT_INSTALL_GUIDE.md'];
+  final contents = ['jitan-server', 'jitan-first-hr', 'jitan-employee.apk', 'install.sh', 'SHA256SUMS', 'IT_INSTALL_GUIDE.md'];
   // Windows' own tar writes zip files (-a); Git's tar, often first on the path, can't.
   final tar = Platform.isWindows ? '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\\System32\\tar.exe' : 'tar';
   await _run(tar, ['-a', '-cf', 'jitan-$jitanVersion.zip', for (final name in contents) if (File('${out.path}/$name').existsSync()) name], out);

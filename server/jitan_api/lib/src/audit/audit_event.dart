@@ -79,6 +79,10 @@ enum AuditEventType {
   /// (`tblAppModulesCredGroup`).
   credentialGroupModuleLinked('credential_group.module.linked'),
 
+  /// IT's first-HR command seeds empty access tables (2026-11-18).
+  credentialGroupCreated('credential_group.created'),
+  appModuleCreated('app_module.created'),
+
   /// The preferred language changed (by the employee or HR/Admin). Generic:
   /// `tblEventLog` cannot say which language (GAP-12, accepted for V1).
   languageChanged('employee.language.changed'),
@@ -157,6 +161,7 @@ enum AuditEventType {
 
   terminalDeactivated('terminal.deactivated'),
   terminalReactivated('terminal.reactivated'),
+
   /// No longer written (Remove became Deactivate, 2026-11-11); kept for
   /// the audit rows that have it.
   terminalRemoved('terminal.removed'),

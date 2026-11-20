@@ -10,6 +10,7 @@ import 'package:jitan_api/src/config/app_config.dart';
 import 'package:jitan_api/src/config/config_exception.dart';
 import 'package:jitan_api/src/config/config_sources.dart';
 import 'package:jitan_api/src/database/database.dart';
+import 'package:jitan_api/src/database/database_exception.dart';
 import 'package:jitan_api/src/http/api_exception.dart';
 
 /// Sets up the very first HR person in one step (IT_INSTALL_GUIDE, step 4):
@@ -74,6 +75,7 @@ Future<void> main(List<String> arguments) async {
 
   try {
     stdout.writeln('Jitan: set up the first HR person.');
+    stdout.writeln('Setup tool: 2026-11-18 (automatic initial access setup).');
     final code = await ask('Employee code: ');
     if (code.isEmpty) return stop('No employee code.');
 
@@ -96,23 +98,38 @@ Future<void> main(List<String> arguments) async {
     }
 
     final groups = await service.accessGroups();
-    if (groups.isEmpty) return stop('tblCredGroup has no active access group yet: add one (for example HR) first.');
-    final groupId = await choose('Access group:', groups);
-    if (groupId == null) return stop('No access group chosen.');
+    int? groupId;
+    if (groups.isEmpty) {
+      stdout.writeln('The HR access group will be created if its table is empty.');
+    } else {
+      groupId = await choose('Access group:', groups);
+      if (groupId == null) return stop('No access group chosen.');
+    }
 
     int? moduleId;
-    if (!await service.opensAModule(groupId)) {
+    if (groupId == null || !await service.opensAModule(groupId)) {
       final modules = await service.modules();
-      if (modules.isEmpty) return stop('tblAppModules has no active module yet: add one (for example HR) first.');
-      moduleId = await choose('This group opens no part of Jitan yet. Which one may it open?', modules);
-      if (moduleId == null) return stop('No module chosen.');
+      if (modules.isEmpty) {
+        stdout.writeln('The Employees module will be created if its table is empty.');
+      } else {
+        moduleId = await choose('This group opens no part of Jitan yet. Which one may it open?', modules);
+        if (moduleId == null) return stop('No module chosen.');
+      }
     }
 
     stdout.writeln('Now the HR person types their password (it is not shown).');
     final password = await ask('Password (at least ${PasswordPolicy.minLength} characters): ', hidden: true);
     if (await ask('Again: ', hidden: true) != password) return stop('The two passwords are not the same.');
 
-    final result = await service.setUp(code: code, firstName: firstName, lastName: lastName, credGroupId: groupId, moduleId: moduleId, password: password);
+    final result = await service.setUp(
+      code: code,
+      firstName: firstName,
+      lastName: lastName,
+      credGroupId: groupId,
+      moduleId: moduleId,
+      password: password,
+      createMissingAccess: true,
+    );
     switch (result) {
       case FirstHrResult.done:
         stdout.writeln('Done. $code can now sign in on the HR website.');
@@ -123,12 +140,24 @@ Future<void> main(List<String> arguments) async {
       case FirstHrResult.codeTaken:
         stop('That code belongs to a switched-off or removed employee.');
       case FirstHrResult.unknownGroup:
-        stop('That access group is no longer active.');
+        stop('The access groups changed or contain inactive records. Ask IT to review them, then retry.');
       case FirstHrResult.moduleNeeded:
-        stop('That module is no longer active.');
+        stop('The modules changed or contain inactive records. Ask IT to review them, then retry.');
     }
   } on ApiException catch (e) {
     stop(e.message);
+  } on DatabaseUnavailableException {
+    stderr.writeln(
+      'The database connection failed. Check /etc/jitan/app.env, MySQL access and TLS certificates. '
+      'Setup was not confirmed; rerun to check the account before trying again.',
+    );
+    exitCode = 1;
+  } on DatabaseQueryException {
+    stderr.writeln(
+      'The database rejected setup. Check database permissions and the installed schema, '
+      'or retry if another setup is running. Setup was not confirmed.',
+    );
+    exitCode = 1;
   } finally {
     await input.cancel();
     await db.close();

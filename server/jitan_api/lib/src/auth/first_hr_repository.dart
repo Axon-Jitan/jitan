@@ -6,12 +6,26 @@ typedef AccessOption = ({int id, String name});
 
 /// The SQL behind setting up the first HR person: IT's access groups
 /// (`tblCredGroup`) and modules (`tblAppModules`), and the link between them
-/// (`tblAppModulesCredGroup`). Names are read from IT's rows, never written
-/// in the code.
+/// (`tblAppModulesCredGroup`). Existing rows stay under IT's control. The
+/// first-run command may seed empty access tables (owner decision 2026-11-18).
 class FirstHrRepository {
   const FirstHrRepository();
 
   static const _duplicateKey = 1062;
+
+  /// Locking reads include inactive rows: bootstrap never revives or bypasses
+  /// an existing access policy. An empty table may receive its initial row.
+  Future<int?> createInitialGroup(SqlExecutor tx) async {
+    if ((await tx.query('SELECT credGroupID FROM tblCredGroup FOR UPDATE')).isNotEmpty) return null;
+    return (await tx.execute('INSERT INTO tblCredGroup (credGroupName, credGroupActive, credGroupMFD) VALUES (:name, 1, 0)', {'name': 'HR'})).lastInsertId;
+  }
+
+  Future<int?> createInitialModule(SqlExecutor tx) async {
+    if ((await tx.query('SELECT appModulesID FROM tblAppModules FOR UPDATE')).isNotEmpty) return null;
+    return (await tx.execute('INSERT INTO tblAppModules (appModuleName, appModuleActive, appModuleMFD) VALUES (:name, 1, 0)', {
+      'name': 'Employees',
+    })).lastInsertId;
+  }
 
   /// The access groups a person can be given: active, not marked for deletion.
   Future<List<AccessOption>> accessGroups(SqlExecutor executor) async => [

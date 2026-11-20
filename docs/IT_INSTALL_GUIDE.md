@@ -7,12 +7,22 @@ agreed on 2026-10-16 ([DEPLOYMENT_CONFIGURATION.md](DEPLOYMENT_CONFIGURATION.md)
 
 ## What you receive
 
+For the existing IT server, extract the complete `jitan-0.0.1.zip`, open a
+terminal in the extracted folder, and run `sudo sh install.sh`. This restores
+both executables even if they were deleted, restarts the existing `jitan`
+service, and starts first-HR setup. The service definition, `svc.dart` account,
+`/etc/jitan/app.env` and certificates must still exist. The installer preserves
+them. Ensure `DB_PASS` in that configuration contains the updated password.
+The ZIP contains no database password. Keep the extracted folder outside
+`/opt/jitan` so installation can back up any existing executables.
+
 | File | What it is |
 |---|---|
 | `jitan-server` | The API, Linux x64. The HR website is built into it: same address, one file to update. |
 | `jitan-first-hr` | Sets up the first HR person in one step, Linux x64. |
 | `jitan-employee.apk` | The employee app for the tablet. It talks to `https://10.1.101.65:8080`. |
 | `SHA256SUMS` | Check that the files arrived intact: `sha256sum -c SHA256SUMS`. |
+| `install.sh` | Restores both executables and starts HR setup using the existing IT service. |
 
 ## 1. Settings
 
@@ -37,8 +47,12 @@ sudo openssl x509 -in /var/lib/mysql/ca.pem          -noout -fingerprint -sha256
 sudo openssl x509 -in /var/lib/mysql/server-cert.pem -noout -fingerprint -sha256
 ```
 
-We already have the server certificate's (`70:26:23:E5:…:85:B9`); please send us the
-CA's too, so we can confirm both.
+The working chain identified on 18 November uses server fingerprint
+`70:26:23:E5:D0:AE:AA:B2:9B:51:AA:5B:C2:85:51:FF:FD:C3:8A:BD:E1:04:32:0F:4F:6B:D2:BE:08:E3:85:B9`
+and CA fingerprint
+`BF:A7:1D:DC:14:34:7D:FC:D3:BE:FE:E0:CD:CD:0B:E2:14:DC:75:AD:B1:A4:EE:B6:57:97:84:BD:68:40:B0:95`.
+Preserve IT's verified working TLS configuration. If certificates are replaced,
+confirm their identity with IT before changing trust settings.
 
 Two more things about the setup:
 
@@ -69,7 +83,20 @@ its value).
 
 ## 4. The first HR person
 
-Nobody can sign in yet. On the server, with the HR person beside you, run:
+Use the updated `jitan-first-hr` (2026-11-18). On the server, with the HR person
+beside you, run:
+
+```sh
+cd /opt/jitan
+chmod +x jitan-first-hr
+sudo -u svc.dart ./jitan-first-hr
+```
+
+On an empty database it creates the initial **HR** access group and **Employees**
+module automatically, together with the employee, their access links and password.
+Only the employee code, first name, last name and password are requested. No manual
+SQL is needed. Existing access tables are not reset: when active choices exist,
+select them as in this example:
 
 ```text
 $ ./jitan-first-hr
@@ -92,6 +119,10 @@ It uses the same `/etc/jitan/app.env` as the server. In one step it adds the emp
 links that group to a module if it opens none yet (it then asks which one), and sets the
 password. Everything happens together or not at all, and each step is in the audit log.
 The groups and modules it lists are your rows in `tblCredGroup` and `tblAppModules`.
+Only completely empty access tables receive initial rows; inactive or removed
+policies are never silently reactivated. The initial group uses the database's
+default level; permissions still follow its module links, not its name or level.
+Cancelling, invalid input or a failed transaction leaves no partial setup.
 It refuses an account that already has a password.
 
 They then sign in on the HR website, and everyone else is set up from there.
@@ -128,5 +159,5 @@ never changes the database structure and never deletes rows. Test records are na
 2. Is `B6:CB:0A:74:…:83:BF:C4` the fingerprint of your `agapp05.crt` (step 5)?
 3. Can phones reach `10.1.101.65:8080` from the office Wi-Fi? And later from outside
    the office, for employees on mobile data?
-4. Who is the first HR person (step 4), and do `tblCredGroup` and `tblAppModules` already
-   have an HR group and module?
+4. Who is the first HR person (step 4)? The updated tool creates the initial access
+   group and module when their tables are empty.
